@@ -27,7 +27,7 @@ const DieselTankContainer: React.FC<{ tank: DieselTank }> = ({ tank }) => {
   const isCritical = percentage < 15;
 
   return (
-    <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-2xl transition-all duration-700">
+    <div className="bg-white p-4 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-2xl transition-all duration-700">
       <div className="flex justify-between items-start mb-8">
         <div>
           <span className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] mb-1 block">Depósito Estacionario</span>
@@ -353,57 +353,20 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
         .animate-diesel-wave { animation: diesel-wave 4s linear infinite; }
       `}</style>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* HEADER SECTION */}
-        <div className="py-10 flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-700">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center shadow-xl shadow-slate-200">
-              <span className="text-2xl">🔥</span>
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight font-outfit">Gestión de Diésel</h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Logística Nacional</p>
-            </div>
-          </div>
-
-          {/* LOCATION SELECTOR (Desktop prominence) */}
-          <div className="hidden sm:block bg-white px-6 py-3 rounded-2xl border-2 border-orange-500 shadow-lg">
-            <div className="flex items-center gap-3">
-              <span className="text-xl">🏢</span>
-              <p className="font-black text-sm uppercase">Matriz Centro</p>
-            </div>
-          </div>
-        </div>
-
-        {/* MOBILE LOCATION SELECTOR */}
-        <div className="sm:hidden mb-8 animate-in fade-in slide-in-from-bottom-2 duration-700 delay-100">
-          <div className="bg-white p-5 rounded-[2rem] border-2 border-orange-500 shadow-xl shadow-orange-100/50">
-            <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 px-1">Ubicación Activa</p>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">🏢</span>
-                <p className="font-black text-sm uppercase">Matriz Centro</p>
-              </div>
-              <div className="w-10 h-10 bg-cyan-50 rounded-xl flex items-center justify-center text-cyan-500">
-                <span className="text-lg">🌐</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         {/* STATS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <div className="bg-white p-6 rounded-[2.5rem] shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-200">
-            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em] mb-1">Estatus Global</p>
-            <p className="text-4xl lg:text-5xl font-black font-outfit">{analytics.globalStatus.toFixed(1)}%</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 mb-8">
+          <div className="bg-white p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-200">
+            <p className="text-[8px] md:text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em] mb-1">Estatus</p>
+            <p className="text-2xl md:text-3xl lg:text-5xl font-black font-outfit">{analytics.globalStatus.toFixed(1)}%</p>
           </div>
-          <div className="bg-white p-6 rounded-[2.5rem] shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-300">
-            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em] mb-1">Suministros (Mes)</p>
-            <p className="text-4xl lg:text-5xl font-black font-outfit text-blue-600">+{analytics.monthlySupplies.toLocaleString()} L</p>
+          <div className="bg-white p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-300">
+            <p className="text-[8px] md:text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em] mb-1">Entradas</p>
+            <p className="text-2xl md:text-3xl lg:text-5xl font-black font-outfit text-blue-600">+{analytics.monthlySupplies.toLocaleString()}</p>
           </div>
-          <div className="bg-white p-6 rounded-[2.5rem] shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-400">
-            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em] mb-1">Despachos (Mes)</p>
-            <p className="text-4xl lg:text-5xl font-black font-outfit text-orange-600">-{analytics.monthlyDispatches.toLocaleString()} L</p>
+          <div className="col-span-2 md:col-span-1 bg-white p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-400">
+            <p className="text-[8px] md:text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em] mb-1">Despachos</p>
+            <p className="text-2xl md:text-3xl lg:text-5xl font-black font-outfit text-orange-600">-{analytics.monthlyDispatches.toLocaleString()}L</p>
           </div>
         </div>
 
@@ -432,8 +395,8 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
         </div>
 
         {/* Navigation Tabs (Centered for Desktop) */}
-        <div className="flex justify-center mb-8 sticky top-4 z-20">
-          <div className="bg-white/90 backdrop-blur-md p-2 rounded-[2.5rem] flex shadow-xl border border-slate-100 w-full max-w-2xl">
+        <div className="flex justify-center mb-8 sticky top-[10px] md:top-[20px] z-20">
+          <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-[2.5rem] flex shadow-2xl border border-slate-100 w-full max-w-2xl mx-auto">
             {[
               { id: 'status', label: 'Niveles de Tanque' },
               { id: 'logs', label: 'Historial Completo' },

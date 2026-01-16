@@ -32,6 +32,7 @@ const Layout: React.FC<LayoutProps> = ({
   selectedBranchId, setSelectedBranchId, branches
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['materiales', 'concretera', 'logistica']);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navigation: NavGroup[] = [
     {
@@ -80,8 +81,20 @@ const Layout: React.FC<LayoutProps> = ({
   const activeBranch = branches.find(b => b.id === selectedBranchId);
 
   return (
-    <div className="h-screen w-full flex flex-col md:flex-row bg-slate-50 text-slate-900 overflow-hidden">
-      <aside className="w-full md:w-72 bg-slate-900 text-white flex flex-col shadow-2xl z-30 overflow-hidden">
+    <div className="h-screen w-full flex flex-col md:flex-row bg-slate-50 text-slate-900 overflow-hidden relative">
+      {/* Mobile Backdrop */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      <aside className={`
+        fixed md:static inset-y-0 left-0 w-72 bg-slate-900 text-white flex flex-col shadow-2xl z-50 
+        transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
         <div className="p-8 border-b border-slate-800">
           <div className="flex items-center gap-3">
             <div className="bg-orange-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-orange-600/20">
@@ -115,7 +128,10 @@ const Layout: React.FC<LayoutProps> = ({
                   {group.items.filter(item => item.roles.includes(currentUser.role)).map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => setActiveTab(item.id)}
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        setIsMobileMenuOpen(false);
+                      }}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${activeTab === item.id
                         ? 'bg-orange-600 text-white font-bold shadow-lg shadow-orange-600/20'
                         : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'
@@ -188,6 +204,14 @@ const Layout: React.FC<LayoutProps> = ({
       <main className="flex-1 flex flex-col min-w-0 bg-slate-50 h-full overflow-hidden">
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-4 md:px-8 py-3 md:py-5 border-b border-slate-200 flex flex-row justify-between items-center gap-4 shadow-sm shadow-slate-200/50">
           <div className="flex items-center gap-2 md:gap-4">
+            {/* Hamburger Menu Toggle */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-lg"
+            >
+              {isMobileMenuOpen ? '✕' : '☰'}
+            </button>
+
             <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-900 rounded-lg md:rounded-xl flex items-center justify-center text-lg md:text-xl shadow-lg">
               {currentItem?.icon || '🏢'}
             </div>
