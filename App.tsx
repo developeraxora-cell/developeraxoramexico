@@ -1,0 +1,118 @@
+
+import React, { useState, useEffect } from 'react';
+import Layout from './components/Layout';
+import POSScreen from './components/POS/POSScreen';
+import InventoryScreen from './components/Inventory/InventoryScreen';
+import PurchasesScreen from './components/Inventory/PurchasesScreen';
+import DieselScreen from './components/Diesel/DieselScreen';
+import CustomerScreen from './components/Customers/CustomerScreen';
+import UsersScreen from './components/Users/UsersScreen';
+import BranchesScreen from './components/Branches/BranchesScreen';
+import ConcreteOps from './components/Concrete/ConcreteOps';
+import ConcreteFormulas from './components/Concrete/ConcreteFormulas';
+import ConcreteFleet from './components/Concrete/ConcreteFleet';
+import { INITIAL_CUSTOMERS, INITIAL_PRODUCTS, INITIAL_CONVERSIONS, INITIAL_USERS, INITIAL_BRANCHES } from './constants';
+import { Customer, Product, ProductConversion, User, Role, Branch, CustomerPayment, DieselTank, Vehicle, Driver, DieselLog, ConcreteFormula, MixerTruck, ConcreteOrder, Sale, Purchase } from './types';
+
+const App: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('pos');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [branches, setBranches] = useState<Branch[]>(INITIAL_BRANCHES);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>(INITIAL_BRANCHES[0].id);
+
+  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+  const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [conversions, setConversions] = useState<ProductConversion[]>(INITIAL_CONVERSIONS);
+  const [payments, setPayments] = useState<CustomerPayment[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+
+  // Estados de Concretera y Diesel
+  const [concreteFormulas, setConcreteFormulas] = useState<ConcreteFormula[]>([
+    { id: 'f1', name: "f'c 250", description: "Estructural", materials: [{ productId: 'p1', qtyPerM3: 350 }, { productId: 'p3', qtyPerM3: 850 }] },
+    { id: 'f2', name: "f'c 150", description: "Firmes", materials: [{ productId: 'p1', qtyPerM3: 250 }, { productId: 'p3', qtyPerM3: 950 }] }
+  ]);
+  const [mixers, setMixers] = useState<MixerTruck[]>([
+    { id: 'm1', plate: 'MIX-101', capacityM3: 7, status: 'DISPONIBLE' },
+    { id: 'm2', plate: 'MIX-202', capacityM3: 8, status: 'DISPONIBLE' },
+  ]);
+  const [concreteOrders, setConcreteOrders] = useState<ConcreteOrder[]>([]);
+  const [tanks, setTanks] = useState<DieselTank[]>([
+    { id: 't1', branchId: 'b1', name: 'Tanque Matriz', currentQty: 1500, maxCapacity: 5000 },
+    { id: 't2', branchId: 'b2', name: 'Almacén Norte Dsl', currentQty: 800, maxCapacity: 2000 }
+  ]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([
+    { id: 'v1', plate: 'MX-4455', description: 'Torton Kenworth #1', active: true },
+    { id: 'v2', plate: 'MX-9900', description: 'Plataforma Isuzu #2', active: true }
+  ]);
+  const [drivers, setDrivers] = useState<Driver[]>([
+    { id: 'd1', name: 'Pedro Sánchez', license: 'FED-10029', active: true },
+    { id: 'd2', name: 'Arturo Méndez', license: 'EST-99882', active: true }
+  ]);
+  const [dieselLogs, setDieselLogs] = useState<DieselLog[]>([]);
+
+  const handleLogin = (username: string) => {
+    const user = users.find(u => u.username === username);
+    if (user) {
+      setCurrentUser(user);
+      if (user.branchId) setSelectedBranchId(user.branchId);
+      setActiveTab('pos');
+    }
+  };
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+        <div className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md text-center animate-in zoom-in">
+          <span className="text-6xl block mb-6">⚒️</span>
+          <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter mb-8">GRUPO LOPAR</h1>
+          <div className="space-y-4">
+            {users.map(u => (
+              <button key={u.id} onClick={() => handleLogin(u.username)} className="w-full p-4 rounded-2xl border-2 border-slate-100 hover:border-orange-500 hover:bg-orange-50 transition-all flex items-center justify-between group">
+                <div className="text-left">
+                  <p className="font-bold text-slate-800">{u.name}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase">{u.role}</p>
+                </div>
+                <span>➡️</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'pos':
+        return <POSScreen customers={customers} setCustomers={setCustomers} products={products} setProducts={setProducts} conversions={conversions} selectedBranchId={selectedBranchId} sales={sales} setSales={setSales} currentUser={currentUser} />;
+      case 'purchases':
+        return <PurchasesScreen products={products} setProducts={setProducts} purchases={purchases} setPurchases={setPurchases} selectedBranchId={selectedBranchId} currentUser={currentUser} />;
+      case 'customers':
+        return <CustomerScreen customers={customers} setCustomers={setCustomers} payments={payments} setPayments={setPayments} sales={sales} currentUser={currentUser} />;
+      case 'inventory':
+        return <InventoryScreen products={products} setProducts={setProducts} selectedBranchId={selectedBranchId} currentUser={currentUser} />;
+      case 'branches':
+        return <BranchesScreen branches={branches} setBranches={setBranches} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} currentUser={currentUser} />;
+      case 'users':
+        return <UsersScreen users={users} setUsers={setUsers} branches={branches} />;
+      case 'concrete-ops':
+        return <ConcreteOps orders={concreteOrders} setOrders={setConcreteOrders} formulas={concreteFormulas} mixers={mixers} setMixers={setMixers} products={products} setProducts={setProducts} customers={customers} selectedBranchId={selectedBranchId} />;
+      case 'concrete-fleet':
+        return <ConcreteFleet mixers={mixers} setMixers={setMixers} orders={concreteOrders} setOrders={setConcreteOrders} />;
+      case 'diesel':
+        return <DieselScreen tanks={tanks} setTanks={setTanks} vehicles={vehicles} setVehicles={setVehicles} drivers={drivers} setDrivers={setDrivers} logs={dieselLogs} setLogs={setDieselLogs} currentUser={currentUser} selectedBranchId={selectedBranchId} />;
+      default:
+        return <POSScreen customers={customers} setCustomers={setCustomers} products={products} setProducts={setProducts} conversions={conversions} selectedBranchId={selectedBranchId} sales={sales} setSales={setSales} currentUser={currentUser} />;
+    }
+  };
+
+  return (
+    <Layout activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} branches={branches} onLogout={() => setCurrentUser(null)}>
+      {renderContent()}
+    </Layout>
+  );
+};
+
+export default App;

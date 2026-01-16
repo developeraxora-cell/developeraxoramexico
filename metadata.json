@@ -1,0 +1,7 @@
+{
+  "name": "POS FerreMateriales",
+  "description": "Sistema avanzado de punto de venta e inventarios para ferreterías con motor de conversión de unidades, control de acero por metros/piezas y venta a granel.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
