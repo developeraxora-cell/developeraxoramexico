@@ -1,4 +1,4 @@
-// Servicio de Supabase para FerrePOS
+// Servicio de Supabase para GRUPO LOPAR
 // Cliente configurado para conectar con la base de datos
 
 import { createClient } from '@supabase/supabase-js';
@@ -40,6 +40,7 @@ export interface VehicleDB {
     plate: string;
     description: string;
     active: boolean;
+    branch_id?: string;
     created_at: string;
     updated_at: string;
 }
@@ -49,6 +50,7 @@ export interface DriverDB {
     name: string;
     license: string;
     active: boolean;
+    branch_id?: string;
     created_at: string;
     updated_at: string;
 }
@@ -129,13 +131,12 @@ export const dieselTanksService = {
 // ============================================================================
 
 export const vehiclesService = {
-    // Obtener todos los vehículos
-    async getAll() {
-        const { data, error } = await supabase
-            .from('vehicles')
-            .select('*')
-            .order('description');
+    // Obtener todos los vehículos de una sucursal
+    async getAll(branchId?: string) {
+        let query = supabase.from('vehicles').select('*');
+        if (branchId) query = query.eq('branch_id', branchId);
 
+        const { data, error } = await query.order('description');
         if (error) throw error;
         return data as VehicleDB[];
     },
@@ -194,13 +195,12 @@ export const vehiclesService = {
 // ============================================================================
 
 export const driversService = {
-    // Obtener todos los conductores
-    async getAll() {
-        const { data, error } = await supabase
-            .from('drivers')
-            .select('*')
-            .order('name');
+    // Obtener todos los conductores de una sucursal
+    async getAll(branchId?: string) {
+        let query = supabase.from('drivers').select('*');
+        if (branchId) query = query.eq('branch_id', branchId);
 
+        const { data, error } = await query.order('name');
         if (error) throw error;
         return data as DriverDB[];
     },

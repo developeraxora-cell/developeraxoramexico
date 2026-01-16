@@ -5,13 +5,8 @@ import {
   vehiclesService,
   driversService,
   dieselLogsService,
-  analyticsService,
   subscriptions,
   supabase,
-  type DieselTankDB,
-  type VehicleDB,
-  type DriverDB,
-  type DieselLogDB
 } from '../../services/supabaseClient';
 
 interface DieselScreenProps {
@@ -28,36 +23,29 @@ interface DieselScreenProps {
 }
 
 const DieselTankContainer: React.FC<{ tank: DieselTank }> = ({ tank }) => {
-  const percent = (tank.currentQty / tank.maxCapacity) * 100;
-  const isCritical = percent < 15;
+  const percentage = (tank.currentQty / tank.maxCapacity) * 100;
+  const isCritical = percentage < 15;
 
   return (
-    <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-2xl transition-all duration-700 border-b-8 border-b-slate-900">
+    <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-2xl transition-all duration-700">
       <div className="flex justify-between items-start mb-8">
         <div>
           <span className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] mb-1 block">Depósito Estacionario</span>
-          <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{tank.name}</h3>
+          <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter font-outfit">{tank.name}</h3>
         </div>
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-inner ${isCritical ? 'bg-red-50 text-red-500 animate-pulse' : 'bg-slate-100 text-slate-400'}`}>
-          {isCritical ? '⚠️' : '⛽'}
+        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-xl shadow-inner border border-slate-100">
+          <span className="grayscale-0">⛽</span>
         </div>
       </div>
 
-      <div className="relative mx-auto w-48 h-64 bg-slate-100 rounded-[2.5rem] border-8 border-slate-900 overflow-hidden shadow-[inset_0_10px_30px_rgba(0,0,0,0.1)] group-hover:scale-105 transition-transform duration-500">
-        <div className="absolute right-3 inset-y-8 flex flex-col justify-between z-20 opacity-30">
-          {[100, 75, 50, 25, 0].map(val => (
-            <div key={val} className="flex items-center gap-2">
-              <span className="text-[7px] font-black text-slate-600">{val}%</span>
-              <div className="w-2 h-0.5 bg-slate-900"></div>
-            </div>
-          ))}
-        </div>
-
+      <div className="relative mx-auto w-48 h-72 bg-slate-100 rounded-[3rem] border-8 border-slate-900 overflow-hidden shadow-[inset_0_10px_30px_rgba(0,0,0,0.1)] group-hover:scale-105 transition-transform duration-500">
+        {/* Fill Background - Using the orange gradient from the screenshot */}
         <div
-          className={`absolute bottom-0 left-0 right-0 transition-all duration-[2000ms] ease-in-out bg-gradient-to-t ${isCritical ? 'from-red-600 to-red-400' : 'from-orange-600 to-amber-400'
+          className={`absolute bottom-0 left-0 right-0 transition-all duration-[2000ms] ease-in-out bg-gradient-to-t ${isCritical ? 'from-red-600 to-red-400' : 'from-orange-500 via-orange-400 to-amber-300'
             }`}
-          style={{ height: `${percent}%` }}
+          style={{ height: `${percentage}%` }}
         >
+          {/* Wave Effect Overlay */}
           <div className="absolute -top-5 left-0 w-[200%] h-10 opacity-30">
             <svg viewBox="0 0 120 28" className="w-full h-full animate-diesel-wave fill-current text-white">
               <path d="M0 15 Q30 0 60 15 T120 15 V28 H0 Z" />
@@ -65,13 +53,24 @@ const DieselTankContainer: React.FC<{ tank: DieselTank }> = ({ tank }) => {
           </div>
         </div>
 
+        {/* Overlay Progress Box */}
         <div className="absolute inset-0 flex flex-col items-center justify-center z-30 pointer-events-none">
           <div className="bg-slate-900/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-slate-700 shadow-2xl">
-            <p className={`text-2xl font-mono font-black ${isCritical ? 'text-red-400' : 'text-orange-400'}`}>
-              {percent.toFixed(1)}%
+            <p className="text-2xl font-mono font-black text-orange-400">
+              {percentage.toFixed(1)}%
             </p>
           </div>
-          <p className="text-[8px] font-black text-white/50 uppercase tracking-[0.3em] mt-2 shadow-sm">Sensor Activo</p>
+          <p className="text-[8px] font-black text-white/50 uppercase tracking-[0.3em] mt-2">Sensor Activo</p>
+        </div>
+
+        {/* Level Markers */}
+        <div className="absolute right-3 inset-y-12 flex flex-col justify-between z-20 opacity-20">
+          {[100, 75, 50, 25, 0].map(val => (
+            <div key={val} className="flex items-center gap-2">
+              <span className="text-[7px] font-black text-slate-900">{val}%</span>
+              <div className="w-2 h-0.5 bg-slate-900"></div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -81,7 +80,7 @@ const DieselTankContainer: React.FC<{ tank: DieselTank }> = ({ tank }) => {
           <p className="text-xl font-black text-slate-900">{tank.currentQty.toLocaleString()} <span className="text-xs text-slate-400">L</span></p>
         </div>
         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">CAPACIDAD</p>
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Capacidad</p>
           <p className="text-xl font-black text-slate-900">{tank.maxCapacity.toLocaleString()} <span className="text-xs text-slate-400">L</span></p>
         </div>
       </div>
@@ -101,27 +100,18 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
 
   const branchTanks = useMemo(() => tanks.filter(t => t.branchId === selectedBranchId), [tanks, selectedBranchId]);
 
-  // Form states
   const [cargaData, setCargaData] = useState({ tankId: '', vehicleId: '', driverId: '', amount: 0, odometer: 0, notes: '' });
   const [recepcionData, setRecepcionData] = useState({ tankId: '', amount: 0, costPerLiter: 22.50, supplier: '', invoiceNumber: '', notes: '' });
   const [newVehicle, setNewVehicle] = useState({ plate: '', description: '' });
   const [newDriver, setNewDriver] = useState({ name: '', license: '' });
 
-  // ============================================================================
-  // CARGA INICIAL DE DATOS
-  // ============================================================================
   useEffect(() => {
     loadAllData();
+  }, [selectedBranchId]);
 
-    // Suscribirse a cambios en tiempo real
-    const tanksChannel = subscriptions.subscribeTanks(() => {
-      loadTanks();
-    });
-
-    const logsChannel = subscriptions.subscribeLogs(() => {
-      loadLogs();
-    });
-
+  useEffect(() => {
+    const tanksChannel = subscriptions.subscribeTanks(() => loadTanks());
+    const logsChannel = subscriptions.subscribeLogs(() => loadLogs());
     return () => {
       tanksChannel.unsubscribe();
       logsChannel.unsubscribe();
@@ -143,41 +133,43 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
 
   const loadTanks = async () => {
     const data = await dieselTanksService.getAll();
-    const mappedTanks: DieselTank[] = data.map(t => ({
+    setTanks(data.map(t => ({
       id: t.id,
       branchId: t.branch_id,
       name: t.name,
       currentQty: Number(t.current_qty),
       maxCapacity: Number(t.max_capacity)
-    }));
-    setTanks(mappedTanks);
+    })));
   };
 
   const loadVehicles = async () => {
-    const data = await vehiclesService.getAll();
-    const mappedVehicles: Vehicle[] = data.map(v => ({
+    // Solo cargar vehículos de esta sucursal
+    const data = await vehiclesService.getAll(selectedBranchId);
+    setVehicles(data.map(v => ({
       id: v.id,
       plate: v.plate,
       description: v.description,
       active: v.active
-    }));
-    setVehicles(mappedVehicles);
+    })));
   };
 
   const loadDrivers = async () => {
-    const data = await driversService.getAll();
-    const mappedDrivers: Driver[] = data.map(d => ({
+    // Solo cargar operadores de esta sucursal
+    const data = await driversService.getAll(selectedBranchId);
+    setDrivers(data.map(d => ({
       id: d.id,
       name: d.name,
       license: d.license,
       active: d.active
-    }));
-    setDrivers(mappedDrivers);
+    })));
   };
 
   const loadLogs = async () => {
-    const data = await dieselLogsService.getAll(100);
-    const mappedLogs: DieselLog[] = data.map(l => ({
+    // Solo cargar logs de tanques que pertenecen a esta sucursal
+    const data = await dieselLogsService.getAll(200);
+    const branchTankIds = tanks.filter(t => t.branchId === selectedBranchId).map(t => t.id);
+
+    setLogs(data.map(l => ({
       id: l.id,
       type: l.type,
       tankId: l.tank_id,
@@ -192,8 +184,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
       userId: l.user_id,
       createdAt: new Date(l.created_at),
       notes: l.notes || undefined
-    }));
-    setLogs(mappedLogs);
+    })).filter(l => branchTankIds.includes(l.tankId)));
   };
 
   useEffect(() => {
@@ -204,165 +195,72 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
   }, [selectedBranchId, branchTanks]);
 
   const analytics = useMemo(() => {
-    const loads = logs.filter(l => l.type === 'CARGA');
-    const vehicleConsumption = vehicles.map(v => {
-      const total = loads.filter(l => l.vehicleId === v.id).reduce((acc, l) => acc + l.amount, 0);
-      return { ...v, total };
-    }).sort((a, b) => b.total - a.total).slice(0, 5);
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const currentBranchStock = branchTanks.reduce((acc, t) => acc + t.currentQty, 0);
-    const avgDaily = loads.length > 0 ? loads.reduce((acc, l) => acc + l.amount, 0) / 30 : 0;
+    const branchLogs = logs.filter(l => {
+      const logTank = tanks.find(t => t.id === l.tankId);
+      return logTank?.branchId === selectedBranchId;
+    });
 
-    return { vehicleConsumption, daysOfAutonomy: avgDaily > 0 ? Math.floor(currentBranchStock / avgDaily) : 'N/A' };
-  }, [logs, branchTanks, vehicles]);
+    const monthlySupplies = branchLogs
+      .filter(l => l.type === 'RECEPCION' && l.createdAt >= startOfMonth)
+      .reduce((acc, l) => acc + l.amount, 0);
 
-  // ============================================================================
-  // GESTIÓN DE VEHÍCULOS
-  // ============================================================================
+    const monthlyDispatches = branchLogs
+      .filter(l => l.type === 'CARGA' && l.createdAt >= startOfMonth)
+      .reduce((acc, l) => acc + l.amount, 0);
+
+    const totalCapacity = branchTanks.reduce((acc, t) => acc + t.maxCapacity, 0);
+    const currentQty = branchTanks.reduce((acc, t) => acc + t.currentQty, 0);
+    const globalStatus = totalCapacity > 0 ? (currentQty / totalCapacity) * 100 : 0;
+
+    return { globalStatus, monthlySupplies, monthlyDispatches };
+  }, [logs, branchTanks, tanks, selectedBranchId]);
+
   const handleAddVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null);
     try {
       await vehiclesService.create({
         plate: newVehicle.plate.toUpperCase(),
         description: newVehicle.description,
-        active: true
+        active: true,
+        branch_id: selectedBranchId
       });
       await loadVehicles();
       setIsAssetModalOpen(null);
       setNewVehicle({ plate: '', description: '' });
     } catch (err: any) {
-      console.error('Error creando vehículo:', err);
-      setError(err.message || 'Error al crear vehículo');
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const toggleVehicle = async (id: string) => {
-    setIsLoading(true);
-    try {
-      await vehiclesService.toggleActive(id);
-      await loadVehicles();
-    } catch (err: any) {
-      console.error('Error actualizando vehículo:', err);
-      setError(err.message || 'Error al actualizar vehículo');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // ============================================================================
-  // GESTIÓN DE CONDUCTORES
-  // ============================================================================
   const handleAddDriver = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null);
     try {
       await driversService.create({
         name: newDriver.name,
         license: newDriver.license.toUpperCase(),
-        active: true
+        active: true,
+        branch_id: selectedBranchId
       });
       await loadDrivers();
       setIsAssetModalOpen(null);
       setNewDriver({ name: '', license: '' });
     } catch (err: any) {
-      console.error('Error creando conductor:', err);
-      setError(err.message || 'Error al crear conductor');
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const toggleDriver = async (id: string) => {
-    setIsLoading(true);
-    try {
-      await driversService.toggleActive(id);
-      await loadDrivers();
-    } catch (err: any) {
-      console.error('Error actualizando conductor:', err);
-      setError(err.message || 'Error al actualizar conductor');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // ============================================================================
-  // LIMPIAR DATOS DE PRUEBA
-  // ============================================================================
-  const handleResetTestData = async () => {
-    const confirmReset = window.confirm(
-      '⚠️ ¿Estás seguro de limpiar TODOS los datos de prueba?\n\n' +
-      'Esto eliminará:\n' +
-      '• Todos los vehículos de prueba\n' +
-      '• Todos los conductores de prueba\n' +
-      '• Todo el historial de movimientos\n\n' +
-      'Los tanques NO se eliminarán, solo se restablecerán a su capacidad inicial.\n\n' +
-      '¿Continuar?'
-    );
-
-    if (!confirmReset) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Eliminar todos los logs
-      const { error: logsError } = await supabase
-        .from('diesel_logs')
-        .delete()
-        .not('id', 'is', null);
-
-      if (logsError) throw logsError;
-
-      // Eliminar todos los vehículos
-      const { error: vehiclesError } = await supabase
-        .from('vehicles')
-        .delete()
-        .not('id', 'is', null);
-
-      if (vehiclesError) throw vehiclesError;
-
-      // Eliminar todos los conductores
-      const { error: driversError } = await supabase
-        .from('drivers')
-        .delete()
-        .not('id', 'is', null);
-
-      if (driversError) throw driversError;
-
-      // Restablecer tanques a valores iniciales
-      await supabase
-        .from('diesel_tanks')
-        .update({ current_qty: 1500 })
-        .eq('name', 'TANQUE DEGOLLADO');
-
-      // Recargar todos los datos
-      await loadAllData();
-
-      alert('✅ Datos limpiados exitosamente.\n\nAhora puedes hacer pruebas desde cero.');
-    } catch (err: any) {
-      console.error('Error limpiando datos:', err);
-      alert(`❌ Error al limpiar datos: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // ============================================================================
-  // DESPACHO DE DIESEL
-  // ============================================================================
   const handleCarga = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cargaData.tankId) {
-      alert("❌ Error: Debes seleccionar un tanque.");
-      setIsLoading(false);
-      return;
-    }
-
+    setIsLoading(true);
     try {
       await dieselLogsService.processDispatch({
         tankId: cargaData.tankId,
@@ -373,36 +271,20 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
         userId: currentUser.id,
         notes: cargaData.notes || undefined
       });
-
-      // Recargar datos
       await Promise.all([loadTanks(), loadLogs()]);
-
       setIsCargaModalOpen(false);
-      // Mantener el tankId para el siguiente registro
       setCargaData(prev => ({ ...prev, amount: 0, odometer: 0, notes: '' }));
       alert("✅ Despacho exitoso.");
     } catch (err: any) {
-      console.error('Error en despacho:', err);
-      // Extraer mensaje de error de Postgres si existe
-      const errorMsg = err.details || err.message || 'Error desconocido';
-      alert(`❌ Error del Servidor: ${errorMsg}`);
+      alert(`❌ Error: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ============================================================================
-  // RECEPCIÓN DE DIESEL
-  // ============================================================================
   const handleRecepcion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recepcionData.tankId) {
-      alert("❌ Error: Debes seleccionar un tanque de destino.");
-      return;
-    }
-
     setIsLoading(true);
-    setError(null);
     try {
       await dieselLogsService.processReception({
         tankId: recepcionData.tankId,
@@ -413,244 +295,303 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
         userId: currentUser.id,
         notes: recepcionData.notes || undefined
       });
-
-      // Recargar datos
       await Promise.all([loadTanks(), loadLogs()]);
-
       setIsRecepcionModalOpen(false);
-      // Mantener el tankId para el siguiente registro pero limpiar lo demás
       setRecepcionData(prev => ({ ...prev, amount: 0, supplier: '', invoiceNumber: '', notes: '' }));
-      alert("✅ Recepción registrada exitosamente.");
+      alert("✅ Recepción registrada.");
     } catch (err: any) {
-      console.error('Error en recepción:', err);
-      // Extraer mensaje de error de Postgres si existe
-      const errorMsg = err.details || err.message || 'Error desconocido';
-      alert(`❌ Error del Servidor: ${errorMsg}`);
+      alert(`❌ Error: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetCalculations = async () => {
+    const confirmReset = window.confirm(
+      '⚠️ ¿Estás seguro de reiniciar los cálculos?\n\n' +
+      'Esto eliminará todo el historial de movimientos y reiniciará los niveles de tanque.\n' +
+      'LA FLOTA Y PERSONAL PERMANECERÁN INTACTOS.\n\n' +
+      '¿Continuar?'
+    );
+
+    if (!confirmReset) return;
+    setIsLoading(true);
+
+    try {
+      // 1. Eliminar todos los logs
+      const { error: logsError } = await supabase
+        .from('diesel_logs')
+        .delete()
+        .not('id', 'is', null);
+
+      if (logsError) throw logsError;
+
+      // 2. Restablecer niveles de tanques (2500L por defecto)
+      for (const tank of branchTanks) {
+        await supabase
+          .from('diesel_tanks')
+          .update({ current_qty: 2500 })
+          .eq('id', tank.id);
+      }
+
+      await loadAllData();
+      alert('✅ Cálculos y tanques reiniciados exitosamente.\nFlota y personal preservados.');
+    } catch (err: any) {
+      console.error('Error al reiniciar:', err);
+      alert(`❌ Error: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="bg-slate-50 min-h-screen pb-24 font-sans antialiased text-slate-900">
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
+        .font-outfit { font-family: 'Outfit', sans-serif; }
         @keyframes diesel-wave { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .animate-diesel-wave { animation: diesel-wave 4s linear infinite; }
       `}</style>
 
-      {/* Error Banner */}
-      {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-          <p className="text-red-700 text-sm font-bold">⚠️ {error}</p>
-        </div>
-      )}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* HEADER SECTION */}
+        <div className="py-10 flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-700">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center shadow-xl shadow-slate-200">
+              <span className="text-2xl">🔥</span>
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight font-outfit">Gestión de Diésel</h1>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Logística Nacional</p>
+            </div>
+          </div>
 
-      {/* Analytics Header */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-        <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Días de Autonomía</p>
-          <p className="text-3xl font-black text-slate-900">{analytics.daysOfAutonomy}</p>
+          {/* LOCATION SELECTOR (Desktop prominence) */}
+          <div className="hidden sm:block bg-white px-6 py-3 rounded-2xl border-2 border-orange-500 shadow-lg">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">🏢</span>
+              <p className="font-black text-sm uppercase">Matriz Centro</p>
+            </div>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unidades Activas</p>
-          <p className="text-3xl font-black text-slate-900">{vehicles.filter(v => v.active).length}</p>
+
+        {/* MOBILE LOCATION SELECTOR */}
+        <div className="sm:hidden mb-8 animate-in fade-in slide-in-from-bottom-2 duration-700 delay-100">
+          <div className="bg-white p-5 rounded-[2rem] border-2 border-orange-500 shadow-xl shadow-orange-100/50">
+            <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 px-1">Ubicación Activa</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🏢</span>
+                <p className="font-black text-sm uppercase">Matriz Centro</p>
+              </div>
+              <div className="w-10 h-10 bg-cyan-50 rounded-xl flex items-center justify-center text-cyan-500">
+                <span className="text-lg">🌐</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Operadores en Turno</p>
-          <p className="text-3xl font-black text-slate-900">{drivers.filter(d => d.active).length}</p>
+
+        {/* STATS GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="bg-white p-6 rounded-[2.5rem] shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-200">
+            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em] mb-1">Estatus Global</p>
+            <p className="text-4xl lg:text-5xl font-black font-outfit">{analytics.globalStatus.toFixed(1)}%</p>
+          </div>
+          <div className="bg-white p-6 rounded-[2.5rem] shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-300">
+            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em] mb-1">Suministros (Mes)</p>
+            <p className="text-4xl lg:text-5xl font-black font-outfit text-blue-600">+{analytics.monthlySupplies.toLocaleString()} L</p>
+          </div>
+          <div className="bg-white p-6 rounded-[2.5rem] shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-400">
+            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em] mb-1">Despachos (Mes)</p>
+            <p className="text-4xl lg:text-5xl font-black font-outfit text-orange-600">-{analytics.monthlyDispatches.toLocaleString()} L</p>
+          </div>
         </div>
-        <div className="bg-slate-900 p-5 rounded-3xl shadow-xl flex items-center justify-center">
-          <button onClick={() => setIsCargaModalOpen(true)} className="w-full h-full text-white font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2" disabled={isLoading}>
-            <span>⛽</span> Nuevo Despacho
-          </button>
-        </div>
-        <div className="bg-blue-600 p-5 rounded-3xl shadow-xl flex items-center justify-center">
-          <button onClick={() => setIsRecepcionModalOpen(true)} className="w-full h-full text-white font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2" disabled={isLoading}>
-            <span>🚚</span> Recibir Combustible
-          </button>
-        </div>
-        <div className="bg-red-600 p-5 rounded-3xl shadow-xl flex items-center justify-center">
+
+        {/* PRIMARY ACTIONS GRID */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">
           <button
-            onClick={handleResetTestData}
-            className="w-full h-full text-white font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-red-700 transition-colors"
-            disabled={isLoading}
-            title="Limpia vehículos, conductores y logs de prueba"
+            onClick={() => setIsRecepcionModalOpen(true)}
+            className="group bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-3xl flex items-center justify-center gap-4 shadow-xl shadow-blue-200 transition-all active:scale-95 duration-300"
           >
-            <span>🗑️</span> Limpiar Datos
+            <span className="text-2xl group-hover:scale-110 transition-transform">🚚</span>
+            <div className="text-left">
+              <span className="block text-[10px] font-black uppercase tracking-widest opacity-70">Recibir Diésel</span>
+              <span className="text-sm font-black uppercase">Registrar Entrada</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setIsCargaModalOpen(true)}
+            className="group bg-slate-900 hover:bg-black text-white p-6 rounded-3xl flex items-center justify-center gap-4 shadow-xl shadow-slate-300 transition-all active:scale-95 duration-300"
+          >
+            <span className="text-2xl group-hover:scale-110 transition-transform">⛽</span>
+            <div className="text-left">
+              <span className="block text-[10px] font-black uppercase tracking-widest opacity-70">Despachar Diésel</span>
+              <span className="text-sm font-black uppercase">Nueva Carga</span>
+            </div>
           </button>
         </div>
-      </div>
 
-      {/* View Switcher Sticky */}
-      <div className="sticky top-[-1px] z-20 flex bg-white/95 backdrop-blur-md p-2 rounded-2xl border border-slate-200 gap-2 shadow-md">
-        {(['status', 'logs', 'assets'] as const).map(v => (
-          <button
-            key={v}
-            onClick={() => setActiveView(v)}
-            className={`flex-1 py-3 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all ${activeView === v ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
-          >
-            {v === 'status' ? 'Niveles' : v === 'logs' ? 'Historial' : 'Flota'}
-          </button>
-        ))}
-      </div>
+        {/* Navigation Tabs (Centered for Desktop) */}
+        <div className="flex justify-center mb-8 sticky top-4 z-20">
+          <div className="bg-white/90 backdrop-blur-md p-2 rounded-[2.5rem] flex shadow-xl border border-slate-100 w-full max-w-2xl">
+            {[
+              { id: 'status', label: 'Niveles de Tanque' },
+              { id: 'logs', label: 'Historial Completo' },
+              { id: 'assets', label: 'Flota y Personal' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveView(tab.id as any)}
+                className={`flex-1 py-4 px-2 sm:px-6 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeView === tab.id
+                  ? 'bg-slate-900 text-white shadow-lg'
+                  : 'text-slate-400 hover:bg-slate-50'
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-      {activeView === 'status' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in">
-          {branchTanks.map(tank => <DieselTankContainer key={tank.id} tank={tank} />)}
-          <div className="bg-slate-900 rounded-[3rem] p-8 text-white flex flex-col">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-400 mb-6">Unidades de Alto Consumo</h3>
+        {/* CONTENT AREA GRID */}
+        <div className="pb-20">
+          {activeView === 'status' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4">
+              {branchTanks.map(tank => <DieselTankContainer key={tank.id} tank={tank} />)}
+              {branchTanks.length === 0 && (
+                <div className="col-span-full bg-white p-12 rounded-[3rem] border-2 border-dashed border-slate-200 text-center">
+                  <p className="text-slate-400 font-bold">No hay tanques registrados en esta ubicación.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeView === 'logs' && (
             <div className="space-y-6">
-              {analytics.vehicleConsumption.map(v => (
-                <div key={v.id}>
-                  <div className="flex justify-between text-[10px] font-bold uppercase mb-1">
-                    <span>{v.description}</span>
-                    <span className="text-orange-400">{v.total} L</span>
-                  </div>
-                  <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-orange-500" style={{ width: `${(v.total / (analytics.vehicleConsumption[0].total || 1)) * 100}%` }}></div>
+              <div className="flex justify-between items-center px-4">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logs de Movimientos</h3>
+                <button
+                  onClick={handleResetCalculations}
+                  disabled={isLoading}
+                  className="px-4 py-2 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-red-200 hover:bg-red-600 transition-all active:scale-95"
+                >
+                  {isLoading ? 'Reiniciando...' : 'Reiniciar Cálculos'}
+                </button>
+              </div>
+              <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[600px]">
+                    <thead className="bg-slate-900 text-white text-[9px] font-black uppercase tracking-[0.2em]">
+                      <tr>
+                        <th className="p-6">Fecha</th>
+                        <th className="p-6">Tipo</th>
+                        <th className="p-6">Detalle / Proveedor</th>
+                        <th className="p-6 text-right">Cantidad</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {logs.filter(l => branchTanks.some(t => t.id === l.tankId)).map(log => (
+                        <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-6 text-xs text-slate-500 font-bold">{log.createdAt.toLocaleDateString()}</td>
+                          <td className="p-6">
+                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${log.type === 'CARGA' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
+                              {log.type === 'CARGA' ? 'Salida' : 'Entrada'}
+                            </span>
+                          </td>
+                          <td className="p-6">
+                            <p className="text-sm font-black text-slate-800 uppercase">
+                              {log.type === 'CARGA' ? vehicles.find(v => v.id === log.vehicleId)?.description : log.supplier}
+                            </p>
+                          </td>
+                          <td className="p-6 text-right font-black text-sm">{log.amount.toLocaleString()} L</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeView === 'assets' && (
+            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4">
+              <div className="flex justify-end px-4">
+                <button
+                  onClick={handleResetCalculations}
+                  disabled={isLoading}
+                  className="px-6 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-red-600 transition-all active:scale-95"
+                >
+                  {isLoading ? 'Reiniciando...' : 'Reiniciar Historial de Logística'}
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-6">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 ml-2">Flota Activa</h3>
+                  <div className="space-y-3">
+                    {vehicles.map(v => (
+                      <div key={v.id} className="bg-white p-5 rounded-3xl border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-xl">🚛</div>
+                          <div>
+                            <p className="text-sm font-black">{v.description}</p>
+                            <p className="text-[10px] font-mono text-orange-600 font-bold tracking-wider">{v.plate}</p>
+                          </div>
+                        </div>
+                        <div className={`px-3 py-1 rounded-full text-[8px] font-black ${v.active ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-300'}`}>
+                          {v.active ? 'ACTIVO' : 'INACTIVO'}
+                        </div>
+                      </div>
+                    ))}
+                    <button onClick={() => setIsAssetModalOpen('vehicle')} className="w-full py-4 bg-slate-100 text-slate-500 rounded-3xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-200 hover:bg-slate-200 transition-colors">+ Añadir Unidad</button>
                   </div>
                 </div>
-              ))}
+
+                <div className="space-y-6">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 ml-2">Operadores Registrados</h3>
+                  <div className="space-y-3">
+                    {drivers.map(d => (
+                      <div key={d.id} className="bg-white p-5 rounded-3xl border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-xl">👷</div>
+                          <div>
+                            <p className="text-sm font-black">{d.name}</p>
+                            <p className="text-[10px] font-mono text-blue-600 tracking-wider font-bold">{d.license}</p>
+                          </div>
+                        </div>
+                        <div className={`px-3 py-1 rounded-full text-[8px] font-black ${d.active ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-300'}`}>
+                          {d.active ? 'OPERANDO' : 'INACTIVO'}
+                        </div>
+                      </div>
+                    ))}
+                    <button onClick={() => setIsAssetModalOpen('driver')} className="w-full py-4 bg-slate-100 text-slate-500 rounded-3xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-200 hover:bg-slate-200 transition-colors">+ Añadir Operador</button>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
-      {activeView === 'assets' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-bottom-4">
-          {/* VEHICLES SECTION */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center px-4">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500">Unidades de Transporte</h3>
-              <button onClick={() => setIsAssetModalOpen('vehicle')} className="bg-slate-900 text-white p-2 rounded-lg text-xs" disabled={isLoading}>+</button>
-            </div>
-            <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                  <tr>
-                    <th className="p-4">Unidad</th>
-                    <th className="p-4">Placa</th>
-                    <th className="p-4 text-center">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {vehicles.map(v => (
-                    <tr key={v.id} className="hover:bg-slate-50 transition-colors group">
-                      <td className="p-4 font-bold text-slate-800 text-xs">{v.description}</td>
-                      <td className="p-4 font-mono text-xs text-orange-600 font-black">{v.plate}</td>
-                      <td className="p-4 text-center">
-                        <button
-                          onClick={() => toggleVehicle(v.id)}
-                          disabled={isLoading}
-                          className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-tighter transition-all ${v.active ? 'bg-green-100 text-green-600 shadow-[0_0_10px_rgba(34,197,94,0.2)]' : 'bg-slate-100 text-slate-400'}`}
-                        >
-                          {v.active ? 'Activo' : 'Inactivo'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* DRIVERS SECTION */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center px-4">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500">Cuerpo de Operadores</h3>
-              <button onClick={() => setIsAssetModalOpen('driver')} className="bg-slate-900 text-white p-2 rounded-lg text-xs" disabled={isLoading}>+</button>
-            </div>
-            <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                  <tr>
-                    <th className="p-4">Nombre</th>
-                    <th className="p-4">Licencia</th>
-                    <th className="p-4 text-center">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {drivers.map(d => (
-                    <tr key={d.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-4 font-bold text-slate-800 text-xs">{d.name}</td>
-                      <td className="p-4 font-mono text-xs text-blue-600">{d.license}</td>
-                      <td className="p-4 text-center">
-                        <button
-                          onClick={() => toggleDriver(d.id)}
-                          disabled={isLoading}
-                          className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-tighter transition-all ${d.active ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}
-                        >
-                          {d.active ? 'Disponible' : 'Baja'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeView === 'logs' && (
-        <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-900 text-white text-[9px] font-black uppercase tracking-[0.2em]">
-              <tr>
-                <th className="p-5">Fecha</th>
-                <th className="p-5">Tipo</th>
-                <th className="p-5">Unidad / Suministro</th>
-                <th className="p-5 text-right">Litros</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {logs.map(log => (
-                <tr key={log.id} className="hover:bg-slate-50">
-                  <td className="p-5 text-[10px] text-slate-500 font-bold">{log.createdAt.toLocaleString()}</td>
-                  <td className="p-5">
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter flex items-center gap-1 w-fit ${log.type === 'CARGA' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
-                      {log.type === 'CARGA' ? (
-                        <><span>⬇️</span> SALIDA</>
-                      ) : (
-                        <><span>⬆️</span> ENTRADA</>
-                      )}
-                    </span>
-                  </td>
-                  <td className="p-5">
-                    <p className="text-xs font-black text-slate-800 uppercase">
-                      {log.type === 'CARGA' ? vehicles.find(v => v.id === log.vehicleId)?.description : log.supplier}
-                    </p>
-                    {log.type === 'CARGA' && <p className="text-[9px] font-mono text-slate-400">KM: {log.odometerReading}</p>}
-                    {log.type === 'RECEPCION' && <p className="text-[9px] font-mono text-slate-400">Factura: {log.invoiceNumber}</p>}
-                  </td>
-                  <td className="p-5 text-right font-black text-slate-900">{log.amount.toLocaleString()} L</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* MODAL DESPACHO */}
+      {/* MODALS */}
       {isCargaModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in my-auto">
+          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in my-auto">
             <div className="bg-orange-500 p-8 text-white flex justify-between items-center shadow-lg shadow-orange-500/20">
               <h3 className="text-xl font-black uppercase tracking-tighter">Despachar Diésel</h3>
               <button onClick={() => setIsCargaModalOpen(false)} className="bg-white/10 w-10 h-10 rounded-xl text-xl font-black">×</button>
             </div>
-            <form onSubmit={handleCarga} className="p-8 space-y-6">
+            <form onSubmit={handleCarga} className="p-8 space-y-5">
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tanque de Origen</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tanque</label>
                 <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-2xl outline-none font-black text-xs uppercase appearance-none" value={cargaData.tankId} onChange={e => setCargaData({ ...cargaData, tankId: e.target.value })}>
-                  <option value="">Seleccionar Tanque...</option>
+                  <option value="">Seleccionar...</option>
                   {branchTanks.map(tank => <option key={tank.id} value={tank.id}>{tank.name} ({tank.currentQty} L)</option>)}
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidad de Transporte (Activa)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidad</label>
                 <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-2xl outline-none font-black text-xs uppercase appearance-none" value={cargaData.vehicleId} onChange={e => setCargaData({ ...cargaData, vehicleId: e.target.value })}>
-                  <option value="">Seleccionar Unidad...</option>
+                  <option value="">Seleccionar...</option>
                   {vehicles.filter(v => v.active).map(v => <option key={v.id} value={v.id}>{v.description} - {v.plate}</option>)}
                 </select>
               </div>
@@ -660,18 +601,18 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                   <input type="number" required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-2xl font-black text-center text-lg" value={cargaData.amount || ''} onChange={e => setCargaData({ ...cargaData, amount: Number(e.target.value) })} />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Km Actual</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Km</label>
                   <input type="number" required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-2xl font-black text-center text-lg text-orange-600" value={cargaData.odometer || ''} onChange={e => setCargaData({ ...cargaData, odometer: Number(e.target.value) })} />
                 </div>
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Operador</label>
                 <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-2xl outline-none font-black text-xs uppercase appearance-none" value={cargaData.driverId} onChange={e => setCargaData({ ...cargaData, driverId: e.target.value })}>
-                  <option value="">Seleccionar Operador...</option>
+                  <option value="">Seleccionar...</option>
                   {drivers.filter(d => d.active).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
-              <button type="submit" disabled={isLoading} className="w-full py-5 bg-slate-900 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[10px] hover:bg-orange-600 transition-colors disabled:opacity-50">
+              <button type="submit" disabled={isLoading} className="w-full py-5 bg-slate-900 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[10px] hover:bg-orange-600 transition-colors">
                 {isLoading ? 'Procesando...' : 'Validar y Cargar'}
               </button>
             </form>
@@ -679,19 +620,18 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
         </div>
       )}
 
-      {/* MODAL RECEPCIÓN */}
       {isRecepcionModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in my-auto">
+          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in my-auto">
             <div className="bg-blue-600 p-8 text-white flex justify-between items-center shadow-lg shadow-blue-600/20">
               <h3 className="text-xl font-black uppercase tracking-tighter">Recibir Combustible</h3>
               <button onClick={() => setIsRecepcionModalOpen(false)} className="bg-white/10 w-10 h-10 rounded-xl text-xl font-black">×</button>
             </div>
-            <form onSubmit={handleRecepcion} className="p-8 space-y-6">
+            <form onSubmit={handleRecepcion} className="p-8 space-y-5">
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tanque de Destino</label>
                 <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-black text-xs uppercase appearance-none" value={recepcionData.tankId} onChange={e => setRecepcionData({ ...recepcionData, tankId: e.target.value })}>
-                  <option value="">Seleccionar Tanque...</option>
+                  <option value="">Seleccionar...</option>
                   {branchTanks.map(tank => <option key={tank.id} value={tank.id}>{tank.name}</option>)}
                 </select>
               </div>
@@ -709,19 +649,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                   <input type="number" step="0.01" required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-black text-center text-lg text-blue-600" value={recepcionData.costPerLiter || ''} onChange={e => setRecepcionData({ ...recepcionData, costPerLiter: Number(e.target.value) })} />
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Número de Factura</label>
-                <input type="text" required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-mono text-sm text-center" value={recepcionData.invoiceNumber} onChange={e => setRecepcionData({ ...recepcionData, invoiceNumber: e.target.value })} placeholder="FC-0000" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Notas (Opcional)</label>
-                <textarea className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-2xl text-sm resize-none" rows={2} value={recepcionData.notes} onChange={e => setRecepcionData({ ...recepcionData, notes: e.target.value })} placeholder="Observaciones adicionales..." />
-              </div>
-              <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Total a Pagar</p>
-                <p className="text-2xl font-black text-blue-600">${(recepcionData.amount * recepcionData.costPerLiter).toFixed(2)} MXN</p>
-              </div>
-              <button type="submit" disabled={isLoading} className="w-full py-5 bg-slate-900 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[10px] hover:bg-blue-600 transition-colors disabled:opacity-50">
+              <button type="submit" disabled={isLoading} className="w-full py-5 bg-slate-900 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[10px] hover:bg-blue-600 transition-colors">
                 {isLoading ? 'Procesando...' : 'Registrar Recepción'}
               </button>
             </form>
@@ -729,29 +657,24 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
         </div>
       )}
 
-      {/* MODAL ADD ASSET (VEHICLE / DRIVER) */}
       {isAssetModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in my-auto">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
               <h3 className="text-lg font-black uppercase tracking-tighter">Nuevo {isAssetModalOpen === 'vehicle' ? 'Vehículo' : 'Operador'}</h3>
-              <button onClick={() => setIsAssetModalOpen(null)} className="text-2xl">&times;</button>
+              <button onClick={() => setIsAssetModalOpen(null)} className="text-2xl font-black">&times;</button>
             </div>
             {isAssetModalOpen === 'vehicle' ? (
               <form onSubmit={handleAddVehicle} className="p-8 space-y-4">
-                <input required placeholder="Placas (Ej. MX-8899)" className="w-full p-4 bg-slate-50 rounded-xl font-black text-sm uppercase tracking-widest outline-none border-2 border-transparent focus:border-orange-500" value={newVehicle.plate} onChange={e => setNewVehicle({ ...newVehicle, plate: e.target.value })} />
-                <input required placeholder="Descripción (Ej. Torton Kenworth #5)" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-orange-500" value={newVehicle.description} onChange={e => setNewVehicle({ ...newVehicle, description: e.target.value })} />
-                <button type="submit" disabled={isLoading} className="w-full py-4 bg-orange-500 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-lg disabled:opacity-50">
-                  {isLoading ? 'Registrando...' : 'Registrar Unidad'}
-                </button>
+                <input required placeholder="PLACA (EX. KW-22-MX)" className="w-full p-4 bg-slate-50 rounded-xl font-black text-xs uppercase appearance-none border-2 border-transparent focus:border-orange-500 outline-none" value={newVehicle.plate} onChange={e => setNewVehicle({ ...newVehicle, plate: e.target.value })} />
+                <input required placeholder="DESCRIPCIÓN" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-sm border-2 border-transparent focus:border-orange-500 outline-none" value={newVehicle.description} onChange={e => setNewVehicle({ ...newVehicle, description: e.target.value })} />
+                <button type="submit" disabled={isLoading} className="w-full py-4 bg-orange-500 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-lg">AGREGAR UNIDAD</button>
               </form>
             ) : (
               <form onSubmit={handleAddDriver} className="p-8 space-y-4">
-                <input required placeholder="Nombre Completo" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-orange-500" value={newDriver.name} onChange={e => setNewDriver({ ...newDriver, name: e.target.value })} />
-                <input required placeholder="Licencia / Identificador" className="w-full p-4 bg-slate-50 rounded-xl font-mono text-sm outline-none border-2 border-transparent focus:border-orange-500" value={newDriver.license} onChange={e => setNewDriver({ ...newDriver, license: e.target.value })} />
-                <button type="submit" disabled={isLoading} className="w-full py-4 bg-blue-600 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-lg disabled:opacity-50">
-                  {isLoading ? 'Registrando...' : 'Registrar Operador'}
-                </button>
+                <input required placeholder="NOMBRE COMPLETO" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-sm border-2 border-transparent focus:border-orange-500 outline-none" value={newDriver.name} onChange={e => setNewDriver({ ...newDriver, name: e.target.value })} />
+                <input required placeholder="LICENCIA / ID" className="w-full p-4 bg-slate-50 rounded-xl font-mono text-sm border-2 border-transparent focus:border-orange-500 outline-none" value={newDriver.license} onChange={e => setNewDriver({ ...newDriver, license: e.target.value })} />
+                <button type="submit" disabled={isLoading} className="w-full py-4 bg-blue-600 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-lg">AGREGAR OPERADOR</button>
               </form>
             )}
           </div>

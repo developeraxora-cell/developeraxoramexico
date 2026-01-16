@@ -88,7 +88,7 @@ const Layout: React.FC<LayoutProps> = ({
               <span className="text-2xl">⚒️</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-black leading-none tracking-tighter">FerrePOS</span>
+              <span className="text-xl font-black leading-none tracking-tighter">GRUPO LOPAR</span>
               <span className="text-[9px] text-orange-500 font-bold uppercase tracking-widest mt-1 italic">Industrial OS</span>
             </div>
           </div>
@@ -143,6 +143,39 @@ const Layout: React.FC<LayoutProps> = ({
               </p>
             </div>
           </div>
+
+          {currentUser.role === Role.ADMIN && (
+            <div className="mb-6 p-4 bg-red-500/5 rounded-2xl border border-red-500/20">
+              <p className="text-[8px] font-black text-red-500 uppercase tracking-[0.2em] mb-3 px-1">Administración Principal</p>
+              <button
+                onClick={async () => {
+                  const confirmReset = window.confirm('⚠️ MODO PRUEBA: ¿Reiniciar TODA la logística (Logs y Tanques)?\nVehículos y choferes NO se borrarán.');
+                  if (!confirmReset) return;
+                  try {
+                    const { createClient } = await import('@supabase/supabase-js');
+                    const supabase = createClient(
+                      'https://ojizyrjgutnvqjbbyons.supabase.co',
+                      'sb_publishable_7BCr1_lp-TJQ8D9NzwaDqw_aacm1Zdc'
+                    );
+
+                    // Borrar logs
+                    await supabase.from('diesel_logs').delete().not('id', 'is', null);
+                    // Reset tanques
+                    await supabase.from('diesel_tanks').update({ current_qty: 2500 }).not('id', 'is', null);
+
+                    alert('✅ Logística reiniciada (Modo Prueba).');
+                    window.location.reload();
+                  } catch (err: any) {
+                    alert('Error: ' + err.message);
+                  }
+                }}
+                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white transition-all rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-red-600/20 active:scale-95"
+              >
+                🚀 Reset Logística (Prueba)
+              </button>
+            </div>
+          )}
+
           <button
             onClick={onLogout}
             className="w-full py-4 bg-slate-800 hover:bg-red-500/10 hover:text-red-500 transition-all rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 border border-transparent hover:border-red-500/20"

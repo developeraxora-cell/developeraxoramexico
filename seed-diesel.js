@@ -6,16 +6,17 @@ const supabaseAnonKey = 'sb_publishable_7BCr1_lp-TJQ8D9NzwaDqw_aacm1Zdc';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function seed() {
-    console.log('🌱 Iniciando restauración de datos de simulación...');
+    console.log('🌱 Iniciando carga de datos MAESTROS (Logística Estable)...');
 
-    // 1. Restaurar Vehículos
+    // 1. Vehículos Profesionales
     const vehicles = [
-        { plate: 'KW-22-MX', description: 'Camión Kenworth #22', active: true },
-        { plate: 'FL-05-TX', description: 'Torton Freightliner #05', active: true },
-        { plate: 'IZ-10-PZ', description: 'Camioneta Isuzu #10', active: true }
+        { plate: 'KW-22-MX', description: 'Kenworth T680 - Unidad #22', active: true },
+        { plate: 'FL-05-TX', description: 'Freightliner Cascadia - Unidad #05', active: true },
+        { plate: 'IZ-10-PZ', description: 'Isuzu Forward 800 - Unidad #10', active: true },
+        { plate: 'VL-15-RH', description: 'Volvo VNL - Unidad #15', active: true }
     ];
 
-    console.log('🚚 Restaurando vehículos...');
+    console.log('🚚 Cargando flota...');
     for (const v of vehicles) {
         const { data, error } = await supabase
             .from('vehicles')
@@ -23,17 +24,18 @@ async function seed() {
             .select();
 
         if (error) console.error(`❌ Error con vehículo ${v.plate}:`, error.message);
-        else console.log(`✅ Vehículo listo: ${data[0].description}`);
+        else console.log(`✅ Unidad estable: ${data[0].description}`);
     }
 
-    // 2. Restaurar Operadores
+    // 2. Operadores Certificados
     const drivers = [
-        { name: 'Juan Pérez', license: 'FED-12345', active: true },
-        { name: 'Carlos Rodríguez', license: 'ST-98765', active: true },
-        { name: 'Roberto Gómez', license: 'OP-45678', active: true }
+        { name: 'Juan Alberto Pérez', license: 'FED-12345678', active: true },
+        { name: 'Carlos Mario Rodríguez', license: 'ST-98765432', active: true },
+        { name: 'Roberto J. Gómez', license: 'OP-45678901', active: true },
+        { name: 'Miguel Ángel Torres', license: 'TX-55443322', active: true }
     ];
 
-    console.log('\n👷 Restaurando operadores...');
+    console.log('\n👷 Cargando operadores...');
     for (const d of drivers) {
         const { data, error } = await supabase
             .from('drivers')
@@ -41,34 +43,32 @@ async function seed() {
             .select();
 
         if (error) console.error(`❌ Error con operador ${d.name}:`, error.message);
-        else console.log(`✅ Operador listo: ${data[0].name}`);
+        else console.log(`✅ Operador activo: ${data[0].name}`);
     }
 
-    // 3. Verificar Tanque
+    // 3. Verificación de Tanques (Asegurar que existan)
     console.log('\n⛽ Verificando tanques...');
     const { data: tanks, error: tankError } = await supabase
         .from('diesel_tanks')
         .select('*');
 
     if (tankError) {
-        console.error('❌ Error cargando tanques:', tankError.message);
+        console.error('❌ Error:', tankError.message);
     } else if (tanks.length === 0) {
-        console.log('⚠️ No hay tanques. Creando Tanque Degollado...');
+        console.log('⚠️ Creando Tanque Principal...');
         const { error: createError } = await supabase
             .from('diesel_tanks')
-            .insert({
-                name: 'TANQUE DEGOLLADO',
-                current_qty: 1500,
-                max_capacity: 5000,
-                branch_id: 'default-branch' // O el ID real si se conoce
-            });
-        if (createError) console.error('❌ Error creando tanque:', createError.message);
-        else console.log('✅ Tanque Degollado creado.');
+            .insert([
+                { name: 'Tanque Matriz 01', current_qty: 3500, max_capacity: 5000, branch_id: 'default-branch' },
+                { name: 'Reserva Emergencia', current_qty: 1200, max_capacity: 2500, branch_id: 'default-branch' }
+            ]);
+        if (createError) console.error('❌ Error creando tanques:', createError.message);
+        else console.log('✅ Tanques principales creados.');
     } else {
-        console.log(`✅ ${tanks.length} tanques detectados.`);
+        console.log(`✅ ${tanks.length} tanques operativos detectados.`);
     }
 
-    console.log('\n✨ Restauración completada exitosamente.');
+    console.log('\n✨ Base de datos de logística optimizada y estable.');
 }
 
 seed();
