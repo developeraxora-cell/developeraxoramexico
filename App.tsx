@@ -11,6 +11,15 @@ import BranchesScreen from './components/Branches/BranchesScreen';
 import ConcreteOps from './components/Concrete/ConcreteOps';
 import ConcreteFormulas from './components/Concrete/ConcreteFormulas';
 import ConcreteFleet from './components/Concrete/ConcreteFleet';
+import {
+  dieselLogsService,
+  subscriptions,
+  supabase,
+  productsService,
+  customersService,
+  salesService,
+  concreteService
+} from './services/supabaseClient';
 import { INITIAL_CUSTOMERS, INITIAL_PRODUCTS, INITIAL_CONVERSIONS, INITIAL_USERS, INITIAL_BRANCHES } from './constants';
 import { Customer, Product, ProductConversion, User, Role, Branch, CustomerPayment, DieselTank, Vehicle, Driver, DieselLog, ConcreteFormula, MixerTruck, ConcreteOrder, Sale, Purchase } from './types';
 
@@ -23,60 +32,24 @@ const App: React.FC = () => {
   });
   const [selectedBranchId, setSelectedBranchId] = useState<string>(INITIAL_BRANCHES[0].id);
 
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('lopar_users');
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
-  });
-  const [customers, setCustomers] = useState<Customer[]>(() => {
-    const saved = localStorage.getItem('lopar_customers');
-    return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
-  });
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('lopar_products');
-    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
-  });
+  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+  const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [conversions, setConversions] = useState<ProductConversion[]>(INITIAL_CONVERSIONS);
-  const [payments, setPayments] = useState<CustomerPayment[]>(() => {
-    const saved = localStorage.getItem('lopar_payments');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [sales, setSales] = useState<Sale[]>(() => {
-    const saved = localStorage.getItem('lopar_sales');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return parsed.map((s: any) => ({ ...s, date: new Date(s.date) }));
-    }
-    return [];
-  });
-  const [purchases, setPurchases] = useState<Purchase[]>(() => {
-    const saved = localStorage.getItem('lopar_purchases');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return parsed.map((p: any) => ({ ...p, date: new Date(p.date) }));
-    }
-    return [];
-  });
+  const [payments, setPayments] = useState<CustomerPayment[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
 
   // Estados de Concretera y Diesel
   const [concreteFormulas, setConcreteFormulas] = useState<ConcreteFormula[]>([
     { id: 'f1', name: "f'c 250", description: "Estructural", materials: [{ productId: 'p1', qtyPerM3: 350 }, { productId: 'p3', qtyPerM3: 850 }] },
     { id: 'f2', name: "f'c 150", description: "Firmes", materials: [{ productId: 'p1', qtyPerM3: 250 }, { productId: 'p3', qtyPerM3: 950 }] }
   ]);
-  const [mixers, setMixers] = useState<MixerTruck[]>(() => {
-    const saved = localStorage.getItem('lopar_mixers');
-    return saved ? JSON.parse(saved) : [
-      { id: 'm1', plate: 'MIX-101', capacityM3: 7, status: 'DISPONIBLE' },
-      { id: 'm2', plate: 'MIX-202', capacityM3: 8, status: 'DISPONIBLE' },
-    ];
-  });
-  const [concreteOrders, setConcreteOrders] = useState<ConcreteOrder[]>(() => {
-    const saved = localStorage.getItem('lopar_concrete_orders');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return parsed.map((o: any) => ({ ...o, scheduledDate: new Date(o.scheduledDate) }));
-    }
-    return [];
-  });
+  const [mixers, setMixers] = useState<MixerTruck[]>([
+    { id: 'm1', plate: 'MIX-101', capacityM3: 7, status: 'DISPONIBLE' },
+    { id: 'm2', plate: 'MIX-202', capacityM3: 8, status: 'DISPONIBLE' },
+  ]);
+  const [concreteOrders, setConcreteOrders] = useState<ConcreteOrder[]>([]);
   const [tanks, setTanks] = useState<DieselTank[]>([
     { id: 't1', branchId: 'b1', name: 'Tanque Matriz', currentQty: 1500, maxCapacity: 5000 },
     { id: 't2', branchId: 'b2', name: 'Almacén Norte Dsl', currentQty: 800, maxCapacity: 2000 }
@@ -91,20 +64,51 @@ const App: React.FC = () => {
   ]);
   const [dieselLogs, setDieselLogs] = useState<DieselLog[]>([]);
 
-  // Persistencia de estados
-  useEffect(() => { localStorage.setItem('lopar_branches', JSON.stringify(branches)); }, [branches]);
-  useEffect(() => { localStorage.setItem('lopar_users', JSON.stringify(users)); }, [users]);
-  useEffect(() => { localStorage.setItem('lopar_customers', JSON.stringify(customers)); }, [customers]);
-  useEffect(() => { localStorage.setItem('lopar_products', JSON.stringify(products)); }, [products]);
-  useEffect(() => { localStorage.setItem('lopar_payments', JSON.stringify(payments)); }, [payments]);
-  useEffect(() => { localStorage.setItem('lopar_sales', JSON.stringify(sales)); }, [sales]);
-  useEffect(() => { localStorage.setItem('lopar_purchases', JSON.stringify(purchases)); }, [purchases]);
-  useEffect(() => { localStorage.setItem('lopar_mixers', JSON.stringify(mixers)); }, [mixers]);
-  useEffect(() => { localStorage.setItem('lopar_concrete_orders', JSON.stringify(concreteOrders)); }, [concreteOrders]);
+  // CARGA INICIAL Y SUBSCRIPCIONES REALTIME
+  useEffect(() => {
+    loadGlobalData();
 
-  const handleGlobalReset = () => {
-    const confirm = window.confirm('⚠️ ¿ESTÁS SEGURO? Se borrará todo el historial local (Ventas, Compras, Pedidos, Stock) y volverá a los valores iniciales.');
+    // Suscripciones para sincronización entre dispositivos
+    const salesSub = subscriptions.subscribeAll('sales', () => loadGlobalData());
+    const concreteSub = subscriptions.subscribeAll('concrete_orders', () => loadGlobalData());
+    const stockSub = subscriptions.subscribeAll('product_stocks', () => loadGlobalData());
+    const customerSub = subscriptions.subscribeAll('customers', () => loadGlobalData());
+
+    return () => {
+      salesSub.unsubscribe();
+      concreteSub.unsubscribe();
+      stockSub.unsubscribe();
+      customerSub.unsubscribe();
+    };
+  }, []);
+
+  const loadGlobalData = async () => {
+    try {
+      const [prods, custs, ords, sls] = await Promise.all([
+        productsService.getAll(),
+        customersService.getAll(),
+        concreteService.getOrders(),
+        salesService.getAll()
+      ]);
+
+      if (prods) {
+        setProducts(prods.map((p: any) => ({
+          ...p,
+          stocks: p.product_stocks.map((s: any) => ({ branchId: s.branch_id, qty: Number(s.qty) }))
+        })));
+      }
+      if (custs) setCustomers(custs.map((c: any) => ({ ...c, creditLimit: Number(c.credit_limit), currentDebt: Number(c.current_debt) })));
+      if (sls) setSales(sls.map((s: any) => ({ ...s, date: new Date(s.date) })));
+      if (ords) setConcreteOrders(ords.map((o: any) => ({ ...o, scheduledDate: new Date(o.scheduled_date), qtyM3: Number(o.qty_m3) })));
+    } catch (err) {
+      console.error("Error syncing data:", err);
+    }
+  };
+
+  const handleGlobalReset = async () => {
+    const confirm = window.confirm('⚠️ ¿ESTÁS SEGURO? Se borrará todo el historial local y de nube. Esta acción es irreversible.');
     if (confirm) {
+      // Aquí se llamaría a una función RPC de Supabase para truncar tablas si fuera necesario
       localStorage.clear();
       window.location.reload();
     }

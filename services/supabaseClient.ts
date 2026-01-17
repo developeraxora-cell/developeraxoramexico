@@ -72,6 +72,49 @@ export interface DieselLogDB {
     created_at: string;
 }
 
+export interface ProductDB {
+    id: string;
+    name: string;
+    sku?: string;
+    base_unit_id: string;
+    price_per_base_unit: number;
+}
+
+export interface ProductStockDB {
+    product_id: string;
+    branch_id: string;
+    qty: number;
+}
+
+export interface CustomerDB {
+    id: string;
+    name: string;
+    credit_limit: number;
+    current_debt: number;
+}
+
+export interface SaleDB {
+    id: string;
+    customer_id?: string;
+    total: number;
+    payment_method: string;
+    branch_id: string;
+    user_id: string;
+    date: string;
+}
+
+export interface ConcreteOrderDB {
+    id: string;
+    customer_id: string;
+    formula_id: string;
+    qty_m3: number;
+    branch_id: string;
+    scheduled_date: string;
+    status: string;
+    mixer_id?: string;
+    total_amount?: number;
+}
+
 // ============================================================================
 // FUNCIONES DE TANQUES
 // ============================================================================
@@ -372,6 +415,90 @@ export const analyticsService = {
 };
 
 // ============================================================================
+// FUNCIONES DE PRODUCTOS Y STOCK
+// ============================================================================
+
+export const productsService = {
+    async getAll() {
+        const { data, error } = await supabase.from('products').select('*, product_stocks(*)');
+        if (error) throw error;
+        return data;
+    },
+    async updateStock(productId: string, branchId: string, newQty: number) {
+        const { error } = await supabase
+            .from('product_stocks')
+            .upsert({ product_id: productId, branch_id: branchId, qty: newQty }, { onConflict: 'product_id,branch_id' });
+        if (error) throw error;
+    }
+};
+
+// ============================================================================
+// FUNCIONES DE CLIENTES
+// ============================================================================
+
+export const customersService = {
+    async getAll() {
+        const { data, error } = await supabase.from('customers').select('*').order('name');
+        if (error) throw error;
+        return data as CustomerDB[];
+    },
+    async updateDebt(id: string, newDebt: number) {
+        const { error } = await supabase.from('customers').update({ current_debt: newDebt }).eq('id', id);
+        if (error) throw error;
+    }
+};
+
+// ============================================================================
+// FUNCIONES DE POS (VENTAS)
+// ============================================================================
+
+export const salesService = {
+    async getAll(branchId?: string) {
+        let query = supabase.from('sales').select('*, sale_items(*)').order('date', { ascending: false });
+        if (branchId) query = query.eq('branch_id', branchId);
+        const { data, error } = await query;
+        if (error) throw error;
+        return data;
+    },
+    async create(sale: Omit<SaleDB, 'date'>, items: any[]) {
+        const { data, error: saleError } = await supabase.from('sales').insert([sale]).select().single();
+        if (saleError) throw saleError;
+
+        const saleItems = items.map(item => ({
+            sale_id: data.id,
+            product_id: item.productId,
+            qty: item.qty,
+            unit_id: item.unitId,
+            unit_price: item.unitPrice,
+            subtotal: item.subtotal
+        }));
+
+        const { error: itemsError } = await supabase.from('sale_items').insert(saleItems);
+        if (itemsError) throw itemsError;
+        return data;
+    }
+};
+
+// ============================================================================
+// FUNCIONES DE CONCRETERA
+// ============================================================================
+
+export const concreteService = {
+    async getOrders(branchId?: string) {
+        let query = supabase.from('concrete_orders').select('*').order('scheduled_date', { ascending: false });
+        if (branchId) query = query.eq('branch_id', branchId);
+        const { data, error } = await query;
+        if (error) throw error;
+        return data as ConcreteOrderDB[];
+    },
+    async upsertOrder(order: ConcreteOrderDB) {
+        const { data, error } = await supabase.from('concrete_orders').upsert([order]).select().single();
+        if (error) throw error;
+        return data;
+    }
+};
+
+// ============================================================================
 // SUSCRIPCIONES EN TIEMPO REAL
 // ============================================================================
 
@@ -397,6 +524,14 @@ export const subscriptions = {
             )
             .subscribe();
     },
+
+    // Suscripción universal para sincronización
+    subscribeAll(table: string, callback: (payload: any) => void) {
+        return supabase
+            .channel(`${table}_changes`)
+            .on('postgres_changes', { event: '*', schema: 'public', table }, callback)
+            .subscribe();
+    }
 };
 
 export default supabase;

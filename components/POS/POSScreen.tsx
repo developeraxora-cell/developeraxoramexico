@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Product, CartItem, ProductConversion, Customer, Sale, User } from '../../types';
 import { UNITS } from '../../constants';
 import { convert, getPriceForUnit } from '../../services/conversionEngine';
+import { salesService, productsService, customersService, SaleDB } from '../../services/supabaseClient';
 
 interface POSProps {
   customers: Customer[];
@@ -16,25 +17,25 @@ interface POSProps {
   currentUser: User;
 }
 
-const POSScreen: React.FC<POSProps> = ({ 
-  customers, setCustomers, products, setProducts, conversions, selectedBranchId, sales, setSales, currentUser 
+const POSScreen: React.FC<POSProps> = ({
+  customers, setCustomers, products, setProducts, conversions, selectedBranchId, sales, setSales, currentUser
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'TARJETA' | 'CREDITO'>('EFECTIVO');
 
-  const selectedCustomer = useMemo(() => 
-    customers.find(c => c.id === selectedCustomerId), 
-  [selectedCustomerId, customers]);
+  const selectedCustomer = useMemo(() =>
+    customers.find(c => c.id === selectedCustomerId),
+    [selectedCustomerId, customers]);
 
   const cartTotal = cart.reduce((acc, curr) => acc + curr.subtotal, 0);
   const availableCredit = selectedCustomer ? (selectedCustomer.creditLimit - selectedCustomer.currentDebt) : 0;
   const canAffordCredit = selectedCustomer && availableCredit >= cartTotal;
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cart.length === 0) return;
-    
+
     if (paymentMethod === 'CREDITO') {
       if (!selectedCustomer) {
         alert("⚠️ Debe seleccionar un cliente para vender a crédito.");
@@ -46,41 +47,47 @@ const POSScreen: React.FC<POSProps> = ({
       }
     }
 
-    // 1. Crear Registro de Venta
-    const newSale: Sale = {
-      id: `V-${Date.now()}`,
-      customerId: selectedCustomerId || undefined,
-      items: [...cart],
-      total: cartTotal,
-      paymentMethod: paymentMethod,
-      date: new Date(),
-      branchId: selectedBranchId,
-      userId: currentUser.id
-    };
+    try {
+      // 1. Crear Registro de Venta en Supabase
+      const saleData: Omit<SaleDB, 'date'> = {
+        id: `V-${Date.now()}`,
+        customer_id: selectedCustomerId || undefined,
+        total: cartTotal,
+        payment_method: paymentMethod,
+        branch_id: selectedBranchId,
+        user_id: currentUser.id
+      };
 
-    // 2. Actualizar Stock y Deuda si es Crédito
-    setProducts(prev => prev.map(p => {
-      const cartItem = cart.find(ci => ci.productId === p.id);
-      if (cartItem) {
-        return {
-          ...p,
-          stocks: p.stocks.map(s => s.branchId === selectedBranchId ? { ...s, qty: s.qty - cartItem.qtyBase } : s)
-        };
+      await salesService.create(saleData, cart.map(item => ({
+        productId: item.productId,
+        qty: item.qty,
+        unitId: item.unitId,
+        unitPrice: item.unitPrice,
+        subtotal: item.subtotal
+      })));
+
+      // 2. Actualizar Stock en Supabase
+      for (const item of cart) {
+        const product = products.find(p => p.id === item.productId);
+        if (product) {
+          const currentBranchStock = product.stocks.find(s => s.branchId === selectedBranchId)?.qty || 0;
+          await productsService.updateStock(product.id, selectedBranchId, currentBranchStock - item.qtyBase);
+        }
       }
-      return p;
-    }));
 
-    if (paymentMethod === 'CREDITO' && selectedCustomerId) {
-      setCustomers(prev => prev.map(c => 
-        c.id === selectedCustomerId ? { ...c, currentDebt: c.currentDebt + cartTotal } : c
-      ));
+      // 3. Actualizar Deuda si es Crédito
+      if (paymentMethod === 'CREDITO' && selectedCustomerId && selectedCustomer) {
+        await customersService.updateDebt(selectedCustomerId, selectedCustomer.currentDebt + cartTotal);
+      }
+
+      alert(`✅ Venta completada (${paymentMethod})`);
+      setCart([]);
+      setSelectedCustomerId('');
+      setPaymentMethod('EFECTIVO');
+    } catch (err: any) {
+      console.error("Error checking out:", err);
+      alert("❌ Error al procesar la venta: " + err.message);
     }
-
-    setSales([newSale, ...sales]);
-    alert(`✅ Venta completada (${paymentMethod})`);
-    setCart([]);
-    setSelectedCustomerId('');
-    setPaymentMethod('EFECTIVO');
   };
 
   const addToCart = (product: Product) => {
@@ -111,7 +118,7 @@ const POSScreen: React.FC<POSProps> = ({
       let newUnitId = updates.unitId !== undefined ? updates.unitId : item.unitId;
       const qtyBase = convert(newQty, newUnitId, product.baseUnitId, product.id, conversions);
       const branchStock = product.stocks.find(s => s.branchId === selectedBranchId)?.qty || 0;
-      
+
       if (qtyBase > branchStock) {
         alert("⚠️ Stock insuficiente.");
         return item;
@@ -129,7 +136,7 @@ const POSScreen: React.FC<POSProps> = ({
         <div className="bg-white p-4 rounded-xl border-2 border-slate-100 flex items-center gap-4 shadow-sm">
           <div className="flex-1">
             <label className="text-[10px] font-black text-gray-400 block mb-1 uppercase tracking-widest">Identificar Cliente (Opcional)</label>
-            <select 
+            <select
               className="w-full bg-gray-50 border-none outline-none font-bold text-slate-700 p-2 rounded-lg cursor-pointer"
               value={selectedCustomerId}
               onChange={(e) => setSelectedCustomerId(e.target.value)}
@@ -203,8 +210,8 @@ const POSScreen: React.FC<POSProps> = ({
         <div className="p-6 bg-slate-900 text-white border-t border-slate-800">
           <div className="grid grid-cols-3 gap-2 mb-6">
             {['EFECTIVO', 'TARJETA', 'CREDITO'].map(m => (
-              <button 
-                key={m} 
+              <button
+                key={m}
                 onClick={() => {
                   if (m === 'CREDITO' && !selectedCustomerId) {
                     alert("⚠️ Seleccione un cliente para habilitar crédito.");
@@ -226,7 +233,7 @@ const POSScreen: React.FC<POSProps> = ({
             </div>
           </div>
 
-          <button 
+          <button
             disabled={cart.length === 0 || (paymentMethod === 'CREDITO' && !canAffordCredit)}
             onClick={handleCheckout}
             className={`w-full py-5 rounded-2xl font-black text-xl shadow-2xl transition-all ${cart.length > 0 && !(paymentMethod === 'CREDITO' && !canAffordCredit) ? 'bg-orange-500 active:scale-95' : 'bg-slate-800 text-slate-600'}`}

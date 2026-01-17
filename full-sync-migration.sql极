@@ -1,0 +1,105 @@
+-- SQL PARA SINCRONIZACIÓN TOTAL - GRUPO LOPAR
+-- Este script crea las tablas necesarias para mover POS, Concretera e Inventario a la nube.
+
+-- 1. TABLA DE PRODUCTOS Y STOCK
+CREATE TABLE IF NOT EXISTS products (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    sku TEXT UNIQUE,
+    base_unit_id TEXT,
+    price_per_base_unit DECIMAL(12,2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS product_stocks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    product_id TEXT REFERENCES products(id) ON DELETE CASCADE,
+    branch_id TEXT NOT NULL,
+    qty DECIMAL(12,2) DEFAULT 0,
+    UNIQUE(product_id, branch_id)
+);
+
+-- 2. TABLA DE CLIENTES Y CRÉDITO
+CREATE TABLE IF NOT EXISTS customers (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    phone TEXT,
+    email TEXT,
+    address TEXT,
+    credit_limit DECIMAL(12,2) DEFAULT 0,
+    current_debt DECIMAL(12,2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. TABLA DE VENTAS (POS)
+CREATE TABLE IF NOT EXISTS sales (
+    id TEXT PRIMARY KEY,
+    customer_id TEXT REFERENCES customers(id),
+    total DECIMAL(12,2) NOT NULL,
+    payment_method TEXT NOT NULL,
+    branch_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    date TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sale_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sale_id TEXT REFERENCES sales(id) ON DELETE CASCADE,
+    product_id TEXT REFERENCES products(id),
+    qty DECIMAL(12,2) NOT NULL,
+    unit_id TEXT NOT NULL,
+    unit_price DECIMAL(12,2) NOT NULL,
+    subtotal DECIMAL(12,2) NOT NULL
+);
+
+-- 4. TABLA DE COMPRAS (INVENTARIO)
+CREATE TABLE IF NOT EXISTS purchases (
+    id TEXT PRIMARY KEY,
+    product_id TEXT REFERENCES products(id),
+    qty DECIMAL(12,2) NOT NULL,
+    cost_per_unit DECIMAL(12,2) NOT NULL,
+    total DECIMAL(12,2) NOT NULL,
+    supplier TEXT,
+    branch_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    date TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5. TABLA DE CONCRETERA (PEDIDOS)
+CREATE TABLE IF NOT EXISTS concrete_orders (
+    id TEXT PRIMARY KEY,
+    customer_id TEXT REFERENCES customers(id),
+    formula_id TEXT NOT NULL,
+    qty_m3 DECIMAL(12,2) NOT NULL,
+    branch_id TEXT NOT NULL,
+    scheduled_date TIMESTAMPTZ NOT NULL,
+    status TEXT DEFAULT 'PENDIENTE',
+    mixer_id TEXT,
+    total_amount DECIMAL(12,2),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 6. HABILITAR REALTIME
+ALTER PUBLICATION supabase_realtime ADD TABLE products;
+ALTER PUBLICATION supabase_realtime ADD TABLE product_stocks;
+ALTER PUBLICATION supabase_realtime ADD TABLE sales;
+ALTER PUBLICATION supabase_realtime ADD TABLE concrete_orders;
+ALTER PUBLICATION supabase_realtime ADD TABLE customers;
+
+-- 7. RLS (SEGURIDAD BÁSICA)
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_stocks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sale_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE purchases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE concrete_orders ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Permitir todo a usuarios autenticados" ON products FOR ALL USING (true);
+CREATE POLICY "Permitir todo a usuarios autenticados" ON product_stocks FOR ALL USING (true);
+CREATE POLICY "Permitir todo a usuarios autenticados" ON customers FOR ALL USING (true);
+CREATE POLICY "Permitir todo a usuarios autenticados" ON sales FOR ALL USING (true);
+CREATE POLICY "Permitir todo a usuarios autenticados" ON sale_items FOR ALL USING (true);
+CREATE POLICY "Permitir todo a usuarios autenticados" ON purchases FOR ALL USING (true);
+CREATE POLICY "Permitir todo a usuarios autenticados" ON concrete_orders FOR ALL USING (true);
