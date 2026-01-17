@@ -17,27 +17,66 @@ import { Customer, Product, ProductConversion, User, Role, Branch, CustomerPayme
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('pos');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [branches, setBranches] = useState<Branch[]>(INITIAL_BRANCHES);
+  const [branches, setBranches] = useState<Branch[]>(() => {
+    const saved = localStorage.getItem('lopar_branches');
+    return saved ? JSON.parse(saved) : INITIAL_BRANCHES;
+  });
   const [selectedBranchId, setSelectedBranchId] = useState<string>(INITIAL_BRANCHES[0].id);
 
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
-  const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [users, setUsers] = useState<User[]>(() => {
+    const saved = localStorage.getItem('lopar_users');
+    return saved ? JSON.parse(saved) : INITIAL_USERS;
+  });
+  const [customers, setCustomers] = useState<Customer[]>(() => {
+    const saved = localStorage.getItem('lopar_customers');
+    return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
+  });
+  const [products, setProducts] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('lopar_products');
+    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+  });
   const [conversions, setConversions] = useState<ProductConversion[]>(INITIAL_CONVERSIONS);
-  const [payments, setPayments] = useState<CustomerPayment[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [payments, setPayments] = useState<CustomerPayment[]>(() => {
+    const saved = localStorage.getItem('lopar_payments');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [sales, setSales] = useState<Sale[]>(() => {
+    const saved = localStorage.getItem('lopar_sales');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return parsed.map((s: any) => ({ ...s, date: new Date(s.date) }));
+    }
+    return [];
+  });
+  const [purchases, setPurchases] = useState<Purchase[]>(() => {
+    const saved = localStorage.getItem('lopar_purchases');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return parsed.map((p: any) => ({ ...p, date: new Date(p.date) }));
+    }
+    return [];
+  });
 
   // Estados de Concretera y Diesel
   const [concreteFormulas, setConcreteFormulas] = useState<ConcreteFormula[]>([
     { id: 'f1', name: "f'c 250", description: "Estructural", materials: [{ productId: 'p1', qtyPerM3: 350 }, { productId: 'p3', qtyPerM3: 850 }] },
     { id: 'f2', name: "f'c 150", description: "Firmes", materials: [{ productId: 'p1', qtyPerM3: 250 }, { productId: 'p3', qtyPerM3: 950 }] }
   ]);
-  const [mixers, setMixers] = useState<MixerTruck[]>([
-    { id: 'm1', plate: 'MIX-101', capacityM3: 7, status: 'DISPONIBLE' },
-    { id: 'm2', plate: 'MIX-202', capacityM3: 8, status: 'DISPONIBLE' },
-  ]);
-  const [concreteOrders, setConcreteOrders] = useState<ConcreteOrder[]>([]);
+  const [mixers, setMixers] = useState<MixerTruck[]>(() => {
+    const saved = localStorage.getItem('lopar_mixers');
+    return saved ? JSON.parse(saved) : [
+      { id: 'm1', plate: 'MIX-101', capacityM3: 7, status: 'DISPONIBLE' },
+      { id: 'm2', plate: 'MIX-202', capacityM3: 8, status: 'DISPONIBLE' },
+    ];
+  });
+  const [concreteOrders, setConcreteOrders] = useState<ConcreteOrder[]>(() => {
+    const saved = localStorage.getItem('lopar_concrete_orders');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return parsed.map((o: any) => ({ ...o, scheduledDate: new Date(o.scheduledDate) }));
+    }
+    return [];
+  });
   const [tanks, setTanks] = useState<DieselTank[]>([
     { id: 't1', branchId: 'b1', name: 'Tanque Matriz', currentQty: 1500, maxCapacity: 5000 },
     { id: 't2', branchId: 'b2', name: 'Almacén Norte Dsl', currentQty: 800, maxCapacity: 2000 }
@@ -51,6 +90,25 @@ const App: React.FC = () => {
     { id: 'd2', name: 'Arturo Méndez', license: 'EST-99882', active: true }
   ]);
   const [dieselLogs, setDieselLogs] = useState<DieselLog[]>([]);
+
+  // Persistencia de estados
+  useEffect(() => { localStorage.setItem('lopar_branches', JSON.stringify(branches)); }, [branches]);
+  useEffect(() => { localStorage.setItem('lopar_users', JSON.stringify(users)); }, [users]);
+  useEffect(() => { localStorage.setItem('lopar_customers', JSON.stringify(customers)); }, [customers]);
+  useEffect(() => { localStorage.setItem('lopar_products', JSON.stringify(products)); }, [products]);
+  useEffect(() => { localStorage.setItem('lopar_payments', JSON.stringify(payments)); }, [payments]);
+  useEffect(() => { localStorage.setItem('lopar_sales', JSON.stringify(sales)); }, [sales]);
+  useEffect(() => { localStorage.setItem('lopar_purchases', JSON.stringify(purchases)); }, [purchases]);
+  useEffect(() => { localStorage.setItem('lopar_mixers', JSON.stringify(mixers)); }, [mixers]);
+  useEffect(() => { localStorage.setItem('lopar_concrete_orders', JSON.stringify(concreteOrders)); }, [concreteOrders]);
+
+  const handleGlobalReset = () => {
+    const confirm = window.confirm('⚠️ ¿ESTÁS SEGURO? Se borrará todo el historial local (Ventas, Compras, Pedidos, Stock) y volverá a los valores iniciales.');
+    if (confirm) {
+      localStorage.clear();
+      window.location.reload();
+    }
+  };
 
   const handleLogin = (username: string) => {
     const user = users.find(u => u.username === username);
@@ -109,7 +167,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} branches={branches} onLogout={() => setCurrentUser(null)}>
+    <Layout activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} branches={branches} onLogout={() => setCurrentUser(null)} onReset={handleGlobalReset}>
       {renderContent()}
     </Layout>
   );

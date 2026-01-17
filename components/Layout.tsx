@@ -11,6 +11,7 @@ interface LayoutProps {
   selectedBranchId: string;
   setSelectedBranchId: (id: string) => void;
   branches: Branch[];
+  onReset?: () => void;
 }
 
 interface NavItem {
@@ -29,7 +30,7 @@ interface NavGroup {
 
 const Layout: React.FC<LayoutProps> = ({
   children, activeTab, setActiveTab, currentUser, onLogout,
-  selectedBranchId, setSelectedBranchId, branches
+  selectedBranchId, setSelectedBranchId, branches, onReset
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['materiales', 'concretera', 'logistica']);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -161,8 +162,16 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
 
           {currentUser.role === Role.ADMIN && (
-            <div className="mb-6 p-4 bg-red-500/5 rounded-2xl border border-red-500/20">
-              <p className="text-[8px] font-black text-red-500 uppercase tracking-[0.2em] mb-3 px-1">Administración Principal</p>
+            <div className="mb-6 p-4 bg-red-500/5 rounded-2xl border border-red-500/20 space-y-3">
+              <p className="text-[8px] font-black text-red-500 uppercase tracking-[0.2em] px-1">Administración de Datos</p>
+
+              <button
+                onClick={onReset}
+                className="w-full py-3 bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white transition-all rounded-xl text-[9px] font-black uppercase tracking-widest border border-red-500/30 active:scale-95"
+              >
+                🗑️ Borrar Historial Local
+              </button>
+
               <button
                 onClick={async () => {
                   const confirmReset = window.confirm('⚠️ MODO PRUEBA: ¿Reiniciar TODA la logística (Logs y Tanques)?\nVehículos y choferes NO se borrarán.');
@@ -187,7 +196,7 @@ const Layout: React.FC<LayoutProps> = ({
                 }}
                 className="w-full py-3 bg-red-600 hover:bg-red-700 text-white transition-all rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-red-600/20 active:scale-95"
               >
-                🚀 Reset Logística (Prueba)
+                🚀 Reset Logística (Nube)
               </button>
             </div>
           )}
