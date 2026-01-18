@@ -33,7 +33,14 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('lopar_branches');
     return saved ? JSON.parse(saved) : INITIAL_BRANCHES;
   });
-  const [selectedBranchId, setSelectedBranchId] = useState<string>(INITIAL_BRANCHES[0].id);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>(() => {
+    return localStorage.getItem('lopar_selected_branch') || INITIAL_BRANCHES[0].id;
+  });
+
+  // Persistir selección de sucursal
+  useEffect(() => {
+    localStorage.setItem('lopar_selected_branch', selectedBranchId);
+  }, [selectedBranchId]);
 
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);

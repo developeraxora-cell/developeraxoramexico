@@ -184,7 +184,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
       userId: l.user_id,
       createdAt: new Date(l.created_at),
       notes: l.notes || undefined
-    })).filter(l => branchTankIds.includes(l.tankId)));
+    })));
   };
 
   useEffect(() => {
