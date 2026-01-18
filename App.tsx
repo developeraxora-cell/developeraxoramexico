@@ -77,11 +77,21 @@ const App: React.FC = () => {
     const stockSub = subscriptions.subscribeAll('product_stocks', () => loadGlobalData());
     const customerSub = subscriptions.subscribeAll('customers', () => loadGlobalData());
 
+    // Suscripciones de Logística Diesel
+    const tanksSub = subscriptions.subscribeAll('diesel_tanks', () => loadGlobalData());
+    const logsSub = subscriptions.subscribeAll('diesel_logs', () => loadGlobalData());
+    const vehicleSub = subscriptions.subscribeAll('vehicles', () => loadGlobalData());
+    const driverSub = subscriptions.subscribeAll('drivers', () => loadGlobalData());
+
     return () => {
       salesSub.unsubscribe();
       concreteSub.unsubscribe();
       stockSub.unsubscribe();
       customerSub.unsubscribe();
+      tanksSub.unsubscribe();
+      logsSub.unsubscribe();
+      vehicleSub.unsubscribe();
+      driverSub.unsubscribe();
     };
   }, []);
 
