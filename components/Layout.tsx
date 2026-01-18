@@ -174,29 +174,26 @@ const Layout: React.FC<LayoutProps> = ({
 
               <button
                 onClick={async () => {
-                  const confirmReset = window.confirm('⚠️ MODO PRUEBA: ¿Reiniciar TODA la logística (Logs y Tanques)?\nVehículos y choferes NO se borrarán.');
+                  const confirmReset = window.confirm('⚠️ MANTENIMIENTO: ¿Deseas restablecer los niveles de diésel y borrar el historial?\nEsta acción es irreversible en la base de datos.');
                   if (!confirmReset) return;
                   try {
-                    const { createClient } = await import('@supabase/supabase-js');
-                    const supabase = createClient(
-                      'https://ojizyrjgutnvqjbbyons.supabase.co',
-                      'sb_publishable_7BCr1_lp-TJQ8D9NzwaDqw_aacm1Zdc'
-                    );
+                    const { supabase: sharedSupabase } = await import('../services/supabaseClient');
+                    const supabase = sharedSupabase;
 
                     // Borrar logs
                     await supabase.from('diesel_logs').delete().not('id', 'is', null);
                     // Reset tanques
                     await supabase.from('diesel_tanks').update({ current_qty: 2500 }).not('id', 'is', null);
 
-                    alert('✅ Logística reiniciada (Modo Prueba).');
+                    alert('✅ Logística sincronizada y niveles restablecidos.');
                     window.location.reload();
                   } catch (err: any) {
                     alert('Error: ' + err.message);
                   }
                 }}
-                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white transition-all rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-red-600/20 active:scale-95"
+                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white transition-all rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-slate-900/20 active:scale-95"
               >
-                🚀 Reset Logística (Nube)
+                ⚙️ Reset Administrativo (Nube)
               </button>
             </div>
           )}

@@ -12,6 +12,9 @@ import ConcreteOps from './components/Concrete/ConcreteOps';
 import ConcreteFormulas from './components/Concrete/ConcreteFormulas';
 import ConcreteFleet from './components/Concrete/ConcreteFleet';
 import {
+  dieselTanksService,
+  vehiclesService,
+  driversService,
   dieselLogsService,
   subscriptions,
   supabase,
@@ -84,11 +87,15 @@ const App: React.FC = () => {
 
   const loadGlobalData = async () => {
     try {
-      const [prods, custs, ords, sls] = await Promise.all([
+      const [prods, custs, ords, sls, tanksData, vehData, drivData, logsData] = await Promise.all([
         productsService.getAll(),
         customersService.getAll(),
         concreteService.getOrders(),
-        salesService.getAll()
+        salesService.getAll(),
+        dieselTanksService.getAll(),
+        vehiclesService.getAll(),
+        driversService.getAll(),
+        dieselLogsService.getAll(100)
       ]);
 
       if (prods) {
@@ -100,6 +107,44 @@ const App: React.FC = () => {
       if (custs) setCustomers(custs.map((c: any) => ({ ...c, creditLimit: Number(c.credit_limit), currentDebt: Number(c.current_debt) })));
       if (sls) setSales(sls.map((s: any) => ({ ...s, date: new Date(s.date) })));
       if (ords) setConcreteOrders(ords.map((o: any) => ({ ...o, scheduledDate: new Date(o.scheduled_date), qtyM3: Number(o.qty_m3) })));
+
+      if (tanksData) {
+        setTanks(tanksData.map((t: any) => ({
+          id: t.id,
+          branchId: t.branch_id,
+          name: t.name,
+          currentQty: Number(t.current_qty),
+          maxCapacity: Number(t.max_capacity)
+        })));
+      }
+      if (vehData) {
+        setVehicles(vehData.map((v: any) => ({
+          id: v.id,
+          plate: v.plate,
+          description: v.description,
+          active: v.active
+        })));
+      }
+      if (drivData) {
+        setDrivers(drivData.map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          license: d.license,
+          active: d.active
+        })));
+      }
+      if (logsData) {
+        setDieselLogs(logsData.map((l: any) => ({
+          id: l.id,
+          type: l.type,
+          tankId: l.tank_id,
+          amount: Number(l.amount),
+          vehicleId: l.vehicle_id || undefined,
+          driverId: l.driver_id || undefined,
+          odometerReading: l.odometer_reading || undefined,
+          createdAt: new Date(l.created_at)
+        })));
+      }
     } catch (err) {
       console.error("Error syncing data:", err);
     }

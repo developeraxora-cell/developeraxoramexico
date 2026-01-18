@@ -60,7 +60,7 @@ const DieselTankContainer: React.FC<{ tank: DieselTank }> = ({ tank }) => {
               {percentage.toFixed(1)}%
             </p>
           </div>
-          <p className="text-[8px] font-black text-white/50 uppercase tracking-[0.3em] mt-2">Sensor Activo</p>
+          <p className="text-[8px] font-black text-white/50 uppercase tracking-[0.3em] mt-2">Nivel en Tiempo Real</p>
         </div>
 
         {/* Level Markers */}
@@ -274,7 +274,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
       await Promise.all([loadTanks(), loadLogs()]);
       setIsCargaModalOpen(false);
       setCargaData(prev => ({ ...prev, amount: 0, odometer: 0, notes: '' }));
-      alert("✅ Despacho exitoso.");
+      alert("✅ Despacho guardado exitosamente en la base de datos.");
     } catch (err: any) {
       alert(`❌ Error: ${err.message}`);
     } finally {
@@ -298,7 +298,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
       await Promise.all([loadTanks(), loadLogs()]);
       setIsRecepcionModalOpen(false);
       setRecepcionData(prev => ({ ...prev, amount: 0, supplier: '', invoiceNumber: '', notes: '' }));
-      alert("✅ Recepción registrada.");
+      alert("✅ Recepción registrada y sincronizada en la nube.");
     } catch (err: any) {
       alert(`❌ Error: ${err.message}`);
     } finally {

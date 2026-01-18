@@ -103,3 +103,29 @@ CREATE POLICY "Permitir todo a usuarios autenticados" ON sales FOR ALL USING (tr
 CREATE POLICY "Permitir todo a usuarios autenticados" ON sale_items FOR ALL USING (true);
 CREATE POLICY "Permitir todo a usuarios autenticados" ON purchases FOR ALL USING (true);
 CREATE POLICY "Permitir todo a usuarios autenticados" ON concrete_orders FOR ALL USING (true);
+
+-- 8. DATOS INICIALES (SEED) - GRUPO LOPAR
+-- Esto poblará tu base de datos con los productos y clientes de prueba.
+
+-- Limpiar antes de insertar
+DELETE FROM product_stocks;
+DELETE FROM products;
+DELETE FROM customers;
+
+-- Insertar Clientes
+INSERT INTO customers (id, name, phone, address, credit_limit, current_debt) VALUES
+('cust1', 'Juan Pérez - Constructor', '555-0101', 'Calle 50 #123 x 45 y 47, Col. Centro', 50000, 12500),
+('cust2', 'María López - Acabados', '555-0202', 'Av. Itzaes #400 x 59, Col. García Ginerés', 20000, 0),
+('cust3', 'Ingeniería Civil SA', '555-0303', 'Parque Industrial Umán, Lote 15', 100000, 95000);
+
+-- Insertar Productos
+INSERT INTO products (id, name, sku, base_unit_id, price_per_base_unit) VALUES
+('p1', 'Cemento Tolteca Gris', 'CEM-TOL-50', 'u1', 4.5),
+('p2', 'Varilla Corrugada 3/8', 'VAR-38-12', 'u4', 38.0),
+('p3', 'Arena de Mina', 'ARE-GRN', 'u1', 1.5);
+
+-- Insertar Stock por Sucursal (Matriz centro = b1, Norte = b2, Bodega = b3)
+INSERT INTO product_stocks (product_id, branch_id, qty) VALUES
+('p1', 'b1', 5000), ('p1', 'b2', 1200), ('p1', 'b3', 15000),
+('p2', 'b1', 600),  ('p2', 'b2', 45),   ('p2', 'b3', 2000),
+('p3', 'b1', 15000),('p3', 'b2', 8000), ('p3', 'b3', 40000);
