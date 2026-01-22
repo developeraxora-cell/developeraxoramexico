@@ -17,11 +17,11 @@ import {
   driversService,
   dieselLogsService,
   subscriptions,
-  supabase,
   productsService,
   customersService,
   salesService,
-  concreteService
+  concreteService,
+  isSupabaseConfigured
 } from './services/supabaseClient';
 import { INITIAL_CUSTOMERS, INITIAL_PRODUCTS, INITIAL_CONVERSIONS, INITIAL_USERS, INITIAL_BRANCHES } from './constants';
 import { Customer, Product, ProductConversion, User, Role, Branch, CustomerPayment, DieselTank, Vehicle, Driver, DieselLog, ConcreteFormula, MixerTruck, ConcreteOrder, Sale, Purchase } from './types';
@@ -61,8 +61,8 @@ const App: React.FC = () => {
   ]);
   const [concreteOrders, setConcreteOrders] = useState<ConcreteOrder[]>([]);
   const [tanks, setTanks] = useState<DieselTank[]>([
-    { id: 't1', branchId: 'b1', name: 'Tanque Matriz', currentQty: 1500, maxCapacity: 5000 },
-    { id: 't2', branchId: 'b2', name: 'Almacén Norte Dsl', currentQty: 800, maxCapacity: 2000 }
+    { id: 't1', branchId: 'b1', name: 'Tanque Matriz', currentQty: 0, maxCapacity: 5000 },
+    { id: 't2', branchId: 'b2', name: 'Almacén Norte Dsl', currentQty: 0, maxCapacity: 2000 }
   ]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([
     { id: 'v1', plate: 'MX-4455', description: 'Torton Kenworth #1', active: true },
@@ -76,6 +76,8 @@ const App: React.FC = () => {
 
   // CARGA INICIAL Y SUBSCRIPCIONES REALTIME
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
     loadGlobalData();
 
     // Suscripciones para sincronización entre dispositivos
@@ -191,6 +193,11 @@ const App: React.FC = () => {
         <div className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md text-center animate-in zoom-in">
           <span className="text-6xl block mb-6">⚒️</span>
           <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter mb-8">GRUPO LOPAR</h1>
+          {!isSupabaseConfigured && (
+            <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+              Configura `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en `.env.local` para habilitar sincronizacion.
+            </div>
+          )}
           <div className="space-y-4">
             {users.map(u => (
               <button key={u.id} onClick={() => handleLogin(u.username)} className="w-full p-4 rounded-2xl border-2 border-slate-100 hover:border-orange-500 hover:bg-orange-50 transition-all flex items-center justify-between group">

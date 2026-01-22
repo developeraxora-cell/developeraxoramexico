@@ -1,5 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { DieselTank, Vehicle, Driver, DieselLog, User } from '../../types';
+import DieselTankCard from './DieselTankCard';
+import DeleteLogModal from './DeleteLogModal';
+import EditCapacityModal from './EditCapacityModal';
+import StatusModal, { StatusType } from '../common/StatusModal';
+import ConfirmModal from '../common/ConfirmModal';
 import {
   dieselTanksService,
   vehiclesService,
@@ -22,72 +27,6 @@ interface DieselScreenProps {
   selectedBranchId: string;
 }
 
-const DieselTankContainer: React.FC<{ tank: DieselTank }> = ({ tank }) => {
-  const percentage = (tank.currentQty / tank.maxCapacity) * 100;
-  const isCritical = percentage < 15;
-
-  return (
-    <div className="bg-white p-4 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-2xl transition-all duration-700">
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <span className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] mb-1 block">Depósito Estacionario</span>
-          <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter font-outfit">{tank.name}</h3>
-        </div>
-        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-xl shadow-inner border border-slate-100">
-          <span className="grayscale-0">⛽</span>
-        </div>
-      </div>
-
-      <div className="relative mx-auto w-48 h-72 bg-slate-100 rounded-[3rem] border-8 border-slate-900 overflow-hidden shadow-[inset_0_10px_30px_rgba(0,0,0,0.1)] group-hover:scale-105 transition-transform duration-500">
-        {/* Fill Background - Using the orange gradient from the screenshot */}
-        <div
-          className={`absolute bottom-0 left-0 right-0 transition-all duration-[2000ms] ease-in-out bg-gradient-to-t ${isCritical ? 'from-red-600 to-red-400' : 'from-orange-500 via-orange-400 to-amber-300'
-            }`}
-          style={{ height: `${percentage}%` }}
-        >
-          {/* Wave Effect Overlay */}
-          <div className="absolute -top-5 left-0 w-[200%] h-10 opacity-30">
-            <svg viewBox="0 0 120 28" className="w-full h-full animate-diesel-wave fill-current text-white">
-              <path d="M0 15 Q30 0 60 15 T120 15 V28 H0 Z" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Overlay Progress Box */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-30 pointer-events-none">
-          <div className="bg-slate-900/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-slate-700 shadow-2xl">
-            <p className="text-2xl font-mono font-black text-orange-400">
-              {percentage.toFixed(1)}%
-            </p>
-          </div>
-          <p className="text-[8px] font-black text-white/50 uppercase tracking-[0.3em] mt-2">Nivel en Tiempo Real</p>
-        </div>
-
-        {/* Level Markers */}
-        <div className="absolute right-3 inset-y-12 flex flex-col justify-between z-20 opacity-20">
-          {[100, 75, 50, 25, 0].map(val => (
-            <div key={val} className="flex items-center gap-2">
-              <span className="text-[7px] font-black text-slate-900">{val}%</span>
-              <div className="w-2 h-0.5 bg-slate-900"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-8 grid grid-cols-2 gap-4">
-        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Volumen Actual</p>
-          <p className="text-xl font-black text-slate-900">{tank.currentQty.toLocaleString()} <span className="text-xs text-slate-400">L</span></p>
-        </div>
-        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Capacidad</p>
-          <p className="text-xl font-black text-slate-900">{tank.maxCapacity.toLocaleString()} <span className="text-xs text-slate-400">L</span></p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const DieselScreen: React.FC<DieselScreenProps> = ({
   tanks, setTanks, vehicles, setVehicles, drivers, setDrivers, logs, setLogs, currentUser, selectedBranchId
 }) => {
@@ -95,8 +34,22 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
   const [isCargaModalOpen, setIsCargaModalOpen] = useState(false);
   const [isRecepcionModalOpen, setIsRecepcionModalOpen] = useState(false);
   const [isAssetModalOpen, setIsAssetModalOpen] = useState<'vehicle' | 'driver' | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isEditCapacityOpen, setIsEditCapacityOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusModal, setStatusModal] = useState<{
+    isOpen: boolean;
+    type: StatusType;
+    title: string;
+    description?: string;
+    icon?: string;
+  }>({
+    isOpen: false,
+    type: 'success',
+    title: '',
+  });
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
   const branchTanks = useMemo(() => tanks.filter(t => t.branchId === selectedBranchId), [tanks, selectedBranchId]);
 
@@ -104,6 +57,15 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
   const [recepcionData, setRecepcionData] = useState({ tankId: '', amount: 0, costPerLiter: 22.50, supplier: '', invoiceNumber: '', notes: '' });
   const [newVehicle, setNewVehicle] = useState({ plate: '', description: '' });
   const [newDriver, setNewDriver] = useState({ name: '', license: '' });
+  const [editMaxCapacity, setEditMaxCapacity] = useState(0);
+  const [deleteObservation, setDeleteObservation] = useState('');
+  const [logToDelete, setLogToDelete] = useState<DieselLog | null>(null);
+  const selectedCargaTank = branchTanks.find(t => t.id === cargaData.tankId);
+  const selectedRecepcionTank = branchTanks.find(t => t.id === recepcionData.tankId);
+  const recepcionMax = selectedRecepcionTank ? selectedRecepcionTank.maxCapacity - selectedRecepcionTank.currentQty : undefined;
+  const showStatus = (type: StatusType, title: string, description?: string, icon?: string) => {
+    setStatusModal({ isOpen: true, type, title, description, icon });
+  };
 
   useEffect(() => {
     loadAllData();
@@ -167,8 +129,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
   const loadLogs = async () => {
     // Solo cargar logs de tanques que pertenecen a esta sucursal
     const data = await dieselLogsService.getAll(200);
-    const branchTankIds = tanks.filter(t => t.branchId === selectedBranchId).map(t => t.id);
-
+    console.log("logs", data);
     setLogs(data.map(l => ({
       id: l.id,
       type: l.type,
@@ -183,7 +144,9 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
       totalCost: l.total_cost ? Number(l.total_cost) : undefined,
       userId: l.user_id,
       createdAt: new Date(l.created_at),
-      notes: l.notes || undefined
+      notes: l.notes || undefined,
+      status: typeof l.status === 'string' ? l.status : (l.status === false ? 'ELIMINADO' : 'ACTIVO'),
+      deleteObservation: l.observacion || undefined
     })));
   };
 
@@ -202,13 +165,13 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
       const logTank = tanks.find(t => t.id === l.tankId);
       return logTank?.branchId === selectedBranchId;
     });
-
+    console.log("branchLogs", branchLogs);
     const monthlySupplies = branchLogs
-      .filter(l => l.type === 'RECEPCION' && l.createdAt >= startOfMonth)
+      .filter(l => l.type === 'RECEPCION' && l.createdAt >= startOfMonth && l.status === "ACTIVO")
       .reduce((acc, l) => acc + l.amount, 0);
 
     const monthlyDispatches = branchLogs
-      .filter(l => l.type === 'CARGA' && l.createdAt >= startOfMonth)
+      .filter(l => l.type === 'CARGA' && l.createdAt >= startOfMonth && l.status === "ACTIVO")
       .reduce((acc, l) => acc + l.amount, 0);
 
     const totalCapacity = branchTanks.reduce((acc, t) => acc + t.maxCapacity, 0);
@@ -258,9 +221,39 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
     }
   };
 
+  const handleUpdateMaxCapacity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const tank = branchTanks[0];
+    if (!tank) return;
+    setIsLoading(true);
+    showStatus('loading', 'Actualizando capacidad', 'Procesando cambios...', '⏳');
+    try {
+      await dieselTanksService.update(tank.id, { max_capacity: editMaxCapacity });
+      await loadTanks();
+      setIsEditCapacityOpen(false);
+      showStatus('success', 'Capacidad actualizada', 'Se guardó correctamente.', '✅');
+    } catch (err: any) {
+      setError(err.message);
+      showStatus('error', 'Error al actualizar', err.message, '❌');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCarga = async (e: React.FormEvent) => {
     e.preventDefault();
+    const tank = branchTanks.find(t => t.id === cargaData.tankId);
+    if (!tank) return;
+    if (cargaData.amount <= 0) {
+      showStatus('warning', 'Cantidad inválida', 'La cantidad debe ser mayor a 0.', '⚠️');
+      return;
+    }
+    if (cargaData.amount > tank.currentQty) {
+      showStatus('warning', 'Diésel insuficiente', `Disponible: ${tank.currentQty} L.`, '⛽');
+      return;
+    }
     setIsLoading(true);
+    showStatus('loading', 'Despachando diésel', 'Registrando salida...', '⏳');
     try {
       await dieselLogsService.processDispatch({
         tankId: cargaData.tankId,
@@ -271,12 +264,12 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
         userId: currentUser.id,
         notes: cargaData.notes || undefined
       });
-      await Promise.all([loadTanks(), loadLogs()]);
+      await loadAllData();
       setIsCargaModalOpen(false);
       setCargaData(prev => ({ ...prev, amount: 0, odometer: 0, notes: '' }));
-      alert("✅ Despacho guardado exitosamente en la base de datos.");
+      showStatus('success', 'Despacho guardado', 'El registro se guardó correctamente.', '✅');
     } catch (err: any) {
-      alert(`❌ Error: ${err.message}`);
+      showStatus('error', 'Error al despachar', err.message, '❌');
     } finally {
       setIsLoading(false);
     }
@@ -284,7 +277,19 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
 
   const handleRecepcion = async (e: React.FormEvent) => {
     e.preventDefault();
+    const tank = branchTanks.find(t => t.id === recepcionData.tankId);
+    if (!tank) return;
+    if (recepcionData.amount <= 0) {
+      showStatus('warning', 'Cantidad inválida', 'La cantidad debe ser mayor a 0.', '⚠️');
+      return;
+    }
+    const availableSpace = tank.maxCapacity - tank.currentQty;
+    if (recepcionData.amount > availableSpace) {
+      showStatus('warning', 'Sin espacio', `Espacio disponible: ${availableSpace} L.`, '🛢️');
+      return;
+    }
     setIsLoading(true);
+    showStatus('loading', 'Recibiendo diésel', 'Registrando entrada...', '⏳');
     try {
       await dieselLogsService.processReception({
         tankId: recepcionData.tankId,
@@ -295,27 +300,63 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
         userId: currentUser.id,
         notes: recepcionData.notes || undefined
       });
-      await Promise.all([loadTanks(), loadLogs()]);
+      await loadAllData();
       setIsRecepcionModalOpen(false);
       setRecepcionData(prev => ({ ...prev, amount: 0, supplier: '', invoiceNumber: '', notes: '' }));
-      alert("✅ Recepción registrada y sincronizada en la nube.");
+      showStatus('success', 'Recepción registrada', 'El ingreso se guardó correctamente.', '✅');
     } catch (err: any) {
-      alert(`❌ Error: ${err.message}`);
+      showStatus('error', 'Error al recibir', err.message, '❌');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteLog = (log: DieselLog) => {
+    setLogToDelete(log);
+    setDeleteObservation('');
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!logToDelete) return;
+
+    setIsLoading(true);
+    showStatus('loading', 'Eliminando registro', 'Guardando observación...', '⏳');
+    try {
+      await dieselLogsService.markDeleted({
+        logId: logToDelete.id,
+        observation: deleteObservation.trim(),
+        userId: currentUser.id,
+        type: logToDelete.type,
+        monto: logToDelete.amount,
+        tankId: logToDelete.tankId
+      });
+      setLogs(prev => prev.map(l => l.id === logToDelete.id ? {
+        ...l,
+        status: 'ELIMINADO',
+        deleteObservation: deleteObservation.trim() || undefined
+      } : l));
+      setIsDeleteModalOpen(false);
+      setLogToDelete(null);
+      setDeleteObservation('');
+      await loadAllData();
+      showStatus('success', 'Registro eliminado', 'Se marcó como eliminado correctamente.', '✅');
+    } catch (err: any) {
+      showStatus('error', 'Error al eliminar', err.message, '❌');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleResetCalculations = async () => {
-    const confirmReset = window.confirm(
-      '⚠️ ¿Estás seguro de reiniciar los cálculos?\n\n' +
-      'Esto eliminará todo el historial de movimientos y reiniciará los niveles de tanque.\n' +
-      'LA FLOTA Y PERSONAL PERMANECERÁN INTACTOS.\n\n' +
-      '¿Continuar?'
-    );
+    setIsResetConfirmOpen(true);
+  };
 
-    if (!confirmReset) return;
+  const handleConfirmReset = async () => {
+    setIsResetConfirmOpen(false);
     setIsLoading(true);
+    showStatus('loading', 'Reiniciando logística', 'Actualizando niveles...', '⏳');
 
     try {
       // 1. Eliminar todos los logs
@@ -330,15 +371,15 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
       for (const tank of branchTanks) {
         await supabase
           .from('diesel_tanks')
-          .update({ current_qty: 2500 })
+          .update({ current_qty: 0 })
           .eq('id', tank.id);
       }
 
       await loadAllData();
-      alert('✅ Cálculos y tanques reiniciados exitosamente.\nFlota y personal preservados.');
+      showStatus('success', 'Reinicio completo', 'Cálculos y tanques reiniciados.', '✅');
     } catch (err: any) {
       console.error('Error al reiniciar:', err);
-      alert(`❌ Error: ${err.message}`);
+      showStatus('error', 'Error al reiniciar', err.message, '❌');
     } finally {
       setIsLoading(false);
     }
@@ -420,7 +461,28 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
         <div className="pb-20">
           {activeView === 'status' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4">
-              {branchTanks.map(tank => <DieselTankContainer key={tank.id} tank={tank} />)}
+              <div className="col-span-full">
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => {
+                      if (branchTanks[0]) {
+                        setEditMaxCapacity(branchTanks[0].maxCapacity);
+                        setIsEditCapacityOpen(true);
+                      }
+                    }}
+                    className="bg-slate-900 text-[12px] font-black flex items-center gap-2 text-white px-4 py-2 rounded-lg shadow-lg shadow-slate-200 transition-all active:scale-95 duration-300"
+                  >
+                    EDITAR CAPACIDAD
+                    <span className="grayscale-0">⛽</span>
+                  </button>
+                </div>
+              </div>
+              {branchTanks.map(tank => (
+                <DieselTankCard
+                  key={tank.id}
+                  tank={tank}
+                />
+              ))}
               {branchTanks.length === 0 && (
                 <div className="col-span-full bg-white p-12 rounded-[3rem] border-2 border-dashed border-slate-200 text-center">
                   <p className="text-slate-400 font-bold">No hay tanques registrados en esta ubicación.</p>
@@ -450,25 +512,46 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                         <th className="p-6">Tipo</th>
                         <th className="p-6">Detalle / Proveedor</th>
                         <th className="p-6 text-right">Cantidad</th>
+                        <th className="p-6 text-right">Precio</th>
+                        <th className="p-6">Observación</th>
+                        <th className="p-6">Estado</th>
+                        <th className="p-6 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {logs.filter(l => branchTanks.some(t => t.id === l.tankId)).map(log => (
-                        <tr key={log.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="p-6 text-xs text-slate-500 font-bold">{log.createdAt.toLocaleDateString()}</td>
-                          <td className="p-6">
-                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${log.type === 'CARGA' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
-                              {log.type === 'CARGA' ? 'Salida' : 'Entrada'}
-                            </span>
-                          </td>
-                          <td className="p-6">
-                            <p className="text-sm font-black text-slate-800 uppercase">
-                              {log.type === 'CARGA' ? vehicles.find(v => v.id === log.vehicleId)?.description : log.supplier}
-                            </p>
-                          </td>
-                          <td className="p-6 text-right font-black text-sm">{log.amount.toLocaleString()} L</td>
-                        </tr>
-                      ))}
+                      {logs.filter(l => branchTanks.some(t => t.id === l.tankId)).map(log => {
+                        const isDeleted = log.status === 'ELIMINADO';
+                        return (
+                          <tr key={log.id} className={`hover:bg-slate-50 transition-colors ${isDeleted ? 'opacity-60' : ''}`}>
+                            <td className="p-6 text-xs text-slate-500 font-bold">{log.createdAt.toLocaleDateString()}</td>
+                            <td className="p-6">
+                              <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${log.type === 'CARGA' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
+                                {log.type === 'CARGA' ? 'Salida' : 'Entrada'}
+                              </span>
+                            </td>
+                            <td className="p-6">
+                              <p className="text-sm font-black text-slate-800 uppercase">
+                                {log.type === 'CARGA' ? vehicles.find(v => v.id === log.vehicleId)?.description : log.supplier}
+                              </p>
+                            </td>
+                            <td className="p-6 text-right font-black text-sm">{log.amount.toLocaleString()} L</td>
+                            <td className="p-6 text-right font-black text-sm">{log.costPerLiter ? `$ ${log.costPerLiter?.toLocaleString()}` : '———'}</td>
+                            <td className="text-sm font-black text-slate-800 uppercase">
+                              {isDeleted ? (log.deleteObservation || '—') : (log.notes || '———')}
+                            </td>
+                            <td className="p-6 text-right font-black text-sm">{log.status || 'ACTIVO'}</td>
+                            <td className="p-6 text-right">
+                              <button
+                                onClick={() => handleDeleteLog(log)}
+                                disabled={isLoading || isDeleted}
+                                className="px-3 py-2 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-red-200 hover:bg-red-600 transition-all active:scale-95"
+                              >
+                                Eliminar
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -561,7 +644,15 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Litros</label>
-                  <input type="number" required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-2xl font-black text-center text-lg" value={cargaData.amount || ''} onChange={e => setCargaData({ ...cargaData, amount: Number(e.target.value) })} />
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    max={selectedCargaTank?.currentQty || undefined}
+                    className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-2xl font-black text-center text-lg"
+                    value={cargaData.amount || ''}
+                    onChange={e => setCargaData({ ...cargaData, amount: Number(e.target.value) })}
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Km</label>
@@ -605,7 +696,15 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Litros</label>
-                  <input type="number" required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-black text-center text-lg" value={recepcionData.amount || ''} onChange={e => setRecepcionData({ ...recepcionData, amount: Number(e.target.value) })} />
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    max={recepcionMax}
+                    className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-black text-center text-lg"
+                    value={recepcionData.amount || ''}
+                    onChange={e => setRecepcionData({ ...recepcionData, amount: Number(e.target.value) })}
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">$/Litro</label>
@@ -619,6 +718,48 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
           </div>
         </div>
       )}
+
+      <DeleteLogModal
+        isOpen={isDeleteModalOpen && Boolean(logToDelete)}
+        isLoading={isLoading}
+        observation={deleteObservation}
+        onObservationChange={setDeleteObservation}
+        onCancel={() => {
+          setIsDeleteModalOpen(false);
+          setLogToDelete(null);
+          setDeleteObservation('');
+        }}
+        onConfirm={handleConfirmDelete}
+      />
+
+      <EditCapacityModal
+        isOpen={isEditCapacityOpen}
+        isLoading={isLoading}
+        value={editMaxCapacity}
+        onChange={setEditMaxCapacity}
+        onCancel={() => setIsEditCapacityOpen(false)}
+        onSubmit={handleUpdateMaxCapacity}
+      />
+
+      <StatusModal
+        isOpen={statusModal.isOpen}
+        type={statusModal.type}
+        title={statusModal.title}
+        description={statusModal.description}
+        icon={statusModal.icon}
+        onClose={() => setStatusModal(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      <ConfirmModal
+        isOpen={isResetConfirmOpen}
+        title="¿Reiniciar cálculos?"
+        description={'Esto eliminará todo el historial de movimientos y reiniciará los niveles de tanque.\nLA FLOTA Y PERSONAL PERMANECERÁN INTACTOS.\n\n¿Continuar?'}
+        icon="⚠️"
+        confirmText="Aceptar"
+        cancelText="Cancelar"
+        onConfirm={handleConfirmReset}
+        onCancel={() => setIsResetConfirmOpen(false)}
+      />
 
       {isAssetModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">

@@ -186,6 +186,8 @@ export interface DieselLog {
   userId: string;
   createdAt: Date;
   notes?: string;
+  status?: string;
+  deleteObservation?: string;
 }
 
 export type AuditReason = 'CONTEO_CORRECTO' | 'MERMA' | 'DERECHO_CORTE' | 'DAÑO' | 'ERROR_VENTA' | 'ROBO' | 'OTRO';

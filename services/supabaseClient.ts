@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 // Obtener variables de entorno
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
 // Validar que las variables estén configuradas
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -14,12 +15,18 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Crear cliente de Supabase
-export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
-    auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-    },
-});
+const fallbackUrl = 'http://localhost:54321';
+const fallbackKey = 'public-anon-key';
+export const supabase = createClient(
+    isSupabaseConfigured ? supabaseUrl : fallbackUrl,
+    isSupabaseConfigured ? supabaseAnonKey : fallbackKey,
+    {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+        },
+    }
+);
 
 // ============================================================================
 // TIPOS DE DATOS
@@ -70,6 +77,8 @@ export interface DieselLogDB {
     notes?: string;
     user_id: string;
     created_at: string;
+    status?: string;
+    observacion?: string;
 }
 
 export interface ProductDB {
@@ -374,6 +383,71 @@ export const dieselLogsService = {
         if (error) throw error;
         return data;
     },
+
+    // Archivar y eliminar un registro (mantiene historial)
+    async archiveLog(params: { logId: string; deletedBy: string }) {
+        const { data, error } = await supabase.rpc('archive_diesel_log', {
+            p_log_id: params.logId,
+        });
+
+        if (error) throw error;
+        return data;
+    },
+
+    // Marcar registro como eliminado y guardar observacion
+    async markDeleted(params: {
+        type: string;
+        logId: string;
+        observation: string;
+        userId: string;
+        monto: number;
+        tankId: string;
+    }) {
+        // 1) Marcar log como eliminado (ideal: solo si estaba activo)
+        const { data: logUpdated, error: logErr } = await supabase
+            .from("diesel_logs")
+            .update({
+                status: false,
+                observacion: params.observation?.trim() || null,
+            })
+            .eq("id", params.logId)
+            .eq("status", true) // evita doble descuento si ya estaba en false
+            .select("id,status")
+            .maybeSingle();
+
+        if (logErr) throw logErr;
+        if (!logUpdated) throw new Error("El log no existe o ya estaba eliminado.");
+
+        // 2) Leer qty actual
+        const { data: tank, error: readErr } = await supabase
+            .from("diesel_tanks")
+            .select("current_qty")
+            .eq("id", params.tankId)
+            .single();
+
+        if (readErr) throw readErr;
+        let newQty
+        if (params.type === "RECEPCION") {
+            newQty = (tank?.current_qty ?? 0) - params.monto;
+        } else {
+            newQty = (tank?.current_qty ?? 0) + params.monto;
+        }
+        // opcional: evitar negativos
+        if (newQty < 0) throw new Error("No se puede dejar el tanque en negativo.");
+
+        // 3) Actualizar tanque
+        const { data: tankUpdated, error: tankErr } = await supabase
+            .from("diesel_tanks")
+            .update({ current_qty: newQty })
+            .eq("id", params.tankId)
+            .select()
+            .single();
+
+        if (tankErr) throw tankErr;
+
+        return tankUpdated;
+    }
+
 };
 
 // ============================================================================
