@@ -24,7 +24,7 @@ import {
   isSupabaseConfigured
 } from './services/supabaseClient';
 import { INITIAL_CUSTOMERS, INITIAL_PRODUCTS, INITIAL_CONVERSIONS, INITIAL_USERS, INITIAL_BRANCHES } from './constants';
-import { Customer, Product, ProductConversion, User, Role, Branch, CustomerPayment, DieselTank, Vehicle, Driver, DieselLog, ConcreteFormula, MixerTruck, ConcreteOrder, Sale, Purchase } from './types';
+import { Customer, Product, ProductConversion, User, Role, Branch, CustomerPayment, DieselTank, Vehicle, Driver, DieselLog, ConcreteFormula, MixerTruck, ConcreteOrder, Sale } from './types';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('pos');
@@ -48,7 +48,6 @@ const App: React.FC = () => {
   const [conversions, setConversions] = useState<ProductConversion[]>(INITIAL_CONVERSIONS);
   const [payments, setPayments] = useState<CustomerPayment[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
 
   // Estados de Concretera y Diesel
   const [concreteFormulas, setConcreteFormulas] = useState<ConcreteFormula[]>([
@@ -219,7 +218,7 @@ const App: React.FC = () => {
       case 'pos':
         return <POSScreen customers={customers} setCustomers={setCustomers} products={products} setProducts={setProducts} conversions={conversions} selectedBranchId={selectedBranchId} sales={sales} setSales={setSales} currentUser={currentUser} />;
       case 'purchases':
-        return <PurchasesScreen products={products} setProducts={setProducts} purchases={purchases} setPurchases={setPurchases} selectedBranchId={selectedBranchId} currentUser={currentUser} />;
+        return <PurchasesScreen selectedBranchId={selectedBranchId} currentUser={currentUser} />;
       case 'customers':
         return <CustomerScreen customers={customers} setCustomers={setCustomers} payments={payments} setPayments={setPayments} sales={sales} currentUser={currentUser} />;
       case 'inventory':
