@@ -4,7 +4,6 @@ import { Unit, Product, ProductConversion, Customer, User, Role, Branch } from '
 export const INITIAL_BRANCHES: Branch[] = [
   { id: 'b1', name: 'Matriz Centro', address: 'Av. Principal 123' },
   { id: 'b2', name: 'Sucursal Norte', address: 'Calle 45 x 10' },
-  { id: 'b3', name: 'Bodega Periférico', address: 'Periférico km 12' },
 ];
 
 export const UNITS: Unit[] = [
