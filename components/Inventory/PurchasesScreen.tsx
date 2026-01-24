@@ -59,6 +59,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   const [isNewProductOpen, setIsNewProductOpen] = useState(false);
   const [reactivateProduct, setReactivateProduct] = useState<Product | null>(null);
   const [reactivateUoms, setReactivateUoms] = useState<ProductUom[]>([]);
+  const [isManualProductOpen, setIsManualProductOpen] = useState(false);
   const [isProductsOpen, setIsProductsOpen] = useState(false);
   const [productsList, setProductsList] = useState<Product[]>([]);
   const [productsSearch, setProductsSearch] = useState('');
@@ -393,6 +394,18 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     await loadProductsList();
   };
 
+  const handleManualProduct = () => {
+    if (!branchId) {
+      showFeedback('alert', 'Sucursal requerida', 'Seleccione una sucursal antes de agregar productos.');
+      return;
+    }
+    setPendingBarcode('');
+    setReactivateProduct(null);
+    setReactivateUoms([]);
+    setIsManualProductOpen(true);
+    setIsNewProductOpen(true);
+  };
+
   const handleClearHistory = async () => {
     if (!branchId) {
       showFeedback('alert', 'Sucursal requerida', 'Seleccione una sucursal antes de limpiar el historial.');
@@ -451,6 +464,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   const handleProductCreated = (payload: { product: Product; purchaseUom: ProductUom }) => {
     addToCart(payload.product, payload.purchaseUom);
     setIsNewProductOpen(false);
+    setIsManualProductOpen(false);
     setPendingBarcode('');
     scanInputRef.current?.focus();
   };
@@ -492,18 +506,24 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
             {selectedBranchLabel}
           </p>
         </div>
-        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-          <button
-            onClick={handleOpenProducts}
-            className="px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all bg-slate-100 text-slate-600 hover:bg-slate-200"
-          >
-            📋 Ver Productos
-          </button>
-          {viewMode === 'HISTORY' && (
+          <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
             <button
-              onClick={() => setIsClearHistoryOpen(true)}
-              className="px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all bg-amber-100 text-amber-700 hover:bg-amber-200"
+              onClick={handleOpenProducts}
+              className="px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all bg-slate-100 text-slate-600 hover:bg-slate-200"
             >
+              📋 Ver Productos
+            </button>
+            <button
+              onClick={handleManualProduct}
+              className="px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all bg-slate-900 text-white hover:bg-orange-600"
+            >
+              ➕ Agregar Producto
+            </button>
+            {viewMode === 'HISTORY' && (
+              <button
+                onClick={() => setIsClearHistoryOpen(true)}
+                className="px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all bg-amber-100 text-amber-700 hover:bg-amber-200"
+              >
               🧹 Limpiar Historial
             </button>
           )}
@@ -742,8 +762,10 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         mode={reactivateProduct ? 'reactivate' : 'create'}
         existingProduct={reactivateProduct}
         existingUoms={reactivateUoms}
+        allowBarcodeEdit={isManualProductOpen}
         onClose={() => {
           setIsNewProductOpen(false);
+          setIsManualProductOpen(false);
           setPendingBarcode('');
           setReactivateProduct(null);
           setReactivateUoms([]);

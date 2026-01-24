@@ -25,6 +25,7 @@ interface NewProductModalProps {
   mode?: 'create' | 'reactivate';
   existingProduct?: Product | null;
   existingUoms?: ProductUom[];
+  allowBarcodeEdit?: boolean;
   onClose: () => void;
   onCreated: (payload: { product: Product; purchaseUom: ProductUom }) => void;
   onReactivated?: (payload: { product: Product; purchaseUom: ProductUom }) => void;
@@ -40,10 +41,12 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   mode = 'create',
   existingProduct = null,
   existingUoms = [],
+  allowBarcodeEdit = false,
   onClose,
   onCreated,
   onReactivated,
 }) => {
+  const [barcodeValue, setBarcodeValue] = useState(barcode);
   const [sku, setSku] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -64,8 +67,10 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     if (!isOpen) return;
     setError(null);
     setSaving(false);
+    setBarcodeValue(barcode);
 
     if (mode === 'reactivate' && existingProduct) {
+      setBarcodeValue(existingProduct.barcode ?? barcode);
       setSku(existingProduct.sku ?? '');
       setName(existingProduct.name ?? '');
       setDescription(existingProduct.description ?? '');
@@ -177,6 +182,11 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       return;
     }
 
+    if (!barcodeValue.trim()) {
+      setError('El código de barras es obligatorio.');
+      return;
+    }
+
     if (!name.trim()) {
       setError('El nombre es obligatorio.');
       return;
@@ -236,7 +246,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       const payload = {
         branch_id: branchId,
         sku: resolvedSku,
-        barcode,
+        barcode: barcodeValue.trim(),
         name: name.trim(),
         description: description.trim() || null,
         category_id: resolvedCategoryId,
@@ -319,9 +329,12 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Barcode</label>
               <input
                 type="text"
-                value={barcode}
-                readOnly
-                className="w-full p-3 bg-gray-100 border-2 border-transparent rounded-xl outline-none font-mono text-xs"
+                value={barcodeValue}
+                readOnly={!allowBarcodeEdit || mode === 'reactivate'}
+                onChange={(e) => setBarcodeValue(e.target.value)}
+                className={`w-full p-3 border-2 border-transparent rounded-xl outline-none font-mono text-xs ${
+                  allowBarcodeEdit && mode !== 'reactivate' ? 'bg-gray-50 focus:border-orange-500' : 'bg-gray-100'
+                }`}
               />
             </div>
             <div className="space-y-1">
