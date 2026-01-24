@@ -7,8 +7,12 @@ export enum Role {
 
 export interface Branch {
   id: string;
+  code: string;
   name: string;
   address: string;
+  dbId?: number;
+  isActive?: boolean;
+  createdAt?: string;
 }
 
 export interface User {

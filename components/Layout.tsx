@@ -80,6 +80,7 @@ const Layout: React.FC<LayoutProps> = ({
 
   const isBranchLocked = !!currentUser.branchId && currentUser.role !== Role.ADMIN;
   const activeBranch = branches.find(b => b.id === selectedBranchId);
+  const selectableBranches = branches.filter(b => b.isActive !== false);
 
   return (
     <div className="h-screen w-full flex flex-col md:flex-row bg-slate-50 text-slate-900 overflow-hidden relative">
@@ -243,7 +244,7 @@ const Layout: React.FC<LayoutProps> = ({
                     onChange={(e) => setSelectedBranchId(e.target.value)}
                     className="bg-transparent font-black text-slate-900 outline-none text-[10px] md:text-xs uppercase tracking-tight cursor-pointer max-w-[100px] md:max-w-none"
                   >
-                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    {selectableBranches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { DieselTank, Vehicle, Driver, DieselLog, User } from '../../types';
+import { Branch, DieselTank, Vehicle, Driver, DieselLog, User } from '../../types';
 import DieselTankCard from './DieselTankCard';
 import DeleteLogModal from './DeleteLogModal';
 import EditCapacityModal from './EditCapacityModal';
@@ -25,10 +25,11 @@ interface DieselScreenProps {
   setLogs: React.Dispatch<React.SetStateAction<DieselLog[]>>;
   currentUser: User;
   selectedBranchId: string;
+  branches: Branch[];
 }
 
 const DieselScreen: React.FC<DieselScreenProps> = ({
-  tanks, setTanks, vehicles, setVehicles, drivers, setDrivers, logs, setLogs, currentUser, selectedBranchId
+  tanks, setTanks, vehicles, setVehicles, drivers, setDrivers, logs, setLogs, currentUser, selectedBranchId, branches
 }) => {
   const [activeView, setActiveView] = useState<'status' | 'logs' | 'assets'>('status');
   const [isCargaModalOpen, setIsCargaModalOpen] = useState(false);
@@ -51,7 +52,40 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
   });
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
-  const branchTanks = useMemo(() => tanks.filter(t => t.branchId === selectedBranchId), [tanks, selectedBranchId]);
+  const selectedBranch = useMemo(
+    () => branches.find(b => b.id === selectedBranchId),
+    [branches, selectedBranchId]
+  );
+  const branchIdsForQuery = useMemo(() => {
+    const ids = new Set<string>();
+    if (selectedBranchId) {
+      ids.add(selectedBranchId);
+      ids.add(selectedBranchId.toLowerCase());
+      ids.add(selectedBranchId.toUpperCase());
+    }
+    if (selectedBranch?.code) {
+      ids.add(selectedBranch.code);
+      ids.add(selectedBranch.code.toLowerCase());
+      ids.add(selectedBranch.code.toUpperCase());
+    }
+    if (selectedBranch?.dbId !== undefined) {
+      ids.add(String(selectedBranch.dbId));
+    }
+    return Array.from(ids);
+  }, [selectedBranch, selectedBranchId]);
+
+  const normalizeBranchId = (rawId: string) => {
+    const raw = String(rawId ?? '');
+    const match = branches.find(b =>
+      String(b.dbId ?? '') === raw || (b.code && b.code.toLowerCase() === raw.toLowerCase())
+    );
+    return match?.code || rawId;
+  };
+
+  const branchTanks = useMemo(
+    () => tanks.filter(t => branchIdsForQuery.includes(String(t.branchId))),
+    [tanks, branchIdsForQuery]
+  );
 
   const [cargaData, setCargaData] = useState({ tankId: '', vehicleId: '', driverId: '', amount: 0, odometer: 0, notes: '' });
   const [recepcionData, setRecepcionData] = useState({ tankId: '', amount: 0, costPerLiter: 22.50, supplier: '', invoiceNumber: '', notes: '' });
@@ -69,7 +103,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
 
   useEffect(() => {
     loadAllData();
-  }, [selectedBranchId]);
+  }, [selectedBranchId, branches]);
 
   useEffect(() => {
     const tanksChannel = subscriptions.subscribeTanks(() => loadTanks());
@@ -97,7 +131,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
     const data = await dieselTanksService.getAll();
     setTanks(data.map(t => ({
       id: t.id,
-      branchId: t.branch_id,
+      branchId: normalizeBranchId(t.branch_id),
       name: t.name,
       currentQty: Number(t.current_qty),
       maxCapacity: Number(t.max_capacity)
@@ -106,7 +140,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
 
   const loadVehicles = async () => {
     // Solo cargar vehículos de esta sucursal
-    const data = await vehiclesService.getAll(selectedBranchId);
+    const data = await vehiclesService.getAll(branchIdsForQuery);
     setVehicles(data.map(v => ({
       id: v.id,
       plate: v.plate,
@@ -117,7 +151,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
 
   const loadDrivers = async () => {
     // Solo cargar operadores de esta sucursal
-    const data = await driversService.getAll(selectedBranchId);
+    const data = await driversService.getAll(branchIdsForQuery);
     setDrivers(data.map(d => ({
       id: d.id,
       name: d.name,

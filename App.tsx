@@ -21,20 +21,18 @@ import {
   customersService,
   salesService,
   concreteService,
-  isSupabaseConfigured
+  isSupabaseConfigured,
+  branchesService
 } from './services/supabaseClient';
-import { INITIAL_CUSTOMERS, INITIAL_PRODUCTS, INITIAL_CONVERSIONS, INITIAL_USERS, INITIAL_BRANCHES } from './constants';
+import { INITIAL_CUSTOMERS, INITIAL_PRODUCTS, INITIAL_CONVERSIONS, INITIAL_USERS } from './constants';
 import { Customer, Product, ProductConversion, User, Role, Branch, CustomerPayment, DieselTank, Vehicle, Driver, DieselLog, ConcreteFormula, MixerTruck, ConcreteOrder, Sale } from './types';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('pos');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [branches, setBranches] = useState<Branch[]>(() => {
-    const saved = localStorage.getItem('lopar_branches');
-    return saved ? JSON.parse(saved) : INITIAL_BRANCHES;
-  });
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>(() => {
-    return localStorage.getItem('lopar_selected_branch') || INITIAL_BRANCHES[0].id;
+    return localStorage.getItem('lopar_selected_branch') || '';
   });
 
   // Persistir selección de sucursal
@@ -60,8 +58,8 @@ const App: React.FC = () => {
   ]);
   const [concreteOrders, setConcreteOrders] = useState<ConcreteOrder[]>([]);
   const [tanks, setTanks] = useState<DieselTank[]>([
-    { id: 't1', branchId: 'b1', name: 'Tanque Matriz', currentQty: 0, maxCapacity: 5000 },
-    { id: 't2', branchId: 'b2', name: 'Almacén Norte Dsl', currentQty: 0, maxCapacity: 2000 }
+    { id: 't1', branchId: 'B1', name: 'Tanque Matriz', currentQty: 0, maxCapacity: 5000 },
+    { id: 't2', branchId: 'B2', name: 'Almacén Norte Dsl', currentQty: 0, maxCapacity: 2000 }
   ]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([
     { id: 'v1', plate: 'MX-4455', description: 'Torton Kenworth #1', active: true },
@@ -90,6 +88,7 @@ const App: React.FC = () => {
     const logsSub = subscriptions.subscribeAll('diesel_logs', () => loadGlobalData());
     const vehicleSub = subscriptions.subscribeAll('vehicles', () => loadGlobalData());
     const driverSub = subscriptions.subscribeAll('drivers', () => loadGlobalData());
+    const branchesSub = subscriptions.subscribeAll('branches', () => loadGlobalData());
 
     return () => {
       salesSub.unsubscribe();
@@ -100,12 +99,20 @@ const App: React.FC = () => {
       logsSub.unsubscribe();
       vehicleSub.unsubscribe();
       driverSub.unsubscribe();
+      branchesSub.unsubscribe();
     };
   }, []);
 
+  const resolveSelectedBranchId = (nextBranches: Branch[], current: string) => {
+    const activeMatch = nextBranches.find(b => b.id === current && b.isActive !== false);
+    if (activeMatch) return current;
+    const firstActive = nextBranches.find(b => b.isActive !== false);
+    return firstActive?.id || nextBranches[0]?.id || '';
+  };
+
   const loadGlobalData = async () => {
     try {
-      const [prods, custs, ords, sls, tanksData, vehData, drivData, logsData] = await Promise.all([
+      const results = await Promise.allSettled([
         productsService.getAll(),
         customersService.getAll(),
         concreteService.getOrders(),
@@ -113,8 +120,30 @@ const App: React.FC = () => {
         dieselTanksService.getAll(),
         vehiclesService.getAll(),
         driversService.getAll(),
-        dieselLogsService.getAll(100)
+        dieselLogsService.getAll(100),
+        branchesService.getAll()
       ]);
+      const [
+        prodsRes,
+        custsRes,
+        ordsRes,
+        slsRes,
+        tanksRes,
+        vehRes,
+        drivRes,
+        logsRes,
+        branchesRes
+      ] = results;
+
+      const prods = prodsRes.status === 'fulfilled' ? prodsRes.value : null;
+      const custs = custsRes.status === 'fulfilled' ? custsRes.value : null;
+      const ords = ordsRes.status === 'fulfilled' ? ordsRes.value : null;
+      const sls = slsRes.status === 'fulfilled' ? slsRes.value : null;
+      const tanksData = tanksRes.status === 'fulfilled' ? tanksRes.value : null;
+      const vehData = vehRes.status === 'fulfilled' ? vehRes.value : null;
+      const drivData = drivRes.status === 'fulfilled' ? drivRes.value : null;
+      const logsData = logsRes.status === 'fulfilled' ? logsRes.value : null;
+      const branchesData = branchesRes.status === 'fulfilled' ? branchesRes.value : null;
 
       if (prods) {
         setProducts(prods.map((p: any) => ({
@@ -162,6 +191,22 @@ const App: React.FC = () => {
           odometerReading: l.odometer_reading || undefined,
           createdAt: new Date(l.created_at)
         })));
+      }
+      if (branchesData) {
+        const mappedBranches = branchesData.map((b: any) => ({
+            id: b.code,
+            code: b.code,
+            dbId: Number(b.id),
+            name: b.name,
+            address: b.address,
+            isActive: b.is_active,
+            createdAt: b.created_at
+        })) as Branch[];
+        setBranches(mappedBranches);
+        const nextSelected = resolveSelectedBranchId(mappedBranches, selectedBranchId);
+        if (nextSelected && nextSelected !== selectedBranchId) {
+          setSelectedBranchId(nextSelected);
+        }
       }
     } catch (err) {
       console.error("Error syncing data:", err);
@@ -213,12 +258,14 @@ const App: React.FC = () => {
     );
   }
 
+  const activeBranches = branches.filter(b => b.isActive !== false);
+
   const renderContent = () => {
     switch (activeTab) {
       case 'pos':
         return <POSScreen customers={customers} setCustomers={setCustomers} products={products} setProducts={setProducts} conversions={conversions} selectedBranchId={selectedBranchId} sales={sales} setSales={setSales} currentUser={currentUser} />;
       case 'purchases':
-        return <PurchasesScreen selectedBranchId={selectedBranchId} currentUser={currentUser} />;
+        return <PurchasesScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
       case 'customers':
         return <CustomerScreen customers={customers} setCustomers={setCustomers} payments={payments} setPayments={setPayments} sales={sales} currentUser={currentUser} />;
       case 'inventory':
@@ -232,14 +279,14 @@ const App: React.FC = () => {
       case 'concrete-fleet':
         return <ConcreteFleet mixers={mixers} setMixers={setMixers} orders={concreteOrders} setOrders={setConcreteOrders} />;
       case 'diesel':
-        return <DieselScreen tanks={tanks} setTanks={setTanks} vehicles={vehicles} setVehicles={setVehicles} drivers={drivers} setDrivers={setDrivers} logs={dieselLogs} setLogs={setDieselLogs} currentUser={currentUser} selectedBranchId={selectedBranchId} />;
+        return <DieselScreen tanks={tanks} setTanks={setTanks} vehicles={vehicles} setVehicles={setVehicles} drivers={drivers} setDrivers={setDrivers} logs={dieselLogs} setLogs={setDieselLogs} currentUser={currentUser} selectedBranchId={selectedBranchId} branches={branches} />;
       default:
         return <POSScreen customers={customers} setCustomers={setCustomers} products={products} setProducts={setProducts} conversions={conversions} selectedBranchId={selectedBranchId} sales={sales} setSales={setSales} currentUser={currentUser} />;
     }
   };
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} branches={branches} onLogout={() => setCurrentUser(null)} onReset={handleGlobalReset}>
+    <Layout activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} branches={activeBranches} onLogout={() => setCurrentUser(null)} onReset={handleGlobalReset}>
       {renderContent()}
     </Layout>
   );

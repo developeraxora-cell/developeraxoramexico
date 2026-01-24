@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { User } from '../../types';
+import { Branch, User } from '../../types';
 import { supabase } from '../../services/supabaseClient';
 import NewProductModal from './NewProductModal';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
@@ -16,6 +16,7 @@ import { purchasesService } from '../../services/inventory/purchases.service';
 interface PurchasesScreenProps {
   selectedBranchId: string;
   currentUser: User;
+  branches: Branch[];
 }
 
 interface PurchaseCartItem {
@@ -45,7 +46,7 @@ interface PendingUomSelection {
   uoms: ProductUom[];
 }
 
-const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, currentUser }) => {
+const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, currentUser, branches }) => {
   const [viewMode, setViewMode] = useState<'HISTORY' | 'CREATE'>('HISTORY');
   const [barcodeInput, setBarcodeInput] = useState('');
   const [reference, setReference] = useState('');
@@ -81,17 +82,10 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     return cartItems.reduce((acc, item) => acc + item.qty * item.unit_price, 0);
   }, [cartItems]);
   const branchId = useMemo(() => {
-    switch (selectedBranchId) {
-      case 'b1':
-        return 1;
-      case 'b2':
-        return 2;
-      case 'b3':
-        return 3;
-      default:
-        return null;
-    }
-  }, [selectedBranchId])
+    const match = branches.find(b => b.id === selectedBranchId);
+    if (match?.dbId !== undefined) return String(match.dbId);
+    return selectedBranchId || null;
+  }, [branches, selectedBranchId]);
   const uomById = useMemo(() => {
     return uoms.reduce<Record<string, Uom>>((acc, uom) => {
       acc[uom.id] = uom;

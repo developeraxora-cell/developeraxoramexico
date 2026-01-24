@@ -1,10 +1,5 @@
 
-import { Unit, Product, ProductConversion, Customer, User, Role, Branch } from './types';
-
-export const INITIAL_BRANCHES: Branch[] = [
-  { id: 'b1', name: 'Matriz Centro', address: 'Av. Principal 123' },
-  { id: 'b2', name: 'Sucursal Norte', address: 'Calle 45 x 10' },
-];
+import { Unit, Product, ProductConversion, Customer, User, Role } from './types';
 
 export const UNITS: Unit[] = [
   { id: 'u1', name: 'Kilogramo', symbol: 'kg', isStandard: true },
@@ -17,8 +12,8 @@ export const UNITS: Unit[] = [
 
 export const INITIAL_USERS: User[] = [
   { id: 'u-1', name: 'Administrador Principal', username: 'admin', role: Role.ADMIN, active: true },
-  { id: 'u-2', name: 'Cajero Matutino (Matriz)', username: 'cajero1', role: Role.CAJERO, active: true, branchId: 'b1' },
-  { id: 'u-3', name: 'Encargado Norte', username: 'almacen1', role: Role.ALMACEN, active: true, branchId: 'b2' },
+  { id: 'u-2', name: 'Cajero Matutino (Matriz)', username: 'cajero1', role: Role.CAJERO, active: true, branchId: 'B1' },
+  { id: 'u-3', name: 'Encargado Norte', username: 'almacen1', role: Role.ALMACEN, active: true, branchId: 'B2' },
 ];
 
 export const INITIAL_PRODUCTS: Product[] = [
@@ -32,9 +27,9 @@ export const INITIAL_PRODUCTS: Product[] = [
     minStock: 1000,
     maxStock: 20000,
     stocks: [
-      { branchId: 'b1', qty: 5000 },
-      { branchId: 'b2', qty: 1200 },
-      { branchId: 'b3', qty: 15000 }
+      { branchId: 'B1', qty: 5000 },
+      { branchId: 'B2', qty: 1200 },
+      { branchId: 'B3', qty: 15000 }
     ],
     costPerBaseUnit: 3.2,
     pricePerBaseUnit: 4.5
@@ -50,9 +45,9 @@ export const INITIAL_PRODUCTS: Product[] = [
     minStock: 240,
     maxStock: 2400,
     stocks: [
-      { branchId: 'b1', qty: 600 },
-      { branchId: 'b2', qty: 45 },
-      { branchId: 'b3', qty: 2000 }
+      { branchId: 'B1', qty: 600 },
+      { branchId: 'B2', qty: 45 },
+      { branchId: 'B3', qty: 2000 }
     ],
     costPerBaseUnit: 25.0,
     pricePerBaseUnit: 38.0
@@ -67,9 +62,9 @@ export const INITIAL_PRODUCTS: Product[] = [
     minStock: 5000,
     maxStock: 50000,
     stocks: [
-      { branchId: 'b1', qty: 15000 },
-      { branchId: 'b2', qty: 8000 },
-      { branchId: 'b3', qty: 40000 }
+      { branchId: 'B1', qty: 15000 },
+      { branchId: 'B2', qty: 8000 },
+      { branchId: 'B3', qty: 40000 }
     ],
     costPerBaseUnit: 0.8,
     pricePerBaseUnit: 1.5

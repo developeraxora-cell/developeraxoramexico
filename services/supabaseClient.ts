@@ -124,6 +124,86 @@ export interface ConcreteOrderDB {
     total_amount?: number;
 }
 
+export interface BranchDB {
+    id: number;
+    code: string;
+    name: string;
+    address: string;
+    is_active: boolean;
+    created_at: string;
+}
+
+// ============================================================================
+// FUNCIONES DE SUCURSALES
+// ============================================================================
+
+export const branchesService = {
+    async getAll() {
+        const { data, error } = await supabase
+            .from('branches')
+            .select('id, code, name, address, is_active, created_at')
+            .order('id');
+
+        if (error) throw error;
+        return data as BranchDB[];
+    },
+    async create(branch: { code: string; name: string; address: string; is_active?: boolean }) {
+        const payload = {
+            code: branch.code,
+            name: branch.name,
+            address: branch.address,
+            is_active: branch.is_active ?? true
+        };
+        const { data, error } = await supabase
+            .from('branches')
+            .insert([payload])
+            .select('id, code, name, address, is_active, created_at')
+            .single();
+
+        if (error) throw error;
+        return data as BranchDB;
+    },
+    async updateById(id: number, updates: { code?: string; name?: string; address?: string; is_active?: boolean }) {
+        console.log(id, updates);
+        const { data, error } = await supabase
+            .from('branches')
+            .update(updates)
+            .eq('id', id)
+            .select('id, code, name, address, is_active, created_at')
+            .single();
+
+        if (error) throw error;
+        return data as BranchDB;
+    },
+    async updateByCode(code: string, updates: { code?: string; name?: string; address?: string; is_active?: boolean }) {
+        const { data, error } = await supabase
+            .from('branches')
+            .update(updates)
+            .eq('code', code)
+            .select('id, code, name, address, is_active, created_at')
+            .single();
+
+        if (error) throw error;
+        return data as BranchDB;
+    },
+    async deleteById(id: number) {
+        const { error } = await supabase
+            .from('branches')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+    async deleteByCode(code: string) {
+        const { error } = await supabase
+            .from('branches')
+            .delete()
+            .eq('code', code);
+
+        if (error) throw error;
+    }
+};
+
 // ============================================================================
 // FUNCIONES DE TANQUES
 // ============================================================================
@@ -184,9 +264,13 @@ export const dieselTanksService = {
 
 export const vehiclesService = {
     // Obtener todos los vehículos de una sucursal
-    async getAll(branchId?: string) {
+    async getAll(branchId?: string | string[]) {
         let query = supabase.from('vehicles').select('*');
-        if (branchId) query = query.eq('branch_id', branchId);
+        if (Array.isArray(branchId)) {
+            if (branchId.length > 0) query = query.in('branch_id', branchId);
+        } else if (branchId) {
+            query = query.eq('branch_id', branchId);
+        }
 
         const { data, error } = await query.order('description');
         if (error) throw error;
@@ -248,9 +332,13 @@ export const vehiclesService = {
 
 export const driversService = {
     // Obtener todos los conductores de una sucursal
-    async getAll(branchId?: string) {
+    async getAll(branchId?: string | string[]) {
         let query = supabase.from('drivers').select('*');
-        if (branchId) query = query.eq('branch_id', branchId);
+        if (Array.isArray(branchId)) {
+            if (branchId.length > 0) query = query.in('branch_id', branchId);
+        } else if (branchId) {
+            query = query.eq('branch_id', branchId);
+        }
 
         const { data, error } = await query.order('name');
         if (error) throw error;
