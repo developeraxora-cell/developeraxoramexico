@@ -50,6 +50,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   const [sku, setSku] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [precio, setPrecio] = useState(0);
   const [categoryId, setCategoryId] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [baseUomId, setBaseUomId] = useState('');
@@ -74,6 +75,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       setSku(existingProduct.sku ?? '');
       setName(existingProduct.name ?? '');
       setDescription(existingProduct.description ?? '');
+      setPrecio(Number((existingProduct as any).precio ?? 0));
       setCategoryId(existingProduct.category_id ?? '');
       setNewCategoryName('');
       setBaseUomId(existingProduct.base_uom_id ?? '');
@@ -107,6 +109,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     setSku('');
     setName('');
     setDescription('');
+    setPrecio(0);
     setCategoryId('');
     setNewCategoryName('');
     setBaseUomId('');
@@ -191,6 +194,10 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       setError('El nombre es obligatorio.');
       return;
     }
+    if (precio <= 0) {
+      setError('El precio debe ser mayor a 0.');
+      return;
+    }
 
     if (!baseUomId) {
       setError('Seleccione la unidad base.');
@@ -248,6 +255,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
         sku: resolvedSku,
         barcode: barcodeValue.trim(),
         name: name.trim(),
+        precio: Number(precio),
         description: description.trim() || null,
         category_id: resolvedCategoryId,
         brand_id: null,
@@ -364,6 +372,18 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
+            </div>
+            <div className="space-y-1 md:col-span-2">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Precio de venta (base)</label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-black text-lg"
+                value={precio}
+                onChange={(e) => setPrecio(Number(e.target.value))}
+              />
+              <p className="text-[10px] text-slate-400">Precio aplicado a la unidad base.</p>
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Categoría</label>

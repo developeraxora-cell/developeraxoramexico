@@ -148,10 +148,17 @@ const App: React.FC = () => {
       if (prods) {
         setProducts(prods.map((p: any) => ({
           ...p,
-          stocks: p.product_stocks.map((s: any) => ({ branchId: s.branch_id, qty: Number(s.qty) }))
+          stocks: p.product_stocks.map((s: any) => ({ branchId: String(s.branch_id), qty: Number(s.qty) }))
         })));
       }
-      if (custs) setCustomers(custs.map((c: any) => ({ ...c, creditLimit: Number(c.credit_limit), currentDebt: Number(c.current_debt) })));
+      if (custs) setCustomers(custs.map((c: any) => ({
+        ...c,
+        phone: c.phone ?? '',
+        address: c.address ?? '',
+        status: c.status ?? 'ACTIVO',
+        creditLimit: Number(c.credit_limit ?? 0),
+        currentDebt: Number(c.current_debt ?? 0),
+      })));
       if (sls) setSales(sls.map((s: any) => ({ ...s, date: new Date(s.date) })));
       if (ords) setConcreteOrders(ords.map((o: any) => ({ ...o, scheduledDate: new Date(o.scheduled_date), qtyM3: Number(o.qty_m3) })));
 
@@ -263,13 +270,13 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'pos':
-        return <POSScreen customers={customers} setCustomers={setCustomers} products={products} setProducts={setProducts} conversions={conversions} selectedBranchId={selectedBranchId} sales={sales} setSales={setSales} currentUser={currentUser} />;
+        return <POSScreen products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'purchases':
         return <PurchasesScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
       case 'customers':
-        return <CustomerScreen customers={customers} setCustomers={setCustomers} payments={payments} setPayments={setPayments} sales={sales} currentUser={currentUser} />;
+        return <CustomerScreen selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'inventory':
-        return <InventoryScreen products={products} setProducts={setProducts} selectedBranchId={selectedBranchId} currentUser={currentUser} />;
+        return <InventoryScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
       case 'branches':
         return <BranchesScreen branches={branches} setBranches={setBranches} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} currentUser={currentUser} />;
       case 'users':
@@ -281,7 +288,7 @@ const App: React.FC = () => {
       case 'diesel':
         return <DieselScreen tanks={tanks} setTanks={setTanks} vehicles={vehicles} setVehicles={setVehicles} drivers={drivers} setDrivers={setDrivers} logs={dieselLogs} setLogs={setDieselLogs} currentUser={currentUser} selectedBranchId={selectedBranchId} branches={branches} />;
       default:
-        return <POSScreen customers={customers} setCustomers={setCustomers} products={products} setProducts={setProducts} conversions={conversions} selectedBranchId={selectedBranchId} sales={sales} setSales={setSales} currentUser={currentUser} />;
+        return <POSScreen products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
     }
   };
 

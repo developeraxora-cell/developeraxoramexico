@@ -600,12 +600,25 @@ export const productsService = {
 
 export const customersService = {
     async getAll() {
-        const { data, error } = await supabase.from('customers').select('*').order('name');
+        const { data, error } = await supabase
+            .from('credit_customers')
+            .select('id, name, credit_limit, credit_notes(balance)')
+            .order('name');
         if (error) throw error;
-        return data as CustomerDB[];
+        const normalized = (data ?? []).map((row: any) => {
+            const notes = row.credit_notes ?? [];
+            const currentDebt = notes.reduce((acc: number, note: any) => acc + Number(note.balance ?? 0), 0);
+            return {
+                id: row.id,
+                name: row.name,
+                credit_limit: Number(row.credit_limit ?? 0),
+                current_debt: currentDebt,
+            } as CustomerDB;
+        });
+        return normalized;
     },
     async updateDebt(id: string, newDebt: number) {
-        const { error } = await supabase.from('customers').update({ current_debt: newDebt }).eq('id', id);
+        const { error } = await supabase.from('credit_customers').update({}).eq('id', id);
         if (error) throw error;
     }
 };

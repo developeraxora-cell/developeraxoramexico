@@ -22,6 +22,7 @@ export interface Product {
   sku: string | null;
   barcode: string;
   name: string;
+  precio?: number | null;
   description: string | null;
   category_id: string | null;
   brand_id: string | null;
@@ -42,6 +43,15 @@ export interface ProductUom {
   is_default_purchase: boolean | null;
   is_default_sale: boolean | null;
   uom?: Uom;
+}
+
+export interface BranchProductPrice {
+  id: string;
+  branch_id: string;
+  product_id: string;
+  product_uom_id: string;
+  price: number;
+  currency: string | null;
 }
 
 export const catalogService = {
@@ -101,12 +111,34 @@ export const catalogService = {
   async listProductsByBranch(branchId: string) {
     const { data, error } = await supabase
       .from('products')
-      .select('id, branch_id, sku, barcode, name, description, category_id, brand_id, base_uom_id, is_divisible, attrs, is_active, created_at, updated_at')
+      .select('id, branch_id, sku, barcode, name, precio, description, category_id, brand_id, base_uom_id, is_divisible, attrs, is_active, created_at, updated_at')
       .eq('branch_id', branchId)
       .order('name');
 
     if (error) throw error;
     return (data ?? []) as Product[];
+  },
+
+  async updateProductPrice(productId: string, precio: number) {
+    const { data, error } = await supabase
+      .from('products')
+      .update({ precio })
+      .eq('id', productId)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data as Product;
+  },
+
+  async listStockByBranch(branchId: string) {
+    const { data, error } = await supabase
+      .from('inventory_stock')
+      .select('product_id, qty_base')
+      .eq('branch_id', branchId);
+
+    if (error) throw error;
+    return (data ?? []) as { product_id: string; qty_base: number }[];
   },
 
   async deactivateProduct(productId: string) {
@@ -208,5 +240,72 @@ export const catalogService = {
       ...row,
       uom: row.uoms as Uom,
     })) as ProductUom[];
+  },
+
+  async listDefaultSaleUoms(productIds: string[]) {
+    if (productIds.length === 0) return [] as ProductUom[];
+    const { data, error } = await supabase
+      .from('product_uoms')
+      .select('id, product_id, uom_id, purpose, factor_to_base, is_default_purchase, is_default_sale, uoms (id, code, name)')
+      .in('product_id', productIds)
+      .eq('is_default_sale', true);
+
+    if (error) throw error;
+
+    return (data ?? []).map((row) => ({
+      ...row,
+      uom: row.uoms as Uom,
+    })) as ProductUom[];
+  },
+
+  async setDefaultSaleUom(productId: string, productUomId: string) {
+    const { error: clearError } = await supabase
+      .from('product_uoms')
+      .update({ is_default_sale: false })
+      .eq('product_id', productId);
+
+    if (clearError) throw clearError;
+
+    const { data, error } = await supabase
+      .from('product_uoms')
+      .update({ is_default_sale: true })
+      .eq('id', productUomId)
+      .select('id, product_id, uom_id, purpose, factor_to_base, is_default_purchase, is_default_sale, uoms (id, code, name)')
+      .single();
+
+    if (error) throw error;
+
+    return {
+      ...data,
+      uom: data.uoms as Uom,
+    } as ProductUom;
+  },
+
+  async listDefaultSaleUoms(productIds: string[]) {
+    if (productIds.length === 0) return [] as ProductUom[];
+    const { data, error } = await supabase
+      .from('product_uoms')
+      .select('id, product_id, uom_id, purpose, factor_to_base, is_default_purchase, is_default_sale, uoms (id, code, name)')
+      .in('product_id', productIds)
+      .eq('is_default_sale', true);
+
+    if (error) throw error;
+
+    return (data ?? []).map((row) => ({
+      ...row,
+      uom: row.uoms as Uom,
+    })) as ProductUom[];
+  },
+
+  async listBranchPrices(branchId: string, productUomIds: string[]) {
+    if (!branchId || productUomIds.length === 0) return [] as BranchProductPrice[];
+    const { data, error } = await supabase
+      .from('branch_product_prices')
+      .select('id, branch_id, product_id, product_uom_id, price, currency')
+      .eq('branch_id', branchId)
+      .in('product_uom_id', productUomIds);
+
+    if (error) throw error;
+    return (data ?? []) as BranchProductPrice[];
   },
 };

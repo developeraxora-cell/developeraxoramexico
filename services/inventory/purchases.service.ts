@@ -17,11 +17,31 @@ export interface CreatePurchaseInput {
   cartItems: PurchaseCartItemInput[];
 }
 
+export interface SaleCartItemInput {
+  product_id: string;
+  product_uom_id: string;
+  qty: number;
+  factor_used: number;
+  qty_base: number;
+  unit_price: number;
+  barcode_scanned?: string | null;
+}
+
+export interface CreateSaleInput {
+  branch_id: string;
+  reference?: string | null;
+  notes?: string | null;
+  created_by: string;
+  nombre_cliente?: string | null;
+  cartItems: SaleCartItemInput[];
+}
+
 export interface CreateProductInput {
   branch_id: string;
   sku: string;
   barcode: string;
   name: string;
+  precio: number;
   description?: string | null;
   category_id?: string | null;
   brand_id?: string | null;
@@ -181,6 +201,86 @@ export const purchasesService = {
       if (stockError) throw stockError;
 
       const nextQty = (existing?.qty_base ?? 0) + qty_base;
+
+      const { error: upsertError } = await supabase
+        .from('inventory_stock')
+        .upsert([
+          {
+            branch_id,
+            product_id,
+            qty_base: nextQty,
+            updated_at: nowIso,
+          },
+        ], {
+          onConflict: 'branch_id,product_id',
+        });
+
+      if (upsertError) throw upsertError;
+    }
+
+    return transaction;
+  },
+
+  async createSale(input: CreateSaleInput) {
+    const { branch_id, reference, notes, created_by, cartItems, nombre_cliente } = input;
+
+    const { data: transaction, error: txError } = await supabase
+      .from('inventory_transactions')
+      .insert([
+        {
+          type: 'SALE',
+          branch_id,
+          reference: reference || null,
+          notes: notes || null,
+          created_by,
+          nombre_cliente: nombre_cliente || null,
+        },
+      ])
+      .select('id, created_at')
+      .single();
+
+    if (txError) throw txError;
+
+    const itemsPayload = cartItems.map((item) => ({
+      transaction_id: transaction.id,
+      product_id: item.product_id,
+      product_uom_id: item.product_uom_id,
+      qty: item.qty,
+      factor_used: item.factor_used,
+      qty_base: item.qty_base,
+      unit_price: item.unit_price,
+      barcode_scanned: item.barcode_scanned ?? null,
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('inventory_transaction_items')
+      .insert(itemsPayload);
+
+    if (itemsError) throw itemsError;
+
+    const totalsByProduct = itemsPayload.reduce<Record<string, number>>((acc, item) => {
+      acc[item.product_id] = (acc[item.product_id] ?? 0) + Number(item.qty_base);
+      return acc;
+    }, {});
+
+    const nowIso = new Date().toISOString();
+
+    for (const [product_id, qty_base] of Object.entries(totalsByProduct)) {
+      const { data: existing, error: stockError } = await supabase
+        .from('inventory_stock')
+        .select('qty_base')
+        .eq('branch_id', branch_id)
+        .eq('product_id', product_id)
+        .maybeSingle();
+
+      if (stockError) throw stockError;
+
+      const currentQty = Number(existing?.qty_base ?? 0);
+      if (currentQty < qty_base) {
+        throw new Error('Stock insuficiente para completar la venta.');
+      }
+
+      const nextQty = currentQty - qty_base;
 
       const { error: upsertError } = await supabase
         .from('inventory_stock')

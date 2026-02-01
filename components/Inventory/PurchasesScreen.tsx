@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Brush, Eye, History, Plus } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { supabase } from '../../services/supabaseClient';
 import NewProductModal from './NewProductModal';
@@ -41,6 +42,23 @@ interface PurchaseHistoryEntry {
   total_amount: number;
 }
 
+interface PurchaseItemDetail {
+  id: string;
+  qty: number;
+  unit_price: number;
+  qty_base: number;
+  product: {
+    name: string;
+    sku: string | null;
+    barcode: string | null;
+    base_uom_id: string | null;
+  } | null;
+  uom: {
+    name: string | null;
+    code: string | null;
+  } | null;
+}
+
 interface PendingUomSelection {
   product: Product;
   uoms: ProductUom[];
@@ -60,14 +78,13 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   const [isNewProductOpen, setIsNewProductOpen] = useState(false);
   const [reactivateProduct, setReactivateProduct] = useState<Product | null>(null);
   const [reactivateUoms, setReactivateUoms] = useState<ProductUom[]>([]);
-  const [isManualProductOpen, setIsManualProductOpen] = useState(false);
-  const [isProductsOpen, setIsProductsOpen] = useState(false);
-  const [productsList, setProductsList] = useState<Product[]>([]);
-  const [productsSearch, setProductsSearch] = useState('');
-  const [isProductsLoading, setIsProductsLoading] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-  const [productToRemove, setProductToRemove] = useState<Product | null>(null);
   const [isClearHistoryOpen, setIsClearHistoryOpen] = useState(false);
+  const [isPurchaseDetailOpen, setIsPurchaseDetailOpen] = useState(false);
+  const [selectedPurchase, setSelectedPurchase] = useState<PurchaseHistoryEntry | null>(null);
+  const [purchaseItems, setPurchaseItems] = useState<PurchaseItemDetail[]>([]);
+  const [isLoadingPurchaseItems, setIsLoadingPurchaseItems] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const historyPageSize = 5;
   const [isSaving, setIsSaving] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
@@ -161,20 +178,6 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     }
   }, [branchId]);
 
-  const loadProductsList = useCallback(async () => {
-    if (!branchId) return;
-    setIsProductsLoading(true);
-    try {
-      const data = await catalogService.listProductsByBranch(branchId);
-      setProductsList(data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'No se pudo cargar productos.';
-      setError(message);
-    } finally {
-      setIsProductsLoading(false);
-    }
-  }, [branchId]);
-
   useEffect(() => {
     loadCatalog();
   }, [loadCatalog]);
@@ -182,6 +185,15 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [selectedBranchId]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(history.length / historyPageSize));
+    setHistoryPage((prev) => Math.min(prev, totalPages));
+  }, [history.length]);
 
   useEffect(() => {
     if (viewMode === 'CREATE') {
@@ -379,27 +391,6 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     }
   };
 
-  const handleOpenProducts = async () => {
-    if (!branchId) {
-      showFeedback('alert', 'Sucursal requerida', 'Seleccione una sucursal antes de ver productos.');
-      return;
-    }
-    setIsProductsOpen(true);
-    await loadProductsList();
-  };
-
-  const handleManualProduct = () => {
-    if (!branchId) {
-      showFeedback('alert', 'Sucursal requerida', 'Seleccione una sucursal antes de agregar productos.');
-      return;
-    }
-    setPendingBarcode('');
-    setReactivateProduct(null);
-    setReactivateUoms([]);
-    setIsManualProductOpen(true);
-    setIsNewProductOpen(true);
-  };
-
   const handleClearHistory = async () => {
     if (!branchId) {
       showFeedback('alert', 'Sucursal requerida', 'Seleccione una sucursal antes de limpiar el historial.');
@@ -421,44 +412,50 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     }
   };
 
-  const handleConfirmDeleteProduct = async () => {
-    if (!productToDelete) return;
-    showFeedback('loading', 'Desactivando producto', 'Procesando...');
+  const handleOpenPurchaseDetail = async (purchase: PurchaseHistoryEntry) => {
+    setSelectedPurchase(purchase);
+    setIsPurchaseDetailOpen(true);
+    setIsLoadingPurchaseItems(true);
+    setError(null);
     try {
-      await catalogService.deactivateProduct(productToDelete.id);
-      setFeedbackOpen(false);
-      showFeedback('success', 'Producto inactivado', 'El producto quedó marcado como inactivo.');
-      setProductsList((prev) =>
-        prev.map((item) => (item.id === productToDelete.id ? { ...item, is_active: false } : item))
-      );
-      setProductToDelete(null);
+      const { data, error: itemsError } = await supabase
+        .from('inventory_transaction_items')
+        .select(`
+          id,
+          qty,
+          unit_price,
+          qty_base,
+          product_id,
+          product_uom_id,
+          products ( name, sku, barcode, base_uom_id ),
+          product_uoms ( uom_id, uoms ( name, code ) )
+        `)
+        .eq('transaction_id', purchase.id);
+
+      if (itemsError) throw itemsError;
+
+      const normalized = (data ?? []).map((row: any) => ({
+        id: row.id,
+        qty: Number(row.qty ?? 0),
+        unit_price: Number(row.unit_price ?? 0),
+        qty_base: Number(row.qty_base ?? 0),
+        product: row.products ?? null,
+        uom: row.product_uoms?.uoms ?? null,
+      })) as PurchaseItemDetail[];
+
+      setPurchaseItems(normalized);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'No se pudo desactivar el producto.';
-      setFeedbackOpen(false);
-      showFeedback('error', 'No se pudo desactivar', message);
+      const message = err instanceof Error ? err.message : 'No se pudo cargar el detalle de la compra.';
+      setError(message);
+    } finally {
+      setIsLoadingPurchaseItems(false);
     }
   };
 
-  const handleConfirmRemoveProduct = async () => {
-    if (!productToRemove) return;
-    showFeedback('loading', 'Eliminando producto', 'Procesando...');
-    try {
-      await catalogService.deleteProduct(productToRemove.id);
-      setFeedbackOpen(false);
-      showFeedback('success', 'Producto eliminado', 'El producto fue eliminado correctamente.');
-      setProductsList((prev) => prev.filter((item) => item.id !== productToRemove.id));
-      setProductToRemove(null);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'No se pudo eliminar el producto.';
-      setFeedbackOpen(false);
-      showFeedback('error', 'No se pudo eliminar', message);
-    }
-  };
 
   const handleProductCreated = (payload: { product: Product; purchaseUom: ProductUom }) => {
     addToCart(payload.product, payload.purchaseUom);
     setIsNewProductOpen(false);
-    setIsManualProductOpen(false);
     setPendingBarcode('');
     scanInputRef.current?.focus();
   };
@@ -478,55 +475,53 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     handleScan();
   };
 
-  const selectedBranchLabel = branchId ? 'Sucursal activa' : 'Seleccione sucursal';
-  const filteredProducts = useMemo(() => {
-    if (!productsSearch.trim()) return productsList;
-    const term = productsSearch.toLowerCase();
-    return productsList.filter((product) =>
-      [product.name, product.sku ?? '', product.barcode ?? ''].some((value) =>
-        value.toLowerCase().includes(term)
-      )
-    );
-  }, [productsList, productsSearch]);
+  const formatLocalDateTime = (value: string) => {
+    const normalized = value.endsWith('Z') ? value : `${value}Z`;
+    return new Date(normalized).toLocaleString();
+  };
 
+  const selectedBranchLabel = branchId ? 'Sucursal activa' : 'Seleccione sucursal';
+  const totalHistoryPages = Math.max(1, Math.ceil(history.length / historyPageSize));
+  const historyStart = (historyPage - 1) * historyPageSize;
+  const historyEnd = historyStart + historyPageSize;
+  const pagedHistory = history.slice(historyStart, historyEnd);
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
-            {viewMode === 'HISTORY' ? '📥 Historial de Compras' : '📦 Nueva Compra'}
-          </h2>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-            {selectedBranchLabel}
-          </p>
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white px-6 py-5 rounded-3xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center">
+            <History className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-black text-slate-900 tracking-tight">
+              {viewMode === 'HISTORY' ? 'Historial de Compras' : 'Nueva Compra'}
+            </h2>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+              {selectedBranchLabel}
+            </p>
+          </div>
         </div>
-          <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+          {viewMode === 'HISTORY' && (
             <button
-              onClick={handleOpenProducts}
-              className="px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all bg-slate-100 text-slate-600 hover:bg-slate-200"
+              onClick={() => setIsClearHistoryOpen(true)}
+              className="px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest border border-orange-200 text-orange-600 bg-orange-50 hover:bg-orange-100"
             >
-              📋 Ver Productos
-            </button>
-            <button
-              onClick={handleManualProduct}
-              className="px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all bg-slate-900 text-white hover:bg-orange-600"
-            >
-              ➕ Agregar Producto
-            </button>
-            {viewMode === 'HISTORY' && (
-              <button
-                onClick={() => setIsClearHistoryOpen(true)}
-                className="px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all bg-amber-100 text-amber-700 hover:bg-amber-200"
-              >
-              🧹 Limpiar Historial
+              <span className="inline-flex items-center gap-2">
+                <Brush className="w-4 h-4" />
+                Limpiar Historial
+              </span>
             </button>
           )}
           <button
             onClick={() => setViewMode(viewMode === 'HISTORY' ? 'CREATE' : 'HISTORY')}
-            className={`px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all ${viewMode === 'HISTORY' ? 'bg-slate-900 text-white hover:bg-orange-600' : 'bg-slate-100 text-slate-500'
+            className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm transition-all ${viewMode === 'HISTORY' ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-slate-100 text-slate-600'
               }`}
           >
-            {viewMode === 'HISTORY' ? '+ Registrar Compra' : 'Volver al Historial'}
+            <span className="inline-flex items-center gap-2">
+              {viewMode === 'HISTORY' && <Plus className="w-4 h-4" />}
+              {viewMode === 'HISTORY' ? 'Registrar Compra' : 'Volver al Historial'}
+            </span>
           </button>
         </div>
       </div>
@@ -662,48 +657,124 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-900 text-white">
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest">ID / Fecha</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest">Referencia</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest">Notas</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-center">Items</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-right">Monto Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {history.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="p-5">
-                    <p className="text-xs font-black text-slate-800">{p.id}</p>
-                    <p className="text-[9px] text-slate-400 font-bold uppercase">
-                      {new Date(p.created_at).toLocaleString()}
-                    </p>
-                  </td>
-                  <td className="p-5 font-black text-xs text-slate-700 uppercase">{p.reference || 'S/N'}</td>
-                  <td className="p-5 text-[10px] text-slate-500">{p.notes || '-'}</td>
-                  <td className="p-5 text-center font-bold text-slate-500">{p.items_count}</td>
-                  <td className="p-5 text-right font-black text-slate-900 text-base">
-                    ${p.total_amount.toLocaleString()}
-                  </td>
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-900 text-white">
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Fecha</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Referencia</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Notas</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest text-center">Items</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest text-right">Monto Total</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest text-center">Detalle</th>
                 </tr>
-              ))}
-              {!isLoadingHistory && history.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="p-20 text-center text-slate-300 italic">
-                    No hay registros de compras recientes
-                  </td>
-                </tr>
-              )}
-              {isLoadingHistory && (
-                <tr>
-                  <td colSpan={5} className="p-20 text-center text-slate-300 italic">Cargando historial...</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {pagedHistory.map((p) => (
+                  <tr
+                    key={p.id}
+                    className="bg-white hover:bg-slate-50/60 transition-colors"
+                  >
+                    <td className="p-4">
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black text-slate-700">
+                        {formatLocalDateTime(p.created_at)}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-700">
+                        {p.reference || 'S/N'}
+                      </span>
+                    </td>
+                    <td className="p-4 text-[11px] text-slate-500 italic">
+                      <div className="line-clamp-2 max-w-xs">{p.notes || '—'}</div>
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-[10px] font-black">
+                        {p.items_count}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <span className="text-base font-black text-slate-900">
+                        ${p.total_amount.toLocaleString()}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center flex items-center justify-center">
+                      <button
+                        onClick={() => handleOpenPurchaseDetail(p)}
+                        className="w-8 h-8 text-center rounded-lg bg-blue-50 text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center"
+                        title="Ver detalle"
+                      >
+                        <Eye className="w-4 h-4 text-blue-600" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!isLoadingHistory && history.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-20 text-center text-slate-300 italic">
+                      No hay registros de compras recientes
+                    </td>
+                  </tr>
+                )}
+                {isLoadingHistory && (
+                  <tr>
+                    <td colSpan={6} className="p-20 text-center text-slate-300 italic">Cargando historial...</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {!isLoadingHistory && history.length > 0 && (
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-6 pb-6">
+              <div className="text-[11px] text-slate-500 font-bold">
+                Mostrando {historyStart + 1}-{Math.min(historyEnd, history.length)} de {history.length} registros
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setHistoryPage((prev) => Math.max(1, prev - 1))}
+                  className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+                  disabled={historyPage === 1}
+                  title="Anterior"
+                >
+                  ‹
+                </button>
+                {Array.from({ length: totalHistoryPages }).slice(0, 5).map((_, index) => {
+                  const page = index + 1;
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setHistoryPage(page)}
+                      className={`w-8 h-8 rounded-lg text-[11px] font-black ${historyPage === page ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+                {totalHistoryPages > 5 && (
+                  <>
+                    <span className="text-slate-400">…</span>
+                    <button
+                      onClick={() => setHistoryPage(totalHistoryPages)}
+                      className={`w-8 h-8 rounded-lg text-[11px] font-black ${historyPage === totalHistoryPages ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}
+                    >
+                      {totalHistoryPages}
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => setHistoryPage((prev) => Math.min(totalHistoryPages, prev + 1))}
+                  className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+                  disabled={historyPage === totalHistoryPages}
+                  title="Siguiente"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -756,10 +827,9 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         mode={reactivateProduct ? 'reactivate' : 'create'}
         existingProduct={reactivateProduct}
         existingUoms={reactivateUoms}
-        allowBarcodeEdit={isManualProductOpen}
+        allowBarcodeEdit={false}
         onClose={() => {
           setIsNewProductOpen(false);
-          setIsManualProductOpen(false);
           setPendingBarcode('');
           setReactivateProduct(null);
           setReactivateUoms([]);
@@ -768,119 +838,14 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         onReactivated={handleProductReactivated}
       />
 
-      {isProductsOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[50vh] overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-black uppercase tracking-tighter">Productos en Sucursal</h3>
-                <p className="text-slate-400 text-xs">Listado por nombre y barcode.</p>
-              </div>
-              <button onClick={() => setIsProductsOpen(false)} className="text-slate-400 hover:text-white text-2xl">
-                &times;
-              </button>
-            </div>
-            <div className="p-6 space-y-4 overflow-y-scroll">
-              <input
-                type="text"
-                placeholder="Buscar por nombre, SKU o barcode..."
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
-                value={productsSearch}
-                onChange={(e) => setProductsSearch(e.target.value)}
-              />
-              <div className="overflow-y-auto border border-slate-100 rounded-2xl">
-                {isProductsLoading && (
-                  <div className="p-6 text-center text-slate-400 text-sm">Cargando productos...</div>
-                )}
-                {!isProductsLoading && filteredProducts.length === 0 && (
-                  <div className="p-6 text-center text-slate-400 text-sm">No hay productos para mostrar.</div>
-                )}
-                {!isProductsLoading && filteredProducts.length > 0 && (
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-900 text-white">
-                      <tr>
-                        <th className="p-4 text-[10px] font-black uppercase tracking-widest">Nombre</th>
-                        <th className="p-4 text-[10px] font-black uppercase tracking-widest">SKU</th>
-                        <th className="p-4 text-[10px] font-black uppercase tracking-widest">Barcode</th>
-                        <th className="p-4 text-[10px] font-black uppercase tracking-widest">Base</th>
-                        <th className="p-4 text-[10px] font-black uppercase tracking-widest">Estado</th>
-                        <th className="p-4 text-[10px] font-black uppercase tracking-widest text-center">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredProducts.map((product) => (
-                        <tr
-                          key={product.id}
-                          className={`transition-colors ${product.is_active === false ? 'bg-slate-100 text-slate-400' : 'hover:bg-slate-50'
-                            }`}
-                        >
-                          <td className="p-4 text-xs font-black text-slate-800 uppercase">{product.name}</td>
-                          <td className="p-4 text-xs font-mono text-slate-500">{product.sku || '—'}</td>
-                          <td className="p-4 text-xs font-mono text-slate-500">{product.barcode || '—'}</td>
-                          <td className="p-4 text-xs font-bold text-slate-600">{uomById[product.base_uom_id]?.code || '—'}</td>
-                          <td className="p-4 text-xs font-bold text-slate-600">
-                            {product.is_active === false ? 'Inactivo' : 'Activo'}
-                          </td>
-                          <td className="p-4 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => setProductToDelete(product)}
-                                className="text-lg text-amber-600"
-                                title="Desactivar"
-                              >
-                                ⛔
-                              </button>
-                              <button
-                                onClick={() => setProductToRemove(product)}
-                                className="text-lg text-red-600"
-                                title="Eliminar"
-                              >
-                                🗑️
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       <ConfirmModal
         isOpen={isClearHistoryOpen}
         title="Limpiar historial de compras"
         description="Se eliminarán todas las compras registradas en esta sucursal. Esta acción no modifica el stock."
-        icon="🧹"
         confirmText="Eliminar"
         cancelText="Cancelar"
         onConfirm={handleClearHistory}
         onCancel={() => setIsClearHistoryOpen(false)}
-      />
-
-      <ConfirmModal
-        isOpen={Boolean(productToDelete)}
-        title="Desactivar producto"
-        description="El producto quedará inactivo y no se podrá usar en compras nuevas."
-        icon="⛔"
-        confirmText="Desactivar"
-        cancelText="Cancelar"
-        onConfirm={handleConfirmDeleteProduct}
-        onCancel={() => setProductToDelete(null)}
-      />
-
-      <ConfirmModal
-        isOpen={Boolean(productToRemove)}
-        title="Eliminar producto"
-        description="Se eliminará del catálogo. Esta acción no se puede deshacer."
-        icon="🗑️"
-        confirmText="Eliminar"
-        cancelText="Cancelar"
-        onConfirm={handleConfirmRemoveProduct}
-        onCancel={() => setProductToRemove(null)}
       />
 
       <FeedbackModal
@@ -890,6 +855,89 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         description={feedbackDescription}
         onClose={closeFeedback}
       />
+
+      {isPurchaseDetailOpen && selectedPurchase && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[70vh] overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col">
+            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-tighter">Detalle de Compra</h3>
+                <p className="text-slate-400 text-xs">
+                  {selectedPurchase.reference || 'S/N'} · {formatLocalDateTime(selectedPurchase.created_at)}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsPurchaseDetailOpen(false);
+                  setSelectedPurchase(null);
+                  setPurchaseItems([]);
+                }}
+                className="text-slate-400 hover:text-white text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto">
+              {isLoadingPurchaseItems && (
+                <div className="p-6 text-center text-slate-400 text-sm">Cargando detalle...</div>
+              )}
+              {!isLoadingPurchaseItems && purchaseItems.length === 0 && (
+                <div className="p-6 text-center text-slate-400 text-sm">No hay productos en esta compra.</div>
+              )}
+              {!isLoadingPurchaseItems && purchaseItems.length > 0 && (
+                <table className="w-full text-left">
+                  <thead className="bg-slate-100 text-slate-600">
+                    <tr>
+                      <th className="p-3 text-[10px] font-black uppercase tracking-widest">Producto</th>
+                      <th className="p-3 text-[10px] font-black uppercase tracking-widest">SKU</th>
+                      <th className="p-3 text-[10px] font-black uppercase tracking-widest">UOM</th>
+                      <th className="p-3 text-[10px] font-black uppercase tracking-widest text-right">Cantidad</th>
+                      <th className="p-3 text-[10px] font-black uppercase tracking-widest text-right">Precio</th>
+                      <th className="p-3 text-[10px] font-black uppercase tracking-widest text-right">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {purchaseItems.map((item) => {
+                      const subtotal = Number(item.qty) * Number(item.unit_price);
+                      return (
+                        <tr key={item.id} className="hover:bg-slate-50">
+                          <td className="p-3 text-xs font-black text-slate-800 uppercase">
+                            {item.product?.name ?? '—'}
+                          </td>
+                          <td className="p-3 text-xs font-mono text-slate-500">{item.product?.sku ?? '—'}</td>
+                          <td className="p-3 text-xs text-slate-600">
+                            {item.uom?.name ?? 'UOM'}{item.uom?.code ? ` (${item.uom?.code})` : ''}
+                          </td>
+                          <td className="p-3 text-xs font-bold text-slate-600 text-right">
+                            {Number(item.qty).toLocaleString()}
+                          </td>
+                          <td className="p-3 text-xs font-bold text-slate-600 text-right">
+                            ${Number(item.unit_price).toLocaleString()}
+                          </td>
+                          <td className="p-3 text-xs font-black text-slate-900 text-right">
+                            ${subtotal.toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+              <div className="text-xs text-slate-500">
+                {selectedPurchase.notes ? `Notas: ${selectedPurchase.notes}` : 'Sin notas'}
+              </div>
+              <div className="text-right">
+                <p className="text-[9px] font-black text-slate-400 uppercase">Total</p>
+                <p className="text-2xl font-black text-slate-900">
+                  ${selectedPurchase.total_amount.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

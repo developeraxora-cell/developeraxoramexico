@@ -39,6 +39,7 @@ export interface BranchStock {
 export interface Product {
   id: string;
   sku: string;
+  barcode?: string;
   name: string;
   category: string;
   baseUnitId: string;
@@ -49,6 +50,7 @@ export interface Product {
   stocks: BranchStock[];
   costPerBaseUnit: number;
   pricePerBaseUnit: number;
+  productUomId?: string;
 }
 
 export interface PurchaseItem {
@@ -86,6 +88,11 @@ export interface CartItem {
   unitPrice: number;
   qtyBase: number;
   subtotal: number;
+  customFactor?: number;
+  customLabel?: string;
+  productUomId?: string;
+  factorUsed?: number;
+  barcodeScanned?: string;
 }
 
 export interface Sale {
