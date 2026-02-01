@@ -4,7 +4,7 @@ import { Branch, Product as PosProduct, CartItem, ProductConversion, User } from
 import { UNITS } from '../../constants';
 import { convert, getPriceForUnit } from '../../services/conversionEngine';
 import { creditService, type CreditCustomer, type CreditNoteWithStatus, type CreditPaymentMethod } from '../../services/credit/credit.service';
-import { catalogService, type Product as CatalogProduct, type ProductUom } from '../../services/inventory/catalog.service';
+import { catalogService, type Product as CatalogProduct, type ProductUom, type Uom } from '../../services/inventory/catalog.service';
 import { purchasesService } from '../../services/inventory/purchases.service';
 import { supabase } from '../../services/supabaseClient';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
@@ -29,6 +29,7 @@ const POSScreen: React.FC<POSProps> = ({
   const [branchStock, setBranchStock] = useState<Record<string, number>>({});
   const [isCatalogLoading, setIsCatalogLoading] = useState(false);
   const [defaultSaleUomByProduct, setDefaultSaleUomByProduct] = useState<Record<string, ProductUom>>({});
+  const [uomsById, setUomsById] = useState<Record<string, Uom>>({});
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'TARJETA' | 'CREDITO'>('EFECTIVO');
@@ -253,9 +254,10 @@ const POSScreen: React.FC<POSProps> = ({
     }
     setIsCatalogLoading(true);
     try {
-      const [productsList, stockRows] = await Promise.all([
+      const [productsList, stockRows, uomsList] = await Promise.all([
         catalogService.listProductsByBranch(branchId),
         catalogService.listStockByBranch(branchId),
+        catalogService.listUoms(),
       ]);
       setBranchProducts(productsList);
       const stockMap = stockRows.reduce<Record<string, number>>((acc, row) => {
@@ -263,19 +265,25 @@ const POSScreen: React.FC<POSProps> = ({
         return acc;
       }, {});
       setBranchStock(stockMap);
+      const uomMap = (uomsList ?? []).reduce<Record<string, Uom>>((acc, uom) => {
+        acc[String(uom.id)] = uom;
+        return acc;
+      }, {});
+      setUomsById(uomMap);
 
       const productIds = productsList.map((p) => String(p.id));
       const defaultSaleUoms = await catalogService.listDefaultSaleUoms(productIds);
-      const uomMap = defaultSaleUoms.reduce<Record<string, ProductUom>>((acc, uom) => {
+      const saleUomMap = defaultSaleUoms.reduce<Record<string, ProductUom>>((acc, uom) => {
         acc[String(uom.product_id)] = uom;
         return acc;
       }, {});
-      setDefaultSaleUomByProduct(uomMap);
+      setDefaultSaleUomByProduct(saleUomMap);
 
     } catch {
       setBranchProducts([]);
       setBranchStock({});
       setDefaultSaleUomByProduct({});
+      setUomsById({});
     } finally {
       setIsCatalogLoading(false);
     }
@@ -682,7 +690,8 @@ const POSScreen: React.FC<POSProps> = ({
                 {(() => {
                   const product = products.find((p) => p.id === item.productId);
                   const baseUnitId = product?.baseUnitId ?? item.unitId;
-                  const baseSymbol = UNITS.find((u) => u.id === baseUnitId)?.symbol ?? baseUnitId;
+                  const baseUom = uomsById[String(baseUnitId)];
+                  const baseSymbol = baseUom?.code ?? baseUom?.name ?? baseUnitId;
                   if (item.customLabel) {
                     return (
                       <div className="flex-1 p-2 border-2 border-slate-200 rounded-lg text-xs font-bold bg-white flex items-center">
@@ -1011,14 +1020,17 @@ const POSScreen: React.FC<POSProps> = ({
               </button>
             </div>
             <div className="p-6 space-y-3">
-              {getEquivalentOptions(pendingCatalogProduct).map((option) => (
-                <button
-                  key={option.label}
-                  onClick={() => {
-                    const hasStock = Object.prototype.hasOwnProperty.call(branchStock, pendingCatalogProduct.id);
-                    const stockValue = hasStock ? branchStock[pendingCatalogProduct.id] : undefined;
-                    const mapped: PosProduct = {
-                      id: String(pendingCatalogProduct.id),
+              {getEquivalentOptions(pendingCatalogProduct).map((option) => {
+                const baseUom = uomsById[String(pendingCatalogProduct.base_uom_id)];
+                const baseLabel = baseUom?.code ?? baseUom?.name ?? 'Base';
+                return (
+                  <button
+                    key={`${option.label}-${option.factor}`}
+                    onClick={() => {
+                      const hasStock = Object.prototype.hasOwnProperty.call(branchStock, pendingCatalogProduct.id);
+                      const stockValue = hasStock ? branchStock[pendingCatalogProduct.id] : undefined;
+                      const mapped: PosProduct = {
+                        id: String(pendingCatalogProduct.id),
                       sku: pendingCatalogProduct.sku ?? '',
                       barcode: pendingCatalogProduct.barcode ?? '',
                       name: pendingCatalogProduct.name,
@@ -1031,17 +1043,22 @@ const POSScreen: React.FC<POSProps> = ({
                       costPerBaseUnit: 0,
                       pricePerBaseUnit: pendingPrice,
                       productUomId: defaultSaleUomByProduct[String(pendingCatalogProduct.id)]?.id,
-                    };
-                    addToCart(mapped, option.factor, option.label, stockValue);
-                    setIsUnitSelectOpen(false);
-                    setPendingCatalogProduct(null);
-                  }}
-                  className="w-full p-4 rounded-2xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
-                >
-                  <p className="text-sm font-black text-slate-900">{option.label}</p>
-                  <p className="text-[10px] text-slate-500">Factor a base: {option.factor}</p>
-                </button>
-              ))}
+                      };
+                      if (option.factor === 1) {
+                        addToCart(mapped, undefined, undefined, stockValue);
+                      } else {
+                        addToCart(mapped, option.factor, option.label, stockValue);
+                      }
+                      setIsUnitSelectOpen(false);
+                      setPendingCatalogProduct(null);
+                    }}
+                    className="w-full p-4 rounded-2xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
+                  >
+                    <p className="text-sm font-black text-slate-900">{option.factor === 1 ? baseLabel : option.label}</p>
+                    <p className="text-[10px] text-slate-500">Factor a base: {option.factor}</p>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
