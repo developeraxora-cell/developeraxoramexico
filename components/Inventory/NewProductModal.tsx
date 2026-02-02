@@ -11,6 +11,7 @@ interface SaleUomDraft {
 }
 
 interface AttrPair {
+  id: string;
   key: string;
   value: string;
 }
@@ -60,6 +61,11 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   const [purchaseFactor, setPurchaseFactor] = useState(1);
   const [saleUoms, setSaleUoms] = useState<SaleUomDraft[]>([]);
   const [attrPairs, setAttrPairs] = useState<AttrPair[]>([]);
+  const buildAttrPair = (key = '', value = ''): AttrPair => ({
+    id: Math.random().toString(36).slice(2, 10),
+    key,
+    value,
+  });
   const [showJsonAttrs, setShowJsonAttrs] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,10 +90,9 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       setShowJsonAttrs(false);
 
       const attrs = existingProduct.attrs ?? {};
-      const pairs = Object.entries(attrs).map(([key, value]) => ({
-        key,
-        value: String(value ?? ''),
-      }));
+      const pairs = Object.entries(attrs).map(([key, value]) =>
+        buildAttrPair(key, String(value ?? ''))
+      );
       setAttrPairs(pairs.length > 0 ? pairs : []);
 
       const purchase = existingUoms.find((uom) => uom.purpose === 'PURCHASE' || uom.is_default_purchase);
@@ -458,7 +463,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
               </div>
               <div className="space-y-3">
                 {attrPairs.map((pair, index) => (
-                  <div key={`${pair.key}-${index}`} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center">
+                  <div key={pair.id} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center">
                     <input
                       type="text"
                       placeholder="Clave (ej: peso_costal_kg)"
@@ -492,7 +497,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 ))}
                 <button
                   type="button"
-                  onClick={() => setAttrPairs((prev) => [...prev, { key: '', value: '' }])}
+                  onClick={() => setAttrPairs((prev) => [...prev, buildAttrPair()])}
                   className="px-4 py-2 rounded-xl bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest"
                 >
                   + Agregar atributo
