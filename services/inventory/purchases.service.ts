@@ -13,6 +13,9 @@ export interface CreatePurchaseInput {
   branch_id: string;
   reference?: string | null;
   notes?: string | null;
+  supplier_id?: string | null;
+  purchase_date?: string | null;
+  is_credit?: boolean;
   created_by: string;
   cartItems: PurchaseCartItemInput[];
 }
@@ -41,7 +44,10 @@ export interface CreateProductInput {
   sku: string;
   barcode: string;
   name: string;
-  precio: number;
+  purchase_price: number;
+  wholesale_price: number;
+  retail_price: number;
+  min_stock: number;
   description?: string | null;
   category_id?: string | null;
   brand_id?: string | null;
@@ -70,14 +76,15 @@ const buildUomsPayload = (
   const saleByUom = new Map<string, CreateProductUomInput>();
   saleUoms.forEach((uom) => {
     if (!uom.uom_id) return;
-    if (!saleByUom.has(uom.uom_id)) {
-      saleByUom.set(uom.uom_id, uom);
+    const key = String(uom.uom_id);
+    if (!saleByUom.has(key)) {
+      saleByUom.set(key, uom);
     }
   });
 
-  const purchaseSaleMatch = saleByUom.get(purchaseUom.uom_id);
+  const purchaseSaleMatch = saleByUom.get(String(purchaseUom.uom_id));
   if (purchaseSaleMatch) {
-    saleByUom.delete(purchaseUom.uom_id);
+    saleByUom.delete(String(purchaseUom.uom_id));
   }
 
   const payload: Omit<ProductUom, 'id' | 'uom'>[] = [
@@ -99,7 +106,12 @@ const buildUomsPayload = (
     })),
   ];
 
-  return payload;
+  const uniquePayload = payload.filter(
+    (item, index, arr) =>
+      arr.findIndex((row) => String(row.uom_id) === String(item.uom_id)) === index
+  );
+
+  return uniquePayload;
 };
 
 export const purchasesService = {
@@ -132,7 +144,7 @@ export const purchasesService = {
     return { deleted: ids.length };
   },
   async createPurchase(input: CreatePurchaseInput) {
-    const { branch_id, reference, notes, created_by, cartItems } = input;
+    const { branch_id, reference, notes, created_by, cartItems, supplier_id, purchase_date, is_credit } = input;
 
     const { data: transaction, error: txError } = await supabase
       .from('inventory_transactions')
@@ -142,6 +154,9 @@ export const purchasesService = {
           branch_id,
           reference: reference || null,
           notes: notes || null,
+          supplier_id: supplier_id || null,
+          purchase_date: purchase_date || null,
+          is_credit: is_credit ?? false,
           created_by,
         },
       ])
@@ -325,7 +340,7 @@ export const purchasesService = {
 
     const { data: createdUoms, error: uomError } = await supabase
       .from('product_uoms')
-      .insert(uomsPayload)
+      .upsert(uomsPayload, { onConflict: 'product_id,uom_id' })
       .select('*');
 
     if (uomError) throw uomError;
@@ -386,7 +401,7 @@ export const purchasesService = {
 
     const { data: createdUoms, error: uomError } = await supabase
       .from('product_uoms')
-      .insert(uomsPayload)
+      .upsert(uomsPayload, { onConflict: 'product_id,uom_id' })
       .select('*');
 
     if (uomError) throw uomError;

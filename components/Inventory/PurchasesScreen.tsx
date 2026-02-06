@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Brush, Eye, History, Plus } from 'lucide-react';
+import { Brush, Eye, FileDown, History, Plus } from 'lucide-react';
+import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, User } from '../../types';
 import { supabase } from '../../services/supabaseClient';
 import NewProductModal from './NewProductModal';
@@ -10,6 +11,7 @@ import {
   type Category,
   type Product,
   type ProductUom,
+  type Supplier,
   type Uom,
 } from '../../services/inventory/catalog.service';
 import { purchasesService } from '../../services/inventory/purchases.service';
@@ -38,6 +40,9 @@ interface PurchaseHistoryEntry {
   reference: string | null;
   notes: string | null;
   created_at: string;
+  purchase_date?: string | null;
+  is_credit?: boolean | null;
+  supplier_name?: string | null;
   items_count: number;
   total_amount: number;
 }
@@ -69,6 +74,16 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   const [barcodeInput, setBarcodeInput] = useState('');
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
+  const [supplierId, setSupplierId] = useState('');
+  const [purchaseDate, setPurchaseDate] = useState('');
+  const [isCredit, setIsCredit] = useState(false);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [supplierName, setSupplierName] = useState('');
+  const [supplierPhone, setSupplierPhone] = useState('');
+  const [supplierEmail, setSupplierEmail] = useState('');
+  const [supplierAddress, setSupplierAddress] = useState('');
+  const [isSavingSupplier, setIsSavingSupplier] = useState(false);
   const [cartItems, setCartItems] = useState<PurchaseCartItem[]>([]);
   const [history, setHistory] = useState<PurchaseHistoryEntry[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -78,6 +93,9 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   const [isNewProductOpen, setIsNewProductOpen] = useState(false);
   const [reactivateProduct, setReactivateProduct] = useState<Product | null>(null);
   const [reactivateUoms, setReactivateUoms] = useState<ProductUom[]>([]);
+  const [productSuggestions, setProductSuggestions] = useState<Product[]>([]);
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
   const [isClearHistoryOpen, setIsClearHistoryOpen] = useState(false);
   const [isPurchaseDetailOpen, setIsPurchaseDetailOpen] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<PurchaseHistoryEntry | null>(null);
@@ -112,20 +130,59 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   const loadCatalog = useCallback(async () => {
     setIsCatalogLoading(true);
     try {
-      const [uomsData, categoriesData] = await Promise.all([
+      const [uomsData, categoriesData, productsData] = await Promise.all([
         catalogService.listUoms(),
         catalogService.listCategories(),
+        branchId ? catalogService.listProductsByBranch(branchId) : Promise.resolve([] as Product[]),
       ]);
 
       setUoms(uomsData);
       setCategories(categoriesData);
+      setCatalogProducts(productsData);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo cargar catálogo.';
       setError(message);
     } finally {
       setIsCatalogLoading(false);
     }
-  }, []);
+  }, [branchId]);
+
+  useEffect(() => {
+    if (!barcodeInput.trim() || !branchId) {
+      setProductSuggestions([]);
+      setIsSuggestionsOpen(false);
+      return;
+    }
+    const term = barcodeInput.trim().toLowerCase();
+    if (term.length < 2) {
+      setProductSuggestions([]);
+      setIsSuggestionsOpen(false);
+      return;
+    }
+    const matches = catalogProducts
+      .filter((product) => product.is_active !== false)
+      .filter((product) =>
+        product.name.toLowerCase().includes(term)
+        || (product.sku ?? '').toLowerCase().includes(term)
+        || (product.barcode ?? '').toLowerCase().includes(term)
+      )
+      .slice(0, 8);
+    setProductSuggestions(matches);
+    setIsSuggestionsOpen(matches.length > 0);
+  }, [barcodeInput, branchId, catalogProducts]);
+
+  const loadSuppliers = useCallback(async () => {
+    if (!branchId) {
+      setSuppliers([]);
+      return;
+    }
+    try {
+      const list = await catalogService.listSuppliersByBranch(branchId);
+      setSuppliers(list);
+    } catch {
+      setSuppliers([]);
+    }
+  }, [branchId]);
 
   const loadHistory = useCallback(async () => {
     if (!branchId) return;
@@ -133,7 +190,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     try {
       const { data: transactions, error: txError } = await supabase
         .from('inventory_transactions')
-        .select('id, reference, notes, created_at')
+        .select('id, reference, notes, created_at, purchase_date, is_credit, supplier_id, suppliers ( name )')
         .eq('branch_id', branchId)
         .eq('type', 'PURCHASE')
         .order('created_at', { ascending: false })
@@ -160,11 +217,14 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         }, {});
       }
 
-      const formatted = (transactions ?? []).map((tx) => ({
+      const formatted = (transactions ?? []).map((tx: any) => ({
         id: tx.id,
         reference: tx.reference,
         notes: tx.notes,
         created_at: tx.created_at,
+        purchase_date: tx.purchase_date ?? null,
+        is_credit: tx.is_credit ?? false,
+        supplier_name: tx.suppliers?.name ?? null,
         items_count: itemsSummary[tx.id]?.count ?? 0,
         total_amount: itemsSummary[tx.id]?.total ?? 0,
       }));
@@ -181,6 +241,10 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   useEffect(() => {
     loadCatalog();
   }, [loadCatalog]);
+
+  useEffect(() => {
+    loadSuppliers();
+  }, [loadSuppliers]);
 
   useEffect(() => {
     loadHistory();
@@ -244,6 +308,39 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     });
   };
 
+  const addProductToCart = async (product: Product, barcodeOverride?: string) => {
+    if (!product) return;
+    if (product.is_active === false) {
+      const uomsData = await catalogService.listProductUoms(product.id);
+      setPendingBarcode(barcodeOverride ?? product.barcode ?? '');
+      setReactivateProduct(product);
+      setReactivateUoms(uomsData);
+      setIsNewProductOpen(true);
+      return;
+    }
+
+    const defaultUom = await catalogService.getDefaultPurchaseUom(product.id);
+    if (defaultUom && defaultUom.uom_id) {
+      addToCart(product, defaultUom);
+      return;
+    }
+
+    const purchaseUoms = await catalogService.getPurchaseUoms(product.id);
+    const validPurchaseUoms = purchaseUoms.filter((uom) => Boolean(uom && uom.uom_id));
+
+    if (validPurchaseUoms.length === 0) {
+      showFeedback('alert', 'UOM requerida', 'Este producto no tiene UOM de compra válida.');
+      return;
+    }
+
+    if (validPurchaseUoms.length === 1) {
+      addToCart(product, validPurchaseUoms[0]);
+      return;
+    }
+
+    setPendingUomSelection({ product, uoms: validPurchaseUoms });
+  };
+
   const handleScan = async () => {
     const barcode = barcodeInput.trim();
     if (!barcode || !branchId) return;
@@ -258,42 +355,14 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         setIsNewProductOpen(true);
         return;
       }
-
-      if (product.is_active === false) {
-        const uomsData = await catalogService.listProductUoms(product.id);
-        setPendingBarcode(barcode);
-        setReactivateProduct(product);
-        setReactivateUoms(uomsData);
-        setIsNewProductOpen(true);
-        return;
-      }
-
-      const defaultUom = await catalogService.getDefaultPurchaseUom(product.id);
-      if (defaultUom && defaultUom.uom_id) {
-        addToCart(product, defaultUom);
-        return;
-      }
-
-      const purchaseUoms = await catalogService.getPurchaseUoms(product.id);
-      const validPurchaseUoms = purchaseUoms.filter((uom) => Boolean(uom && uom.uom_id));
-
-      if (validPurchaseUoms.length === 0) {
-        showFeedback('alert', 'UOM requerida', 'Este producto no tiene UOM de compra válida.');
-        return;
-      }
-
-      if (validPurchaseUoms.length === 1) {
-        addToCart(product, validPurchaseUoms[0]);
-        return;
-      }
-
-      setPendingUomSelection({ product, uoms: validPurchaseUoms });
+      await addProductToCart(product, barcode);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo leer el barcode.';
       setError(message);
     } finally {
       setIsScanning(false);
       setBarcodeInput('');
+      setIsSuggestionsOpen(false);
       scanInputRef.current?.focus();
     }
   };
@@ -322,6 +391,206 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     setFeedbackOpen(false);
   };
 
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPurchasePdf = async (purchase: PurchaseHistoryEntry) => {
+    try {
+      const { data, error } = await supabase
+        .from('inventory_transaction_items')
+        .select(`
+          qty,
+          unit_price,
+          products ( name ),
+          product_uoms ( uoms ( name, code ) )
+        `)
+        .eq('transaction_id', purchase.id);
+
+      if (error) throw error;
+
+      const pdfDoc = await PDFDocument.create();
+      const fontRegular = await pdfDoc.embedFont('Helvetica');
+      const fontBold = await pdfDoc.embedFont('Helvetica-Bold');
+      let page = pdfDoc.addPage([595.28, 841.89]);
+      const { height, width } = page.getSize();
+
+      let watermarkImage: any = null;
+      try {
+        const logoBytes = await fetch('/lopar-watermark.png').then((r) => r.arrayBuffer());
+        watermarkImage = await pdfDoc.embedPng(logoBytes);
+      } catch {
+        watermarkImage = null;
+      }
+
+      const drawWatermark = (targetPage: any) => {
+        if (!watermarkImage) return;
+        const dims = watermarkImage.scale(0.50);
+        targetPage.drawImage(watermarkImage, {
+          x: (width - dims.width) / 2,
+          y: (height - dims.height) / 2,
+          width: dims.width,
+          height: dims.height,
+          opacity: 0.12,
+        });
+      };
+
+      drawWatermark(page);
+
+      const dateLabel = purchase.purchase_date
+        ? purchase.purchase_date
+        : formatLocalDateTime(purchase.created_at);
+
+      const marginX = 48;
+      const headerTop = height - 40;
+      const title = 'MATERIALES LOPAR JESUS MARIA';
+      const titleWidth = title.length * 6.2;
+      page.drawText(title, { x: (width - titleWidth - 20) / 2, y: headerTop, size: 14, font: fontBold });
+
+      // Outer border (full page)
+      page.drawRectangle({
+        x: marginX,
+        y: 70,
+        width: width - marginX * 2,
+        height: height - 140,
+        borderWidth: 1,
+        borderColor: rgb(0, 0, 0),
+      });
+
+      // Info box
+      const boxTop = headerTop - 40;
+      const boxHeight = 110;
+      page.drawText(`FECHA: ${dateLabel}`, { x: marginX + 12, y: boxTop - 36, size: 12, font: fontBold });
+      page.drawText('NOTA DE ENTRADA', { x: width - marginX - 140, y: boxTop - 28, size: 12, font: fontBold });
+      page.drawText(String(purchase.id), { x: width - marginX - 90, y: boxTop - 46, size: 12, font: fontBold });
+      page.drawText(`USUARIO: ${currentUser.name}`, { x: width - marginX - 180, y: boxTop - 66, size: 11, font: fontRegular });
+
+      // Table header
+      const tableTop = boxTop - boxHeight - 20;
+      const tableLeft = marginX;
+      const tableWidth = width - marginX * 2;
+      const headerHeight = 20;
+      const colWidth = tableWidth / 5;
+      const colXs = [
+        tableLeft,
+        tableLeft + colWidth,
+        tableLeft + colWidth * 2,
+        tableLeft + colWidth * 3,
+        tableLeft + colWidth * 4,
+        tableLeft + tableWidth,
+      ];
+      const truncateText = (text: string, maxWidth: number, font: any, size: number) => {
+        if (font.widthOfTextAtSize(text, size) <= maxWidth) return text;
+        const ellipsis = '...';
+        const ellipsisWidth = font.widthOfTextAtSize(ellipsis, size);
+        let trimmed = text;
+        while (trimmed.length > 0 && font.widthOfTextAtSize(trimmed, size) + ellipsisWidth > maxWidth) {
+          trimmed = trimmed.slice(0, -1);
+        }
+        return `${trimmed}${ellipsis}`;
+      };
+      const centerText = (text: string, colIndex: number, yPos: number, size: number, font: any, color?: any) => {
+        const colStart = colXs[colIndex];
+        const colEnd = colXs[colIndex + 1];
+        const colWidth = colEnd - colStart;
+        const safeText = truncateText(text, colWidth - 8, font, size);
+        const textWidth = font.widthOfTextAtSize(safeText, size);
+        const x = colStart + Math.max(0, (colWidth - textWidth) / 2);
+        page.drawText(safeText, { x, y: yPos, size, font, color });
+      };
+      page.drawRectangle({
+        x: tableLeft,
+        y: tableTop - headerHeight,
+        width: tableWidth,
+        height: headerHeight,
+        color: rgb(0, 0, 0),
+      });
+      centerText('PRODUCTO', 0, tableTop - 14, 7, fontBold, rgb(1, 1, 1));
+      centerText('PRESENTACION', 1, tableTop - 14, 7, fontBold, rgb(1, 1, 1));
+      centerText('PROVEEDOR', 2, tableTop - 14, 7, fontBold, rgb(1, 1, 1));
+      centerText('CANTIDAD', 3, tableTop - 14, 7, fontBold, rgb(1, 1, 1));
+      centerText('PRECIO UNITARIO', 4, tableTop - 14, 7, fontBold, rgb(1, 1, 1));
+
+      const rows = (data ?? []).map((row: any) => ({
+        name: row.products?.name ?? '—',
+        qty: Number(row.qty ?? 0),
+        unit_price: Number(row.unit_price ?? 0),
+        uom: row.product_uoms?.uoms?.code ?? row.product_uoms?.uoms?.name ?? 'UOM',
+      }));
+
+      let y = tableTop - headerHeight - 14;
+      let total = 0;
+      const rowHeight = 18;
+      for (const row of rows) {
+        const subtotal = row.qty * row.unit_price;
+        total += subtotal;
+
+        if (y < 90) {
+          page = pdfDoc.addPage([595.28, 841.89]);
+          drawWatermark(page);
+          y = height - 80;
+        }
+
+        // Row borders
+        page.drawRectangle({
+          x: tableLeft,
+          y: y - 4,
+          width: tableWidth,
+          height: rowHeight,
+          borderWidth: 0.5,
+          borderColor: rgb(0, 0, 0),
+        });
+        // Vertical separators
+        for (let i = 1; i < colXs.length - 1; i += 1) {
+          page.drawLine({
+            start: { x: colXs[i], y: y - 4 },
+            end: { x: colXs[i], y: y - 4 + rowHeight },
+            thickness: 0.5,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+        const textY = y + 4;
+        centerText(row.name, 0, textY, 7, fontRegular);
+        centerText(row.uom, 1, textY, 7, fontRegular);
+        centerText(purchase.supplier_name || '—', 2, textY, 7, fontRegular);
+        centerText(row.qty.toFixed(2), 3, textY, 7, fontRegular);
+        centerText(`$ ${row.unit_price.toFixed(2)}`, 4, textY, 7, fontRegular);
+        y -= rowHeight;
+      }
+
+      // Footer total bar
+      page.drawRectangle({
+        x: marginX,
+        y: 70,
+        width: tableWidth,
+        height: 22,
+        color: rgb(0, 0, 0),
+      });
+      page.drawText(`TOTAL: $${total.toFixed(2)}`, { x: width - marginX - 150, y: 74, size: 14, color: rgb(1, 1, 1), font: fontBold });
+
+      // Footer line
+      page.drawText(
+        'KILOMETRO, 3 LAS CANOAS, JESUS MARIA JALISCO   (348) 148 8326',
+        { x: marginX + 40, y: 52, size: 7 }
+      );
+      page.drawText('Página 1', { x: width - marginX - 30, y: 52, size: 7 });
+
+      const pdfBytes = await pdfDoc.save();
+      downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), `compra-${purchase.id}.pdf`);
+    } catch (err) {
+      console.error(err);
+      showFeedback('error', 'PDF no disponible', 'No se pudo generar el PDF de la compra.');
+    }
+  };
+
   const handleSavePurchase = async () => {
     if (!branchId) {
       showFeedback('alert', 'Sucursal requerida', 'Seleccione una sucursal antes de registrar compras.');
@@ -333,8 +602,13 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       return;
     }
 
-    if (!reference.trim() || !notes.trim()) {
-      showFeedback('alert', 'Referencia y nota requeridas', 'Capture referencia y notas antes de guardar la compra.');
+    if (!supplierId) {
+      showFeedback('alert', 'Proveedor requerido', 'Seleccione el proveedor de la compra.');
+      return;
+    }
+
+    if (!purchaseDate) {
+      showFeedback('alert', 'Fecha requerida', 'Seleccione la fecha de compra.');
       return;
     }
 
@@ -365,6 +639,9 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         branch_id: branchId,
         reference: reference.trim(),
         notes: notes.trim(),
+        supplier_id: supplierId,
+        purchase_date: purchaseDate,
+        is_credit: isCredit,
         created_by: currentUser.id,
         cartItems: cartItems.map((item) => ({
           product_id: item.product_id,
@@ -378,6 +655,9 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       setCartItems([]);
       setReference('');
       setNotes('');
+      setSupplierId('');
+      setPurchaseDate('');
+      setIsCredit(false);
       setFeedbackOpen(false);
       showFeedback('success', 'Compra registrada', 'La compra se guardó correctamente.');
       setViewMode('HISTORY');
@@ -388,6 +668,39 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       showFeedback('error', 'No se pudo guardar', message);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleCreateSupplier = async () => {
+    if (!branchId) {
+      showFeedback('alert', 'Sucursal requerida', 'Seleccione una sucursal antes de crear el proveedor.');
+      return;
+    }
+    if (!supplierName.trim()) {
+      showFeedback('alert', 'Nombre requerido', 'Ingrese el nombre del proveedor.');
+      return;
+    }
+    setIsSavingSupplier(true);
+    try {
+      const created = await catalogService.createSupplier({
+        branch_id: branchId,
+        name: supplierName.trim(),
+        phone: supplierPhone.trim() || null,
+        email: supplierEmail.trim() || null,
+        address: supplierAddress.trim() || null,
+      });
+      setSuppliers((prev) => [created, ...prev]);
+      setSupplierId(String(created.id));
+      setSupplierName('');
+      setSupplierPhone('');
+      setSupplierEmail('');
+      setSupplierAddress('');
+      setIsSupplierModalOpen(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo crear el proveedor.';
+      showFeedback('error', 'Error', message);
+    } finally {
+      setIsSavingSupplier(false);
     }
   };
 
@@ -472,6 +785,13 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   const handleBarcodeKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== 'Enter') return;
     event.preventDefault();
+    if (isSuggestionsOpen && productSuggestions.length > 0) {
+      addProductToCart(productSuggestions[0]);
+      setBarcodeInput('');
+      setIsSuggestionsOpen(false);
+      scanInputRef.current?.focus();
+      return;
+    }
     handleScan();
   };
 
@@ -535,20 +855,95 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       {viewMode === 'CREATE' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 space-y-4">
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-4">
+            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-4 relative">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Paso 1: Escaneo de Producto</p>
               <input
                 ref={scanInputRef}
                 type="text"
-                placeholder="Escanee el barcode y presione Enter"
+                placeholder="Escanee el barcode o escriba el nombre"
                 className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
                 value={barcodeInput}
                 onChange={(e) => setBarcodeInput(e.target.value)}
                 onKeyDown={handleBarcodeKey}
                 disabled={!branchId || isScanning}
               />
+              {isSuggestionsOpen && productSuggestions.length > 0 && (
+                <div className="absolute left-6 right-6 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-20 max-h-64 overflow-y-auto">
+                  {productSuggestions.map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => {
+                        addProductToCart(product);
+                        setBarcodeInput('');
+                        setIsSuggestionsOpen(false);
+                        scanInputRef.current?.focus();
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-b-0"
+                    >
+                      <p className="text-xs font-black text-slate-800">{product.name}</p>
+                      <p className="text-[10px] text-slate-500">{product.sku || '—'} · {product.barcode || 'Sin barcode'}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
                 {branchId ? '1 scan = 1 producto (luego ingrese cantidad)' : 'Seleccione sucursal antes de escanear'}
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-4">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Proveedor y fecha</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Proveedor</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsSupplierModalOpen(true)}
+                    className="text-[10px] font-black text-slate-600 uppercase tracking-widest"
+                    disabled={!branchId}
+                  >
+                    + Nuevo proveedor
+                  </button>
+                </div>
+                <select
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                  value={supplierId}
+                  onChange={(e) => setSupplierId(e.target.value)}
+                  disabled={!branchId}
+                >
+                  <option value="">Seleccionar proveedor</option>
+                  {suppliers.map((supplier) => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                    </option>
+                  ))}
+                </select>
+                {branchId && suppliers.length === 0 && (
+                  <p className="text-[10px] text-slate-400">No hay proveedores en esta sucursal.</p>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Fecha de compra</label>
+                  <input
+                    type="date"
+                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                    value={purchaseDate}
+                    onChange={(e) => setPurchaseDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Compra a crédito</label>
+                  <select
+                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                    value={isCredit ? 'SI' : 'NO'}
+                    onChange={(e) => setIsCredit(e.target.value === 'SI')}
+                  >
+                    <option value="NO">No</option>
+                    <option value="SI">Sí</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -662,7 +1057,10 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-900 text-white">
-                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Fecha</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Fecha Compra</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Fecha Registro</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Proveedor</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Crédito</th>
                   <th className="p-4 text-[10px] font-black uppercase tracking-widest">Referencia</th>
                   <th className="p-4 text-[10px] font-black uppercase tracking-widest">Notas</th>
                   <th className="p-4 text-[10px] font-black uppercase tracking-widest text-center">Items</th>
@@ -678,7 +1076,22 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                   >
                     <td className="p-4">
                       <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black text-slate-700">
+                        {p.purchase_date || '—'}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black text-slate-700">
                         {formatLocalDateTime(p.created_at)}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-700">
+                        {p.supplier_name || '—'}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest ${p.is_credit ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                        {p.is_credit ? 'Sí' : 'No'}
                       </span>
                     </td>
                     <td className="p-4">
@@ -699,27 +1112,36 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                         ${p.total_amount.toLocaleString()}
                       </span>
                     </td>
-                    <td className="p-4 text-center flex items-center justify-center">
-                      <button
-                        onClick={() => handleOpenPurchaseDetail(p)}
-                        className="w-8 h-8 text-center rounded-lg bg-blue-50 text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center"
-                        title="Ver detalle"
-                      >
-                        <Eye className="w-4 h-4 text-blue-600" />
-                      </button>
+                    <td className="p-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleOpenPurchaseDetail(p)}
+                          className="w-8 h-8 text-center rounded-lg bg-blue-50 text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center"
+                          title="Ver detalle"
+                        >
+                          <Eye className="w-4 h-4 text-blue-600" />
+                        </button>
+                        <button
+                          onClick={() => handleDownloadPurchasePdf(p)}
+                          className="w-8 h-8 text-center rounded-lg bg-slate-50 text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center"
+                          title="Descargar PDF"
+                        >
+                          <FileDown className="w-4 h-4 text-slate-600" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
                 {!isLoadingHistory && history.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="p-20 text-center text-slate-300 italic">
+                    <td colSpan={9} className="p-20 text-center text-slate-300 italic">
                       No hay registros de compras recientes
                     </td>
                   </tr>
                 )}
                 {isLoadingHistory && (
                   <tr>
-                    <td colSpan={6} className="p-20 text-center text-slate-300 italic">Cargando historial...</td>
+                    <td colSpan={9} className="p-20 text-center text-slate-300 italic">Cargando historial...</td>
                   </tr>
                 )}
               </tbody>
@@ -812,6 +1234,81 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                   </button>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isSupplierModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="bg-slate-900 p-6 text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black uppercase tracking-tighter">Nuevo proveedor</h3>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Sucursal {selectedBranchId || '—'}</p>
+              </div>
+              <button
+                onClick={() => setIsSupplierModalOpen(false)}
+                className="text-2xl text-slate-300"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Nombre</label>
+                <input
+                  type="text"
+                  className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-orange-500"
+                  value={supplierName}
+                  onChange={(e) => setSupplierName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Teléfono</label>
+                <input
+                  type="text"
+                  className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-orange-500"
+                  value={supplierPhone}
+                  onChange={(e) => setSupplierPhone(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Correo</label>
+                <input
+                  type="email"
+                  className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-orange-500"
+                  value={supplierEmail}
+                  onChange={(e) => setSupplierEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Dirección</label>
+                <input
+                  type="text"
+                  className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-orange-500"
+                  value={supplierAddress}
+                  onChange={(e) => setSupplierAddress(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsSupplierModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-slate-500 bg-slate-100"
+                  disabled={isSavingSupplier}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateSupplier}
+                  disabled={isSavingSupplier}
+                  className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+                >
+                  {isSavingSupplier ? 'Guardando...' : 'Guardar proveedor'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

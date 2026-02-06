@@ -1,7 +1,8 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Ban } from 'lucide-react';
 import { Branch, User } from '../../types';
-import { catalogService, type Category, type Product, type Uom } from '../../services/inventory/catalog.service';
+import { catalogService, type Category, type Product, type ProductUom, type Uom } from '../../services/inventory/catalog.service';
 import ConfirmModal from '../common/ConfirmModal';
 import NewProductModal from './NewProductModal';
 
@@ -27,6 +28,10 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
   const [productToRemove, setProductToRemove] = useState<Product | null>(null);
   const [priceProduct, setPriceProduct] = useState<Product | null>(null);
   const [priceValue, setPriceValue] = useState(0);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editUoms, setEditUoms] = useState<ProductUom[]>([]);
+  const [isEditLoading, setIsEditLoading] = useState(false);
 
   const branchId = useMemo(() => {
     const match = branches.find((b) => b.id === selectedBranchId);
@@ -80,11 +85,15 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     setIsSaving(true);
     setError(null);
     try {
-      await catalogService.deactivateProduct(productToDelete.id);
+      if (productToDelete.is_active === false) {
+        await catalogService.activateProduct(productToDelete.id);
+      } else {
+        await catalogService.deactivateProduct(productToDelete.id);
+      }
       setProductToDelete(null);
       await loadProducts();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'No se pudo desactivar el producto.';
+      const message = err instanceof Error ? err.message : 'No se pudo actualizar el estado del producto.';
       setError(message);
     } finally {
       setIsSaving(false);
@@ -109,7 +118,22 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
 
   const handleOpenPriceModal = (product: Product) => {
     setPriceProduct(product);
-    setPriceValue(Number((product as any).precio ?? 0));
+    setPriceValue(Number((product as any).retail_price ?? (product as any).precio ?? 0));
+  };
+
+  const handleOpenEditProduct = async (product: Product) => {
+    setIsEditLoading(true);
+    setEditProduct(product);
+    try {
+      const uomsList = await catalogService.listProductUoms(String(product.id));
+      setEditUoms(uomsList);
+      setIsEditOpen(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo cargar el producto.';
+      setError(message);
+    } finally {
+      setIsEditLoading(false);
+    }
   };
 
   const handleSavePrice = async () => {
@@ -228,8 +252,9 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest">SKU</th>
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest">Barcode</th>
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest">Base</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-right">Precio</th>
+                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-right">Precio Menor</th>
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest text-right">Stock</th>
+                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-right">Stock Mínimo</th>
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest text-center">Estado</th>
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest text-center">Acciones</th>
               </tr>
@@ -247,11 +272,17 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
               )}
               {!isLoading && filteredProducts.map((product) => {
                 const isActive = product.is_active !== false;
-                const stock = stockByProduct[product.id] ?? 0;
+                const stock = Number((product as any).stock ?? stockByProduct[product.id] ?? 0);
+                const minStock = Number((product as any).min_stock ?? 0);
                 const stockLabel = Number.isFinite(stock)
                   ? stock.toLocaleString(undefined, { maximumFractionDigits: 3 })
                   : '0';
                 const baseCode = uomById[product.base_uom_id]?.code || '—';
+                const stockStatus = stock <= minStock
+                  ? 'low'
+                  : stock <= minStock + Math.max(1, minStock * 0.1)
+                    ? 'warning'
+                    : 'ok';
                 return (
                 <tr
                   key={product.id}
@@ -268,10 +299,24 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                   <td className="p-5 text-xs font-mono text-slate-500">{product.barcode || '—'}</td>
                   <td className="p-5 text-xs font-bold text-slate-600">{baseCode}</td>
                   <td className="p-5 text-right text-xs font-black text-slate-900">
-                    ${Number((product as any).precio ?? 0).toLocaleString()}
+                    ${Number((product as any).retail_price ?? (product as any).precio ?? 0).toLocaleString()}
                   </td>
-                  <td className="p-5 text-right text-xs font-black text-slate-700">
-                    {stockLabel} <span className="text-[9px] font-black text-slate-400">{baseCode}</span>
+                  <td className="p-5 text-right text-xs font-black">
+                    <span
+                      className={`inline-flex items-center gap-2 rounded-full px-3 py-1 ${
+                        stockStatus === 'low'
+                          ? 'bg-red-100 text-red-700'
+                          : stockStatus === 'warning'
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-emerald-100 text-emerald-700'
+                      }`}
+                    >
+                      {stockLabel} <span className="text-[9px] font-black">{baseCode}</span>
+                    </span>
+                  </td>
+                  <td className="p-5 text-right text-xs font-black text-slate-600">
+                    {minStock.toLocaleString(undefined, { maximumFractionDigits: 3 })}{' '}
+                    <span className="text-[9px] font-black text-slate-400">{baseCode}</span>
                   </td>
                   <td className="p-5 text-center text-xs font-bold">
                     <span
@@ -285,28 +330,32 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                   <td className="p-5 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button
-                        onClick={() => handleOpenPriceModal(product)}
-                        className="text-xs font-black px-3 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        title="Editar precio"
-                        disabled={isSaving}
+                        onClick={() => handleOpenEditProduct(product)}
+                        className="text-xs font-black px-3 py-1 rounded-lg bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
+                        title="Editar producto"
+                        disabled={isSaving || isEditLoading}
                       >
-                        Precio
+                        Editar
                       </button>
+                      {false && (
+                        <button
+                          onClick={() => handleOpenPriceModal(product)}
+                          className="text-xs font-black px-3 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          title="Editar precio menor"
+                          disabled={isSaving}
+                        >
+                          Precio
+                        </button>
+                      )}
                       <button
                         onClick={() => setProductToDelete(product)}
-                        className="text-lg text-amber-600"
-                        title="Desactivar"
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg ${
+                          isActive ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'
+                        }`}
+                        title={isActive ? 'Desactivar' : 'Activar'}
                         disabled={isSaving}
                       >
-                        ⛔
-                      </button>
-                      <button
-                        onClick={() => setProductToRemove(product)}
-                        className="text-lg text-red-600"
-                        title="Eliminar"
-                        disabled={isSaving}
-                      >
-                        🗑️
+                        <Ban className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
@@ -331,10 +380,14 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
 
       <ConfirmModal
         isOpen={Boolean(productToDelete)}
-        title="Desactivar producto"
-        description="El producto quedará inactivo y no se podrá usar en compras nuevas."
+        title={productToDelete?.is_active === false ? 'Activar producto' : 'Desactivar producto'}
+        description={
+          productToDelete?.is_active === false
+            ? 'El producto volverá a estar disponible para compras.'
+            : 'El producto quedará inactivo y no se podrá usar en compras nuevas.'
+        }
         icon="⛔"
-        confirmText="Desactivar"
+        confirmText={productToDelete?.is_active === false ? 'Activar' : 'Desactivar'}
         cancelText="Cancelar"
         onConfirm={handleConfirmDeleteProduct}
         onCancel={() => setProductToDelete(null)}
@@ -356,7 +409,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-black uppercase tracking-tighter">Actualizar precio</h3>
+                <h3 className="text-lg font-black uppercase tracking-tighter">Actualizar precio menor</h3>
                 <p className="text-slate-400 text-xs">{priceProduct.name}</p>
               </div>
               <button onClick={() => setPriceProduct(null)} className="text-slate-400 hover:text-white text-2xl">
@@ -409,6 +462,30 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
         onCreated={() => {
           setIsNewProductOpen(false);
           setPendingBarcode('');
+          loadProducts();
+        }}
+      />
+
+      <NewProductModal
+        isOpen={isEditOpen}
+        barcode={editProduct?.barcode ?? ''}
+        branchId={branchId ?? ''}
+        uoms={uoms}
+        categories={categories}
+        isCatalogLoading={isLoading}
+        mode="edit"
+        existingProduct={editProduct}
+        existingUoms={editUoms}
+        allowBarcodeEdit
+        onClose={() => {
+          setIsEditOpen(false);
+          setEditProduct(null);
+          setEditUoms([]);
+        }}
+        onUpdated={() => {
+          setIsEditOpen(false);
+          setEditProduct(null);
+          setEditUoms([]);
           loadProducts();
         }}
       />

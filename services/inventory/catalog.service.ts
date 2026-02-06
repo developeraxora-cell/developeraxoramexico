@@ -16,6 +16,17 @@ export interface Brand {
   name: string;
 }
 
+export interface Supplier {
+  id: string;
+  branch_id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface Product {
   id: string;
   branch_id: string;
@@ -23,6 +34,10 @@ export interface Product {
   barcode: string;
   name: string;
   precio?: number | null;
+  purchase_price?: number | null;
+  wholesale_price?: number | null;
+  retail_price?: number | null;
+  min_stock?: number | null;
   description: string | null;
   category_id: string | null;
   brand_id: string | null;
@@ -111,7 +126,7 @@ export const catalogService = {
   async listProductsByBranch(branchId: string) {
     const { data, error } = await supabase
       .from('products')
-      .select('id, branch_id, sku, barcode, name, precio, description, category_id, brand_id, base_uom_id, is_divisible, attrs, is_active, created_at, updated_at')
+      .select('id, branch_id, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, is_active, created_at, updated_at')
       .eq('branch_id', branchId)
       .order('name');
 
@@ -119,16 +134,53 @@ export const catalogService = {
     return (data ?? []) as Product[];
   },
 
-  async updateProductPrice(productId: string, precio: number) {
+  async updateProductPrice(productId: string, retail_price: number) {
     const { data, error } = await supabase
       .from('products')
-      .update({ precio })
+      .update({ retail_price, precio: retail_price })
       .eq('id', productId)
       .select('*')
       .single();
 
     if (error) throw error;
     return data as Product;
+  },
+
+  async listSuppliersByBranch(branchId: string) {
+    const { data, error } = await supabase
+      .from('suppliers')
+      .select('id, branch_id, name, phone, email, address, is_active, created_at')
+      .eq('branch_id', branchId)
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) throw error;
+    return (data ?? []) as Supplier[];
+  },
+
+  async createSupplier(input: {
+    branch_id: string;
+    name: string;
+    phone?: string | null;
+    email?: string | null;
+    address?: string | null;
+  }) {
+    const { data, error } = await supabase
+      .from('suppliers')
+      .insert([
+        {
+          branch_id: input.branch_id,
+          name: input.name,
+          phone: input.phone ?? null,
+          email: input.email ?? null,
+          address: input.address ?? null,
+        },
+      ])
+      .select('id, branch_id, name, phone, email, address, is_active, created_at')
+      .single();
+
+    if (error) throw error;
+    return data as Supplier;
   },
 
   async listStockByBranch(branchId: string) {
@@ -145,6 +197,16 @@ export const catalogService = {
     const { error } = await supabase
       .from('products')
       .update({ is_active: false })
+      .eq('id', productId);
+
+    if (error) throw error;
+    return true;
+  },
+
+  async activateProduct(productId: string) {
+    const { error } = await supabase
+      .from('products')
+      .update({ is_active: true })
       .eq('id', productId);
 
     if (error) throw error;
@@ -242,21 +304,6 @@ export const catalogService = {
     })) as ProductUom[];
   },
 
-  async listDefaultSaleUoms(productIds: string[]) {
-    if (productIds.length === 0) return [] as ProductUom[];
-    const { data, error } = await supabase
-      .from('product_uoms')
-      .select('id, product_id, uom_id, purpose, factor_to_base, is_default_purchase, is_default_sale, uoms (id, code, name)')
-      .in('product_id', productIds)
-      .eq('is_default_sale', true);
-
-    if (error) throw error;
-
-    return (data ?? []).map((row) => ({
-      ...row,
-      uom: row.uoms as Uom,
-    })) as ProductUom[];
-  },
 
   async setDefaultSaleUom(productId: string, productUomId: string) {
     const { error: clearError } = await supabase

@@ -23,13 +23,14 @@ interface NewProductModalProps {
   uoms: Uom[];
   categories: Category[];
   isCatalogLoading?: boolean;
-  mode?: 'create' | 'reactivate';
+  mode?: 'create' | 'reactivate' | 'edit';
   existingProduct?: Product | null;
   existingUoms?: ProductUom[];
   allowBarcodeEdit?: boolean;
   onClose: () => void;
   onCreated: (payload: { product: Product; purchaseUom: ProductUom }) => void;
   onReactivated?: (payload: { product: Product; purchaseUom: ProductUom }) => void;
+  onUpdated?: (payload: { product: Product; purchaseUom: ProductUom }) => void;
 }
 
 const NewProductModal: React.FC<NewProductModalProps> = ({
@@ -46,12 +47,16 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   onClose,
   onCreated,
   onReactivated,
+  onUpdated,
 }) => {
   const [barcodeValue, setBarcodeValue] = useState(barcode);
   const [sku, setSku] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [precio, setPrecio] = useState(0);
+  const [purchasePrice, setPurchasePrice] = useState(0);
+  const [wholesalePrice, setWholesalePrice] = useState(0);
+  const [retailPrice, setRetailPrice] = useState(0);
+  const [minStock, setMinStock] = useState(0);
   const [categoryId, setCategoryId] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [baseUomId, setBaseUomId] = useState('');
@@ -76,12 +81,15 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     setSaving(false);
     setBarcodeValue(barcode);
 
-    if (mode === 'reactivate' && existingProduct) {
+    if ((mode === 'reactivate' || mode === 'edit') && existingProduct) {
       setBarcodeValue(existingProduct.barcode ?? barcode);
       setSku(existingProduct.sku ?? '');
       setName(existingProduct.name ?? '');
       setDescription(existingProduct.description ?? '');
-      setPrecio(Number((existingProduct as any).precio ?? 0));
+      setPurchasePrice(Number((existingProduct as any).purchase_price ?? 0));
+      setWholesalePrice(Number((existingProduct as any).wholesale_price ?? 0));
+      setRetailPrice(Number((existingProduct as any).retail_price ?? (existingProduct as any).precio ?? 0));
+      setMinStock(Number((existingProduct as any).min_stock ?? 0));
       setCategoryId(existingProduct.category_id ?? '');
       setNewCategoryName('');
       setBaseUomId(existingProduct.base_uom_id ?? '');
@@ -114,7 +122,10 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     setSku('');
     setName('');
     setDescription('');
-    setPrecio(0);
+    setPurchasePrice(0);
+    setWholesalePrice(0);
+    setRetailPrice(0);
+    setMinStock(0);
     setCategoryId('');
     setNewCategoryName('');
     setBaseUomId('');
@@ -199,8 +210,8 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       setError('El nombre es obligatorio.');
       return;
     }
-    if (precio <= 0) {
-      setError('El precio debe ser mayor a 0.');
+    if (retailPrice <= 0) {
+      setError('El precio de venta menor debe ser mayor a 0.');
       return;
     }
 
@@ -241,10 +252,11 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
 
     const normalizedSaleUoms = saleUoms
       .filter((uom) => uom.uom_id && uom.factor_to_base > 0)
-      .map((uom, index) => ({
-        ...uom,
-        is_default_sale: uom.is_default_sale || index === 0,
-      }));
+      .reduce<SaleUomDraft[]>((acc, uom) => {
+        if (acc.find((row) => row.uom_id === uom.uom_id)) return acc;
+        acc.push({ ...uom, is_default_sale: uom.is_default_sale || acc.length === 0 });
+        return acc;
+      }, []);
 
     const saleDefaults = normalizedSaleUoms.filter((uom) => uom.is_default_sale);
     if (saleDefaults.length > 1) {
@@ -260,7 +272,10 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
         sku: resolvedSku,
         barcode: barcodeValue.trim(),
         name: name.trim(),
-        precio: Number(precio),
+        purchase_price: Number(purchasePrice),
+        wholesale_price: Number(wholesalePrice),
+        retail_price: Number(retailPrice),
+        min_stock: Number(minStock),
         description: description.trim() || null,
         category_id: resolvedCategoryId,
         brand_id: null,
@@ -269,7 +284,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
         attrs: parsedAttrs ?? {},
       };
 
-      if (mode === 'reactivate' && existingProduct) {
+      if ((mode === 'reactivate' || mode === 'edit') && existingProduct) {
         const result = await purchasesService.updateProductWithUoms({
           productId: existingProduct.id,
           product: payload,
@@ -281,7 +296,11 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
           },
           saleUoms: normalizedSaleUoms,
         });
-        onReactivated?.(result);
+        if (mode === 'reactivate') {
+          onReactivated?.(result);
+        } else {
+          onUpdated?.(result);
+        }
       } else {
         const result = await purchasesService.createProductWithUoms({
           product: payload,
@@ -296,7 +315,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
         onCreated(result);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'No se pudo crear el producto.';
+      const message = err instanceof Error ? err.message : 'No se pudo guardar el producto.';
       setError(message);
     } finally {
       setSaving(false);
@@ -313,10 +332,14 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
         <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
           <div>
             <h3 className="text-xl font-black uppercase tracking-tighter">
-              {mode === 'reactivate' ? 'Reactivar Producto' : 'Nuevo Producto'}
+              {mode === 'reactivate' ? 'Reactivar Producto' : mode === 'edit' ? 'Editar Producto' : 'Nuevo Producto'}
             </h3>
             <p className="text-slate-400 text-xs">
-              {mode === 'reactivate' ? 'Actualiza datos para reactivar el producto.' : 'Registro rápido desde escaneo.'}
+              {mode === 'reactivate'
+                ? 'Actualiza datos para reactivar el producto.'
+                : mode === 'edit'
+                  ? 'Actualiza la información del producto.'
+                  : 'Registro rápido desde escaneo.'}
             </p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
@@ -332,8 +355,8 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
           {!isCatalogReady && (
             <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold rounded-2xl px-4 py-3">
               {isCatalogLoading
-                ? 'Cargando catálogo de unidades, marcas y categorías...'
-                : 'No hay datos de catálogo. Verifique que existan UOMs, marcas o categorías en Supabase.'}
+                ? 'Cargando catálogo de unidades...'
+                : 'No hay unidades registradas. Verifique las UOMs en Supabase.'}
             </div>
           )}
 
@@ -346,18 +369,19 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 readOnly={!allowBarcodeEdit || mode === 'reactivate'}
                 onChange={(e) => setBarcodeValue(e.target.value)}
                 className={`w-full p-3 border-2 border-transparent rounded-xl outline-none font-mono text-xs ${
-                  allowBarcodeEdit && mode !== 'reactivate' ? 'bg-gray-50 focus:border-orange-500' : 'bg-gray-100'
+                  allowBarcodeEdit && mode === 'create' ? 'bg-gray-50 focus:border-orange-500' : 'bg-gray-100'
                 }`}
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">SKU</label>
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Stock mínimo</label>
               <input
-                type="text"
-                placeholder="Opcional (se autogenera si vacío)"
-                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-mono text-xs"
-                value={sku}
-                onChange={(e) => setSku(e.target.value)}
+                type="number"
+                min={0}
+                step="0.01"
+                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-semibold text-sm"
+                value={minStock}
+                onChange={(e) => setMinStock(Number(e.target.value))}
               />
             </div>
             <div className="space-y-1 md:col-span-2">
@@ -370,54 +394,28 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Descripción</label>
-              <textarea
-                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-semibold text-xs min-h-[80px]"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Precio de venta (base)</label>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Precio venta mayor</label>
               <input
                 type="number"
                 min={0}
                 step="0.01"
-                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-black text-lg"
-                value={precio}
-                onChange={(e) => setPrecio(Number(e.target.value))}
+                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-black text-sm"
+                value={wholesalePrice}
+                onChange={(e) => setWholesalePrice(Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Precio venta menor</label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-black text-sm"
+                value={retailPrice}
+                onChange={(e) => setRetailPrice(Number(e.target.value))}
               />
               <p className="text-[10px] text-slate-400">Precio aplicado a la unidad base.</p>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Categoría</label>
-              <select
-                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-              >
-                <option value="">Sin categoría</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              {categories.length === 0 && (
-                <p className="text-[10px] text-slate-400">No hay categorías cargadas.</p>
-              )}
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Nueva Categoría</label>
-              <input
-                type="text"
-                placeholder="Crear nueva categoría (opcional)"
-                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-              />
-              <p className="text-[10px] text-slate-400">Si escribes aquí, se creará una categoría nueva.</p>
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Unidad Base</label>
@@ -450,73 +448,11 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 Permite fraccionar (decimales)
               </label>
             </div>
-            <div className="space-y-1 md:col-span-2">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Atributos del producto</label>
-                <button
-                  type="button"
-                  onClick={() => setShowJsonAttrs((prev) => !prev)}
-                  className="text-[10px] font-black text-slate-500 uppercase tracking-widest"
-                >
-                  {showJsonAttrs ? 'Ocultar JSON' : 'Modo JSON'}
-                </button>
-              </div>
-              <div className="space-y-3">
-                {attrPairs.map((pair, index) => (
-                  <div key={pair.id} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center">
-                    <input
-                      type="text"
-                      placeholder="Clave (ej: peso_costal_kg)"
-                      className="md:col-span-2 w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
-                      value={pair.key}
-                      onChange={(e) =>
-                        setAttrPairs((prev) =>
-                          prev.map((item, idx) => (idx === index ? { ...item, key: e.target.value } : item))
-                        )
-                      }
-                    />
-                    <input
-                      type="text"
-                      placeholder="Valor (ej: 50)"
-                      className="md:col-span-2 w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
-                      value={pair.value}
-                      onChange={(e) =>
-                        setAttrPairs((prev) =>
-                          prev.map((item, idx) => (idx === index ? { ...item, value: e.target.value } : item))
-                        )
-                      }
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setAttrPairs((prev) => prev.filter((_, idx) => idx !== index))}
-                      className="text-[10px] font-black text-red-500"
-                    >
-                      Quitar
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setAttrPairs((prev) => [...prev, buildAttrPair()])}
-                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest"
-                >
-                  + Agregar atributo
-                </button>
-              </div>
-              {showJsonAttrs && (
-                <textarea
-                  className="w-full mt-3 p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-mono text-xs min-h-[90px]"
-                  placeholder='{"peso_costal_kg": 50}'
-                  value={attrsText}
-                  onChange={(e) => setAttrsText(e.target.value)}
-                />
-              )}
-            </div>
           </div>
 
           <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-black uppercase tracking-widest text-slate-600">Unidad de Compra</h4>
+              <h4 className="text-xs font-black uppercase tracking-widest text-slate-600">Medida de Compra</h4>
             </div>
             <p className="text-[10px] text-slate-400">Así lo compras al proveedor (ej: costal = 50 KG).</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -557,7 +493,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
 
           <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-black uppercase tracking-widest text-slate-600">Unidades de Venta</h4>
+              <h4 className="text-xs font-black uppercase tracking-widest text-slate-600">Venta por menor (equivalencias)</h4>
               <button
                 type="button"
                 onClick={handleAddSaleUom}
@@ -566,7 +502,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 + Agregar
               </button>
             </div>
-            <p className="text-[10px] text-slate-400">Cómo se vende al cliente (ej: pieza, bolsa, metro).</p>
+            <p className="text-[10px] text-slate-400">Define equivalencias para venta menor (ej: 1 costal = 50 KG).</p>
             {saleUoms.length === 0 ? (
               <p className="text-xs text-slate-400">No hay unidades de venta configuradas.</p>
             ) : (
@@ -638,7 +574,13 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
               disabled={saving || !isCatalogReady}
                 className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl ${saving || !isCatalogReady ? 'bg-slate-200 text-slate-400' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
               >
-              {saving ? 'Guardando...' : mode === 'reactivate' ? 'Reactivar Producto' : 'Guardar Producto'}
+              {saving
+                ? 'Guardando...'
+                : mode === 'reactivate'
+                  ? 'Reactivar Producto'
+                  : mode === 'edit'
+                    ? 'Guardar Cambios'
+                    : 'Guardar Producto'}
             </button>
           </div>
         </form>

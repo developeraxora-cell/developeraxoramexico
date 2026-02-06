@@ -92,6 +92,7 @@ export interface CartItem {
   customLabel?: string;
   productUomId?: string;
   factorUsed?: number;
+  saleType?: 'MAYOR' | 'MENOR';
   barcodeScanned?: string;
 }
 

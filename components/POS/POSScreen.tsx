@@ -30,6 +30,7 @@ const POSScreen: React.FC<POSProps> = ({
   const [isCatalogLoading, setIsCatalogLoading] = useState(false);
   const [defaultSaleUomByProduct, setDefaultSaleUomByProduct] = useState<Record<string, ProductUom>>({});
   const [uomsById, setUomsById] = useState<Record<string, Uom>>({});
+  const [saleUomsByProduct, setSaleUomsByProduct] = useState<Record<string, ProductUom[]>>({});
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'TARJETA' | 'CREDITO'>('EFECTIVO');
@@ -50,10 +51,12 @@ const POSScreen: React.FC<POSProps> = ({
   const [paymentNotes, setPaymentNotes] = useState('');
   const [paymentMethodChoice, setPaymentMethodChoice] = useState<CreditPaymentMethod>('EFECTIVO');
   const [noteRows, setNoteRows] = useState<Record<string, number>>({});
+  const [isSaleTypeOpen, setIsSaleTypeOpen] = useState(false);
   const [isUnitSelectOpen, setIsUnitSelectOpen] = useState(false);
   const [isSaleUomSelectOpen, setIsSaleUomSelectOpen] = useState(false);
   const [pendingCatalogProduct, setPendingCatalogProduct] = useState<CatalogProduct | null>(null);
   const [pendingPrice, setPendingPrice] = useState(0);
+  const [pendingStockValue, setPendingStockValue] = useState<number | undefined>(undefined);
   const [saleUomOptions, setSaleUomOptions] = useState<ProductUom[]>([]);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('loading');
@@ -211,6 +214,7 @@ const POSScreen: React.FC<POSProps> = ({
     }
   };
 
+
   const branchId = useMemo(() => {
     const match = branches.find((b) => b.id === selectedBranchId);
     if (match?.dbId !== undefined) return String(match.dbId);
@@ -250,6 +254,7 @@ const POSScreen: React.FC<POSProps> = ({
       setBranchProducts([]);
       setBranchStock({});
       setDefaultSaleUomByProduct({});
+      setSaleUomsByProduct({});
       return;
     }
     setIsCatalogLoading(true);
@@ -278,16 +283,34 @@ const POSScreen: React.FC<POSProps> = ({
         return acc;
       }, {});
       setDefaultSaleUomByProduct(saleUomMap);
+      setSaleUomsByProduct({});
 
     } catch {
       setBranchProducts([]);
       setBranchStock({});
       setDefaultSaleUomByProduct({});
       setUomsById({});
+      setSaleUomsByProduct({});
     } finally {
       setIsCatalogLoading(false);
     }
   }, [branchId]);
+
+  const ensureSaleUoms = useCallback(async (productId: string) => {
+    if (saleUomsByProduct[productId]) return;
+    try {
+      const uoms = await catalogService.listProductUoms(productId);
+      setSaleUomsByProduct((prev) => ({
+        ...prev,
+        [productId]: uoms,
+      }));
+    } catch {
+      setSaleUomsByProduct((prev) => ({
+        ...prev,
+        [productId]: [],
+      }));
+    }
+  }, [saleUomsByProduct]);
 
   useEffect(() => {
     loadBranchCatalog();
@@ -392,7 +415,10 @@ const POSScreen: React.FC<POSProps> = ({
     product: PosProduct,
     customFactor?: number,
     customLabel?: string,
-    stockOverride?: number
+    stockOverride?: number,
+    productUomId?: string,
+    factorUsed?: number,
+    saleType?: 'MAYOR' | 'MENOR'
   ) => {
     const productId = String(product.id);
     if (cart.find((i) => i.productId === productId)) return;
@@ -402,8 +428,12 @@ const POSScreen: React.FC<POSProps> = ({
       alert('⚠️ Sin stock en esta sucursal.');
       return;
     }
-    const factorToBase = customFactor ?? 1;
-    const unitPrice = product.pricePerBaseUnit * factorToBase;
+    const factorToBase = factorUsed ?? customFactor ?? 1;
+    const saleTypeResolved = saleType ?? 'MENOR';
+    const basePrice = saleTypeResolved === 'MAYOR'
+      ? Number((product as any).wholesale_price ?? product.pricePerBaseUnit ?? 0)
+      : Number((product as any).retail_price ?? (product as any).precio ?? product.pricePerBaseUnit ?? 0);
+    const unitPrice = basePrice * factorToBase;
     const newItem: CartItem = {
       id: Math.random().toString(36).substr(2, 9),
       productId,
@@ -413,10 +443,11 @@ const POSScreen: React.FC<POSProps> = ({
       unitPrice,
       qtyBase: 1 * factorToBase,
       subtotal: 1 * unitPrice,
-      customFactor: factorToBase,
+      customFactor: customLabel ? factorToBase : undefined,
       customLabel,
-      productUomId: product.productUomId,
+      productUomId: productUomId ?? product.productUomId,
       factorUsed: factorToBase,
+      saleType: saleTypeResolved,
     };
     setCart((prev) => [...prev, newItem]);
   };
@@ -425,31 +456,92 @@ const POSScreen: React.FC<POSProps> = ({
     setCart((prev) =>
       prev.map((item) => {
         if (item.id !== itemId) return item;
-        const product = products.find((p) => p.id === item.productId);
+        const product = branchProducts.find((p) => String(p.id) === item.productId)
+          ?? (products ?? []).find((p) => p.id === item.productId);
         const newQty = updates.qty !== undefined ? updates.qty : item.qty;
         const newUnitId = updates.unitId !== undefined ? updates.unitId : item.unitId;
-        const customFactor = item.customFactor && item.customLabel ? item.customFactor : undefined;
-        const qtyBase = customFactor
-          ? newQty * customFactor
-          : product
-            ? convert(newQty, newUnitId, product.baseUnitId, product.id, conversions)
-            : newQty;
+        const nextProductUomId = updates.productUomId ?? item.productUomId;
+        let factorUsed = updates.factorUsed ?? item.factorUsed ?? 1;
+        if (updates.productUomId && saleUomsByProduct[item.productId]) {
+          const match = saleUomsByProduct[item.productId].find((u) => String(u.id) === String(updates.productUomId));
+          if (match) factorUsed = Number(match.factor_to_base);
+        }
+        const nextCustomLabel = updates.productUomId ? undefined : item.customLabel;
+        const nextCustomFactor = updates.productUomId ? undefined : item.customFactor;
+        const customFactor = nextCustomFactor && nextCustomLabel ? nextCustomFactor : undefined;
+        const effectiveFactor = customFactor ?? factorUsed ?? 1;
+        const qtyBase = newQty * effectiveFactor;
         const hasStock = Object.prototype.hasOwnProperty.call(branchStock, item.productId);
         const availableStock =
-          product?.stocks.find((s) => s.branchId === branchId)?.qty ?? (hasStock ? branchStock[item.productId] : undefined);
+          product?.stocks?.find((s) => s.branchId === branchId)?.qty ?? (hasStock ? branchStock[item.productId] : undefined);
 
         if (availableStock !== undefined && qtyBase > availableStock) {
           alert('⚠️ Stock insuficiente.');
           return item;
         }
 
-        const basePrice = product?.pricePerBaseUnit ?? (customFactor ? item.unitPrice / customFactor : item.unitPrice);
-        const unitPrice = customFactor
-          ? basePrice * customFactor
-          : product
-            ? getPriceForUnit(product.pricePerBaseUnit, product.baseUnitId, newUnitId, product.id, conversions)
-            : item.unitPrice;
-        return { ...item, qty: newQty, unitId: newUnitId, qtyBase, unitPrice, subtotal: newQty * unitPrice };
+        const saleTypeResolved = item.saleType ?? 'MENOR';
+        const basePrice = product
+          ? Number(
+              saleTypeResolved === 'MAYOR'
+                ? (product as any).wholesale_price ?? (product as any).pricePerBaseUnit ?? 0
+                : (product as any).retail_price ?? (product as any).precio ?? (product as any).pricePerBaseUnit ?? 0
+            )
+          : (item.factorUsed ? item.unitPrice / item.factorUsed : item.unitPrice);
+        const unitPrice = basePrice * effectiveFactor;
+        return {
+          ...item,
+          qty: newQty,
+          unitId: newUnitId,
+          productUomId: nextProductUomId,
+          factorUsed: effectiveFactor,
+          qtyBase,
+          unitPrice,
+          subtotal: newQty * unitPrice,
+          customLabel: nextCustomLabel,
+          customFactor: nextCustomFactor,
+        };
+      })
+    );
+  };
+
+  const handleSaleUomChange = (itemId: string, nextUomId: string) => {
+    console.log('Changing UOM for item', itemId, 'to', nextUomId);
+    setCart((prev) =>
+      prev.map((item) => {
+        if (item.id !== itemId) return item;
+        const saleUoms = saleUomsByProduct[item.productId] ?? [];
+        const match = saleUoms.find((uom) => String(uom.id) === String(nextUomId));
+        const factor = match ? Number(match.factor_to_base) : 1;
+        const product = branchProducts.find((p) => String(p.id) === item.productId);
+        const saleTypeResolved = item.saleType ?? 'MENOR';
+        const basePrice = product
+          ? Number(
+              saleTypeResolved === 'MAYOR'
+                ? (product as any).wholesale_price ?? 0
+                : (product as any).retail_price ?? (product as any).precio ?? 0
+            )
+          : (item.factorUsed ? item.unitPrice / item.factorUsed : item.unitPrice);
+        const unitPrice = basePrice * factor;
+        const qtyBase = item.qty * factor;
+        const hasStock = Object.prototype.hasOwnProperty.call(branchStock, item.productId);
+        const availableStock =
+          product?.stocks?.find((s) => s.branchId === branchId)?.qty ?? (hasStock ? branchStock[item.productId] : undefined);
+        if (availableStock !== undefined && qtyBase > availableStock) {
+          alert('⚠️ Stock insuficiente.');
+          return item;
+        }
+        return {
+          ...item,
+          productUomId: nextUomId,
+          factorUsed: factor,
+          qtyBase,
+          unitPrice,
+          subtotal: item.qty * unitPrice,
+          saleType: 'MENOR',
+          customLabel: undefined,
+          customFactor: undefined,
+        };
       })
     );
   };
@@ -492,26 +584,16 @@ const POSScreen: React.FC<POSProps> = ({
     }
   };
 
-  const getEquivalentOptions = (product: CatalogProduct) => {
-    const options: { label: string; factor: number }[] = [{ label: 'Base', factor: 1 }];
-    const attrs = (product.attrs ?? {}) as Record<string, unknown>;
-    const pesoBolsa = Number((attrs as any)?.peso_bolsa_kg ?? 0);
-    if (pesoBolsa > 0) {
-      options.push({ label: `Bolsa (${pesoBolsa} kg)`, factor: pesoBolsa });
-    }
-    Object.entries(attrs).forEach(([key, value]) => {
-      if (key === 'peso_bolsa_kg') return;
-      const factor = Number(value);
-      if (Number.isFinite(factor) && factor > 0) {
-        options.push({ label: `${key} (${factor})`, factor });
-      }
-    });
-    return options;
+  const getSaleUoms = (productId: string) => saleUomsByProduct[productId] ?? [];
+
+  const getBaseSaleUom = (productId: string) => {
+    const saleUoms = getSaleUoms(productId);
+    const baseUom = saleUoms.find((uom) => Number(uom.factor_to_base) === 1);
+    return baseUom ?? defaultSaleUomByProduct[productId] ?? null;
   };
 
   const handleAddFromCatalog = (product: CatalogProduct) => {
-    const options = getEquivalentOptions(product);
-    const pricePerBaseUnit = Number((product as any).precio ?? 0);
+    const pricePerBaseUnit = Number((product as any).retail_price ?? (product as any).precio ?? 0);
     if (pricePerBaseUnit <= 0) {
       alert('⚠️ No hay precio configurado para este producto.');
       return;
@@ -532,28 +614,11 @@ const POSScreen: React.FC<POSProps> = ({
     }
     const hasStock = Object.prototype.hasOwnProperty.call(branchStock, product.id);
     const stockValue = hasStock ? branchStock[product.id] : undefined;
-    if (options.length <= 1) {
-      const mapped: PosProduct = {
-        id: String(product.id),
-        sku: product.sku ?? '',
-        barcode: product.barcode ?? '',
-        name: product.name,
-        category: 'CATALOGO',
-        baseUnitId: product.base_uom_id,
-        allowsDecimals: product.is_divisible,
-        minStock: 0,
-        maxStock: 0,
-        stocks: hasStock ? [{ branchId: branchId, qty: stockValue ?? 0 }] : [],
-        costPerBaseUnit: 0,
-        pricePerBaseUnit,
-        productUomId: defaultSaleUom.id,
-      };
-      addToCart(mapped, undefined, undefined, stockValue);
-      return;
-    }
+    ensureSaleUoms(String(product.id));
     setPendingCatalogProduct(product);
     setPendingPrice(pricePerBaseUnit);
-    setIsUnitSelectOpen(true);
+    setPendingStockValue(stockValue);
+    setIsSaleTypeOpen(true);
   };
 
   return (
@@ -688,15 +753,40 @@ const POSScreen: React.FC<POSProps> = ({
                   className="w-20 p-2 border-2 border-slate-200 rounded-lg text-center font-black"
                 />
                 {(() => {
-                  const product = products.find((p) => p.id === item.productId);
+                  const product = (products ?? []).find((p) => p.id === item.productId);
                   const baseUnitId = product?.baseUnitId ?? item.unitId;
                   const baseUom = uomsById[String(baseUnitId)];
                   const baseSymbol = baseUom?.code ?? baseUom?.name ?? baseUnitId;
+                  const saleUoms = saleUomsByProduct[item.productId] ?? [];
                   if (item.customLabel) {
                     return (
                       <div className="flex-1 p-2 border-2 border-slate-200 rounded-lg text-xs font-bold bg-white flex items-center">
                         {item.customLabel}
                       </div>
+                    );
+                  }
+                  if (item.saleType === 'MAYOR') {
+                    return (
+                      <div className="flex-1 p-2 border-2 border-slate-200 rounded-lg text-xs font-bold bg-white flex items-center">
+                        {baseSymbol}
+                      </div>
+                    );
+                  }
+                  if (saleUoms.length > 0) {
+                    return (
+                      <select
+                        value={item.productUomId ?? ''}
+                        onChange={(e) => handleSaleUomChange(item.id, e.target.value)}
+                        onFocus={() => ensureSaleUoms(item.productId)}
+                        className="flex-1 p-2 border-2 border-slate-200 rounded-lg text-xs font-bold"
+                      >
+                        <option value="">Seleccionar</option>
+                        {saleUoms.map((uom) => (
+                          <option key={uom.id} value={String(uom.id)}>
+                            {uom.uom?.code ?? uom.uom?.name ?? 'UOM'} ({uom.factor_to_base})
+                          </option>
+                        ))}
+                      </select>
                     );
                   }
                   return (
@@ -1001,6 +1091,83 @@ const POSScreen: React.FC<POSProps> = ({
         </div>
       )}
 
+      {isSaleTypeOpen && pendingCatalogProduct && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-tighter">Tipo de venta</h3>
+                <p className="text-slate-400 text-xs">{pendingCatalogProduct.name}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsSaleTypeOpen(false);
+                  setPendingCatalogProduct(null);
+                  setPendingPrice(0);
+                  setPendingStockValue(undefined);
+                }}
+                className="text-2xl text-slate-300"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              <button
+                onClick={() => {
+                  setIsSaleTypeOpen(false);
+                  setIsUnitSelectOpen(true);
+                }}
+                className="w-full p-4 rounded-2xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
+              >
+                <p className="text-sm font-black text-slate-900">Venta por menor</p>
+                <p className="text-[10px] text-slate-500">Selecciona medida base o equivalencia (bolsa, caja, etc.).</p>
+              </button>
+              <button
+                onClick={() => {
+                  const baseUom = getBaseSaleUom(String(pendingCatalogProduct.id));
+                  if (!baseUom) {
+                    showFeedback('alert', 'Unidad base faltante', 'Configure la unidad base de venta.');
+                    return;
+                  }
+                  const mapped: PosProduct = {
+                    id: String(pendingCatalogProduct.id),
+                    sku: pendingCatalogProduct.sku ?? '',
+                    barcode: pendingCatalogProduct.barcode ?? '',
+                    name: pendingCatalogProduct.name,
+                    category: 'CATALOGO',
+                    baseUnitId: pendingCatalogProduct.base_uom_id,
+                    allowsDecimals: pendingCatalogProduct.is_divisible,
+                    minStock: 0,
+                    maxStock: 0,
+                    stocks: pendingStockValue !== undefined ? [{ branchId: branchId, qty: pendingStockValue ?? 0 }] : [],
+                    costPerBaseUnit: 0,
+                    pricePerBaseUnit: Number((pendingCatalogProduct as any).wholesale_price ?? pendingPrice),
+                    productUomId: baseUom.id,
+                  };
+                  addToCart(
+                    mapped,
+                    undefined,
+                    undefined,
+                    pendingStockValue,
+                    baseUom.id,
+                    Number(baseUom.factor_to_base ?? 1),
+                    'MAYOR'
+                  );
+                  setIsSaleTypeOpen(false);
+                  setPendingCatalogProduct(null);
+                  setPendingPrice(0);
+                  setPendingStockValue(undefined);
+                }}
+                className="w-full p-4 rounded-2xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
+              >
+                <p className="text-sm font-black text-slate-900">Venta por mayor</p>
+                <p className="text-[10px] text-slate-500">Usa la unidad base del producto.</p>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isUnitSelectOpen && pendingCatalogProduct && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
@@ -1020,45 +1187,58 @@ const POSScreen: React.FC<POSProps> = ({
               </button>
             </div>
             <div className="p-6 space-y-3">
-              {getEquivalentOptions(pendingCatalogProduct).map((option) => {
-                const baseUom = uomsById[String(pendingCatalogProduct.base_uom_id)];
-                const baseLabel = baseUom?.code ?? baseUom?.name ?? 'Base';
-                return (
-                  <button
-                    key={`${option.label}-${option.factor}`}
-                    onClick={() => {
-                      const hasStock = Object.prototype.hasOwnProperty.call(branchStock, pendingCatalogProduct.id);
-                      const stockValue = hasStock ? branchStock[pendingCatalogProduct.id] : undefined;
-                      const mapped: PosProduct = {
-                        id: String(pendingCatalogProduct.id),
-                      sku: pendingCatalogProduct.sku ?? '',
-                      barcode: pendingCatalogProduct.barcode ?? '',
-                      name: pendingCatalogProduct.name,
-                      category: 'CATALOGO',
-                      baseUnitId: pendingCatalogProduct.base_uom_id,
-                      allowsDecimals: pendingCatalogProduct.is_divisible,
-                      minStock: 0,
-                      maxStock: 0,
-                      stocks: hasStock ? [{ branchId: branchId, qty: stockValue ?? 0 }] : [],
-                      costPerBaseUnit: 0,
-                      pricePerBaseUnit: pendingPrice,
-                      productUomId: defaultSaleUomByProduct[String(pendingCatalogProduct.id)]?.id,
-                      };
-                      if (option.factor === 1) {
-                        addToCart(mapped, undefined, undefined, stockValue);
-                      } else {
-                        addToCart(mapped, option.factor, option.label, stockValue);
-                      }
-                      setIsUnitSelectOpen(false);
-                      setPendingCatalogProduct(null);
-                    }}
-                    className="w-full p-4 rounded-2xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
-                  >
-                    <p className="text-sm font-black text-slate-900">{option.factor === 1 ? baseLabel : option.label}</p>
-                    <p className="text-[10px] text-slate-500">Factor a base: {option.factor}</p>
-                  </button>
-                );
-              })}
+              {(() => {
+                const productId = String(pendingCatalogProduct.id);
+                const saleUoms = getSaleUoms(productId);
+                const baseUom = getBaseSaleUom(productId);
+                const withBase = baseUom && !saleUoms.find((u) => String(u.id) === String(baseUom.id))
+                  ? [baseUom, ...saleUoms]
+                  : saleUoms;
+                return withBase.map((uom) => {
+                  const label = uom.uom?.code ?? uom.uom?.name ?? 'UOM';
+                  return (
+                    <button
+                      key={uom.id}
+                      onClick={() => {
+                        const hasStock = Object.prototype.hasOwnProperty.call(branchStock, pendingCatalogProduct.id);
+                        const stockValue = pendingStockValue ?? (hasStock ? branchStock[pendingCatalogProduct.id] : undefined);
+                  const mapped: PosProduct = {
+                    id: String(pendingCatalogProduct.id),
+                    sku: pendingCatalogProduct.sku ?? '',
+                    barcode: pendingCatalogProduct.barcode ?? '',
+                    name: pendingCatalogProduct.name,
+                          category: 'CATALOGO',
+                          baseUnitId: pendingCatalogProduct.base_uom_id,
+                          allowsDecimals: pendingCatalogProduct.is_divisible,
+                          minStock: 0,
+                          maxStock: 0,
+                    stocks: hasStock ? [{ branchId: branchId, qty: stockValue ?? 0 }] : [],
+                    costPerBaseUnit: 0,
+                    pricePerBaseUnit: Number((pendingCatalogProduct as any).retail_price ?? (pendingCatalogProduct as any).precio ?? pendingPrice),
+                    productUomId: uom.id,
+                  };
+                        addToCart(
+                          mapped,
+                          undefined,
+                          undefined,
+                          stockValue,
+                          uom.id,
+                          Number(uom.factor_to_base ?? 1),
+                          'MENOR'
+                        );
+                        setIsUnitSelectOpen(false);
+                        setPendingCatalogProduct(null);
+                        setPendingPrice(0);
+                        setPendingStockValue(undefined);
+                      }}
+                      className="w-full p-4 rounded-2xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
+                    >
+                      <p className="text-sm font-black text-slate-900">{label}</p>
+                      <p className="text-[10px] text-slate-500">Factor a base: {uom.factor_to_base}</p>
+                    </button>
+                  );
+                });
+              })()}
             </div>
           </div>
         </div>
