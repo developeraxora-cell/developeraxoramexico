@@ -4,6 +4,7 @@ import { Branch, User, Role } from '../../types';
 import { branchesService, isSupabaseConfigured } from '../../services/supabaseClient';
 import StatusModal, { StatusType } from '../common/StatusModal';
 import ConfirmModal from '../common/ConfirmModal';
+import { formatCurrency } from '../../services/currency';
 
 interface BranchesScreenProps {
   branches: Branch[];
@@ -300,11 +301,11 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
                 <div className="grid grid-cols-2 gap-4 mb-8">
                   <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
                     <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock Valorizado</p>
-                    <p className="text-sm font-black text-slate-700">${(Math.random() * 500000 + 100000).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p>
+                    <p className="text-sm font-black text-slate-700">{formatCurrency(Math.random() * 500000 + 100000)}</p>
                   </div>
                   <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
                     <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Ventas Hoy</p>
-                    <p className="text-sm font-black text-green-600">${(Math.random() * 45000 + 5000).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p>
+                    <p className="text-sm font-black text-green-600">{formatCurrency(Math.random() * 45000 + 5000)}</p>
                   </div>
                 </div>
 

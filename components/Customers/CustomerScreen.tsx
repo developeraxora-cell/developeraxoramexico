@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Branch, User } from '../../types';
 import { creditService, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPaymentMethod, type CreditSummary } from '../../services/credit/credit.service';
 import { Eye, Plus, Wallet } from 'lucide-react';
+import { formatCurrency } from '../../services/currency';
 
 interface CustomerScreenProps {
   selectedBranchId: string;
@@ -240,13 +241,13 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     <p className="font-bold text-slate-800">{customer.name}</p>
                     <p className="text-[10px] text-slate-400">{customer.phone || '—'}</p>
                   </td>
-                  <td className="p-4 text-right font-mono text-sm">${Number(customer.credit_limit).toLocaleString()}</td>
+                  <td className="p-4 text-right font-mono text-sm">{formatCurrency(Number(customer.credit_limit))}</td>
                   <td className="p-4 text-right">
                     <span className={`font-black ${debt > 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                      ${debt.toLocaleString()}
+                      {formatCurrency(debt)}
                     </span>
                   </td>
-                  <td className="p-4 text-right font-black text-green-600">${available.toLocaleString()}</td>
+                  <td className="p-4 text-right font-black text-green-600">{formatCurrency(available)}</td>
                   <td className="p-4 text-center space-x-2">
                     <button
                       onClick={() => handleOpenHistory(customer)}
@@ -400,8 +401,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       <td className="p-4 text-xs font-bold text-slate-700">{note.folio}</td>
                       <td className="p-4 text-xs text-slate-500">{note.issue_date}</td>
                       <td className="p-4 text-xs text-slate-500">{note.due_date}</td>
-                      <td className="p-4 text-right text-xs font-bold">${Number(note.total).toLocaleString()}</td>
-                      <td className="p-4 text-right text-xs font-black text-red-600">${Number(note.balance).toLocaleString()}</td>
+                      <td className="p-4 text-right text-xs font-bold">{formatCurrency(Number(note.total))}</td>
+                      <td className="p-4 text-right text-xs font-black text-red-600">{formatCurrency(Number(note.balance))}</td>
                       <td className="p-4 text-center">
                         <span
                           className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${note.status === 'VENCIDA'
@@ -466,7 +467,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     {openNotes.map((note) => (
                       <tr key={note.id}>
                         <td className="p-3 text-xs font-bold text-slate-700">{note.folio}</td>
-                        <td className="p-3 text-right text-xs font-black text-red-600">${Number(note.balance).toLocaleString()}</td>
+                        <td className="p-3 text-right text-xs font-black text-red-600">{formatCurrency(Number(note.balance))}</td>
                         <td className="p-3 text-right">
                           <input
                             type="number"

@@ -15,6 +15,7 @@ import {
 import { Download } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import { catalogService } from '../../services/inventory/catalog.service';
+import { formatCurrency, formatNumber } from '../../services/currency';
 import { Branch } from '../../types';
 
 interface ReportsScreenProps {
@@ -66,11 +67,8 @@ interface ItemRow {
   unit_price: number | null;
 }
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(value || 0);
-
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat('es-PE', { maximumFractionDigits: 2 }).format(value || 0);
+const formatQty = (value: number) =>
+  formatNumber(value || 0, undefined, { maximumFractionDigits: 2 });
 
 const normalizeISO = (value: string) => (value.endsWith('Z') ? value : `${value}Z`);
 
@@ -425,7 +423,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
     <div className="h-full w-full overflow-y-auto px-4 md:px-8 py-6 space-y-6">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Reportería</h1>
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Reportes</h1>
           <p className="text-sm text-slate-500">Panel BI para ventas, compras y stock crítico.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -544,7 +542,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
           { label: 'Número de ventas', value: kpis.salesCount },
           { label: 'Ticket promedio', value: formatCurrency(kpis.avgTicket) },
           { label: 'Stock crítico', value: kpis.stockCritical },
-          { label: 'Top producto', value: kpis.topProduct ? `${kpis.topProduct.name} (${formatNumber(kpis.topProduct.qty)})` : '—' },
+          { label: 'Top producto', value: kpis.topProduct ? `${kpis.topProduct.name} (${formatQty(kpis.topProduct.qty)})` : '—' },
         ].map((card, idx) => (
           <div key={idx} className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm">
             <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400">{card.label}</p>
@@ -644,7 +642,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
                   formatter={(value: number, name: string, props: any) => {
                     const unit = props?.payload?.unitLabel ? ` ${props.payload.unitLabel}` : '';
                     const label = name === 'stock' || name === 'Stock' ? 'Stock' : 'Mínimo';
-                    return [`${formatNumber(Number(value))}${unit}`, label];
+                    return [`${formatQty(Number(value))}${unit}`, label];
                   }}
                   labelFormatter={(label) => String(label)}
                 />
@@ -666,7 +664,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
               <div key={row.name} className="flex items-center justify-between px-3 py-2 rounded-xl border border-slate-200">
                 <div>
                   <p className="font-bold text-sm text-slate-700">{row.name}</p>
-                  <p className="text-xs text-slate-400">Mín: {formatNumber(row.min)} {row.unitLabel}</p>
+                  <p className="text-xs text-slate-400">Mín: {formatQty(row.min)} {row.unitLabel}</p>
                 </div>
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
@@ -677,7 +675,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
                       : 'bg-emerald-100 text-emerald-700'
                   }`}
                 >
-                  {formatNumber(row.stock)} {row.unitLabel}
+                  {formatQty(row.stock)} {row.unitLabel}
                 </span>
               </div>
             ))}

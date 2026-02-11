@@ -7,6 +7,7 @@ import { creditService, type CreditCustomer, type CreditNoteWithStatus, type Cre
 import { catalogService, type Product as CatalogProduct, type ProductUom, type Uom } from '../../services/inventory/catalog.service';
 import { purchasesService } from '../../services/inventory/purchases.service';
 import { supabase } from '../../services/supabaseClient';
+import { formatCurrency } from '../../services/currency';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 
 interface POSProps {
@@ -653,7 +654,7 @@ const POSScreen: React.FC<POSProps> = ({
             <div className="px-4 border-l border-slate-100 text-right animate-in fade-in">
               <p className="text-[9px] font-black text-slate-400 uppercase">Límite Disponible</p>
               <p className={`text-xl font-black ${creditCheck.disponible >= cartTotal ? 'text-green-600' : 'text-red-600'}`}>
-                ${creditCheck.disponible.toLocaleString()}
+                {formatCurrency(creditCheck.disponible)}
               </p>
             </div>
           )}
@@ -806,7 +807,7 @@ const POSScreen: React.FC<POSProps> = ({
                     </select>
                   );
                 })()}
-                <span className="font-black text-slate-900 ml-auto flex items-center">${item.subtotal.toFixed(2)}</span>
+                <span className="font-black text-slate-900 ml-auto flex items-center">{formatCurrency(item.subtotal)}</span>
               </div>
             </div>
           ))}
@@ -831,9 +832,7 @@ const POSScreen: React.FC<POSProps> = ({
           <div className="flex justify-between items-end mb-6">
             <div>
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total a Pagar</p>
-              <p className="text-4xl font-black text-orange-400 tracking-tighter">
-                ${cartTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-              </p>
+              <p className="text-4xl font-black text-orange-400 tracking-tighter">{formatCurrency(cartTotal)}</p>
             </div>
           </div>
 
@@ -875,7 +874,7 @@ const POSScreen: React.FC<POSProps> = ({
                       <td className="p-3 text-xs font-bold text-slate-700">{note.folio}</td>
                       <td className="p-3 text-xs text-slate-500">{note.issue_date}</td>
                       <td className="p-3 text-xs text-slate-500">{note.due_date}</td>
-                      <td className="p-3 text-xs font-black text-red-600 text-right">${Number(note.balance).toLocaleString()}</td>
+                      <td className="p-3 text-xs font-black text-red-600 text-right">{formatCurrency(Number(note.balance))}</td>
                       <td className="p-3 text-xs font-black text-red-600 text-right">{note.days_overdue}</td>
                     </tr>
                   ))}
@@ -926,19 +925,19 @@ const POSScreen: React.FC<POSProps> = ({
             <div className="p-6 space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-500">Límite</span>
-                <span className="font-black">${creditCheck.limite.toLocaleString()}</span>
+                <span className="font-black">{formatCurrency(creditCheck.limite)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Saldo actual</span>
-                <span className="font-black text-red-600">${creditCheck.saldo_total.toLocaleString()}</span>
+                <span className="font-black text-red-600">{formatCurrency(creditCheck.saldo_total)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Disponible</span>
-                <span className="font-black text-green-600">${creditCheck.disponible.toLocaleString()}</span>
+                <span className="font-black text-green-600">{formatCurrency(creditCheck.disponible)}</span>
               </div>
               <div className="flex justify-between border-t border-slate-200 pt-3">
                 <span className="text-slate-500">Venta</span>
-                <span className="font-black">${cartTotal.toLocaleString()}</span>
+                <span className="font-black">{formatCurrency(cartTotal)}</span>
               </div>
               <div className="flex justify-end">
                 <button
@@ -1000,7 +999,7 @@ const POSScreen: React.FC<POSProps> = ({
                     {creditCheck.vencidas.map((note) => (
                       <tr key={note.id}>
                         <td className="p-3 text-xs font-bold text-slate-700">{note.folio}</td>
-                        <td className="p-3 text-right text-xs font-black text-red-600">${Number(note.balance).toLocaleString()}</td>
+                        <td className="p-3 text-right text-xs font-black text-red-600">{formatCurrency(Number(note.balance))}</td>
                         <td className="p-3 text-right">
                           <input
                             type="number"
@@ -1305,8 +1304,8 @@ const POSScreen: React.FC<POSProps> = ({
                           <td className="p-3 text-xs font-mono text-slate-500">{item.product_sku || '—'}</td>
                           <td className="p-3 text-xs text-slate-600">{uomLabel}</td>
                           <td className="p-3 text-xs font-bold text-slate-600 text-right">{Number(item.qty).toLocaleString()}</td>
-                          <td className="p-3 text-xs font-bold text-slate-600 text-right">${Number(item.unit_price).toLocaleString()}</td>
-                          <td className="p-3 text-xs font-black text-slate-900 text-right">${subtotal.toLocaleString()}</td>
+                          <td className="p-3 text-xs font-bold text-slate-600 text-right">{formatCurrency(Number(item.unit_price))}</td>
+                          <td className="p-3 text-xs font-black text-slate-900 text-right">{formatCurrency(subtotal)}</td>
                         </tr>
                       );
                     })}
@@ -1361,7 +1360,7 @@ const POSScreen: React.FC<POSProps> = ({
                         <td className="p-4 text-xs font-bold text-slate-700">{formatLocalDateTime(sale.created_at)}</td>
                         <td className="p-4 text-xs font-bold text-slate-700">{sale.nombre_cliente || 'Público General'}</td>
                         <td className="p-4 text-center text-xs font-bold text-slate-600">{sale.items_count}</td>
-                        <td className="p-4 text-right text-sm font-black text-slate-900">${sale.total_amount.toLocaleString()}</td>
+                        <td className="p-4 text-right text-sm font-black text-slate-900">{formatCurrency(sale.total_amount)}</td>
                         <td className="p-4 text-center">
                           <button
                             onClick={() => openSaleDetail(sale)}

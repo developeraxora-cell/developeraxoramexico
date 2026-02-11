@@ -15,6 +15,7 @@ import {
   type Uom,
 } from '../../services/inventory/catalog.service';
 import { purchasesService } from '../../services/inventory/purchases.service';
+import { formatCurrency, formatNumber } from '../../services/currency';
 
 interface PurchasesScreenProps {
   selectedBranchId: string;
@@ -562,7 +563,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         centerText(row.uom, 1, textY, 7, fontRegular);
         centerText(purchase.supplier_name || '—', 2, textY, 7, fontRegular);
         centerText(row.qty.toFixed(2), 3, textY, 7, fontRegular);
-        centerText(`$ ${row.unit_price.toFixed(2)}`, 4, textY, 7, fontRegular);
+        centerText(formatCurrency(row.unit_price), 4, textY, 7, fontRegular);
         y -= rowHeight;
       }
 
@@ -574,7 +575,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         height: 22,
         color: rgb(0, 0, 0),
       });
-      page.drawText(`TOTAL: $${total.toFixed(2)}`, { x: width - marginX - 150, y: 74, size: 14, color: rgb(1, 1, 1), font: fontBold });
+      page.drawText(`TOTAL: ${formatCurrency(total)}`, { x: width - marginX - 170, y: 74, size: 14, color: rgb(1, 1, 1), font: fontBold });
 
       // Footer line
       page.drawText(
@@ -974,7 +975,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total estimado</p>
-                  <p className="text-2xl font-black">${totalAmount.toLocaleString()}</p>
+                  <p className="text-2xl font-black">{formatCurrency(totalAmount)}</p>
                 </div>
               </div>
 
@@ -1035,7 +1036,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
               <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
                 <div>
                   <p className="text-[9px] font-black text-slate-400 uppercase">Total compra</p>
-                  <p className="text-3xl font-black text-slate-900">${totalAmount.toLocaleString()}</p>
+                  <p className="text-3xl font-black text-slate-900">{formatCurrency(totalAmount)}</p>
                 </div>
                 <button
                   onClick={handleSavePurchase}
@@ -1109,7 +1110,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                     </td>
                     <td className="p-4 text-right">
                       <span className="text-base font-black text-slate-900">
-                        ${p.total_amount.toLocaleString()}
+                        {formatCurrency(p.total_amount)}
                       </span>
                     </td>
                     <td className="p-4 text-center">
@@ -1406,13 +1407,13 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                             {item.uom?.name ?? 'UOM'}{item.uom?.code ? ` (${item.uom?.code})` : ''}
                           </td>
                           <td className="p-3 text-xs font-bold text-slate-600 text-right">
-                            {Number(item.qty).toLocaleString()}
+                            {formatNumber(Number(item.qty))}
                           </td>
                           <td className="p-3 text-xs font-bold text-slate-600 text-right">
-                            ${Number(item.unit_price).toLocaleString()}
+                            {formatCurrency(Number(item.unit_price))}
                           </td>
                           <td className="p-3 text-xs font-black text-slate-900 text-right">
-                            ${subtotal.toLocaleString()}
+                            {formatCurrency(subtotal)}
                           </td>
                         </tr>
                       );
@@ -1428,7 +1429,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
               <div className="text-right">
                 <p className="text-[9px] font-black text-slate-400 uppercase">Total</p>
                 <p className="text-2xl font-black text-slate-900">
-                  ${selectedPurchase.total_amount.toLocaleString()}
+                  {formatCurrency(selectedPurchase.total_amount)}
                 </p>
               </div>
             </div>

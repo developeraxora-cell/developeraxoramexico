@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ban } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { catalogService, type Category, type Product, type ProductUom, type Uom } from '../../services/inventory/catalog.service';
+import { formatCurrency } from '../../services/currency';
 import ConfirmModal from '../common/ConfirmModal';
 import NewProductModal from './NewProductModal';
 
@@ -299,7 +300,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                   <td className="p-5 text-xs font-mono text-slate-500">{product.barcode || '—'}</td>
                   <td className="p-5 text-xs font-bold text-slate-600">{baseCode}</td>
                   <td className="p-5 text-right text-xs font-black text-slate-900">
-                    ${Number((product as any).retail_price ?? (product as any).precio ?? 0).toLocaleString()}
+                    {formatCurrency(Number((product as any).retail_price ?? (product as any).precio ?? 0))}
                   </td>
                   <td className="p-5 text-right text-xs font-black">
                     <span
