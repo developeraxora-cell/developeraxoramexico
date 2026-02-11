@@ -11,6 +11,7 @@ import BranchesScreen from './components/Branches/BranchesScreen';
 import ConcreteOps from './components/Concrete/ConcreteOps';
 import ConcreteFormulas from './components/Concrete/ConcreteFormulas';
 import ConcreteFleet from './components/Concrete/ConcreteFleet';
+import ReportsScreen from './components/Reports/ReportsScreen';
 import {
   dieselTanksService,
   vehiclesService,
@@ -287,6 +288,8 @@ const App: React.FC = () => {
         return <ConcreteFleet mixers={mixers} setMixers={setMixers} orders={concreteOrders} setOrders={setConcreteOrders} />;
       case 'diesel':
         return <DieselScreen tanks={tanks} setTanks={setTanks} vehicles={vehicles} setVehicles={setVehicles} drivers={drivers} setDrivers={setDrivers} logs={dieselLogs} setLogs={setDieselLogs} currentUser={currentUser} selectedBranchId={selectedBranchId} branches={branches} />;
+      case 'reports':
+        return <ReportsScreen selectedBranchId={selectedBranchId} branches={activeBranches} />;
       default:
         return <POSScreen products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
     }
