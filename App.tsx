@@ -8,10 +8,12 @@ import DieselScreen from './components/Diesel/DieselScreen';
 import CustomerScreen from './components/Customers/CustomerScreen';
 import UsersScreen from './components/Users/UsersScreen';
 import BranchesScreen from './components/Branches/BranchesScreen';
-import ConcreteOps from './components/Concrete/ConcreteOps';
-import ConcreteFormulas from './components/Concrete/ConcreteFormulas';
-import ConcreteFleet from './components/Concrete/ConcreteFleet';
 import ReportsScreen from './components/Reports/ReportsScreen';
+import ConcretePOSScreen from './components/Concrete/ConcretePOSScreen';
+import ConcretePurchasesScreen from './components/Concrete/ConcretePurchasesScreen';
+import ConcreteInventoryScreen from './components/Concrete/ConcreteInventoryScreen';
+import ConcreteCustomersScreen from './components/Concrete/ConcreteCustomersScreen';
+import ConcreteReportsScreen from './components/Concrete/ConcreteReportsScreen';
 import {
   dieselTanksService,
   vehiclesService,
@@ -21,12 +23,11 @@ import {
   productsService,
   customersService,
   salesService,
-  concreteService,
   isSupabaseConfigured,
   branchesService
 } from './services/supabaseClient';
 import { INITIAL_CUSTOMERS, INITIAL_PRODUCTS, INITIAL_CONVERSIONS, INITIAL_USERS } from './constants';
-import { Customer, Product, ProductConversion, User, Role, Branch, CustomerPayment, DieselTank, Vehicle, Driver, DieselLog, ConcreteFormula, MixerTruck, ConcreteOrder, Sale } from './types';
+import { Customer, Product, ProductConversion, User, Role, Branch, CustomerPayment, DieselTank, Vehicle, Driver, DieselLog, Sale } from './types';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('pos');
@@ -48,16 +49,7 @@ const App: React.FC = () => {
   const [payments, setPayments] = useState<CustomerPayment[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
 
-  // Estados de Concretera y Diesel
-  const [concreteFormulas, setConcreteFormulas] = useState<ConcreteFormula[]>([
-    { id: 'f1', name: "f'c 250", description: "Estructural", materials: [{ productId: 'p1', qtyPerM3: 350 }, { productId: 'p3', qtyPerM3: 850 }] },
-    { id: 'f2', name: "f'c 150", description: "Firmes", materials: [{ productId: 'p1', qtyPerM3: 250 }, { productId: 'p3', qtyPerM3: 950 }] }
-  ]);
-  const [mixers, setMixers] = useState<MixerTruck[]>([
-    { id: 'm1', plate: 'MIX-101', capacityM3: 7, status: 'DISPONIBLE' },
-    { id: 'm2', plate: 'MIX-202', capacityM3: 8, status: 'DISPONIBLE' },
-  ]);
-  const [concreteOrders, setConcreteOrders] = useState<ConcreteOrder[]>([]);
+  // Estados de Diesel
   const [tanks, setTanks] = useState<DieselTank[]>([
     { id: 't1', branchId: 'B1', name: 'Tanque Matriz', currentQty: 0, maxCapacity: 5000 },
     { id: 't2', branchId: 'B2', name: 'Almacén Norte Dsl', currentQty: 0, maxCapacity: 2000 }
@@ -80,7 +72,6 @@ const App: React.FC = () => {
 
     // Suscripciones para sincronización entre dispositivos
     const salesSub = subscriptions.subscribeAll('sales', () => loadGlobalData());
-    const concreteSub = subscriptions.subscribeAll('concrete_orders', () => loadGlobalData());
     const stockSub = subscriptions.subscribeAll('product_stocks', () => loadGlobalData());
     const customerSub = subscriptions.subscribeAll('customers', () => loadGlobalData());
 
@@ -93,7 +84,6 @@ const App: React.FC = () => {
 
     return () => {
       salesSub.unsubscribe();
-      concreteSub.unsubscribe();
       stockSub.unsubscribe();
       customerSub.unsubscribe();
       tanksSub.unsubscribe();
@@ -116,7 +106,6 @@ const App: React.FC = () => {
       const results = await Promise.allSettled([
         productsService.getAll(),
         customersService.getAll(),
-        concreteService.getOrders(),
         salesService.getAll(),
         dieselTanksService.getAll(),
         vehiclesService.getAll(),
@@ -127,7 +116,6 @@ const App: React.FC = () => {
       const [
         prodsRes,
         custsRes,
-        ordsRes,
         slsRes,
         tanksRes,
         vehRes,
@@ -138,7 +126,6 @@ const App: React.FC = () => {
 
       const prods = prodsRes.status === 'fulfilled' ? prodsRes.value : null;
       const custs = custsRes.status === 'fulfilled' ? custsRes.value : null;
-      const ords = ordsRes.status === 'fulfilled' ? ordsRes.value : null;
       const sls = slsRes.status === 'fulfilled' ? slsRes.value : null;
       const tanksData = tanksRes.status === 'fulfilled' ? tanksRes.value : null;
       const vehData = vehRes.status === 'fulfilled' ? vehRes.value : null;
@@ -161,7 +148,6 @@ const App: React.FC = () => {
         currentDebt: Number(c.current_debt ?? 0),
       })));
       if (sls) setSales(sls.map((s: any) => ({ ...s, date: new Date(s.date) })));
-      if (ords) setConcreteOrders(ords.map((o: any) => ({ ...o, scheduledDate: new Date(o.scheduled_date), qtyM3: Number(o.qty_m3) })));
 
       if (tanksData) {
         setTanks(tanksData.map((t: any) => ({
@@ -282,10 +268,16 @@ const App: React.FC = () => {
         return <BranchesScreen branches={branches} setBranches={setBranches} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} currentUser={currentUser} />;
       case 'users':
         return <UsersScreen users={users} setUsers={setUsers} branches={branches} />;
-      case 'concrete-ops':
-        return <ConcreteOps orders={concreteOrders} setOrders={setConcreteOrders} formulas={concreteFormulas} mixers={mixers} setMixers={setMixers} products={products} setProducts={setProducts} customers={customers} selectedBranchId={selectedBranchId} />;
-      case 'concrete-fleet':
-        return <ConcreteFleet mixers={mixers} setMixers={setMixers} orders={concreteOrders} setOrders={setConcreteOrders} />;
+      case 'concrete-pos':
+        return <ConcretePOSScreen products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'concrete-purchases':
+        return <ConcretePurchasesScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
+      case 'concrete-customers':
+        return <ConcreteCustomersScreen selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'concrete-inventory':
+        return <ConcreteInventoryScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
+      case 'concrete-reports':
+        return <ConcreteReportsScreen selectedBranchId={selectedBranchId} branches={activeBranches} />;
       case 'diesel':
         return <DieselScreen tanks={tanks} setTanks={setTanks} vehicles={vehicles} setVehicles={setVehicles} drivers={drivers} setDrivers={setDrivers} logs={dieselLogs} setLogs={setDieselLogs} currentUser={currentUser} selectedBranchId={selectedBranchId} branches={branches} />;
       case 'reports':

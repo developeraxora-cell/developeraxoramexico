@@ -55,9 +55,11 @@ const Layout: React.FC<LayoutProps> = ({
       label: 'Concretera',
       icon: '🚛',
       items: [
-        { id: 'concrete-ops', label: 'Panel de Producción', icon: '🏭', roles: [Role.ADMIN, Role.ALMACEN] },
-        { id: 'concrete-fleet', label: 'Control de Ollas', icon: '🚚', roles: [Role.ADMIN, Role.ALMACEN] },
-        { id: 'concrete-formulas', label: 'Mezclas y Fórmulas', icon: '🧪', roles: [Role.ADMIN, Role.ALMACEN] },
+        { id: 'concrete-pos', label: 'Caja / Venta', icon: '🛒', roles: [Role.ADMIN, Role.CAJERO, Role.ALMACEN] },
+        { id: 'concrete-purchases', label: 'Compras / Entradas', icon: '📥', roles: [Role.ADMIN, Role.ALMACEN] },
+        { id: 'concrete-inventory', label: 'Inventario / Auditoría', icon: '📦', roles: [Role.ADMIN, Role.ALMACEN] },
+        { id: 'concrete-customers', label: 'Clientes / Crédito', icon: '👥', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
+        { id: 'concrete-reports', label: 'Reportes', icon: '📊', roles: [Role.ADMIN, Role.ALMACEN] },
       ]
     },
     {
