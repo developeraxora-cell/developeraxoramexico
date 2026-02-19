@@ -122,6 +122,10 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     if (match?.dbId !== undefined) return String(match.dbId);
     return selectedBranchId || null;
   }, [branches, selectedBranchId]);
+  const selectedBranch = useMemo(
+    () => branches.find((b) => b.id === selectedBranchId) ?? null,
+    [branches, selectedBranchId]
+  );
   const uomById = useMemo(() => {
     return uoms.reduce<Record<string, Uom>>((acc, uom) => {
       acc[uom.id] = uom;
@@ -451,9 +455,11 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
 
       const marginX = 48;
       const headerTop = height - 40;
-      const title = 'MATERIALES LOPAR JESUS MARIA';
-      const titleWidth = title.length * 6.2;
-      page.drawText(title, { x: (width - titleWidth - 20) / 2, y: headerTop, size: 14, font: fontBold });
+      const branchTitle = (selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL').toUpperCase();
+      const title = `MATERIALES ${branchTitle}`;
+      const titleSize = 14;
+      const titleWidth = fontBold.widthOfTextAtSize(title, titleSize);
+      page.drawText(title, { x: (width - titleWidth) / 2, y: headerTop, size: titleSize, font: fontBold });
 
       // Outer border (full page)
       page.drawRectangle({

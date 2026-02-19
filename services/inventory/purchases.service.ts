@@ -36,6 +36,7 @@ export interface CreateSaleInput {
   notes?: string | null;
   created_by: string;
   nombre_cliente?: string | null;
+  direccion_cliente?: string | null;
   cartItems: SaleCartItemInput[];
 }
 
@@ -237,7 +238,7 @@ export const purchasesService = {
   },
 
   async createSale(input: CreateSaleInput) {
-    const { branch_id, reference, notes, created_by, cartItems, nombre_cliente } = input;
+    const { branch_id, reference, notes, created_by, cartItems, nombre_cliente, direccion_cliente } = input;
 
     const { data: transaction, error: txError } = await supabase
       .from('inventory_transactions')
@@ -249,6 +250,7 @@ export const purchasesService = {
           notes: notes || null,
           created_by,
           nombre_cliente: nombre_cliente || null,
+          direccion_cliente: direccion_cliente || null,
         },
       ])
       .select('id, created_at')

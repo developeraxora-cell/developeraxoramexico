@@ -165,43 +165,6 @@ const Layout: React.FC<LayoutProps> = ({
             </div>
           </div>
 
-          {currentUser.role === Role.ADMIN && (
-            <div className="mb-6 p-4 bg-red-500/5 rounded-2xl border border-red-500/20 space-y-3">
-              <p className="text-[8px] font-black text-red-500 uppercase tracking-[0.2em] px-1">Administración de Datos</p>
-
-              <button
-                onClick={onReset}
-                className="w-full py-3 bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white transition-all rounded-xl text-[9px] font-black uppercase tracking-widest border border-red-500/30 active:scale-95"
-              >
-                🗑️ Borrar Historial Local
-              </button>
-
-              <button
-                onClick={async () => {
-                  const confirmReset = window.confirm('⚠️ MANTENIMIENTO: ¿Deseas restablecer los niveles de diésel y borrar el historial?\nEsta acción es irreversible en la base de datos.');
-                  if (!confirmReset) return;
-                  try {
-                    const { supabase: sharedSupabase } = await import('../services/supabaseClient');
-                    const supabase = sharedSupabase;
-
-                    // Borrar logs
-                    await supabase.from('diesel_logs').delete().not('id', 'is', null);
-                    // Reset tanques
-                    await supabase.from('diesel_tanks').update({ current_qty: 2500 }).not('id', 'is', null);
-
-                    alert('✅ Logística sincronizada y niveles restablecidos.');
-                    window.location.reload();
-                  } catch (err: any) {
-                    alert('Error: ' + err.message);
-                  }
-                }}
-                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white transition-all rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-slate-900/20 active:scale-95"
-              >
-                ⚙️ Reset Administrativo (Nube)
-              </button>
-            </div>
-          )}
-
           <button
             onClick={onLogout}
             className="w-full py-4 bg-slate-800 hover:bg-red-500/10 hover:text-red-500 transition-all rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 border border-transparent hover:border-red-500/20"

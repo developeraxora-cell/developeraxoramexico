@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Eye } from 'lucide-react';
+import { Eye, FileDown } from 'lucide-react';
+import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, Product as PosProduct, CartItem, ProductConversion, User } from '../../types';
 import { UNITS } from '../../constants';
 import { convert, getPriceForUnit } from '../../services/conversionEngine';
@@ -34,7 +35,7 @@ const POSScreen: React.FC<POSProps> = ({
   const [saleUomsByProduct, setSaleUomsByProduct] = useState<Record<string, ProductUom[]>>({});
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'TARJETA' | 'CREDITO'>('EFECTIVO');
+  const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'CREDITO'>('EFECTIVO');
   const [creditCustomers, setCreditCustomers] = useState<CreditCustomer[]>([]);
   const [creditCheck, setCreditCheck] = useState<{
     allowedCredit: boolean;
@@ -69,7 +70,9 @@ const POSScreen: React.FC<POSProps> = ({
     created_at: string;
     reference: string | null;
     notes: string | null;
+    direccion_cliente: string | null;
     nombre_cliente: string | null;
+    created_by: string | null;
     items_count: number;
     total_amount: number;
   }>>([]);
@@ -112,7 +115,7 @@ const POSScreen: React.FC<POSProps> = ({
     try {
       const { data: transactions, error: txError } = await supabase
         .from('inventory_transactions')
-        .select('id, reference, notes, created_at, nombre_cliente')
+        .select('id, reference, notes, direccion_cliente, created_at, nombre_cliente, created_by')
         .eq('branch_id', branchId)
         .eq('type', 'SALE')
         .order('created_at', { ascending: false })
@@ -144,7 +147,9 @@ const POSScreen: React.FC<POSProps> = ({
         id: tx.id,
         reference: tx.reference,
         notes: tx.notes,
+        direccion_cliente: tx.direccion_cliente ?? null,
         nombre_cliente: tx.nombre_cliente ?? null,
+        created_by: tx.created_by ?? null,
         created_at: tx.created_at,
         items_count: itemsSummary[tx.id]?.count ?? 0,
         total_amount: itemsSummary[tx.id]?.total ?? 0,
@@ -226,11 +231,248 @@ const POSScreen: React.FC<POSProps> = ({
     () => creditCustomers.find((c) => c.id === selectedCustomerId),
     [selectedCustomerId, creditCustomers]
   );
+  const selectedBranch = useMemo(
+    () => branches.find((b) => b.id === selectedBranchId) ?? null,
+    [branches, selectedBranchId]
+  );
 
   const cartTotal = cart.reduce((acc, curr) => acc + curr.subtotal, 0);
   const formatLocalDateTime = (value: string) => {
     const normalized = value.endsWith('Z') ? value : `${value}Z`;
     return new Date(normalized).toLocaleString();
+  };
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+  const toFileToken = (value: string | null | undefined, fallback: string) => {
+    const source = String(value ?? '');
+    const normalized = typeof source.normalize === 'function' ? source.normalize('NFD') : source;
+    const cleaned = normalized
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .toUpperCase();
+    return cleaned || fallback;
+  };
+  const buildSalePdfFilename = (branchName: string | null | undefined, saleId: string) => {
+    const moduleToken = 'MATERIALES';
+    const branchToken = toFileToken(branchName, 'SUCURSAL');
+    const saleToken = toFileToken(saleId, '0');
+    return `${moduleToken}-${branchToken}-${saleToken}.pdf`;
+  };
+  const getPresentationLabel = (factorUsed: number, row: any) => {
+    const uomCode = row.product_uoms?.uoms?.code ?? row.product_uoms?.uoms?.name ?? 'UND';
+    const safeFactor = Number(factorUsed ?? 1);
+    return safeFactor > 1 ? `${uomCode} (${safeFactor})` : uomCode;
+  };
+  const generateSalePdf = async (input: {
+    saleId: string;
+    createdAt: string;
+    items: Array<{
+      name: string;
+      presentation: string;
+      qty: number;
+      unitPrice: number;
+      subtotal: number;
+    }>;
+    paymentMethod: 'EFECTIVO' | 'CREDITO';
+    customerName: string;
+    customerAddress: string;
+    cashierName: string;
+    branchName: string;
+  }) => {
+    const pdfDoc = await PDFDocument.create();
+    const fontRegular = await pdfDoc.embedFont('Helvetica');
+    const fontBold = await pdfDoc.embedFont('Helvetica-Bold');
+    const page = pdfDoc.addPage([595.28, 841.89]);
+    const { width, height } = page.getSize();
+
+    let watermarkImage: any = null;
+    try {
+      const logoBytes = await fetch('/lopar-watermark.png').then((r) => r.arrayBuffer());
+      watermarkImage = await pdfDoc.embedPng(logoBytes);
+    } catch {
+      watermarkImage = null;
+    }
+
+    if (watermarkImage) {
+      const dims = watermarkImage.scale(0.5);
+      page.drawImage(watermarkImage, {
+        x: (width - dims.width) / 2,
+        y: (height - dims.height) / 2 - 40,
+        width: dims.width,
+        height: dims.height,
+        opacity: 0.12,
+      });
+    }
+
+    const marginX = 30;
+    const outerY = 75;
+    const outerTop = height - 70;
+    const outerHeight = outerTop - outerY;
+    page.drawRectangle({
+      x: marginX,
+      y: outerY,
+      width: width - marginX * 2,
+      height: outerHeight,
+      borderWidth: 1,
+      borderColor: rgb(0, 0, 0),
+    });
+
+    const title = `MATERIALES ${(input.branchName || 'SUCURSAL').toUpperCase()}`;
+    const titleSize = 14;
+    const titleWidth = fontBold.widthOfTextAtSize(title, titleSize);
+    page.drawText(title, {
+      x: (width - titleWidth) / 2,
+      y: height - 42,
+      size: titleSize,
+      font: fontBold,
+    });
+
+    const infoTop = height - 105;
+    const rightInfoX = width - marginX - 155;
+    page.drawText(`FECHA:  ${formatLocalDateTime(input.createdAt)}`, { x: marginX + 10, y: infoTop, size: 10, font: fontBold });
+    page.drawText(`CLIENTE:  ${input.customerName.toUpperCase()}`, { x: marginX + 10, y: infoTop - 24, size: 10, font: fontBold });
+    page.drawText(`DIRECCION:  ${input.customerAddress.toUpperCase()}`, { x: marginX + 10, y: infoTop - 48, size: 10, font: fontBold });
+    page.drawText(input.paymentMethod === 'CREDITO' ? 'CREDITO' : 'LIQUIDADO', { x: marginX + 10, y: infoTop - 72, size: 10, font: fontBold });
+    page.drawText('NOTA DE VENTA', { x: rightInfoX + 18, y: infoTop, size: 12, font: fontBold });
+    page.drawText(String(input.saleId), { x: rightInfoX + 70, y: infoTop - 24, size: 12, font: fontBold });
+    page.drawText(`CAJERO:  ${input.cashierName.toUpperCase()}`, { x: rightInfoX, y: infoTop - 72, size: 10, font: fontBold });
+
+    const tableTop = infoTop - 120;
+    const tableWidth = width - marginX * 2;
+    const colRatios = [0.36, 0.2, 0.14, 0.15, 0.15];
+    const colXs = colRatios.reduce<number[]>((acc, ratio) => {
+      const prev = acc[acc.length - 1];
+      acc.push(prev + tableWidth * ratio);
+      return acc;
+    }, [marginX]);
+    const drawCellText = (text: string, col: number, y: number, size: number, font: any, color = rgb(0, 0, 0)) => {
+      const xStart = colXs[col];
+      const xEnd = colXs[col + 1];
+      const colWidth = xEnd - xStart;
+      const available = colWidth - 6;
+      let safe = text ?? '';
+      while (safe.length > 0 && font.widthOfTextAtSize(safe, size) > available) {
+        safe = `${safe.slice(0, -1)}`;
+      }
+      if (safe !== text && safe.length > 3) safe = `${safe.slice(0, -3)}...`;
+      const textWidth = font.widthOfTextAtSize(safe, size);
+      const textX = xStart + Math.max(3, (colWidth - textWidth) / 2);
+      page.drawText(safe, { x: textX, y, size, font, color });
+    };
+
+    page.drawRectangle({ x: marginX, y: tableTop - 16, width: tableWidth, height: 16, color: rgb(0, 0, 0) });
+    ['PRODUCTO', 'PRESENTACION', 'CANTIDAD', 'PRECIO UNITARIO', 'SUBTOTAL'].forEach((header, idx) => {
+      drawCellText(header, idx, tableTop - 12, 8, fontBold, rgb(1, 1, 1));
+    });
+
+    let rowY = tableTop - 32;
+    const maxRows = Math.min(14, input.items.length);
+    let total = 0;
+    for (let i = 0; i < maxRows; i += 1) {
+      const item = input.items[i];
+      const subtotal = Number(item.subtotal ?? (item.qty * item.unitPrice));
+      total += subtotal;
+      const rowHeight = 18;
+      page.drawRectangle({
+        x: marginX,
+        y: rowY - 2,
+        width: tableWidth,
+        height: rowHeight,
+        borderWidth: 0.5,
+        borderColor: rgb(0, 0, 0),
+      });
+      for (let c = 1; c < colXs.length - 1; c += 1) {
+        page.drawLine({
+          start: { x: colXs[c], y: rowY - 2 },
+          end: { x: colXs[c], y: rowY - 2 + rowHeight },
+          thickness: 0.5,
+          color: rgb(0, 0, 0),
+        });
+      }
+      drawCellText(item.name.toUpperCase(), 0, rowY + 4, 8, fontBold);
+      drawCellText(item.presentation.toUpperCase(), 1, rowY + 4, 8, fontBold);
+      drawCellText(Number(item.qty).toFixed(2), 2, rowY + 4, 8, fontBold);
+      drawCellText(formatCurrency(Number(item.unitPrice)), 3, rowY + 4, 8, fontBold);
+      drawCellText(formatCurrency(subtotal), 4, rowY + 4, 8, fontBold);
+      rowY -= rowHeight;
+    }
+
+    page.drawText(`TOTAL:  ${formatCurrency(total)}`, { x: width - marginX - 210, y: 108, size: 20, font: fontBold });
+    page.drawText('KILOMETRO, 3 LAS CANOAS, JESUS MARIA JALISCO   (348) 148 8326', {
+      x: marginX + 80,
+      y: 64,
+      size: 9,
+      font: fontBold,
+    });
+    page.drawText('Página 1', { x: width - marginX - 54, y: 64, size: 9, font: fontBold });
+
+    const pdfBytes = await pdfDoc.save();
+    const filename = buildSalePdfFilename(input.branchName, input.saleId);
+    downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), filename);
+  };
+  const handleDownloadSalePdf = async (sale: {
+    id: string;
+    created_at: string;
+    nombre_cliente: string | null;
+    direccion_cliente: string | null;
+    created_by: string | null;
+  }) => {
+    try {
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('inventory_transaction_items')
+        .select(`
+          qty,
+          unit_price,
+          factor_used,
+          products ( name ),
+          product_uoms ( uoms ( name, code ) )
+        `)
+        .eq('transaction_id', sale.id);
+      if (itemsError) throw itemsError;
+
+      const { data: creditNote } = await supabase
+        .from('credit_notes')
+        .select('id')
+        .eq('inventory_transaction_id', sale.id)
+        .maybeSingle();
+
+      const lines = (itemsData ?? []).map((row: any) => {
+        const factorUsed = Number(row.factor_used ?? 1);
+        const qty = Number(row.qty ?? 0);
+        const unitPrice = Number(row.unit_price ?? 0);
+        return {
+          name: row.products?.name ?? 'PRODUCTO',
+          presentation: getPresentationLabel(factorUsed, row),
+          qty,
+          unitPrice,
+          subtotal: qty * unitPrice,
+        };
+      });
+
+      await generateSalePdf({
+        saleId: sale.id,
+        createdAt: sale.created_at,
+        items: lines,
+        paymentMethod: creditNote?.id ? 'CREDITO' : 'EFECTIVO',
+        customerName: sale.nombre_cliente ?? 'PUBLICO GENERAL',
+        customerAddress: sale.direccion_cliente ?? '-',
+        cashierName: sale.created_by || currentUser.name,
+        branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+      });
+    } catch (err) {
+      console.error('Error exporting sale PDF:', err);
+      showFeedback('error', 'No se pudo exportar', 'No se pudo generar el PDF de la venta.');
+    }
   };
 
   const loadCreditCustomers = useCallback(async () => {
@@ -327,7 +569,7 @@ const POSScreen: React.FC<POSProps> = ({
     return result;
   }, [selectedCustomer, cartTotal]);
 
-  const handleSelectPaymentMethod = async (method: 'EFECTIVO' | 'TARJETA' | 'CREDITO') => {
+  const handleSelectPaymentMethod = async (method: 'EFECTIVO' | 'CREDITO') => {
     if (method === 'CREDITO') {
       if (!selectedCustomer) {
         alert('⚠️ Seleccione un cliente para habilitar crédito.');
@@ -380,6 +622,7 @@ const POSScreen: React.FC<POSProps> = ({
         notes: null,
         created_by: currentUser.id,
         nombre_cliente: selectedCustomer?.name || null,
+        direccion_cliente: selectedCustomer?.address || null,
         cartItems: cart.map((item) => ({
           product_id: item.productId,
           product_uom_id: item.productUomId ?? '',
@@ -814,11 +1057,11 @@ const POSScreen: React.FC<POSProps> = ({
         </div>
 
         <div className="p-6 bg-slate-900 text-white border-t border-slate-800">
-          <div className="grid grid-cols-3 gap-2 mb-6">
-            {['EFECTIVO', 'TARJETA', 'CREDITO'].map((m) => (
+          <div className="grid grid-cols-2 gap-2 mb-6">
+            {(['EFECTIVO', 'CREDITO'] as const).map((m) => (
               <button
                 key={m}
-                onClick={() => handleSelectPaymentMethod(m as any)}
+                onClick={() => handleSelectPaymentMethod(m)}
                 className={`py-3 text-[10px] font-black rounded-xl border-2 transition-all ${paymentMethod === m
                   ? 'bg-orange-500 border-orange-400 text-white shadow-lg'
                   : 'bg-slate-800 border-slate-700 text-slate-500'
@@ -974,7 +1217,6 @@ const POSScreen: React.FC<POSProps> = ({
                 >
                   <option value="EFECTIVO">Efectivo</option>
                   <option value="TRANSFERENCIA">Transferencia</option>
-                  <option value="TARJETA">Tarjeta</option>
                   <option value="YAPE">Yape</option>
                   <option value="PLIN">Plin</option>
                   <option value="OTRO">Otro</option>
@@ -1362,13 +1604,22 @@ const POSScreen: React.FC<POSProps> = ({
                         <td className="p-4 text-center text-xs font-bold text-slate-600">{sale.items_count}</td>
                         <td className="p-4 text-right text-sm font-black text-slate-900">{formatCurrency(sale.total_amount)}</td>
                         <td className="p-4 text-center">
-                          <button
-                            onClick={() => openSaleDetail(sale)}
-                            className="w-8 h-8 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-                            title="Ver detalle"
-                          >
-                            <Eye className="w-4 h-4 mx-auto" />
-                          </button>
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleDownloadSalePdf(sale)}
+                              className="w-8 h-8 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                              title="Exportar PDF"
+                            >
+                              <FileDown className="w-4 h-4 mx-auto" />
+                            </button>
+                            <button
+                              onClick={() => openSaleDetail(sale)}
+                              className="w-8 h-8 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                              title="Ver detalle"
+                            >
+                              <Eye className="w-4 h-4 mx-auto" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

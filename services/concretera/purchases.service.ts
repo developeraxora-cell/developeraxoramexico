@@ -35,8 +35,12 @@ export interface CreateSaleInput {
   branch_id: string;
   reference?: string | null;
   notes?: string | null;
+  edad?: string | null;
+  rev?: string | null;
+  descarga?: string | null;
   created_by: string;
   nombre_cliente?: string | null;
+  direccion_cliente?: string | null;
   cartItems: SaleCartItemInput[];
 }
 
@@ -238,7 +242,7 @@ export const purchasesService = {
   },
 
   async createSale(input: CreateSaleInput) {
-    const { branch_id, reference, notes, created_by, cartItems, nombre_cliente } = input;
+    const { branch_id, reference, notes, edad, rev, descarga, created_by, cartItems, nombre_cliente, direccion_cliente } = input;
 
     const { data: transaction, error: txError } = await concreteDb
       .from('concrete_inventory_transactions')
@@ -248,8 +252,12 @@ export const purchasesService = {
           branch_id,
           reference: reference || null,
           notes: notes || null,
+          edad: edad || null,
+          rev: rev || null,
+          descarga: descarga || null,
           created_by,
           nombre_cliente: nombre_cliente || null,
+          direccion_cliente: direccion_cliente || null,
         },
       ])
       .select('id, created_at')

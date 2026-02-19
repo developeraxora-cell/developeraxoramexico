@@ -13,6 +13,7 @@ interface CustomerScreenProps {
 const defaultCustomerForm = {
   name: '',
   phone: '',
+  address: '',
   credit_limit: 0,
   default_credit_days: 30,
   policy: 'CERO_TOLERANCIA' as const,
@@ -46,7 +47,9 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     const term = searchTerm.trim().toLowerCase();
     if (!term) return customers;
     return customers.filter((customer) =>
-      customer.name.toLowerCase().includes(term) || (customer.phone ?? '').toLowerCase().includes(term)
+      customer.name.toLowerCase().includes(term)
+      || (customer.phone ?? '').toLowerCase().includes(term)
+      || (customer.address ?? '').toLowerCase().includes(term)
     );
   }, [customers, searchTerm]);
 
@@ -178,6 +181,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         branch_id: branchId,
         name: formData.name,
         phone: formData.phone || null,
+        address: formData.address || null,
         credit_limit: Number(formData.credit_limit),
         default_credit_days: Number(formData.default_credit_days),
         policy: formData.policy,
@@ -238,9 +242,10 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               return (
                 <tr key={customer.id} className="hover:bg-slate-50 transition-colors">
                   <td className="p-4">
-                    <p className="font-bold text-slate-800">{customer.name}</p>
-                    <p className="text-[10px] text-slate-400">{customer.phone || '—'}</p>
-                  </td>
+                  <p className="font-bold text-slate-800">{customer.name}</p>
+                  <p className="text-[10px] text-slate-400">{customer.phone || '—'}</p>
+                  <p className="text-[10px] text-slate-400">{customer.address || 'Sin dirección'}</p>
+                </td>
                   <td className="p-4 text-right font-mono text-sm">{formatCurrency(Number(customer.credit_limit))}</td>
                   <td className="p-4 text-right">
                     <span className={`font-black ${debt > 0 ? 'text-red-600' : 'text-slate-400'}`}>
@@ -303,6 +308,15 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
                   value={formData.phone}
                   onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dirección</label>
+                <input
+                  placeholder="Dirección"
+                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                  value={formData.address}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">

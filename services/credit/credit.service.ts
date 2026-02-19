@@ -8,6 +8,7 @@ export interface CreditCustomer {
   branch_id: string;
   name: string;
   phone: string | null;
+  address: string | null;
   credit_limit: number;
   default_credit_days: number;
   policy: CreditPolicy;
@@ -89,6 +90,7 @@ export const creditService = {
     branch_id: string;
     name: string;
     phone?: string | null;
+    address?: string | null;
     credit_limit: number;
     default_credit_days: number;
     policy: CreditPolicy;
