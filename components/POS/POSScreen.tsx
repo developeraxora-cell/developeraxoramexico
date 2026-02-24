@@ -97,6 +97,24 @@ const POSScreen: React.FC<POSProps> = ({
   }>>([]);
   const [isSaleDetailLoading, setIsSaleDetailLoading] = useState(false);
 
+  const activeBranchProducts = useMemo(
+    () => branchProducts.filter((product) => product.is_active !== false),
+    [branchProducts]
+  );
+
+  const visibleBranchProducts = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const filtered = activeBranchProducts.filter((product) => {
+      if (!term) return true;
+      return (
+        product.name.toLowerCase().includes(term) ||
+        (product.sku ?? '').toLowerCase().includes(term) ||
+        (product.barcode ?? '').toLowerCase().includes(term)
+      );
+    });
+    return filtered.slice(0, 6);
+  }, [activeBranchProducts, searchTerm]);
+
   const showFeedback = (type: FeedbackType, title: string, description?: string) => {
     setFeedbackType(type);
     setFeedbackTitle(title);
@@ -913,7 +931,7 @@ const POSScreen: React.FC<POSProps> = ({
             if (e.key !== 'Enter') return;
             const term = searchTerm.trim().toLowerCase();
             if (!term) return;
-            const match = branchProducts.find((p) =>
+            const match = activeBranchProducts.find((p) =>
               (p.barcode ?? '').toLowerCase() === term ||
               (p.sku ?? '').toLowerCase() === term ||
               p.name.toLowerCase() === term
@@ -926,17 +944,7 @@ const POSScreen: React.FC<POSProps> = ({
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto pr-2">
-          {branchProducts
-            .filter((product) => {
-              const term = searchTerm.trim().toLowerCase();
-              if (!term) return true;
-              return (
-                product.name.toLowerCase().includes(term) ||
-                (product.sku ?? '').toLowerCase().includes(term) ||
-                (product.barcode ?? '').toLowerCase().includes(term)
-              );
-            })
-            .map((product) => {
+          {visibleBranchProducts.map((product) => {
               const stockQty = branchStock[product.id] ?? 0;
               return (
                 <button
@@ -958,7 +966,7 @@ const POSScreen: React.FC<POSProps> = ({
                 </button>
               );
             })}
-          {!isCatalogLoading && branchProducts.length === 0 && (
+          {!isCatalogLoading && visibleBranchProducts.length === 0 && (
             <div className="col-span-full text-center text-slate-400 text-sm py-10">
               No hay productos para mostrar.
             </div>
