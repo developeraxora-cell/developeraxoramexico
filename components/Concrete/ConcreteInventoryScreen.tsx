@@ -28,7 +28,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [productToRemove, setProductToRemove] = useState<Product | null>(null);
   const [priceProduct, setPriceProduct] = useState<Product | null>(null);
-  const [priceValue, setPriceValue] = useState(0);
+  const [priceValue, setPriceValue] = useState<string>('');
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [editUoms, setEditUoms] = useState<ProductUom[]>([]);
@@ -164,7 +164,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
 
   const handleOpenPriceModal = (product: Product) => {
     setPriceProduct(product);
-    setPriceValue(Number((product as any).retail_price ?? (product as any).precio ?? 0));
+    setPriceValue(String(Number((product as any).retail_price ?? (product as any).precio ?? 0)));
   };
 
   const handleOpenEditProduct = async (product: Product) => {
@@ -184,14 +184,15 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
 
   const handleSavePrice = async () => {
     if (!priceProduct) return;
-    if (priceValue <= 0) {
+    const nextPrice = Number(priceValue || 0);
+    if (nextPrice <= 0) {
       setError('El precio debe ser mayor a 0.');
       return;
     }
     setIsSaving(true);
     setError(null);
     try {
-      await catalogService.updateProductPrice(priceProduct.id, Number(priceValue));
+      await catalogService.updateProductPrice(priceProduct.id, nextPrice);
       setPriceProduct(null);
       await loadProducts();
     } catch (err) {
@@ -469,7 +470,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                 step="0.01"
                 className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-lg outline-none focus:ring-2 focus:ring-orange-500"
                 value={priceValue}
-                onChange={(e) => setPriceValue(Number(e.target.value))}
+                onChange={(e) => setPriceValue(e.target.value)}
               />
               <div className="flex gap-2">
                 <button

@@ -53,17 +53,17 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   const [sku, setSku] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [purchasePrice, setPurchasePrice] = useState(0);
-  const [wholesalePrice, setWholesalePrice] = useState(0);
-  const [retailPrice, setRetailPrice] = useState(0);
-  const [minStock, setMinStock] = useState(0);
+  const [purchasePrice, setPurchasePrice] = useState<string>('');
+  const [wholesalePrice, setWholesalePrice] = useState<string>('');
+  const [retailPrice, setRetailPrice] = useState<string>('');
+  const [minStock, setMinStock] = useState<string>('');
   const [categoryId, setCategoryId] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [baseUomId, setBaseUomId] = useState('');
   const [isDivisible, setIsDivisible] = useState(false);
   const [attrsText, setAttrsText] = useState('');
   const [purchaseUomId, setPurchaseUomId] = useState('');
-  const [purchaseFactor, setPurchaseFactor] = useState(1);
+  const [purchaseFactor, setPurchaseFactor] = useState<string>('1');
   const [saleUoms, setSaleUoms] = useState<SaleUomDraft[]>([]);
   const [attrPairs, setAttrPairs] = useState<AttrPair[]>([]);
   const buildAttrPair = (key = '', value = ''): AttrPair => ({
@@ -86,10 +86,10 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       setSku(existingProduct.sku ?? '');
       setName(existingProduct.name ?? '');
       setDescription(existingProduct.description ?? '');
-      setPurchasePrice(Number((existingProduct as any).purchase_price ?? 0));
-      setWholesalePrice(Number((existingProduct as any).wholesale_price ?? 0));
-      setRetailPrice(Number((existingProduct as any).retail_price ?? (existingProduct as any).precio ?? 0));
-      setMinStock(Number((existingProduct as any).min_stock ?? 0));
+      setPurchasePrice(String(Number((existingProduct as any).purchase_price ?? 0)));
+      setWholesalePrice(String(Number((existingProduct as any).wholesale_price ?? 0)));
+      setRetailPrice(String(Number((existingProduct as any).retail_price ?? (existingProduct as any).precio ?? 0)));
+      setMinStock(String(Number((existingProduct as any).min_stock ?? 0)));
       setCategoryId(existingProduct.category_id ?? '');
       setNewCategoryName('');
       setBaseUomId(existingProduct.base_uom_id ?? '');
@@ -105,7 +105,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
 
       const purchase = existingUoms.find((uom) => uom.purpose === 'PURCHASE' || uom.is_default_purchase);
       setPurchaseUomId(purchase?.uom_id ?? existingProduct.base_uom_id ?? '');
-      setPurchaseFactor(Number(purchase?.factor_to_base ?? 1));
+      setPurchaseFactor(String(Number(purchase?.factor_to_base ?? 1)));
 
       const sales = existingUoms.filter((uom) => uom.purpose === 'SALE' || uom.purpose === 'BOTH');
       setSaleUoms(
@@ -122,17 +122,17 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     setSku('');
     setName('');
     setDescription('');
-    setPurchasePrice(0);
-    setWholesalePrice(0);
-    setRetailPrice(0);
-    setMinStock(0);
+    setPurchasePrice('');
+    setWholesalePrice('');
+    setRetailPrice('');
+    setMinStock('');
     setCategoryId('');
     setNewCategoryName('');
     setBaseUomId('');
     setIsDivisible(false);
     setAttrsText('');
     setPurchaseUomId('');
-    setPurchaseFactor(1);
+    setPurchaseFactor('1');
     setSaleUoms([]);
     setAttrPairs([]);
     setShowJsonAttrs(false);
@@ -210,7 +210,8 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       setError('El nombre es obligatorio.');
       return;
     }
-    if (retailPrice <= 0) {
+    const retailPriceNumber = Number(retailPrice || 0);
+    if (retailPriceNumber <= 0) {
       setError('El precio de venta menor debe ser mayor a 0.');
       return;
     }
@@ -225,7 +226,8 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       return;
     }
 
-    if (purchaseFactor <= 0) {
+    const purchaseFactorNumber = Number(purchaseFactor || 0);
+    if (purchaseFactorNumber <= 0) {
       setError('El factor de la unidad de compra debe ser mayor a 0.');
       return;
     }
@@ -272,10 +274,10 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
         sku: resolvedSku,
         barcode: barcodeValue.trim(),
         name: name.trim(),
-        purchase_price: Number(purchasePrice),
-        wholesale_price: Number(wholesalePrice),
-        retail_price: Number(retailPrice),
-        min_stock: Number(minStock),
+        purchase_price: Number(purchasePrice || 0),
+        wholesale_price: Number(wholesalePrice || 0),
+        retail_price: retailPriceNumber,
+        min_stock: Number(minStock || 0),
         description: description.trim() || null,
         category_id: resolvedCategoryId,
         brand_id: null,
@@ -291,7 +293,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
           purchaseUom: {
             uom_id: purchaseUomId,
             purpose: 'PURCHASE',
-            factor_to_base: purchaseFactor,
+            factor_to_base: purchaseFactorNumber,
             is_default_purchase: true,
           },
           saleUoms: normalizedSaleUoms,
@@ -307,7 +309,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
           purchaseUom: {
             uom_id: purchaseUomId,
             purpose: 'PURCHASE',
-            factor_to_base: purchaseFactor,
+            factor_to_base: purchaseFactorNumber,
             is_default_purchase: true,
           },
           saleUoms: normalizedSaleUoms,
@@ -381,7 +383,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 step="0.01"
                 className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-semibold text-sm"
                 value={minStock}
-                onChange={(e) => setMinStock(Number(e.target.value))}
+                onChange={(e) => setMinStock(e.target.value)}
               />
             </div>
             <div className="space-y-1 md:col-span-2">
@@ -402,7 +404,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 step="0.01"
                 className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-black text-sm"
                 value={wholesalePrice}
-                onChange={(e) => setWholesalePrice(Number(e.target.value))}
+                onChange={(e) => setWholesalePrice(e.target.value)}
               />
             </div>
             <div className="space-y-1">
@@ -413,7 +415,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 step="0.01"
                 className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-black text-sm"
                 value={retailPrice}
-                onChange={(e) => setRetailPrice(Number(e.target.value))}
+                onChange={(e) => setRetailPrice(e.target.value)}
               />
               <p className="text-[10px] text-slate-400">Precio aplicado a la unidad base.</p>
             </div>
@@ -482,11 +484,11 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                   step="0.0001"
                   className="w-full p-3 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
                   value={purchaseFactor}
-                  onChange={(e) => setPurchaseFactor(Number(e.target.value))}
+                  onChange={(e) => setPurchaseFactor(e.target.value)}
                 />
               </div>
               <div className="flex items-center text-[10px] font-bold text-slate-500">
-                1 unidad de compra = {purchaseFactor || 0} unidades base
+                1 unidad de compra = {Number(purchaseFactor || 0)} unidades base
               </div>
             </div>
           </div>

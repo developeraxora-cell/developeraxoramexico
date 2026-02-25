@@ -21,9 +21,13 @@ const defaultCustomerForm = {
 };
 
 const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branches, currentUser }) => {
+  const PAGE_SIZE = 5;
   const [customers, setCustomers] = useState<CreditCustomer[]>([]);
   const [summaries, setSummaries] = useState<Record<string, CreditSummary>>({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCustomers, setTotalCustomers] = useState(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
@@ -43,20 +47,21 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     return selectedBranchId || '';
   }, [branches, selectedBranchId]);
 
-  const filteredCustomers = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    if (!term) return customers;
-    return customers.filter((customer) =>
-      customer.name.toLowerCase().includes(term)
-      || (customer.phone ?? '').toLowerCase().includes(term)
-      || (customer.address ?? '').toLowerCase().includes(term)
-    );
-  }, [customers, searchTerm]);
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCustomers / PAGE_SIZE)), [totalCustomers, PAGE_SIZE]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+      setCurrentPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchTerm]);
 
   const loadCustomers = useCallback(async () => {
     if (!branchId) {
       setCustomers([]);
       setSummaries({});
+      setTotalCustomers(0);
       return;
     }
 
@@ -64,20 +69,10 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setError(null);
 
     try {
-      const list = await creditService.listCustomersByBranch(branchId);
-      const summaryEntries = await Promise.all(
-        list.map(async (customer) => {
-          const summary = await creditService.getCustomerSummary(customer);
-          return [customer.id, summary] as const;
-        })
-      );
-
-      const summaryMap = summaryEntries.reduce<Record<string, CreditSummary>>((acc, [id, summary]) => {
-        acc[id] = summary;
-        return acc;
-      }, {});
-
-      setCustomers(list);
+      const pageData = await creditService.listCustomersByBranchPaged(branchId, currentPage, PAGE_SIZE, debouncedSearchTerm);
+      const summaryMap = await creditService.getSummariesForCustomers(pageData.rows);
+      setCustomers(pageData.rows);
+      setTotalCustomers(pageData.total);
       setSummaries(summaryMap);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo cargar clientes.';
@@ -85,11 +80,17 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     } finally {
       setIsLoading(false);
     }
-  }, [branchId]);
+  }, [branchId, currentPage, debouncedSearchTerm, PAGE_SIZE]);
 
   useEffect(() => {
     loadCustomers();
   }, [loadCustomers]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const handleOpenHistory = async (customer: CreditCustomer) => {
     setSelectedCustomer(customer);
@@ -189,6 +190,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       });
       setIsCreateModalOpen(false);
       setFormData(defaultCustomerForm);
+      setCurrentPage(1);
       await loadCustomers();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo crear el cliente.';
@@ -235,7 +237,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredCustomers.map((customer) => {
+            {customers.map((customer) => {
               const summary = summaries[customer.id];
               const debt = summary?.saldo_total_pendiente ?? 0;
               const available = summary?.disponible_credito ?? 0;
@@ -272,7 +274,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 </tr>
               );
             })}
-            {!isLoading && filteredCustomers.length === 0 && (
+            {!isLoading && customers.length === 0 && (
               <tr>
                 <td colSpan={5} className="p-6 text-center text-slate-400 text-sm">
                   No hay clientes registrados en esta sucursal.
@@ -281,6 +283,32 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
             )}
           </tbody>
         </table>
+        <div className="p-4 border-t border-slate-200 flex flex-col md:flex-row items-center justify-between gap-3">
+          <p className="text-xs text-slate-500">
+            Mostrando {customers.length} de {totalCustomers} clientes
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage <= 1 || isLoading}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold disabled:opacity-40"
+            >
+              Anterior
+            </button>
+            <span className="text-xs font-black text-slate-700">
+              Página {currentPage} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage >= totalPages || isLoading}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold disabled:opacity-40"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
       </div>
 
       {isCreateModalOpen && (

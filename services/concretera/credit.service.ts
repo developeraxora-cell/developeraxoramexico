@@ -59,6 +59,11 @@ export interface CreditSummary {
   notas_vencidas: CreditNoteWithStatus[];
 }
 
+export interface CreditCustomersPage {
+  rows: CreditCustomer[];
+  total: number;
+}
+
 const normalizeNumber = (value: unknown) => Number(value ?? 0);
 
 const computeStatus = (note: CreditNote, today: Date, toleranceDays: number) => {
@@ -75,6 +80,25 @@ const computeStatus = (note: CreditNote, today: Date, toleranceDays: number) => 
   };
 };
 
+const buildSummary = (customer: CreditCustomer, notes: CreditNote[], today: Date) => {
+  const saldo_total_pendiente = notes.reduce((acc, note) => acc + normalizeNumber(note.balance), 0);
+  const limite_credito = normalizeNumber(customer.credit_limit);
+  const disponible_credito = limite_credito - saldo_total_pendiente;
+  const notas_vencidas = notes
+    .map((note) => ({
+      ...note,
+      ...computeStatus(note, today, customer.late_tolerance_days ?? 0),
+    }))
+    .filter((note) => note.status === 'VENCIDA');
+
+  return {
+    saldo_total_pendiente,
+    disponible_credito,
+    limite_credito,
+    notas_vencidas,
+  } as CreditSummary;
+};
+
 export const creditService = {
   async listCustomersByBranch(branchId: string) {
     const { data, error } = await concreteDb
@@ -85,6 +109,32 @@ export const creditService = {
 
     if (error) throw error;
     return (data ?? []) as CreditCustomer[];
+  },
+
+  async listCustomersByBranchPaged(branchId: string, page: number, pageSize: number, searchTerm = '') {
+    const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+    const safePageSize = Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : 5;
+    const from = (safePage - 1) * safePageSize;
+    const to = from + safePageSize - 1;
+
+    let query = concreteDb
+      .from('concrete_credit_customers')
+      .select('*', { count: 'exact' })
+      .eq('branch_id', branchId);
+
+    const term = searchTerm.trim();
+    if (term) {
+      const escaped = term.replace(/[%_,]/g, '');
+      query = query.or(`name.ilike.%${escaped}%,phone.ilike.%${escaped}%,address.ilike.%${escaped}%`);
+    }
+
+    const { data, error, count } = await query.order('name').range(from, to);
+    if (error) throw error;
+
+    return {
+      rows: (data ?? []) as CreditCustomer[],
+      total: Number(count ?? 0),
+    } as CreditCustomersPage;
   },
 
   async createCustomer(input: {
@@ -152,22 +202,33 @@ export const creditService = {
 
   async getCustomerSummary(customer: CreditCustomer, today = new Date()) {
     const notes = await creditService.listOpenNotesByCustomer(customer.id);
-    const saldo_total_pendiente = notes.reduce((acc, note) => acc + normalizeNumber(note.balance), 0);
-    const limite_credito = normalizeNumber(customer.credit_limit);
-    const disponible_credito = limite_credito - saldo_total_pendiente;
-    const notas_vencidas = notes
-      .map((note) => ({
-        ...note,
-        ...computeStatus(note, today, customer.late_tolerance_days ?? 0),
-      }))
-      .filter((note) => note.status === 'VENCIDA');
+    return buildSummary(customer, notes, today);
+  },
 
-    return {
-      saldo_total_pendiente,
-      disponible_credito,
-      limite_credito,
-      notas_vencidas,
-    } as CreditSummary;
+  async getSummariesForCustomers(customers: CreditCustomer[], today = new Date()) {
+    if (customers.length === 0) return {} as Record<string, CreditSummary>;
+
+    const ids = customers.map((customer) => customer.id);
+    const { data, error } = await concreteDb
+      .from('concrete_credit_notes')
+      .select('*')
+      .in('customer_id', ids)
+      .gt('balance', 0)
+      .order('due_date', { ascending: true });
+
+    if (error) throw error;
+
+    const notesByCustomer = (data ?? []).reduce<Record<string, CreditNote[]>>((acc, row) => {
+      const note = row as CreditNote;
+      if (!acc[note.customer_id]) acc[note.customer_id] = [];
+      acc[note.customer_id].push(note);
+      return acc;
+    }, {});
+
+    return customers.reduce<Record<string, CreditSummary>>((acc, customer) => {
+      acc[customer.id] = buildSummary(customer, notesByCustomer[customer.id] ?? [], today);
+      return acc;
+    }, {});
   },
 
   async createPayment(input: {

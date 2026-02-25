@@ -330,6 +330,27 @@ const POSScreen: React.FC<POSProps> = ({
     anchor.remove();
     URL.revokeObjectURL(url);
   };
+  const openPdfPreview = (blob: Blob, filename: string, targetWindow?: Window | null) => {
+    const url = URL.createObjectURL(blob);
+    let previewWindow = targetWindow && !targetWindow.closed ? targetWindow : null;
+
+    if (!previewWindow) {
+      previewWindow = window.open('', '_blank');
+    }
+
+    if (previewWindow && !previewWindow.closed) {
+      try {
+        previewWindow.document.title = filename;
+        previewWindow.location.href = url;
+      } catch {
+        downloadBlob(blob, filename);
+      }
+    } else {
+      downloadBlob(blob, filename);
+    }
+
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
   const toFileToken = (value: string | null | undefined, fallback: string) => {
     const source = String(value ?? '');
     const normalized = typeof source.normalize === 'function' ? source.normalize('NFD') : source;
@@ -380,6 +401,7 @@ const POSScreen: React.FC<POSProps> = ({
     edad: string | null;
     rev: string | null;
     descarga: string | null;
+    previewWindow?: Window | null;
   }) => {
     const pdfDoc = await PDFDocument.create();
     const fontRegular = await pdfDoc.embedFont('Helvetica');
@@ -562,7 +584,7 @@ const POSScreen: React.FC<POSProps> = ({
 
     const pdfBytes = await pdfDoc.save();
     const filename = buildSalePdfFilename(input.branchName, input.saleId);
-    downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), filename);
+    openPdfPreview(new Blob([pdfBytes], { type: 'application/pdf' }), filename, input.previewWindow);
   };
   const handleDownloadSalePdf = async (sale: {
     id: string;
@@ -575,6 +597,11 @@ const POSScreen: React.FC<POSProps> = ({
     rev: string | null;
     descarga: string | null;
   }) => {
+    const previewWindow = window.open('', '_blank');
+    if (previewWindow && !previewWindow.closed) {
+      previewWindow.document.write('<p style="font-family: sans-serif; padding: 16px;">Generando documento de venta...</p>');
+      previewWindow.document.close();
+    }
     try {
       const parsedMeta = parseConcreteMeta({
         edad: sale.edad,
@@ -627,8 +654,12 @@ const POSScreen: React.FC<POSProps> = ({
         edad: parsedMeta.edad,
         rev: parsedMeta.rev,
         descarga: parsedMeta.descarga,
+        previewWindow,
       });
     } catch (err) {
+      if (previewWindow && !previewWindow.closed) {
+        previewWindow.close();
+      }
       console.error('Error exporting sale PDF:', err);
       showFeedback('error', 'No se pudo exportar', 'No se pudo generar el PDF de la venta.');
     }
@@ -773,11 +804,21 @@ const POSScreen: React.FC<POSProps> = ({
       }
     }
 
+    let pdfPreviewWindow: Window | null = null;
+
     try {
       const saleCartSnapshot = cart.map((item) => ({ ...item }));
       const paymentMethodSnapshot = paymentMethod;
       const customerSnapshot = selectedCustomer;
       const concreteMetaSnapshot = { ...concreteMeta };
+      const totalSnapshot = cartTotal;
+
+      pdfPreviewWindow = window.open('', '_blank');
+      if (pdfPreviewWindow && !pdfPreviewWindow.closed) {
+        pdfPreviewWindow.document.write('<p style="font-family: sans-serif; padding: 16px;">Generando documento de venta...</p>');
+        pdfPreviewWindow.document.close();
+      }
+
       showFeedback('loading', 'Procesando pago', 'Registrando venta...');
       const transaction = await purchasesService.createSale({
         branch_id: branchId,
@@ -789,7 +830,7 @@ const POSScreen: React.FC<POSProps> = ({
         created_by: currentUser.id,
         nombre_cliente: selectedCustomer?.name || null,
         direccion_cliente: selectedCustomer?.address || null,
-        cartItems: cart.map((item) => ({
+        cartItems: saleCartSnapshot.map((item) => ({
           product_id: item.productId,
           product_uom_id: item.productUomId ?? '',
           qty: item.qty,
@@ -804,7 +845,7 @@ const POSScreen: React.FC<POSProps> = ({
         await creditService.createCreditNote({
           branch_id: branchId,
           customer_id: customerSnapshot.id,
-          total: cartTotal,
+          total: totalSnapshot,
           credit_days_applied: customerSnapshot.default_credit_days,
           inventory_transaction_id: transaction.id,
         });
@@ -828,9 +869,13 @@ const POSScreen: React.FC<POSProps> = ({
           edad: concreteMetaSnapshot.edad,
           rev: concreteMetaSnapshot.rev,
           descarga: concreteMetaSnapshot.descarga,
+          previewWindow: pdfPreviewWindow,
         });
       } catch (pdfError) {
         console.error('Error generating sale PDF:', pdfError);
+        if (pdfPreviewWindow && !pdfPreviewWindow.closed) {
+          pdfPreviewWindow.close();
+        }
       }
 
       await loadBranchCatalog();
@@ -840,6 +885,9 @@ const POSScreen: React.FC<POSProps> = ({
       setPaymentMethod('EFECTIVO');
       setConcreteMeta(DEFAULT_CONCRETE_META);
     } catch (err: any) {
+      if (pdfPreviewWindow && !pdfPreviewWindow.closed) {
+        pdfPreviewWindow.close();
+      }
       console.error('Error checking out:', err);
       showFeedback('error', 'Error al procesar', err.message ?? 'No se pudo completar la venta.');
     }
