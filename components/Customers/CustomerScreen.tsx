@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Branch, User } from '../../types';
 import { creditService, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPaymentMethod, type CreditSummary } from '../../services/credit/credit.service';
-import { Eye, Plus, Wallet } from 'lucide-react';
+import { Eye, FileDown, Plus, Wallet } from 'lucide-react';
 import { formatCurrency } from '../../services/currency';
+import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
+import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 
 interface CustomerScreenProps {
   selectedBranchId: string;
@@ -40,12 +42,32 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [paymentNotes, setPaymentNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<FeedbackType>('alert');
+  const [feedbackTitle, setFeedbackTitle] = useState('');
+  const [feedbackDescription, setFeedbackDescription] = useState('');
 
   const branchId = useMemo(() => {
     const match = branches.find((b) => b.id === selectedBranchId);
     if (match?.dbId !== undefined) return String(match.dbId);
     return selectedBranchId || '';
   }, [branches, selectedBranchId]);
+  const selectedBranch = useMemo(
+    () => branches.find((b) => b.id === selectedBranchId) ?? null,
+    [branches, selectedBranchId]
+  );
+
+  const showFeedback = (type: FeedbackType, title: string, description?: string) => {
+    setFeedbackType(type);
+    setFeedbackTitle(title);
+    setFeedbackDescription(description ?? '');
+    setFeedbackOpen(true);
+  };
+
+  const closeFeedback = () => {
+    if (feedbackType === 'loading') return;
+    setFeedbackOpen(false);
+  };
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCustomers / PAGE_SIZE)), [totalCustomers, PAGE_SIZE]);
 
@@ -130,6 +152,68 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       setNoteRows(initRows);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudieron cargar notas.';
+      setError(message);
+    }
+  };
+
+  const handleDownloadCustomerPdf = async (customer: CreditCustomer) => {
+    showFeedback('loading', 'Generando PDF', 'Preparando estado de cuenta...');
+
+    try {
+      const [notes, summary] = await Promise.all([
+        creditService.listNotesByCustomer(customer.id),
+        summaries[customer.id] ? Promise.resolve(summaries[customer.id]) : creditService.getCustomerSummary(customer),
+      ]);
+
+      const noteIds = notes.map((note) => note.id);
+      const payments = await creditService.listPaymentsByNoteIds(noteIds);
+
+      const withStatus = notes.map((note) => {
+        const dueDate = new Date(`${note.due_date}T00:00:00Z`);
+        const diffDays = Math.floor((Date.now() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        const overdue = note.balance > 0 && diffDays > (customer.late_tolerance_days ?? 0);
+        return {
+          ...note,
+          status: note.balance <= 0 ? 'PAGADA' : overdue ? 'VENCIDA' : 'ABIERTA',
+          days_overdue: overdue ? diffDays : 0,
+        } as CreditNoteWithStatus;
+      });
+
+      await generateCustomerStatementPdf({
+        moduleLabel: 'MATERIALES',
+        branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          address: customer.address,
+          credit_limit: Number(customer.credit_limit ?? 0),
+        },
+        debt: summary.saldo_total_pendiente,
+        available: summary.disponible_credito,
+        notes: withStatus.map((note) => ({
+          id: note.id,
+          folio: note.folio,
+          issue_date: note.issue_date,
+          due_date: note.due_date,
+          total: Number(note.total ?? 0),
+          paid_amount: Number(note.paid_amount ?? 0),
+          balance: Number(note.balance ?? 0),
+          status: note.status,
+        })),
+        payments: payments.map((payment) => ({
+          note_id: payment.note_id,
+          paid_at: payment.paid_at,
+          amount: Number(payment.amount ?? 0),
+          method: payment.method,
+          reference: payment.reference ?? null,
+        })),
+      });
+      setFeedbackOpen(false);
+    } catch (err) {
+      setFeedbackOpen(false);
+      const message = err instanceof Error ? err.message : 'No se pudo generar el PDF del cliente.';
+      showFeedback('error', 'PDF no disponible', message);
       setError(message);
     }
   };
@@ -225,6 +309,14 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         </div>
       )}
 
+      <FeedbackModal
+        isOpen={feedbackOpen}
+        type={feedbackType}
+        title={feedbackTitle}
+        description={feedbackDescription}
+        onClose={closeFeedback}
+      />
+
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -256,6 +348,13 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   </td>
                   <td className="p-4 text-right font-black text-green-600">{formatCurrency(available)}</td>
                   <td className="p-4 text-center space-x-2">
+                    <button
+                      onClick={() => handleDownloadCustomerPdf(customer)}
+                      className="bg-slate-100 p-2 rounded-lg"
+                      title="Exportar PDF"
+                    >
+                      <FileDown className="w-4 h-4 text-slate-600" />
+                    </button>
                     <button
                       onClick={() => handleOpenHistory(customer)}
                       className="bg-slate-100 p-2 rounded-lg"

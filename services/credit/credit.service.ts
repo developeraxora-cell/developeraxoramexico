@@ -199,6 +199,19 @@ export const creditService = {
     return (data ?? []) as CreditNote[];
   },
 
+  async listPaymentsByNoteIds(noteIds: string[]) {
+    if (noteIds.length === 0) return [] as CreditPayment[];
+
+    const { data, error } = await supabase
+      .from('credit_payments')
+      .select('*')
+      .in('note_id', noteIds)
+      .order('paid_at', { ascending: false });
+
+    if (error) throw error;
+    return (data ?? []) as CreditPayment[];
+  },
+
   async getCustomerSummary(customer: CreditCustomer, today = new Date()) {
     const notes = await creditService.listOpenNotesByCustomer(customer.id);
     return buildSummary(customer, notes, today);

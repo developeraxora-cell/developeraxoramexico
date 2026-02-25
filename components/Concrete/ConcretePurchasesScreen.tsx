@@ -442,7 +442,26 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     URL.revokeObjectURL(url);
   };
 
+  const openPdfPreview = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const previewWindow = window.open('', '_blank');
+
+    if (previewWindow && !previewWindow.closed) {
+      try {
+        previewWindow.document.title = filename;
+        previewWindow.location.href = url;
+      } catch {
+        downloadBlob(blob, filename);
+      }
+    } else {
+      downloadBlob(blob, filename);
+    }
+
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+
   const handleDownloadPurchasePdf = async (purchase: PurchaseHistoryEntry) => {
+    showFeedback('loading', 'Generando PDF', 'Preparando documento de compra...');
     try {
       const { data, error } = await supabase
           .from('concrete_inventory_transaction_items')
@@ -626,9 +645,11 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       page.drawText('Página 1', { x: width - marginX - 30, y: 52, size: 7 });
 
       const pdfBytes = await pdfDoc.save();
-      downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), `compra-${purchase.id}.pdf`);
+      openPdfPreview(new Blob([pdfBytes], { type: 'application/pdf' }), `compra-${purchase.id}.pdf`);
+      setFeedbackOpen(false);
     } catch (err) {
       console.error(err);
+      setFeedbackOpen(false);
       showFeedback('error', 'PDF no disponible', 'No se pudo generar el PDF de la compra.');
     }
   };

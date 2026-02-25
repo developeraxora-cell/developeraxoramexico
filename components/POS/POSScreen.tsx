@@ -269,13 +269,9 @@ const POSScreen: React.FC<POSProps> = ({
     anchor.remove();
     URL.revokeObjectURL(url);
   };
-  const openPdfPreview = (blob: Blob, filename: string, targetWindow?: Window | null) => {
+  const openPdfPreview = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
-    let previewWindow = targetWindow && !targetWindow.closed ? targetWindow : null;
-
-    if (!previewWindow) {
-      previewWindow = window.open('', '_blank');
-    }
+    const previewWindow = window.open('', '_blank');
 
     if (previewWindow && !previewWindow.closed) {
       try {
@@ -345,7 +341,6 @@ const POSScreen: React.FC<POSProps> = ({
     customerAddress: string;
     cashierName: string;
     branchName: string;
-    previewWindow?: Window | null;
   }) => {
     const pdfDoc = await PDFDocument.create();
     const fontRegular = await pdfDoc.embedFont('Helvetica');
@@ -476,7 +471,7 @@ const POSScreen: React.FC<POSProps> = ({
 
     const pdfBytes = await pdfDoc.save();
     const filename = buildSalePdfFilename(input.branchName, input.saleId);
-    openPdfPreview(new Blob([pdfBytes], { type: 'application/pdf' }), filename, input.previewWindow);
+    openPdfPreview(new Blob([pdfBytes], { type: 'application/pdf' }), filename);
   };
   const handleDownloadSalePdf = async (sale: {
     id: string;
@@ -485,11 +480,7 @@ const POSScreen: React.FC<POSProps> = ({
     direccion_cliente: string | null;
     created_by: string | null;
   }) => {
-    const previewWindow = window.open('', '_blank');
-    if (previewWindow && !previewWindow.closed) {
-      previewWindow.document.write('<p style="font-family: sans-serif; padding: 16px;">Generando documento de venta...</p>');
-      previewWindow.document.close();
-    }
+    showFeedback('loading', 'Generando PDF', 'Preparando documento de venta...');
     try {
       const { data: itemsData, error: itemsError } = await supabase
         .from('inventory_transaction_items')
@@ -531,12 +522,10 @@ const POSScreen: React.FC<POSProps> = ({
         customerAddress: sale.direccion_cliente ?? '-',
         cashierName: sale.created_by || currentUser.name,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
-        previewWindow,
       });
+      setFeedbackOpen(false);
     } catch (err) {
-      if (previewWindow && !previewWindow.closed) {
-        previewWindow.close();
-      }
+      setFeedbackOpen(false);
       console.error('Error exporting sale PDF:', err);
       showFeedback('error', 'No se pudo exportar', 'No se pudo generar el PDF de la venta.');
     }
@@ -681,19 +670,11 @@ const POSScreen: React.FC<POSProps> = ({
       }
     }
 
-    let pdfPreviewWindow: Window | null = null;
-
     try {
       const saleCartSnapshot = cart.map((item) => ({ ...item }));
       const paymentMethodSnapshot = paymentMethod;
       const customerSnapshot = selectedCustomer;
       const totalSnapshot = cartTotal;
-
-      pdfPreviewWindow = window.open('', '_blank');
-      if (pdfPreviewWindow && !pdfPreviewWindow.closed) {
-        pdfPreviewWindow.document.write('<p style="font-family: sans-serif; padding: 16px;">Generando documento de venta...</p>');
-        pdfPreviewWindow.document.close();
-      }
 
       showFeedback('loading', 'Procesando pago', 'Registrando venta...');
       const transaction = await purchasesService.createSale({
@@ -740,13 +721,9 @@ const POSScreen: React.FC<POSProps> = ({
           customerAddress: customerSnapshot?.address ?? '-',
           cashierName: currentUser.name,
           branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
-          previewWindow: pdfPreviewWindow,
         });
       } catch (pdfError) {
         console.error('Error generating sale PDF:', pdfError);
-        if (pdfPreviewWindow && !pdfPreviewWindow.closed) {
-          pdfPreviewWindow.close();
-        }
       }
 
       await loadBranchCatalog();
@@ -755,9 +732,6 @@ const POSScreen: React.FC<POSProps> = ({
       setSelectedCustomerId('');
       setPaymentMethod('EFECTIVO');
     } catch (err: any) {
-      if (pdfPreviewWindow && !pdfPreviewWindow.closed) {
-        pdfPreviewWindow.close();
-      }
       console.error('Error checking out:', err);
       showFeedback('error', 'Error al procesar', err.message ?? 'No se pudo completar la venta.');
     }
