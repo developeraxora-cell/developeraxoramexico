@@ -418,7 +418,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Precio venta mayor</label>
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Precio Mayoreo</label>
               <input
                 type="number"
                 min={0}
@@ -429,7 +429,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Precio venta menor</label>
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Precio Menudeo</label>
               <input
                 type="number"
                 min={0}
