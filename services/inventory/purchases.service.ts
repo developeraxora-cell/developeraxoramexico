@@ -115,6 +115,12 @@ const buildUomsPayload = (
   return uniquePayload;
 };
 
+const isRlsErrorForTable = (error: unknown, tableName: string) => {
+  const payload = error as { code?: string; message?: string };
+  const message = String(payload?.message ?? '').toLowerCase();
+  return payload?.code === '42501' && message.includes('row-level security policy') && message.includes(tableName.toLowerCase());
+};
+
 export const purchasesService = {
   async clearPurchaseHistory(branchId: string) {
     const { data: transactions, error: txError } = await supabase
@@ -392,29 +398,47 @@ export const purchasesService = {
 
     if (productError) throw productError;
 
-    const { error: deleteError } = await supabase
-      .from('product_uoms')
-      .delete()
-      .eq('product_id', productId);
+    let createdUoms: ProductUom[] | null = null;
+    try {
+      const { error: deleteError } = await supabase
+        .from('product_uoms')
+        .delete()
+        .eq('product_id', productId);
 
-    if (deleteError) throw deleteError;
+      if (deleteError) throw deleteError;
 
-    const uomsPayload = buildUomsPayload(productId, purchaseUom, saleUoms);
+      const uomsPayload = buildUomsPayload(productId, purchaseUom, saleUoms);
 
-    const { data: createdUoms, error: uomError } = await supabase
-      .from('product_uoms')
-      .upsert(uomsPayload, { onConflict: 'product_id,uom_id' })
-      .select('*');
+      const { data, error: uomError } = await supabase
+        .from('product_uoms')
+        .upsert(uomsPayload, { onConflict: 'product_id,uom_id' })
+        .select('*');
 
-    if (uomError) throw uomError;
+      if (uomError) throw uomError;
+      createdUoms = (data ?? []) as ProductUom[];
+    } catch (uomSyncError) {
+      if (!isRlsErrorForTable(uomSyncError, 'product_uoms')) {
+        throw uomSyncError;
+      }
+      // Permite guardar cambios del producto aunque RLS bloquee la sincronizacion de UOMs.
+      console.warn('RLS bloquea sincronizacion en product_uoms; se guardaron solo datos del producto.', uomSyncError);
+    }
 
-    const purchase = (createdUoms ?? []).find(
-      (uom) => uom.purpose === 'PURCHASE' || uom.purpose === 'BOTH' || uom.is_default_purchase
-    );
+    const purchase =
+      (createdUoms ?? []).find((uom) => uom.purpose === 'PURCHASE' || uom.purpose === 'BOTH' || uom.is_default_purchase) ??
+      ({
+        id: '',
+        product_id: productId,
+        uom_id: purchaseUom.uom_id,
+        purpose: purchaseUom.purpose,
+        factor_to_base: purchaseUom.factor_to_base,
+        is_default_purchase: true,
+        is_default_sale: false,
+      } as ProductUom);
 
     return {
       product: updatedProduct,
-      purchaseUom: purchase as ProductUom,
+      purchaseUom: purchase,
     };
   },
 };

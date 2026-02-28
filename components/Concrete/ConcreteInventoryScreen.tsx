@@ -14,6 +14,7 @@ interface InventoryScreenProps {
 }
 
 const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, currentUser, branches }) => {
+  const PAGE_SIZE = 10;
   const [productsList, setProductsList] = useState<Product[]>([]);
   const [stockByProduct, setStockByProduct] = useState<Record<string, number>>({});
   const [productsSearch, setProductsSearch] = useState('');
@@ -33,6 +34,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [editUoms, setEditUoms] = useState<ProductUom[]>([]);
   const [isEditLoading, setIsEditLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const getErrorMessage = (err: unknown, fallback: string) => {
     if (!err) return fallback;
@@ -219,6 +221,26 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     });
   }, [productsList, productsSearch, statusFilter]);
 
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE)),
+    [filteredProducts.length, PAGE_SIZE]
+  );
+
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredProducts.slice(start, start + PAGE_SIZE);
+  }, [filteredProducts, currentPage, PAGE_SIZE]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [productsSearch, statusFilter, branchId]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       
@@ -309,15 +331,15 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
             <tbody className="divide-y divide-slate-100">
               {isLoading && (
                 <tr>
-                  <td colSpan={8} className="p-6 text-center text-slate-400 text-sm">Cargando productos...</td>
+                  <td colSpan={9} className="p-6 text-center text-slate-400 text-sm">Cargando productos...</td>
                 </tr>
               )}
               {!isLoading && branchId && filteredProducts.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-6 text-center text-slate-400 text-sm">No hay productos para mostrar.</td>
+                  <td colSpan={9} className="p-6 text-center text-slate-400 text-sm">No hay productos para mostrar.</td>
                 </tr>
               )}
-              {!isLoading && filteredProducts.map((product) => {
+              {!isLoading && paginatedProducts.map((product) => {
                 const isActive = product.is_active !== false;
                 const stock = Number((product as any).stock ?? stockByProduct[product.id] ?? 0);
                 const minStock = Number((product as any).min_stock ?? 0);
@@ -414,11 +436,39 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
         </div>
       </div>
 
+      {/* PAGINACIÓN */}
+      {branchId && filteredProducts.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-3">
+          <p className="text-xs font-bold text-slate-500">
+            Mostrando {paginatedProducts.length} de {filteredProducts.length} productos
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 rounded-lg border border-slate-200 text-[10px] font-black uppercase disabled:opacity-40"
+            >
+              Anterior
+            </button>
+            <span className="text-[11px] font-black text-slate-700">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 rounded-lg border border-slate-200 text-[10px] font-black uppercase disabled:opacity-40"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* FOOTER INFORMATIVO */}
       <div className="bg-slate-900 p-4 rounded-2xl flex flex-col md:flex-row justify-between items-center text-white/50 text-[10px] font-black uppercase tracking-[0.2em]">
         <div className="flex items-center gap-4">
            <span>Sucursal: <span className="text-orange-400">{selectedBranchId || '—'}</span></span>
-           <span>Productos en vista: <span className="text-white">{filteredProducts.length}</span></span>
+           <span>Productos en vista: <span className="text-white">{paginatedProducts.length}</span></span>
         </div>
         <div className="flex items-center gap-2 text-orange-400">
           Usuario: {currentUser.name}

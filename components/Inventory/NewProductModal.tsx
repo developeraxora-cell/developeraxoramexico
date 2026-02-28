@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, X } from 'lucide-react';
 import type { Category, Product, ProductUom, Uom } from '../../services/inventory/catalog.service';
 import { purchasesService } from '../../services/inventory/purchases.service';
 import { catalogService } from '../../services/inventory/catalog.service';
@@ -74,6 +75,13 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   const [showJsonAttrs, setShowJsonAttrs] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const showErrorModal = (message: string) => setError(message);
+  const [barcodeMode, setBarcodeMode] = useState<'with' | 'without'>('with');
+
+  const buildAutoBarcode = () =>
+    `MAT-${branchId || '0'}-${Date.now()}-${Math.floor(Math.random() * 1_000_000)
+      .toString()
+      .padStart(6, '0')}`;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -83,6 +91,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
 
     if ((mode === 'reactivate' || mode === 'edit') && existingProduct) {
       setBarcodeValue(existingProduct.barcode ?? barcode);
+      setBarcodeMode(existingProduct.barcode ? 'with' : 'without');
       setSku(existingProduct.sku ?? '');
       setName(existingProduct.name ?? '');
       setDescription(existingProduct.description ?? '');
@@ -136,6 +145,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     setSaleUoms([]);
     setAttrPairs([]);
     setShowJsonAttrs(false);
+    setBarcodeMode(barcode.trim() ? 'with' : 'without');
   }, [isOpen, barcode, existingProduct, existingUoms, mode]);
 
   useEffect(() => {
@@ -197,43 +207,38 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     setError(null);
 
     if (!branchId) {
-      setError('Seleccione una sucursal antes de crear el producto.');
-      return;
-    }
-
-    if (!barcodeValue.trim()) {
-      setError('El código de barras es obligatorio.');
+      showErrorModal('Seleccione una sucursal antes de crear el producto.');
       return;
     }
 
     if (!name.trim()) {
-      setError('El nombre es obligatorio.');
+      showErrorModal('El nombre es obligatorio.');
       return;
     }
     const retailPriceNumber = Number(retailPrice || 0);
     if (retailPriceNumber <= 0) {
-      setError('El precio de venta menor debe ser mayor a 0.');
+      showErrorModal('El precio de venta menor debe ser mayor a 0.');
       return;
     }
 
     if (!baseUomId) {
-      setError('Seleccione la unidad base.');
+      showErrorModal('Seleccione la unidad base.');
       return;
     }
 
     if (!purchaseUomId) {
-      setError('Seleccione la unidad de compra.');
+      showErrorModal('Seleccione la unidad de compra.');
       return;
     }
 
     const purchaseFactorNumber = Number(purchaseFactor || 0);
     if (purchaseFactorNumber <= 0) {
-      setError('El factor de la unidad de compra debe ser mayor a 0.');
+      showErrorModal('El factor de la unidad de compra debe ser mayor a 0.');
       return;
     }
 
     if (showJsonAttrs && parsedAttrs === undefined) {
-      setError('El JSON de atributos no es válido.');
+      showErrorModal('El JSON de atributos no es válido.');
       return;
     }
 
@@ -246,7 +251,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
         resolvedCategoryId = createdCategory.id;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'No se pudo crear la categoría.';
-        setError(message);
+        showErrorModal(message);
         setSaving(false);
         return;
       }
@@ -269,10 +274,12 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
 
     setSaving(true);
     try {
+      const manualBarcode = barcodeMode === 'without' ? '' : barcodeValue.trim();
+      const resolvedBarcode = manualBarcode || buildAutoBarcode();
       const payload = {
         branch_id: branchId,
         sku: resolvedSku,
-        barcode: barcodeValue.trim(),
+        barcode: resolvedBarcode,
         name: name.trim(),
         purchase_price: Number(purchasePrice || 0),
         wholesale_price: Number(wholesalePrice || 0),
@@ -318,7 +325,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo guardar el producto.';
-      setError(message);
+      showErrorModal(message);
     } finally {
       setSaving(false);
     }
@@ -348,12 +355,6 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
         </div>
 
         <form onSubmit={handleSave} className="p-8 space-y-6 overflow-y-auto">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-2xl px-4 py-3">
-              {error}
-            </div>
-          )}
-
           {!isCatalogReady && (
             <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold rounded-2xl px-4 py-3">
               {isCatalogLoading
@@ -363,16 +364,49 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {mode === 'create' && (
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Barcode</label>
+                <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setBarcodeMode('with')}
+                    className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
+                      barcodeMode === 'with' ? 'bg-slate-900 text-white' : 'bg-white text-slate-500'
+                    }`}
+                  >
+                    Con código
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBarcodeMode('without');
+                      setBarcodeValue('');
+                    }}
+                    className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
+                      barcodeMode === 'without' ? 'bg-slate-900 text-white' : 'bg-white text-slate-500'
+                    }`}
+                  >
+                    Sin código (auto)
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Barcode</label>
               <input
                 type="text"
                 value={barcodeValue}
-                readOnly={!allowBarcodeEdit || mode === 'reactivate'}
+                readOnly={barcodeMode === 'without' || !allowBarcodeEdit || mode === 'reactivate'}
                 onChange={(e) => setBarcodeValue(e.target.value)}
                 className={`w-full p-3 border-2 border-transparent rounded-xl outline-none font-mono text-xs ${
-                  allowBarcodeEdit && mode === 'create' ? 'bg-gray-50 focus:border-orange-500' : 'bg-gray-100'
+                  barcodeMode === 'without'
+                    ? 'bg-gray-100 text-gray-400'
+                    : allowBarcodeEdit && mode === 'create'
+                      ? 'bg-gray-50 focus:border-orange-500'
+                      : 'bg-gray-100'
                 }`}
+                placeholder={barcodeMode === 'without' ? 'Se generará automáticamente al guardar' : ''}
               />
             </div>
             <div className="space-y-1">
@@ -587,6 +621,42 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
           </div>
         </form>
       </div>
+
+      {error && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-3xl overflow-hidden bg-white shadow-2xl">
+            <div className="bg-red-600 p-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6" />
+                <div>
+                  <h4 className="text-base font-black uppercase tracking-widest">Error</h4>
+                  <p className="text-[11px] text-white/80">No se pudo completar la operación.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center"
+                aria-label="Cerrar error"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm font-semibold text-red-700 whitespace-pre-wrap break-words">{error}</p>
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="px-6 py-3 rounded-2xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest"
+                >
+                  Aceptar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
