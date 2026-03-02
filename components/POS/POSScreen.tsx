@@ -930,7 +930,13 @@ const POSScreen: React.FC<POSProps> = ({
         .listProductUoms(String(product.id))
         .then((uoms) => {
           const saleUoms = uoms.filter((uom) => uom.purpose === 'SALE' || uom.purpose === 'BOTH');
-          setSaleUomOptions(saleUoms);
+          if (saleUoms.length > 0) {
+            setSaleUomOptions(saleUoms);
+            return;
+          }
+          // Fallback operativo: si no hay UOM de venta, permite usar UOM de compra.
+          const purchaseUoms = uoms.filter((uom) => uom.purpose === 'PURCHASE');
+          setSaleUomOptions(purchaseUoms);
         })
         .catch(() => setSaleUomOptions([]));
       setPendingCatalogProduct(product);

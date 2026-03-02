@@ -121,6 +121,42 @@ const isRlsErrorForTable = (error: unknown, tableName: string) => {
   return payload?.code === '42501' && message.includes('row-level security policy') && message.includes(tableName.toLowerCase());
 };
 
+const cleanupUnusedProductUoms = async (productId: string, nextUomIds: string[]) => {
+  const nextIdsSet = new Set(nextUomIds.map((id) => String(id)));
+
+  const { data: existingRows, error: existingError } = await supabase
+    .from('product_uoms')
+    .select('id, uom_id')
+    .eq('product_id', productId);
+
+  if (existingError) throw existingError;
+
+  const removableUomRowIds = (existingRows ?? [])
+    .filter((row) => !nextIdsSet.has(String(row.uom_id)))
+    .map((row) => String(row.id));
+
+  if (removableUomRowIds.length === 0) return;
+
+  const { data: referencedRows, error: referenceError } = await supabase
+    .from('inventory_transaction_items')
+    .select('product_uom_id')
+    .in('product_uom_id', removableUomRowIds);
+
+  if (referenceError) throw referenceError;
+
+  const referencedSet = new Set((referencedRows ?? []).map((row) => String(row.product_uom_id)));
+  const deletableIds = removableUomRowIds.filter((id) => !referencedSet.has(id));
+
+  if (deletableIds.length === 0) return;
+
+  const { error: deleteError } = await supabase
+    .from('product_uoms')
+    .delete()
+    .in('id', deletableIds);
+
+  if (deleteError) throw deleteError;
+};
+
 export const purchasesService = {
   async clearPurchaseHistory(branchId: string) {
     const { data: transactions, error: txError } = await supabase
@@ -400,13 +436,6 @@ export const purchasesService = {
 
     let createdUoms: ProductUom[] | null = null;
     try {
-      const { error: deleteError } = await supabase
-        .from('product_uoms')
-        .delete()
-        .eq('product_id', productId);
-
-      if (deleteError) throw deleteError;
-
       const uomsPayload = buildUomsPayload(productId, purchaseUom, saleUoms);
 
       const { data, error: uomError } = await supabase
@@ -416,6 +445,9 @@ export const purchasesService = {
 
       if (uomError) throw uomError;
       createdUoms = (data ?? []) as ProductUom[];
+
+      // No eliminamos UOMs antiguas aqui para no romper FKs historicas
+      // (inventory_transaction_items.product_uom_id).
     } catch (uomSyncError) {
       if (!isRlsErrorForTable(uomSyncError, 'product_uoms')) {
         throw uomSyncError;
