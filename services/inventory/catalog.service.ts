@@ -80,6 +80,22 @@ export const catalogService = {
     return (data ?? []) as Uom[];
   },
 
+  async createUom(input: { code: string; name: string }) {
+    const { data, error } = await supabase
+      .from('uoms')
+      .insert([
+        {
+          code: input.code.trim().toUpperCase(),
+          name: input.name.trim(),
+        },
+      ])
+      .select('id, code, name')
+      .single();
+
+    if (error) throw error;
+    return data as Uom;
+  },
+
   async listCategories() {
     const { data, error } = await supabase
       .from('categories')

@@ -50,6 +50,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   onReactivated,
   onUpdated,
 }) => {
+  const [modalUoms, setModalUoms] = useState<Uom[]>(uoms);
   const [barcodeValue, setBarcodeValue] = useState(barcode);
   const [sku, setSku] = useState('');
   const [name, setName] = useState('');
@@ -73,10 +74,26 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     value,
   });
   const [showJsonAttrs, setShowJsonAttrs] = useState(false);
+  const [isNewUomModalOpen, setIsNewUomModalOpen] = useState(false);
+  const [newUomCode, setNewUomCode] = useState('');
+  const [newUomName, setNewUomName] = useState('');
+  const [isSavingUom, setIsSavingUom] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const showErrorModal = (message: string) => setError(message);
   const [barcodeMode, setBarcodeMode] = useState<'with' | 'without'>('with');
+
+  const getErrorMessage = (err: unknown, fallback: string) => {
+    if (!err) return fallback;
+    if (err instanceof Error && err.message) return err.message;
+    if (typeof err === 'object') {
+      const payload = err as { message?: string; hint?: string; details?: string };
+      if (payload.message && payload.hint) return `${payload.message}. ${payload.hint}`;
+      if (payload.message) return payload.message;
+      if (payload.details) return payload.details;
+    }
+    return fallback;
+  };
 
   const buildAutoBarcode = () =>
     `MAT-${branchId || '0'}-${Date.now()}-${Math.floor(Math.random() * 1_000_000)
@@ -84,10 +101,18 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       .padStart(6, '0')}`;
 
   useEffect(() => {
+    setModalUoms(uoms);
+  }, [uoms]);
+
+  useEffect(() => {
     if (!isOpen) return;
     setError(null);
     setSaving(false);
     setBarcodeValue(barcode);
+    setIsNewUomModalOpen(false);
+    setNewUomCode('');
+    setNewUomName('');
+    setIsSavingUom(false);
 
     if ((mode === 'reactivate' || mode === 'edit') && existingProduct) {
       setBarcodeValue(existingProduct.barcode ?? barcode);
@@ -250,7 +275,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
         const createdCategory = await catalogService.createCategory(newCategoryName.trim());
         resolvedCategoryId = createdCategory.id;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'No se pudo crear la categoría.';
+        const message = getErrorMessage(err, 'No se pudo crear la categoría.');
         showErrorModal(message);
         setSaving(false);
         return;
@@ -331,9 +356,38 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     }
   };
 
+  const handleCreateUom = async () => {
+    setError(null);
+    const code = newUomCode.trim().toUpperCase();
+    const nameValue = newUomName.trim();
+
+    if (!code || !nameValue) {
+      showErrorModal('Ingrese código y nombre de la unidad.');
+      return;
+    }
+
+    setIsSavingUom(true);
+    try {
+      const created = await catalogService.createUom({ code, name: nameValue });
+      setModalUoms((prev) => {
+        if (prev.some((u) => String(u.id) === String(created.id))) return prev;
+        return [...prev, created].sort((a, b) => a.name.localeCompare(b.name));
+      });
+      setBaseUomId(String(created.id));
+      setNewUomCode('');
+      setNewUomName('');
+      setIsNewUomModalOpen(false);
+    } catch (err) {
+      const message = getErrorMessage(err, 'No se pudo crear la unidad.');
+      showErrorModal(message);
+    } finally {
+      setIsSavingUom(false);
+    }
+  };
+
   if (!isOpen) return null;
 
-  const isCatalogReady = !isCatalogLoading && uoms.length > 0;
+  const isCatalogReady = !isCatalogLoading && modalUoms.length > 0;
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -461,15 +515,22 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 onChange={(e) => setBaseUomId(e.target.value)}
               >
                 <option value="">Seleccionar</option>
-                {uoms.map((uom) => (
+                {modalUoms.map((uom) => (
                   <option key={uom.id} value={uom.id}>
                     {uom.name} ({uom.code})
                   </option>
                 ))}
               </select>
-              {uoms.length === 0 && (
+              {modalUoms.length === 0 && (
                 <p className="text-[10px] text-slate-400">No hay unidades registradas.</p>
               )}
+              <button
+                type="button"
+                onClick={() => setIsNewUomModalOpen(true)}
+                className="text-[10px] font-black uppercase tracking-widest text-orange-600 hover:text-orange-700"
+              >
+                + Nueva unidad base
+              </button>
               <p className="text-[10px] text-slate-400">Unidad en la que se controla el stock (ej: KG).</p>
             </div>
             <div className="space-y-1 flex items-center gap-3">
@@ -500,13 +561,13 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                   onChange={(e) => setPurchaseUomId(e.target.value)}
                 >
                   <option value="">Seleccionar</option>
-                  {uoms.map((uom) => (
+                  {modalUoms.map((uom) => (
                     <option key={uom.id} value={uom.id}>
                       {uom.name} ({uom.code})
                     </option>
                   ))}
                 </select>
-                {uoms.length === 0 && (
+                {modalUoms.length === 0 && (
                   <p className="text-[10px] text-slate-400">Cargue UOMs antes de continuar.</p>
                 )}
               </div>
@@ -551,7 +612,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                       onChange={(e) => updateSaleUom(index, { uom_id: e.target.value })}
                     >
                       <option value="">Seleccionar</option>
-                      {uoms.map((uom) => (
+                      {modalUoms.map((uom) => (
                         <option key={uom.id} value={uom.id}>
                           {uom.name} ({uom.code})
                         </option>
@@ -651,6 +712,67 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                   className="px-6 py-3 rounded-2xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest"
                 >
                   Aceptar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isNewUomModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+              <div>
+                <h4 className="text-lg font-black uppercase tracking-tighter">Nueva unidad base</h4>
+                <p className="text-slate-400 text-xs">Disponible para Materiales.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsNewUomModalOpen(false)}
+                className="text-slate-300 hover:text-white text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Código</label>
+                <input
+                  type="text"
+                  placeholder="Ej: UND"
+                  className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-sm"
+                  value={newUomCode}
+                  onChange={(e) => setNewUomCode(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Nombre</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Unidad"
+                  className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-sm"
+                  value={newUomName}
+                  onChange={(e) => setNewUomName(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsNewUomModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateUom}
+                  disabled={isSavingUom}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                    isSavingUom ? 'bg-slate-200 text-slate-400' : 'bg-slate-900 text-white hover:bg-slate-800'
+                  }`}
+                >
+                  {isSavingUom ? 'Guardando...' : 'Guardar UOM'}
                 </button>
               </div>
             </div>
