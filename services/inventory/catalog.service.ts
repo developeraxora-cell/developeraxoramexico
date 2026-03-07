@@ -69,6 +69,48 @@ export interface BranchProductPrice {
   currency: string | null;
 }
 
+export interface StockAdjustmentInput {
+  branch_id: string;
+  product_id: string;
+  new_qty_base: number;
+  reason?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+}
+
+export interface StockAdjustmentResult {
+  previous_qty_base: number;
+  new_qty_base: number;
+  delta_qty_base: number;
+}
+
+export interface ProductMovementRow {
+  id: string;
+  movement_type: 'PURCHASE' | 'SALE' | 'ADJUSTMENT';
+  created_at: string;
+  reference: string | null;
+  notes: string | null;
+  created_by: string | null;
+  qty_base: number;
+  unit_price: number | null;
+  total_amount: number;
+  stock_before: number | null;
+  stock_after: number | null;
+}
+
+export interface ProductMovementSummary {
+  purchased_qty_base: number;
+  sold_qty_base: number;
+  purchased_total: number;
+  sold_total: number;
+  manual_delta_qty_base: number;
+}
+
+export interface ProductMovementHistory {
+  summary: ProductMovementSummary;
+  rows: ProductMovementRow[];
+}
+
 export const catalogService = {
   async listUoms() {
     const { data, error } = await supabase
@@ -370,5 +412,182 @@ export const catalogService = {
 
     if (error) throw error;
     return (data ?? []) as BranchProductPrice[];
+  },
+
+  async adjustProductStock(input: StockAdjustmentInput) {
+    if (!input.branch_id || !input.product_id) {
+      throw new Error('Sucursal o producto inválido para ajuste de stock.');
+    }
+    if (!Number.isFinite(input.new_qty_base) || input.new_qty_base < 0) {
+      throw new Error('El nuevo stock debe ser un número mayor o igual a 0.');
+    }
+
+    const { data, error } = await supabase.rpc('adjust_inventory_stock', {
+      p_branch_id: Number(input.branch_id),
+      p_product_id: Number(input.product_id),
+      p_new_qty_base: Number(input.new_qty_base),
+      p_reason: input.reason ?? null,
+      p_notes: input.notes ?? null,
+      p_created_by: input.created_by ?? null,
+    });
+
+    if (error) {
+      const code = String(error.code ?? '');
+      const message = String(error.message ?? '');
+      if (code === '42883') {
+        throw new Error('Falta la función de ajuste de stock en la base de datos. Ejecute el script SQL de migración.');
+      }
+      if (code === 'PGRST202' || code === 'PGRST204') {
+        throw new Error('No se encontró el endpoint RPC de ajuste de stock. Verifique que la función exista en Supabase.');
+      }
+      if (message.toLowerCase().includes('adjust_inventory_stock')) {
+        throw new Error('No se encontró la función adjust_inventory_stock en la base de datos.');
+      }
+      throw error;
+    }
+
+    const row = Array.isArray(data) ? data[0] : null;
+    if (!row) {
+      throw new Error('No se pudo confirmar el ajuste de stock.');
+    }
+
+    return {
+      previous_qty_base: Number(row.previous_qty_base ?? 0),
+      new_qty_base: Number(row.new_qty_base ?? 0),
+      delta_qty_base: Number(row.delta_qty_base ?? 0),
+    } as StockAdjustmentResult;
+  },
+
+  async getProductMovementHistory(branchId: string, productId: string, limit = 120) {
+    if (!branchId || !productId) {
+      return {
+        summary: {
+          purchased_qty_base: 0,
+          sold_qty_base: 0,
+          purchased_total: 0,
+          sold_total: 0,
+          manual_delta_qty_base: 0,
+        },
+        rows: [],
+      } as ProductMovementHistory;
+    }
+
+    const safeLimit = Math.max(10, Math.min(limit, 400));
+
+    const { data: txItems, error: txItemsError } = await supabase
+      .from('inventory_transaction_items')
+      .select(`
+        id,
+        qty,
+        qty_base,
+        unit_price,
+        inventory_transactions!inner (
+          id,
+          type,
+          branch_id,
+          reference,
+          notes,
+          created_by,
+          created_at
+        )
+      `)
+      .eq('product_id', productId)
+      .eq('inventory_transactions.branch_id', branchId)
+      .in('inventory_transactions.type', ['PURCHASE', 'SALE'])
+      .order('created_at', { ascending: false, foreignTable: 'inventory_transactions' })
+      .limit(safeLimit);
+
+    if (txItemsError) throw txItemsError;
+
+    const { data: adjustmentsData, error: adjustmentsError } = await supabase
+      .from('inventory_stock_adjustments')
+      .select('id, previous_qty_base, new_qty_base, delta_qty_base, reason, notes, created_by, created_at')
+      .eq('branch_id', branchId)
+      .eq('product_id', productId)
+      .order('created_at', { ascending: false })
+      .limit(safeLimit);
+
+    if (adjustmentsError) {
+      const code = String(adjustmentsError.code ?? '');
+      if (code === '42P01') {
+        throw new Error('Falta la tabla inventory_stock_adjustments en la base de datos. Ejecute el script SQL de migración.');
+      }
+      throw adjustmentsError;
+    }
+
+    const summary: ProductMovementSummary = {
+      purchased_qty_base: 0,
+      sold_qty_base: 0,
+      purchased_total: 0,
+      sold_total: 0,
+      manual_delta_qty_base: 0,
+    };
+
+    const transactionRows: ProductMovementRow[] = (txItems ?? []).map((row: any) => {
+      const transaction = row.inventory_transactions;
+      const txType = transaction?.type === 'SALE' ? 'SALE' : 'PURCHASE';
+      const qtyBase = Number(row.qty_base ?? 0);
+      const unitPrice = row.unit_price === null || row.unit_price === undefined
+        ? null
+        : Number(row.unit_price);
+      const totalAmount = Number(row.qty ?? 0) * Number(row.unit_price ?? 0);
+
+      if (txType === 'PURCHASE') {
+        summary.purchased_qty_base += qtyBase;
+        summary.purchased_total += totalAmount;
+      } else {
+        summary.sold_qty_base += qtyBase;
+        summary.sold_total += totalAmount;
+      }
+
+      return {
+        id: `TX-${row.id}`,
+        movement_type: txType,
+        created_at: String(transaction?.created_at ?? ''),
+        reference: (transaction?.reference as string | null) ?? null,
+        notes: (transaction?.notes as string | null) ?? null,
+        created_by: (transaction?.created_by as string | null) ?? null,
+        qty_base: txType === 'SALE' ? -qtyBase : qtyBase,
+        unit_price: unitPrice,
+        total_amount: totalAmount,
+        stock_before: null,
+        stock_after: null,
+      };
+    });
+
+    const adjustmentRows: ProductMovementRow[] = (adjustmentsData ?? []).map((row: any) => {
+      const delta = Number(row.delta_qty_base ?? 0);
+      summary.manual_delta_qty_base += delta;
+
+      const detailNotes = [
+        row.reason ? `Motivo: ${row.reason}` : null,
+        row.notes ? row.notes : null,
+      ]
+        .filter(Boolean)
+        .join(' | ');
+
+      return {
+        id: `ADJ-${row.id}`,
+        movement_type: 'ADJUSTMENT',
+        created_at: String(row.created_at ?? ''),
+        reference: 'Ajuste manual',
+        notes: detailNotes || null,
+        created_by: (row.created_by as string | null) ?? null,
+        qty_base: delta,
+        unit_price: null,
+        total_amount: 0,
+        stock_before: Number(row.previous_qty_base ?? 0),
+        stock_after: Number(row.new_qty_base ?? 0),
+      };
+    });
+
+    const rows = [...transactionRows, ...adjustmentRows]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, safeLimit);
+
+    return {
+      summary,
+      rows,
+    } as ProductMovementHistory;
   },
 };
