@@ -69,6 +69,17 @@ export interface CreateProductUomInput {
   is_default_sale?: boolean;
 }
 
+const buildTotalsByProduct = (
+  itemsPayload: Array<{
+    product_id: string;
+    qty_base: number;
+  }>
+) =>
+  itemsPayload.reduce<Record<string, number>>((acc, item) => {
+    acc[item.product_id] = (acc[item.product_id] ?? 0) + Number(item.qty_base);
+    return acc;
+  }, {});
+
 const buildUomsPayload = (
   productId: string,
   purchaseUom: CreateProductUomInput,
@@ -245,35 +256,34 @@ export const purchasesService = {
 
     if (itemsError) throw itemsError;
 
-    const totalsByProduct = itemsPayload.reduce<Record<string, number>>((acc, item) => {
-      acc[item.product_id] = (acc[item.product_id] ?? 0) + Number(item.qty_base);
-      return acc;
-    }, {});
+    const totalsByProduct = buildTotalsByProduct(itemsPayload);
+    const productIds = Object.keys(totalsByProduct);
 
     const nowIso = new Date().toISOString();
-
-    for (const [product_id, qty_base] of Object.entries(totalsByProduct)) {
-      const { data: existing, error: stockError } = await concreteDb
-      .from('concrete_inventory_stock')
-        .select('qty_base')
+    if (productIds.length > 0) {
+      const { data: existingRows, error: stockError } = await concreteDb
+        .from('concrete_inventory_stock')
+        .select('product_id, qty_base')
         .eq('branch_id', branch_id)
-        .eq('product_id', product_id)
-        .maybeSingle();
+        .in('product_id', productIds);
 
       if (stockError) throw stockError;
 
-      const nextQty = (existing?.qty_base ?? 0) + qty_base;
+      const existingMap = new Map<string, number>();
+      (existingRows ?? []).forEach((row) => {
+        existingMap.set(String(row.product_id), Number(row.qty_base ?? 0));
+      });
+
+      const stockPayload = productIds.map((product_id) => ({
+        branch_id,
+        product_id,
+        qty_base: (existingMap.get(product_id) ?? 0) + totalsByProduct[product_id],
+        updated_at: nowIso,
+      }));
 
       const { error: upsertError } = await concreteDb
-      .from('concrete_inventory_stock')
-        .upsert([
-          {
-            branch_id,
-            product_id,
-            qty_base: nextQty,
-            updated_at: nowIso,
-          },
-        ], {
+        .from('concrete_inventory_stock')
+        .upsert(stockPayload, {
           onConflict: 'branch_id,product_id',
         });
 
@@ -324,40 +334,41 @@ export const purchasesService = {
 
     if (itemsError) throw itemsError;
 
-    const totalsByProduct = itemsPayload.reduce<Record<string, number>>((acc, item) => {
-      acc[item.product_id] = (acc[item.product_id] ?? 0) + Number(item.qty_base);
-      return acc;
-    }, {});
+    const totalsByProduct = buildTotalsByProduct(itemsPayload);
+    const productIds = Object.keys(totalsByProduct);
 
     const nowIso = new Date().toISOString();
-
-    for (const [product_id, qty_base] of Object.entries(totalsByProduct)) {
-      const { data: existing, error: stockError } = await concreteDb
-      .from('concrete_inventory_stock')
-        .select('qty_base')
+    if (productIds.length > 0) {
+      const { data: existingRows, error: stockError } = await concreteDb
+        .from('concrete_inventory_stock')
+        .select('product_id, qty_base')
         .eq('branch_id', branch_id)
-        .eq('product_id', product_id)
-        .maybeSingle();
+        .in('product_id', productIds);
 
       if (stockError) throw stockError;
 
-      const currentQty = Number(existing?.qty_base ?? 0);
-      if (currentQty < qty_base) {
-        throw new Error('Stock insuficiente para completar la venta.');
-      }
+      const existingMap = new Map<string, number>();
+      (existingRows ?? []).forEach((row) => {
+        existingMap.set(String(row.product_id), Number(row.qty_base ?? 0));
+      });
 
-      const nextQty = currentQty - qty_base;
+      const stockPayload = productIds.map((product_id) => {
+        const currentQty = existingMap.get(product_id) ?? 0;
+        const qtyBase = totalsByProduct[product_id];
+        if (currentQty < qtyBase) {
+          throw new Error('Stock insuficiente para completar la venta.');
+        }
+        return {
+          branch_id,
+          product_id,
+          qty_base: currentQty - qtyBase,
+          updated_at: nowIso,
+        };
+      });
 
       const { error: upsertError } = await concreteDb
-      .from('concrete_inventory_stock')
-        .upsert([
-          {
-            branch_id,
-            product_id,
-            qty_base: nextQty,
-            updated_at: nowIso,
-          },
-        ], {
+        .from('concrete_inventory_stock')
+        .upsert(stockPayload, {
           onConflict: 'branch_id,product_id',
         });
 

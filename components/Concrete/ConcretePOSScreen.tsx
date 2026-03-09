@@ -10,6 +10,7 @@ import { purchasesService } from '../../services/concretera/purchases.service';
 import { supabase } from '../../services/supabaseClient';
 import { formatCurrency } from '../../services/currency';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
+import CustomerSearchSelect from '../common/CustomerSearchSelect';
 
 const EDAD_OPTIONS = ['28', '14', '7', '3'] as const;
 const REV_OPTIONS = ['12', '14', '16', '18'] as const;
@@ -34,6 +35,17 @@ interface POSProps {
   branches: Branch[];
   currentUser: User;
 }
+
+let watermarkPngBytesPromise: Promise<ArrayBuffer | null> | null = null;
+
+const getWatermarkPngBytes = async () => {
+  if (!watermarkPngBytesPromise) {
+    watermarkPngBytesPromise = fetch('/lopar-watermark.png')
+      .then((response) => (response.ok ? response.arrayBuffer() : null))
+      .catch(() => null);
+  }
+  return watermarkPngBytesPromise;
+};
 
 const POSScreen: React.FC<POSProps> = ({
   products,
@@ -145,6 +157,22 @@ const POSScreen: React.FC<POSProps> = ({
   const closeFeedback = () => {
     if (feedbackType === 'loading') return;
     setFeedbackOpen(false);
+  };
+
+  const applyLocalSaleStock = (items: CartItem[]) => {
+    const deltaByProduct = items.reduce<Record<string, number>>((acc, item) => {
+      acc[item.productId] = (acc[item.productId] ?? 0) + Number(item.qtyBase ?? 0);
+      return acc;
+    }, {});
+
+    setBranchStock((prev) => {
+      const next = { ...prev };
+      Object.entries(deltaByProduct).forEach(([productId, delta]) => {
+        const current = Number(next[productId] ?? 0);
+        next[productId] = Math.max(0, current - delta);
+      });
+      return next;
+    });
   };
   const parseConcreteMeta = (input?: {
     edad?: string | null;
@@ -406,8 +434,10 @@ const POSScreen: React.FC<POSProps> = ({
 
     let watermarkImage: any = null;
     try {
-      const logoBytes = await fetch('/lopar-watermark.png').then((r) => r.arrayBuffer());
-      watermarkImage = await pdfDoc.embedPng(logoBytes);
+      const logoBytes = await getWatermarkPngBytes();
+      if (logoBytes) {
+        watermarkImage = await pdfDoc.embedPng(logoBytes);
+      }
     } catch {
       watermarkImage = null;
     }
@@ -799,6 +829,25 @@ const POSScreen: React.FC<POSProps> = ({
       const customerSnapshot = selectedCustomer;
       const concreteMetaSnapshot = { ...concreteMeta };
       const totalSnapshot = cartTotal;
+      const pdfPayload = {
+        saleId: '',
+        createdAt: '',
+        items: saleCartSnapshot.map((item) => ({
+          name: item.name,
+          presentation: getPresentationLabel(item),
+          qty: Number(item.qty ?? 0),
+          unitPrice: Number(item.unitPrice ?? 0),
+          subtotal: Number(item.subtotal ?? 0),
+        })),
+        paymentMethod: paymentMethodSnapshot,
+        customerName: customerSnapshot?.name ?? 'PUBLICO GENERAL',
+        customerAddress: customerSnapshot?.address ?? '-',
+        cashierName: currentUser.name,
+        branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+        edad: concreteMetaSnapshot.edad,
+        rev: concreteMetaSnapshot.rev,
+        descarga: concreteMetaSnapshot.descarga,
+      };
 
       showFeedback('loading', 'Procesando pago', 'Registrando venta...');
       const transaction = await purchasesService.createSale({
@@ -831,36 +880,25 @@ const POSScreen: React.FC<POSProps> = ({
           inventory_transaction_id: transaction.id,
         });
       }
-      try {
-        await generateSalePdf({
-          saleId: String(transaction.id),
-          createdAt: transaction.created_at ?? new Date().toISOString(),
-          items: saleCartSnapshot.map((item) => ({
-            name: item.name,
-            presentation: getPresentationLabel(item),
-            qty: Number(item.qty ?? 0),
-            unitPrice: Number(item.unitPrice ?? 0),
-            subtotal: Number(item.subtotal ?? 0),
-          })),
-          paymentMethod: paymentMethodSnapshot,
-          customerName: customerSnapshot?.name ?? 'PUBLICO GENERAL',
-          customerAddress: customerSnapshot?.address ?? '-',
-          cashierName: currentUser.name,
-          branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
-          edad: concreteMetaSnapshot.edad,
-          rev: concreteMetaSnapshot.rev,
-          descarga: concreteMetaSnapshot.descarga,
-        });
-      } catch (pdfError) {
-        console.error('Error generating sale PDF:', pdfError);
-      }
-
-      await loadBranchCatalog();
+      applyLocalSaleStock(saleCartSnapshot);
       showFeedback('success', 'Pago exitoso', `Venta registrada (${paymentMethodSnapshot}).`);
       setCart([]);
       setSelectedCustomerId('');
       setPaymentMethod('EFECTIVO');
       setConcreteMeta(DEFAULT_CONCRETE_META);
+      if (paymentMethodSnapshot === 'CREDITO') {
+        void loadCreditCustomers();
+      }
+
+      window.setTimeout(() => {
+        void generateSalePdf({
+          ...pdfPayload,
+          saleId: String(transaction.id),
+          createdAt: transaction.created_at ?? new Date().toISOString(),
+        }).catch((pdfError) => {
+          console.error('Error generating sale PDF:', pdfError);
+        });
+      }, 0);
     } catch (err: any) {
       console.error('Error checking out:', err);
       showFeedback('error', 'Error al procesar', err.message ?? 'No se pudo completar la venta.');
@@ -1089,18 +1127,11 @@ const POSScreen: React.FC<POSProps> = ({
         <div className="bg-white p-4 rounded-xl border-2 border-slate-100 flex items-center gap-4 shadow-sm">
           <div className="flex-1">
             <label className="text-[10px] font-black text-gray-400 block mb-1 uppercase tracking-widest">Identificar Cliente (Opcional)</label>
-            <select
-              className="w-full bg-gray-50 border-none outline-none font-bold text-slate-700 p-2 rounded-lg cursor-pointer"
-              value={selectedCustomerId}
-              onChange={(e) => setSelectedCustomerId(e.target.value)}
-            >
-              <option value="">Público General (Mostrador)</option>
-              {creditCustomers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <CustomerSearchSelect
+              customers={creditCustomers}
+              selectedId={selectedCustomerId}
+              onSelect={setSelectedCustomerId}
+            />
           </div>
           <button
             onClick={() => {
