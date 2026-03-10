@@ -1,8 +1,16 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Ban } from 'lucide-react';
+import { Ban, History, PenLine } from 'lucide-react';
 import { Branch, User } from '../../types';
-import { catalogService, type Category, type Product, type ProductUom, type Uom } from '../../services/concretera/catalog.service';
+import {
+  catalogService,
+  type Category,
+  type Product,
+  type ProductMovementHistory,
+  type ProductMovementRow,
+  type ProductUom,
+  type Uom,
+} from '../../services/concretera/catalog.service';
 import { formatCurrency } from '../../services/currency';
 import ConfirmModal from '../common/ConfirmModal';
 import ConcreteNewProductModal from './ConcreteNewProductModal';
@@ -11,6 +19,11 @@ interface InventoryScreenProps {
   selectedBranchId: string;
   currentUser: User;
   branches: Branch[];
+}
+
+interface ManualStockModalState {
+  product: Product;
+  currentStock: number;
 }
 
 const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, currentUser, branches }) => {
@@ -35,6 +48,14 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
   const [editUoms, setEditUoms] = useState<ProductUom[]>([]);
   const [isEditLoading, setIsEditLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [manualStockModal, setManualStockModal] = useState<ManualStockModalState | null>(null);
+  const [manualStockValue, setManualStockValue] = useState('');
+  const [manualStockReason, setManualStockReason] = useState('');
+  const [manualStockNotes, setManualStockNotes] = useState('');
+  const [isSavingStock, setIsSavingStock] = useState(false);
+  const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
+  const [historyData, setHistoryData] = useState<ProductMovementHistory | null>(null);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   const getErrorMessage = (err: unknown, fallback: string) => {
     if (!err) return fallback;
@@ -60,6 +81,17 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       return acc;
     }, {});
   }, [uoms]);
+
+  const formatQty = useCallback((value: number) => {
+    return Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 3 });
+  }, []);
+
+  const formatDateTime = useCallback((value: string) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleString();
+  }, []);
 
   const loadProducts = useCallback(async () => {
     if (!branchId) {
@@ -203,6 +235,78 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleOpenManualStockModal = (product: Product) => {
+    const currentStock = Number(stockByProduct[product.id] ?? 0);
+    setManualStockModal({ product, currentStock });
+    setManualStockValue(String(currentStock));
+    setManualStockReason('');
+    setManualStockNotes('');
+  };
+
+  const closeManualStockModal = () => {
+    setManualStockModal(null);
+    setManualStockValue('');
+    setManualStockReason('');
+    setManualStockNotes('');
+  };
+
+  const handleSaveManualStock = async () => {
+    if (!manualStockModal || !branchId) return;
+
+    const nextQty = Number(manualStockValue);
+    if (!Number.isFinite(nextQty) || nextQty < 0) {
+      setError('El nuevo stock debe ser un número mayor o igual a 0.');
+      return;
+    }
+
+    if (nextQty === manualStockModal.currentStock) {
+      setError('No hay cambios en el stock para guardar.');
+      return;
+    }
+
+    setIsSavingStock(true);
+    setError(null);
+    try {
+      await catalogService.adjustProductStock({
+        branch_id: branchId,
+        product_id: manualStockModal.product.id,
+        new_qty_base: nextQty,
+        reason: manualStockReason.trim() || null,
+        notes: manualStockNotes.trim() || null,
+        created_by: currentUser.name || currentUser.username || null,
+      });
+      closeManualStockModal();
+      await loadProducts();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo guardar el ajuste de stock.';
+      setError(message);
+    } finally {
+      setIsSavingStock(false);
+    }
+  };
+
+  const handleOpenHistoryModal = async (product: Product) => {
+    if (!branchId) return;
+    setHistoryProduct(product);
+    setHistoryData(null);
+    setIsHistoryLoading(true);
+    setError(null);
+    try {
+      const movementHistory = await catalogService.getProductMovementHistory(branchId, product.id, 120);
+      setHistoryData(movementHistory);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo cargar el historial del producto.';
+      setError(message);
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  };
+
+  const closeHistoryModal = () => {
+    setHistoryProduct(null);
+    setHistoryData(null);
   };
 
   const filteredProducts = useMemo(() => {
@@ -406,6 +510,22 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                       >
                         Editar
                       </button>
+                      <button
+                        onClick={() => handleOpenManualStockModal(product)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                        title="Ajustar stock"
+                        disabled={isSaving || isEditLoading}
+                      >
+                        <PenLine className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleOpenHistoryModal(product)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                        title="Ver historial"
+                        disabled={isSaving || isEditLoading}
+                      >
+                        <History className="w-4 h-4" />
+                      </button>
                       {false && (
                         <button
                           onClick={() => handleOpenPriceModal(product)}
@@ -536,6 +656,223 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                   Guardar
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {manualStockModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-black uppercase tracking-tighter">Editar stock</h3>
+                <p className="text-slate-400 text-xs">{manualStockModal.product.name}</p>
+              </div>
+              <button
+                onClick={closeManualStockModal}
+                className="text-slate-400 hover:text-white text-2xl"
+                disabled={isSavingStock}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stock actual</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{formatQty(manualStockModal.currentStock)}</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Nuevo stock real</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.001"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                    value={manualStockValue}
+                    onChange={(e) => setManualStockValue(e.target.value)}
+                    disabled={isSavingStock}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Motivo (opcional)</label>
+                <input
+                  type="text"
+                  maxLength={100}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="Ej: Conteo físico"
+                  value={manualStockReason}
+                  onChange={(e) => setManualStockReason(e.target.value)}
+                  disabled={isSavingStock}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Observación (opcional)</label>
+                <textarea
+                  rows={3}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                  placeholder="Detalle del ajuste manual"
+                  value={manualStockNotes}
+                  onChange={(e) => setManualStockNotes(e.target.value)}
+                  disabled={isSavingStock}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={closeManualStockModal}
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
+                  disabled={isSavingStock}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveManualStock}
+                  className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
+                  disabled={isSavingStock}
+                >
+                  {isSavingStock ? 'Guardando...' : 'Guardar ajuste'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {historyProduct && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl overflow-hidden max-h-[92vh] flex flex-col">
+            <div className="bg-slate-900 px-6 py-5 text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black uppercase tracking-widest">Historial de producto</h3>
+                <p className="text-xs text-slate-300 uppercase tracking-wider mt-1">{historyProduct.name}</p>
+              </div>
+              <button onClick={closeHistoryModal} className="text-slate-400 hover:text-white text-2xl">
+                &times;
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4">
+              {isHistoryLoading && (
+                <div className="p-8 rounded-2xl bg-slate-50 border border-slate-200 text-sm text-slate-500 text-center">
+                  Cargando historial del producto...
+                </div>
+              )}
+
+              {!isHistoryLoading && historyData && (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Stock actual</p>
+                      <p className="text-lg font-black text-slate-900 mt-1">
+                        {formatQty(Number(stockByProduct[historyProduct.id] ?? 0))}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3">
+                      <p className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">Comprado</p>
+                      <p className="text-lg font-black text-emerald-700 mt-1">
+                        {formatQty(historyData.summary.purchased_qty_base)}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-red-100 bg-red-50 p-3">
+                      <p className="text-[10px] font-black uppercase text-red-600 tracking-wider">Vendido</p>
+                      <p className="text-lg font-black text-red-700 mt-1">
+                        {formatQty(historyData.summary.sold_qty_base)}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total compras</p>
+                      <p className="text-lg font-black text-slate-900 mt-1">
+                        {formatCurrency(historyData.summary.purchased_total)}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total ventas</p>
+                      <p className="text-lg font-black text-slate-900 mt-1">
+                        {formatCurrency(historyData.summary.sold_total)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                    <table className="w-full min-w-[950px] border-collapse">
+                      <thead>
+                        <tr className="bg-slate-900 text-white">
+                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-left">Fecha</th>
+                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-left">Tipo</th>
+                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-left">Referencia</th>
+                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Cantidad</th>
+                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Unitario</th>
+                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Total</th>
+                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Stock antes</th>
+                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Stock después</th>
+                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-left">Usuario</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {historyData.rows.length === 0 && (
+                          <tr>
+                            <td colSpan={9} className="p-5 text-sm text-center text-slate-400">
+                              Sin movimientos para este producto.
+                            </td>
+                          </tr>
+                        )}
+                        {historyData.rows.map((row: ProductMovementRow) => (
+                          <tr key={row.id} className="hover:bg-slate-50">
+                            <td className="p-3 text-xs font-semibold text-slate-600">{formatDateTime(row.created_at)}</td>
+                            <td className="p-3">
+                              <span
+                                className={`inline-flex rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-widest ${
+                                  row.movement_type === 'PURCHASE'
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : row.movement_type === 'SALE'
+                                      ? 'bg-red-100 text-red-700'
+                                      : 'bg-amber-100 text-amber-700'
+                                }`}
+                              >
+                                {row.movement_type === 'PURCHASE'
+                                  ? 'Compra'
+                                  : row.movement_type === 'SALE'
+                                    ? 'Venta'
+                                    : 'Ajuste'}
+                              </span>
+                            </td>
+                            <td className="p-3 text-xs font-semibold text-slate-700">
+                              {row.reference || '—'}
+                              {row.notes ? <p className="text-[10px] text-slate-400 mt-1">{row.notes}</p> : null}
+                            </td>
+                            <td
+                              className={`p-3 text-xs font-black text-right ${
+                                row.qty_base < 0 ? 'text-red-700' : 'text-emerald-700'
+                              }`}
+                            >
+                              {row.qty_base < 0 ? '-' : '+'}
+                              {formatQty(Math.abs(row.qty_base))}
+                            </td>
+                            <td className="p-3 text-xs font-black text-right text-slate-700">
+                              {row.unit_price === null ? '—' : formatCurrency(row.unit_price)}
+                            </td>
+                            <td className="p-3 text-xs font-black text-right text-slate-900">
+                              {row.total_amount > 0 ? formatCurrency(row.total_amount) : '—'}
+                            </td>
+                            <td className="p-3 text-xs text-right font-semibold text-slate-600">
+                              {row.stock_before === null ? '—' : formatQty(row.stock_before)}
+                            </td>
+                            <td className="p-3 text-xs text-right font-semibold text-slate-600">
+                              {row.stock_after === null ? '—' : formatQty(row.stock_after)}
+                            </td>
+                            <td className="p-3 text-xs font-semibold text-slate-600">{row.created_by || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
