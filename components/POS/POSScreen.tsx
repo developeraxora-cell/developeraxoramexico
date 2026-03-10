@@ -46,9 +46,10 @@ const POSScreen: React.FC<POSProps> = ({
   const [uomsById, setUomsById] = useState<Record<string, Uom>>({});
   const [saleUomsByProduct, setSaleUomsByProduct] = useState<Record<string, ProductUom[]>>({});
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [selectedCustomer, setSelectedCustomer] = useState<CreditCustomer | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'CREDITO'>('EFECTIVO');
   const [creditCustomers, setCreditCustomers] = useState<CreditCustomer[]>([]);
+  const [isCustomerSearchLoading, setIsCustomerSearchLoading] = useState(false);
   const [creditCheck, setCreditCheck] = useState<{
     allowedCredit: boolean;
     reason: 'VENCIDAS' | 'LIMITE' | null;
@@ -272,11 +273,6 @@ const POSScreen: React.FC<POSProps> = ({
     if (match?.dbId !== undefined) return String(match.dbId);
     return selectedBranchId || '';
   }, [branches, selectedBranchId]);
-
-  const selectedCustomer = useMemo(
-    () => creditCustomers.find((c) => c.id === selectedCustomerId),
-    [selectedCustomerId, creditCustomers]
-  );
   const selectedBranch = useMemo(
     () => branches.find((b) => b.id === selectedBranchId) ?? null,
     [branches, selectedBranchId]
@@ -561,22 +557,24 @@ const POSScreen: React.FC<POSProps> = ({
     }
   };
 
-  const loadCreditCustomers = useCallback(async () => {
-    if (!branchId) {
+  const handleCustomerSearch = useCallback(async (query: string) => {
+    const term = query.trim();
+    if (!branchId || term.length < 3) {
       setCreditCustomers([]);
+      setIsCustomerSearchLoading(false);
       return;
     }
+
+    setIsCustomerSearchLoading(true);
     try {
-      const list = await creditService.listCustomersByBranch(branchId);
-      setCreditCustomers(list.filter((c) => c.is_active));
+      const list = await creditService.searchCustomersByBranch(branchId, term);
+      setCreditCustomers(list);
     } catch {
       setCreditCustomers([]);
+    } finally {
+      setIsCustomerSearchLoading(false);
     }
   }, [branchId]);
-
-  useEffect(() => {
-    loadCreditCustomers();
-  }, [loadCreditCustomers]);
 
   const loadBranchCatalog = useCallback(async () => {
     if (!branchId) {
@@ -644,6 +642,14 @@ const POSScreen: React.FC<POSProps> = ({
   useEffect(() => {
     loadBranchCatalog();
   }, [loadBranchCatalog]);
+
+  useEffect(() => {
+    setSelectedCustomer(null);
+    setCreditCustomers([]);
+    setCreditCheck(null);
+    setPaymentMethod('EFECTIVO');
+    setIsCustomerSearchLoading(false);
+  }, [branchId]);
 
   const runCreditCheck = useCallback(async () => {
     if (!selectedCustomer) return null;
@@ -753,11 +759,10 @@ const POSScreen: React.FC<POSProps> = ({
       applyLocalSaleStock(saleCartSnapshot);
       showFeedback('success', 'Pago exitoso', `Venta registrada (${paymentMethodSnapshot}).`);
       setCart([]);
-      setSelectedCustomerId('');
+      setSelectedCustomer(null);
+      setCreditCustomers([]);
+      setCreditCheck(null);
       setPaymentMethod('EFECTIVO');
-      if (paymentMethodSnapshot === 'CREDITO') {
-        void loadCreditCustomers();
-      }
 
       window.setTimeout(() => {
         void generateSalePdf({
@@ -998,8 +1003,17 @@ const POSScreen: React.FC<POSProps> = ({
             <label className="text-[10px] font-black text-gray-400 block mb-1 uppercase tracking-widest">Identificar Cliente (Opcional)</label>
             <CustomerSearchSelect
               customers={creditCustomers}
-              selectedId={selectedCustomerId}
-              onSelect={setSelectedCustomerId}
+              selectedCustomer={selectedCustomer}
+              onSelect={(customer) => {
+                setSelectedCustomer((customer as CreditCustomer | null) ?? null);
+                setCreditCheck(null);
+                if (!customer) {
+                  setPaymentMethod('EFECTIVO');
+                  setCreditCustomers([]);
+                }
+              }}
+              onSearch={handleCustomerSearch}
+              isLoading={isCustomerSearchLoading}
             />
           </div>
           <button

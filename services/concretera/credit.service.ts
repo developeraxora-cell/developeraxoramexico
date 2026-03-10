@@ -111,6 +111,23 @@ export const creditService = {
     return (data ?? []) as CreditCustomer[];
   },
 
+  async searchCustomersByBranch(branchId: string, searchTerm: string) {
+    const term = searchTerm.trim();
+    if (!branchId || term.length < 3) return [] as CreditCustomer[];
+
+    const escaped = term.replace(/[%_,]/g, '');
+    const { data, error } = await concreteDb
+      .from('concrete_credit_customers')
+      .select('*')
+      .eq('branch_id', branchId)
+      .eq('is_active', true)
+      .or(`name.ilike.%${escaped}%,phone.ilike.%${escaped}%,address.ilike.%${escaped}%`)
+      .order('name');
+
+    if (error) throw error;
+    return (data ?? []) as CreditCustomer[];
+  },
+
   async listCustomersByBranchPaged(branchId: string, page: number, pageSize: number, searchTerm = '') {
     const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
     const safePageSize = Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : 5;
