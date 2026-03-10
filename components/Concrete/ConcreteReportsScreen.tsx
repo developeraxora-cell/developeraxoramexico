@@ -72,6 +72,26 @@ const formatQty = (value: number) =>
 
 const normalizeISO = (value: string) => (value.endsWith('Z') ? value : `${value}Z`);
 
+const toLocalDateInputValue = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseLocalDateInput = (value: string, endOfDay = false) => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(
+    year,
+    (month || 1) - 1,
+    day || 1,
+    endOfDay ? 23 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 999 : 0
+  );
+};
+
 const toDateKey = (value: Date, granularity: 'day' | 'week' | 'month') => {
   const year = value.getFullYear();
   const month = String(value.getMonth() + 1).padStart(2, '0');
@@ -144,32 +164,31 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
 
   useEffect(() => {
     const today = new Date();
-    const toISO = (value: Date) => value.toISOString().slice(0, 10);
 
     if (datePreset === 'today') {
-      setStartDate(toISO(today));
-      setEndDate(toISO(today));
+      setStartDate(toLocalDateInputValue(today));
+      setEndDate(toLocalDateInputValue(today));
       return;
     }
     if (datePreset === '7d') {
       const start = new Date();
       start.setDate(today.getDate() - 6);
-      setStartDate(toISO(start));
-      setEndDate(toISO(today));
+      setStartDate(toLocalDateInputValue(start));
+      setEndDate(toLocalDateInputValue(today));
       return;
     }
     if (datePreset === '30d') {
       const start = new Date();
       start.setDate(today.getDate() - 29);
-      setStartDate(toISO(start));
-      setEndDate(toISO(today));
+      setStartDate(toLocalDateInputValue(start));
+      setEndDate(toLocalDateInputValue(today));
       return;
     }
     if (datePreset === 'month') {
       const start = new Date(today.getFullYear(), today.getMonth(), 1);
       const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      setStartDate(toISO(start));
-      setEndDate(toISO(end));
+      setStartDate(toLocalDateInputValue(start));
+      setEndDate(toLocalDateInputValue(end));
     }
   }, [datePreset]);
 
@@ -216,8 +235,8 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
     setError(null);
 
     try {
-      const rangeStart = new Date(`${startDate}T00:00:00Z`);
-      const rangeEnd = new Date(`${endDate}T23:59:59Z`);
+      const rangeStart = parseLocalDateInput(startDate);
+      const rangeEnd = parseLocalDateInput(endDate, true);
 
       const { data: transactions, error: txError } = await supabase
         .from('concrete_inventory_transactions')
@@ -314,7 +333,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
         const seriesMap = new Map<string, number>();
         txs.forEach((tx) => {
           const dateValue = tx.type === 'PURCHASE' && tx.purchase_date
-            ? new Date(`${tx.purchase_date}T00:00:00Z`)
+            ? parseLocalDateInput(tx.purchase_date)
             : new Date(normalizeISO(tx.created_at));
           const key = toDateKey(dateValue, granularity);
           const nextTotal = (seriesMap.get(key) ?? 0) + (txTotals[tx.id] ?? 0);
@@ -362,7 +381,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
       const purchasesTableRows = purchaseTx.map((tx) => ({
         id: tx.id,
         date: tx.purchase_date
-          ? new Date(`${tx.purchase_date}T00:00:00Z`).toLocaleDateString()
+          ? parseLocalDateInput(tx.purchase_date).toLocaleDateString()
           : new Date(normalizeISO(tx.created_at)).toLocaleDateString(),
         supplier: tx.concrete_suppliers?.name ?? '—',
         items: txItemsCount[tx.id] ?? 0,
