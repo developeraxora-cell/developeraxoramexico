@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Eye, FileDown } from 'lucide-react';
+import { BadgeDollarSign, Eye, FileDown, RotateCcw } from 'lucide-react';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, Product as PosProduct, CartItem, ProductConversion, User } from '../../types';
 import { UNITS } from '../../constants';
@@ -8,7 +8,8 @@ import { creditService, type CreditCustomer, type CreditNoteWithStatus, type Cre
 import { catalogService, type Product as CatalogProduct, type ProductUom, type Uom } from '../../services/concretera/catalog.service';
 import { purchasesService } from '../../services/concretera/purchases.service';
 import { supabase } from '../../services/supabaseClient';
-import { formatCurrency } from '../../services/currency';
+import { formatCurrency, formatNumber } from '../../services/currency';
+import { logConcreteraAudit } from '../../services/audit/audit.service';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 import CustomerSearchSelect from '../common/CustomerSearchSelect';
 
@@ -36,7 +37,15 @@ interface POSProps {
   currentUser: User;
 }
 
+interface SpecialPriceModalState {
+  itemId: string;
+  itemName: string;
+  currentPrice: number;
+  currentNote: string;
+}
+
 let watermarkPngBytesPromise: Promise<ArrayBuffer | null> | null = null;
+const SALES_HISTORY_PAGE_SIZE = 5;
 
 const getWatermarkPngBytes = async () => {
   if (!watermarkPngBytesPromise) {
@@ -90,6 +99,8 @@ const POSScreen: React.FC<POSProps> = ({
   const [pendingPrice, setPendingPrice] = useState(0);
   const [pendingStockValue, setPendingStockValue] = useState<number | undefined>(undefined);
   const [saleUomOptions, setSaleUomOptions] = useState<ProductUom[]>([]);
+  const [saleUomObservation, setSaleUomObservation] = useState('');
+  const [saleUomObservationError, setSaleUomObservationError] = useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('loading');
   const [feedbackTitle, setFeedbackTitle] = useState('');
@@ -110,6 +121,10 @@ const POSScreen: React.FC<POSProps> = ({
     total_amount: number;
   }>>([]);
   const [isSalesHistoryLoading, setIsSalesHistoryLoading] = useState(false);
+  const [salesHistoryPage, setSalesHistoryPage] = useState(1);
+  const [salesHistoryTotal, setSalesHistoryTotal] = useState(0);
+  const [salesHistoryDateFrom, setSalesHistoryDateFrom] = useState('');
+  const [salesHistoryDateTo, setSalesHistoryDateTo] = useState('');
   const [isSaleDetailOpen, setIsSaleDetailOpen] = useState(false);
   const [saleDetail, setSaleDetail] = useState<{
     id: string;
@@ -129,6 +144,10 @@ const POSScreen: React.FC<POSProps> = ({
     custom_label: string | null;
   }>>([]);
   const [isSaleDetailLoading, setIsSaleDetailLoading] = useState(false);
+  const [specialPriceModal, setSpecialPriceModal] = useState<SpecialPriceModalState | null>(null);
+  const [specialPriceValue, setSpecialPriceValue] = useState('');
+  const [specialPriceNote, setSpecialPriceNote] = useState('');
+  const [specialPriceError, setSpecialPriceError] = useState<string | null>(null);
 
   const activeBranchProducts = useMemo(
     () => branchProducts.filter((product) => product.is_active !== false),
@@ -175,6 +194,42 @@ const POSScreen: React.FC<POSProps> = ({
       return next;
     });
   };
+
+  const resolveProductForCart = useCallback((productId: string) => {
+    return branchProducts.find((p) => String(p.id) === String(productId))
+      ?? (products ?? []).find((p) => String(p.id) === String(productId));
+  }, [branchProducts, products]);
+
+  const resolveBasePriceForSaleType = useCallback((product: any, saleType: 'MAYOR' | 'MENOR') => {
+    return Number(
+      saleType === 'MAYOR'
+        ? product?.wholesale_price ?? product?.pricePerBaseUnit ?? 0
+        : product?.retail_price ?? product?.precio ?? product?.pricePerBaseUnit ?? 0
+    );
+  }, []);
+
+  const resolveStandardUnitPrice = useCallback((
+    productId: string,
+    saleType: 'MAYOR' | 'MENOR' | undefined,
+    factor: number,
+    fallbackUnitPrice: number
+  ) => {
+    const product = resolveProductForCart(productId);
+    if (!product) return Number(fallbackUnitPrice ?? 0);
+    const safeFactor = Number(factor || 1);
+    return resolveBasePriceForSaleType(product, saleType ?? 'MENOR') * safeFactor;
+  }, [resolveBasePriceForSaleType, resolveProductForCart]);
+
+  const branchId = useMemo(() => {
+    const match = branches.find((b) => b.id === selectedBranchId);
+    if (match?.dbId !== undefined) return String(match.dbId);
+    return selectedBranchId || '';
+  }, [branches, selectedBranchId]);
+  const selectedBranch = useMemo(
+    () => branches.find((b) => b.id === selectedBranchId) ?? null,
+    [branches, selectedBranchId]
+  );
+  const salesHistoryTotalPages = Math.max(1, Math.ceil(salesHistoryTotal / SALES_HISTORY_PAGE_SIZE));
   const parseConcreteMeta = (input?: {
     edad?: string | null;
     rev?: string | null;
@@ -214,17 +269,45 @@ const POSScreen: React.FC<POSProps> = ({
     }
   };
 
-  const loadSalesHistory = async () => {
+  const loadSalesHistory = useCallback(async () => {
     if (!branchId) return;
     setIsSalesHistoryLoading(true);
     try {
-      const { data: transactions, error: txError } = await supabase
+      let countQuery = supabase
+        .from('concrete_inventory_transactions')
+        .select('id', { count: 'exact', head: true })
+        .eq('branch_id', branchId)
+        .eq('type', 'SALE');
+
+      if (salesHistoryDateFrom) {
+        countQuery = countQuery.gte('created_at', `${salesHistoryDateFrom}T00:00:00`);
+      }
+      if (salesHistoryDateTo) {
+        countQuery = countQuery.lte('created_at', `${salesHistoryDateTo}T23:59:59.999`);
+      }
+
+      const { count, error: countError } = await countQuery;
+      if (countError) throw countError;
+
+      const from = (salesHistoryPage - 1) * SALES_HISTORY_PAGE_SIZE;
+      const to = from + SALES_HISTORY_PAGE_SIZE - 1;
+
+      let transactionsQuery = supabase
         .from('concrete_inventory_transactions')
         .select('id, reference, notes, direccion_cliente, edad, rev, descarga, created_at, nombre_cliente, created_by')
         .eq('branch_id', branchId)
-        .eq('type', 'SALE')
+        .eq('type', 'SALE');
+
+      if (salesHistoryDateFrom) {
+        transactionsQuery = transactionsQuery.gte('created_at', `${salesHistoryDateFrom}T00:00:00`);
+      }
+      if (salesHistoryDateTo) {
+        transactionsQuery = transactionsQuery.lte('created_at', `${salesHistoryDateTo}T23:59:59.999`);
+      }
+
+      const { data: transactions, error: txError } = await transactionsQuery
         .order('created_at', { ascending: false })
-        .limit(100);
+        .range(from, to);
 
       if (txError) throw txError;
 
@@ -264,12 +347,14 @@ const POSScreen: React.FC<POSProps> = ({
       }));
 
       setSalesHistory(formatted);
+      setSalesHistoryTotal(Number(count ?? 0));
     } catch {
       setSalesHistory([]);
+      setSalesHistoryTotal(0);
     } finally {
       setIsSalesHistoryLoading(false);
     }
-  };
+  }, [branchId, salesHistoryDateFrom, salesHistoryDateTo, salesHistoryPage]);
 
   const openSaleDetail = async (sale: { id: string; created_at: string; nombre_cliente: string | null }) => {
     setSaleDetail(sale);
@@ -328,16 +413,76 @@ const POSScreen: React.FC<POSProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (!isSalesHistoryOpen) return;
+    void loadSalesHistory();
+  }, [isSalesHistoryOpen, loadSalesHistory]);
 
-  const branchId = useMemo(() => {
-    const match = branches.find((b) => b.id === selectedBranchId);
-    if (match?.dbId !== undefined) return String(match.dbId);
-    return selectedBranchId || '';
-  }, [branches, selectedBranchId]);
-  const selectedBranch = useMemo(
-    () => branches.find((b) => b.id === selectedBranchId) ?? null,
-    [branches, selectedBranchId]
-  );
+  const openSpecialPriceModal = (item: CartItem) => {
+    setSpecialPriceModal({
+      itemId: item.id,
+      itemName: item.name,
+      currentPrice: Number(item.specialUnitPrice ?? item.unitPrice ?? 0),
+      currentNote: item.specialPriceNote ?? '',
+    });
+    setSpecialPriceValue(String(Number(item.specialUnitPrice ?? item.unitPrice ?? 0)));
+    setSpecialPriceNote(item.specialPriceNote ?? '');
+    setSpecialPriceError(null);
+  };
+
+  const closeSpecialPriceModal = () => {
+    setSpecialPriceModal(null);
+    setSpecialPriceValue('');
+    setSpecialPriceNote('');
+    setSpecialPriceError(null);
+  };
+
+  const handleSaveSpecialPrice = () => {
+    if (!specialPriceModal) return;
+    const parsedPrice = Number(String(specialPriceValue).replace(/,/g, '').trim());
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+      setSpecialPriceError('Ingrese un precio especial válido.');
+      return;
+    }
+    const note = specialPriceNote.trim();
+    if (!note) {
+      setSpecialPriceError('La observación es obligatoria para usar precio especial.');
+      return;
+    }
+
+    setCart((prev) => prev.map((item) => (
+      item.id === specialPriceModal.itemId
+        ? {
+            ...item,
+            specialUnitPrice: parsedPrice,
+            specialPriceNote: note,
+            unitPrice: parsedPrice,
+            subtotal: Number(item.qty ?? 0) * parsedPrice,
+          }
+        : item
+    )));
+
+    closeSpecialPriceModal();
+  };
+
+  const clearSpecialPrice = (itemId: string) => {
+    setCart((prev) => prev.map((item) => {
+      if (item.id !== itemId) return item;
+      const standardUnitPrice = resolveStandardUnitPrice(
+        item.productId,
+        item.saleType,
+        Number(item.factorUsed ?? 1),
+        Number(item.unitPrice ?? 0)
+      );
+      return {
+        ...item,
+        specialUnitPrice: null,
+        specialPriceNote: null,
+        unitPrice: standardUnitPrice,
+        subtotal: Number(item.qty ?? 0) * standardUnitPrice,
+      };
+    }));
+  };
 
   const cartTotal = cart.reduce((acc, curr) => acc + curr.subtotal, 0);
   const formatLocalDateTime = (value: string) => {
@@ -835,6 +980,12 @@ const POSScreen: React.FC<POSProps> = ({
       const customerSnapshot = selectedCustomer;
       const concreteMetaSnapshot = { ...concreteMeta };
       const totalSnapshot = cartTotal;
+      const specialPriceItems = saleCartSnapshot.filter((item) => Number(item.specialUnitPrice ?? 0) > 0);
+      const specialPriceJustification = specialPriceItems.length > 0
+        ? specialPriceItems
+            .map((item) => `${item.name}: ${formatCurrency(Number(item.unitPrice ?? 0))} - ${item.specialPriceNote?.trim() || 'Sin observación'}`)
+            .join(' | ')
+        : null;
       const pdfPayload = {
         saleId: '',
         createdAt: '',
@@ -875,6 +1026,47 @@ const POSScreen: React.FC<POSProps> = ({
           unit_price: item.unitPrice,
           barcode_scanned: item.barcodeScanned ?? null,
         })),
+      });
+
+      logConcreteraAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'VENTA',
+        entity_type: 'venta',
+        entity_id: String(transaction.id),
+        description: `Venta registrada${customerSnapshot?.name ? ` para ${customerSnapshot.name}` : ''}${specialPriceItems.length > 0 ? ' con precio especial' : ''}`,
+        justification: specialPriceJustification,
+        new_data: {
+          branch_id: branchId,
+          payment_method: paymentMethodSnapshot,
+          customer_id: customerSnapshot?.id ?? null,
+          customer_name: customerSnapshot?.name ?? null,
+          customer_address: customerSnapshot?.address ?? null,
+          total_amount: totalSnapshot,
+          edad: concreteMetaSnapshot.edad,
+          rev: concreteMetaSnapshot.rev,
+          descarga: concreteMetaSnapshot.descarga,
+          special_price_items: specialPriceItems.map((item) => ({
+            product_id: item.productId,
+            product_name: item.name,
+            qty: item.qty,
+            unit_price: item.unitPrice,
+            note: item.specialPriceNote ?? null,
+          })),
+          items: saleCartSnapshot.map((item) => ({
+            product_id: item.productId,
+            product_name: item.name,
+            qty: item.qty,
+            qty_base: item.qtyBase,
+            factor_used: item.factorUsed,
+            unit_price: item.unitPrice,
+            product_uom_id: item.productUomId ?? null,
+            special_unit_price: item.specialUnitPrice ?? null,
+            special_price_note: item.specialPriceNote ?? null,
+          })),
+        },
       });
 
       if (paymentMethodSnapshot === 'CREDITO' && customerSnapshot) {
@@ -947,6 +1139,8 @@ const POSScreen: React.FC<POSProps> = ({
       productUomId: productUomId ?? product.productUomId,
       factorUsed: factorToBase,
       saleType: saleTypeResolved,
+      specialUnitPrice: null,
+      specialPriceNote: null,
     };
     setCart((prev) => [...prev, newItem]);
   };
@@ -960,6 +1154,10 @@ const POSScreen: React.FC<POSProps> = ({
         const newQty = updates.qty !== undefined ? updates.qty : item.qty;
         const newUnitId = updates.unitId !== undefined ? updates.unitId : item.unitId;
         const nextProductUomId = updates.productUomId ?? item.productUomId;
+        const shouldResetSpecialPrice =
+          updates.productUomId !== undefined ||
+          updates.factorUsed !== undefined ||
+          updates.unitId !== undefined;
         let factorUsed = updates.factorUsed ?? item.factorUsed ?? 1;
         if (updates.productUomId && saleUomsByProduct[item.productId]) {
           const match = saleUomsByProduct[item.productId].find((u) => String(u.id) === String(updates.productUomId));
@@ -980,14 +1178,25 @@ const POSScreen: React.FC<POSProps> = ({
         }
 
         const saleTypeResolved = item.saleType ?? 'MENOR';
-        const basePrice = product
-          ? Number(
-              saleTypeResolved === 'MAYOR'
-                ? (product as any).wholesale_price ?? (product as any).pricePerBaseUnit ?? 0
-                : (product as any).retail_price ?? (product as any).precio ?? (product as any).pricePerBaseUnit ?? 0
-            )
-          : (item.factorUsed ? item.unitPrice / item.factorUsed : item.unitPrice);
-        const unitPrice = basePrice * effectiveFactor;
+        const standardUnitPrice = resolveStandardUnitPrice(
+          item.productId,
+          saleTypeResolved,
+          effectiveFactor,
+          Number(item.unitPrice ?? 0)
+        );
+        const nextSpecialUnitPrice =
+          updates.specialUnitPrice !== undefined
+            ? updates.specialUnitPrice
+            : shouldResetSpecialPrice
+              ? null
+              : (item.specialUnitPrice ?? null);
+        const nextSpecialPriceNote =
+          updates.specialPriceNote !== undefined
+            ? updates.specialPriceNote
+            : shouldResetSpecialPrice
+              ? null
+              : (item.specialPriceNote ?? null);
+        const unitPrice = Number(nextSpecialUnitPrice ?? standardUnitPrice);
         return {
           ...item,
           qty: newQty,
@@ -999,6 +1208,8 @@ const POSScreen: React.FC<POSProps> = ({
           subtotal: newQty * unitPrice,
           customLabel: nextCustomLabel,
           customFactor: nextCustomFactor,
+          specialUnitPrice: nextSpecialUnitPrice,
+          specialPriceNote: nextSpecialPriceNote,
         };
       })
     );
@@ -1012,17 +1223,15 @@ const POSScreen: React.FC<POSProps> = ({
         const saleUoms = saleUomsByProduct[item.productId] ?? [];
         const match = saleUoms.find((uom) => String(uom.id) === String(nextUomId));
         const factor = match ? Number(match.factor_to_base) : 1;
-        const product = branchProducts.find((p) => String(p.id) === item.productId);
         const saleTypeResolved = item.saleType ?? 'MENOR';
-        const basePrice = product
-          ? Number(
-              saleTypeResolved === 'MAYOR'
-                ? (product as any).wholesale_price ?? 0
-                : (product as any).retail_price ?? (product as any).precio ?? 0
-            )
-          : (item.factorUsed ? item.unitPrice / item.factorUsed : item.unitPrice);
-        const unitPrice = basePrice * factor;
+        const unitPrice = resolveStandardUnitPrice(
+          item.productId,
+          saleTypeResolved,
+          factor,
+          Number(item.unitPrice ?? 0)
+        );
         const qtyBase = item.qty * factor;
+        const product = branchProducts.find((p) => String(p.id) === item.productId);
         const hasStock = Object.prototype.hasOwnProperty.call(branchStock, item.productId);
         const availableStock =
           product?.stocks?.find((s) => s.branchId === branchId)?.qty ?? (hasStock ? branchStock[item.productId] : undefined);
@@ -1040,6 +1249,8 @@ const POSScreen: React.FC<POSProps> = ({
           saleType: 'MENOR',
           customLabel: undefined,
           customFactor: undefined,
+          specialUnitPrice: null,
+          specialPriceNote: null,
         };
       })
     );
@@ -1099,6 +1310,8 @@ const POSScreen: React.FC<POSProps> = ({
     }
     const defaultSaleUom = defaultSaleUomByProduct[String(product.id)];
     if (!defaultSaleUom) {
+      setSaleUomObservation('');
+      setSaleUomObservationError(null);
       catalogService
         .listProductUoms(String(product.id))
         .then((uoms) => {
@@ -1149,8 +1362,8 @@ const POSScreen: React.FC<POSProps> = ({
           </div>
           <button
             onClick={() => {
+              setSalesHistoryPage(1);
               setIsSalesHistoryOpen(true);
-              loadSalesHistory();
             }}
             className="px-4 py-3 rounded-xl bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest hover:bg-slate-200"
           >
@@ -1244,7 +1457,7 @@ const POSScreen: React.FC<POSProps> = ({
                     <p className="text-xs text-gray-400 font-mono">{product.sku || product.barcode || '—'}</p>
                   </div>
                   <div className="mt-4 flex justify-between items-end">
-                    <span className="text-xl font-black text-slate-900">Stock {stockQty.toLocaleString()}</span>
+                    <span className="text-xl font-black text-slate-900">Stock {formatNumber(Number(stockQty))}</span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-500">
                       Base: {product.base_uom_id}
                     </span>
@@ -1278,11 +1491,19 @@ const POSScreen: React.FC<POSProps> = ({
                 ×
               </button>
               <p className="font-bold text-sm text-slate-800 mb-2">{item.name}</p>
-              {item.customLabel && (
-                <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-2">
-                  {item.customLabel}
-                </p>
-              )}
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                {item.customLabel && (
+                  <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">
+                    {item.customLabel}
+                  </p>
+                )}
+                {item.specialUnitPrice !== null && item.specialUnitPrice !== undefined && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-amber-700">
+                    <BadgeDollarSign className="w-3 h-3" />
+                    Precio especial
+                  </span>
+                )}
+              </div>
               <div className="flex gap-2">
                 <input
                   type="number"
@@ -1345,6 +1566,32 @@ const POSScreen: React.FC<POSProps> = ({
                   );
                 })()}
                 <span className="font-black text-slate-900 ml-auto flex items-center">{formatCurrency(item.subtotal)}</span>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-[10px] font-bold text-slate-500">
+                  Unitario: <span className="text-slate-800">{formatCurrency(Number(item.unitPrice ?? 0))}</span>
+                  {item.specialPriceNote && (
+                    <span className="ml-2 text-amber-700">• {item.specialPriceNote}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => openSpecialPriceModal(item)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-200"
+                  >
+                    <BadgeDollarSign className="w-3.5 h-3.5" />
+                    Precio especial
+                  </button>
+                  {item.specialUnitPrice !== null && item.specialUnitPrice !== undefined && (
+                    <button
+                      onClick={() => clearSpecialPrice(item.id)}
+                      className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-700 hover:bg-amber-100"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Restablecer
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -1581,6 +1828,8 @@ const POSScreen: React.FC<POSProps> = ({
                 onClick={() => {
                   setIsSaleUomSelectOpen(false);
                   setPendingCatalogProduct(null);
+                  setSaleUomObservation('');
+                  setSaleUomObservationError(null);
                 }}
                 className="text-2xl text-slate-300"
               >
@@ -1591,21 +1840,61 @@ const POSScreen: React.FC<POSProps> = ({
               {saleUomOptions.length === 0 && (
                 <div className="text-sm text-slate-500">No hay UOMs de venta configuradas.</div>
               )}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Observación *</label>
+                <textarea
+                  rows={3}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                  placeholder="Explique por qué se actualizará la unidad de venta"
+                  value={saleUomObservation}
+                  onChange={(e) => {
+                    setSaleUomObservation(e.target.value);
+                    if (saleUomObservationError) setSaleUomObservationError(null);
+                  }}
+                />
+                {saleUomObservationError && (
+                  <p className="text-xs font-bold text-red-600">{saleUomObservationError}</p>
+                )}
+              </div>
               {saleUomOptions.map((uom) => (
                 <button
                   key={uom.id}
                   onClick={async () => {
                     if (!pendingCatalogProduct) return;
+                    const justification = saleUomObservation.trim();
+                    if (!justification) {
+                      setSaleUomObservationError('La observación es obligatoria para actualizar la unidad de venta.');
+                      return;
+                    }
                     try {
                       const updated = await catalogService.setDefaultSaleUom(
                         String(pendingCatalogProduct.id),
                         uom.id
                       );
+                      logConcreteraAudit({
+                        branch_id: branchId,
+                        branch_name: selectedBranch?.name ?? null,
+                        user_id: currentUser.id,
+                        user_name: currentUser.name,
+                        action_type: 'ACTUALIZAR',
+                        entity_type: 'producto',
+                        entity_id: String(pendingCatalogProduct.id),
+                        description: `Unidad de venta actualizada: ${pendingCatalogProduct.name}`,
+                        justification,
+                        new_data: {
+                          product_uom_id: uom.id,
+                          uom_name: uom.uom?.name ?? null,
+                          uom_code: uom.uom?.code ?? null,
+                          notes: justification,
+                        },
+                      });
                       setDefaultSaleUomByProduct((prev) => ({
                         ...prev,
                         [String(updated.product_id)]: updated,
                       }));
                       setIsSaleUomSelectOpen(false);
+                      setSaleUomObservation('');
+                      setSaleUomObservationError(null);
                       const product = pendingCatalogProduct;
                       setPendingCatalogProduct(null);
                       handleAddFromCatalog(product);
@@ -1787,6 +2076,71 @@ const POSScreen: React.FC<POSProps> = ({
         onClose={closeFeedback}
       />
 
+      {specialPriceModal && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl overflow-hidden">
+            <div className="bg-slate-900 px-6 py-5 text-white flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-tighter">Precio especial</h3>
+                <p className="text-slate-400 text-xs mt-1">{specialPriceModal.itemName}</p>
+              </div>
+              <button onClick={closeSpecialPriceModal} className="text-2xl text-slate-300">&times;</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700">
+                Precio actual: {formatCurrency(Number(specialPriceModal.currentPrice ?? 0))}
+              </div>
+              <label className="block">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nuevo precio unitario</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={specialPriceValue}
+                  onChange={(e) => {
+                    setSpecialPriceValue(e.target.value);
+                    setSpecialPriceError(null);
+                  }}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </label>
+              <label className="block">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observación obligatoria</span>
+                <textarea
+                  rows={3}
+                  value={specialPriceNote}
+                  onChange={(e) => {
+                    setSpecialPriceNote(e.target.value);
+                    setSpecialPriceError(null);
+                  }}
+                  placeholder="Explique por qué está aplicando un precio especial."
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                />
+              </label>
+              {specialPriceError && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                  {specialPriceError}
+                </div>
+              )}
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={closeSpecialPriceModal}
+                  className="px-4 py-3 rounded-xl bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest hover:bg-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveSpecialPrice}
+                  className="px-4 py-3 rounded-xl bg-orange-500 text-white font-black text-[10px] uppercase tracking-widest hover:bg-orange-600"
+                >
+                  Guardar precio
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isSaleDetailOpen && saleDetail && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[75vh] overflow-hidden flex flex-col">
@@ -1839,7 +2193,7 @@ const POSScreen: React.FC<POSProps> = ({
                           <td className="p-3 text-xs font-bold text-slate-700">{item.product_name || '—'}</td>
                           <td className="p-3 text-xs font-mono text-slate-500">{item.product_sku || '—'}</td>
                           <td className="p-3 text-xs text-slate-600">{uomLabel}</td>
-                          <td className="p-3 text-xs font-bold text-slate-600 text-right">{Number(item.qty).toLocaleString()}</td>
+                          <td className="p-3 text-xs font-bold text-slate-600 text-right">{formatNumber(Number(item.qty))}</td>
                           <td className="p-3 text-xs font-bold text-slate-600 text-right">{formatCurrency(Number(item.unit_price))}</td>
                           <td className="p-3 text-xs font-black text-slate-900 text-right">{formatCurrency(subtotal)}</td>
                         </tr>
@@ -1869,6 +2223,44 @@ const POSScreen: React.FC<POSProps> = ({
               </button>
             </div>
             <div className="p-6 overflow-y-auto">
+              <div className="mb-4 grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Desde</span>
+                  <input
+                    type="date"
+                    value={salesHistoryDateFrom}
+                    onChange={(e) => {
+                      setSalesHistoryDateFrom(e.target.value);
+                      setSalesHistoryPage(1);
+                    }}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Hasta</span>
+                  <input
+                    type="date"
+                    value={salesHistoryDateTo}
+                    onChange={(e) => {
+                      setSalesHistoryDateTo(e.target.value);
+                      setSalesHistoryPage(1);
+                    }}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </label>
+                <div className="flex items-end">
+                  <button
+                    onClick={() => {
+                      setSalesHistoryDateFrom('');
+                      setSalesHistoryDateTo('');
+                      setSalesHistoryPage(1);
+                    }}
+                    className="w-full md:w-auto px-4 py-3 rounded-xl bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest hover:bg-slate-200"
+                  >
+                    Limpiar filtro
+                  </button>
+                </div>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead className="bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest">
@@ -1919,6 +2311,30 @@ const POSScreen: React.FC<POSProps> = ({
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p className="text-xs font-bold text-slate-500">
+                  Mostrando {salesHistory.length} de {salesHistoryTotal} ventas
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSalesHistoryPage((prev) => Math.max(1, prev - 1))}
+                    disabled={salesHistoryPage === 1 || isSalesHistoryLoading}
+                    className="px-3 py-2 rounded-lg border border-slate-200 text-[10px] font-black uppercase disabled:opacity-40"
+                  >
+                    Anterior
+                  </button>
+                  <span className="text-[11px] font-black text-slate-700">
+                    {salesHistoryPage} / {salesHistoryTotalPages}
+                  </span>
+                  <button
+                    onClick={() => setSalesHistoryPage((prev) => Math.min(salesHistoryTotalPages, prev + 1))}
+                    disabled={salesHistoryPage === salesHistoryTotalPages || isSalesHistoryLoading}
+                    className="px-3 py-2 rounded-lg border border-slate-200 text-[10px] font-black uppercase disabled:opacity-40"
+                  >
+                    Siguiente
+                  </button>
+                </div>
               </div>
             </div>
           </div>

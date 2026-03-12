@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
+import type { User } from '../../types';
 import type { Category, Product, ProductUom, Uom } from '../../services/inventory/catalog.service';
 import { purchasesService } from '../../services/inventory/purchases.service';
 import { catalogService } from '../../services/inventory/catalog.service';
+import { logMaterialsAudit } from '../../services/audit/audit.service';
+import ConfirmModal from '../common/ConfirmModal';
 
 interface SaleUomDraft {
   uom_id: string;
@@ -28,6 +31,8 @@ interface NewProductModalProps {
   existingProduct?: Product | null;
   existingUoms?: ProductUom[];
   allowBarcodeEdit?: boolean;
+  currentUser: User;
+  branchName?: string | null;
   onClose: () => void;
   onCreated: (payload: { product: Product; purchaseUom: ProductUom }) => void;
   onReactivated?: (payload: { product: Product; purchaseUom: ProductUom }) => void;
@@ -45,6 +50,8 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   existingProduct = null,
   existingUoms = [],
   allowBarcodeEdit = false,
+  currentUser,
+  branchName = null,
   onClose,
   onCreated,
   onReactivated,
@@ -82,6 +89,9 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const showErrorModal = (message: string) => setError(message);
   const [barcodeMode, setBarcodeMode] = useState<'with' | 'without'>('with');
+  const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
+  const [saveObservation, setSaveObservation] = useState('');
+  const [saveObservationError, setSaveObservationError] = useState<string | null>(null);
 
   const getErrorMessage = (err: unknown, fallback: string) => {
     if (!err) return fallback;
@@ -113,6 +123,9 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     setNewUomCode('');
     setNewUomName('');
     setIsSavingUom(false);
+    setIsSaveConfirmOpen(false);
+    setSaveObservation('');
+    setSaveObservationError(null);
 
     if ((mode === 'reactivate' || mode === 'edit') && existingProduct) {
       setBarcodeValue(existingProduct.barcode ?? barcode);
@@ -227,59 +240,44 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     setSaleUoms((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSave = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const buildSaveContext = () => {
     setError(null);
 
     if (!branchId) {
       showErrorModal('Seleccione una sucursal antes de crear el producto.');
-      return;
+      return null;
     }
 
     if (!name.trim()) {
       showErrorModal('El nombre es obligatorio.');
-      return;
+      return null;
     }
+
     const retailPriceNumber = Number(retailPrice || 0);
     if (retailPriceNumber <= 0) {
       showErrorModal('El precio de venta menor debe ser mayor a 0.');
-      return;
+      return null;
     }
 
     if (!baseUomId) {
       showErrorModal('Seleccione la unidad base.');
-      return;
+      return null;
     }
 
     if (!purchaseUomId) {
       showErrorModal('Seleccione la unidad de compra.');
-      return;
+      return null;
     }
 
     const purchaseFactorNumber = Number(purchaseFactor || 0);
     if (purchaseFactorNumber <= 0) {
       showErrorModal('El factor de la unidad de compra debe ser mayor a 0.');
-      return;
+      return null;
     }
 
     if (showJsonAttrs && parsedAttrs === undefined) {
       showErrorModal('El JSON de atributos no es válido.');
-      return;
-    }
-
-    const resolvedSku = sku.trim() || `${branchId}-${Date.now()}`;
-    let resolvedCategoryId = categoryId || null;
-
-    if (newCategoryName.trim()) {
-      try {
-        const createdCategory = await catalogService.createCategory(newCategoryName.trim());
-        resolvedCategoryId = createdCategory.id;
-      } catch (err) {
-        const message = getErrorMessage(err, 'No se pudo crear la categoría.');
-        showErrorModal(message);
-        setSaving(false);
-        return;
-      }
+      return null;
     }
 
     const normalizedSaleUoms = saleUoms
@@ -297,18 +295,44 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       });
     }
 
+    return {
+      retailPriceNumber,
+      purchaseFactorNumber,
+      normalizedSaleUoms,
+      resolvedSku: sku.trim() || `${branchId}-${Date.now()}`,
+    };
+  };
+
+  const submitSave = async (justification: string | null) => {
+    const context = buildSaveContext();
+    if (!context) return;
+
     setSaving(true);
     try {
+      let resolvedCategoryId = categoryId || null;
+
+      if (newCategoryName.trim()) {
+        try {
+          const createdCategory = await catalogService.createCategory(newCategoryName.trim());
+          resolvedCategoryId = createdCategory.id;
+        } catch (err) {
+          const message = getErrorMessage(err, 'No se pudo crear la categoría.');
+          showErrorModal(message);
+          setSaving(false);
+          return;
+        }
+      }
+
       const manualBarcode = barcodeMode === 'without' ? '' : barcodeValue.trim();
       const resolvedBarcode = manualBarcode || buildAutoBarcode();
       const payload = {
         branch_id: branchId,
-        sku: resolvedSku,
+        sku: context.resolvedSku,
         barcode: resolvedBarcode,
         name: name.trim(),
         purchase_price: Number(purchasePrice || 0),
         wholesale_price: Number(wholesalePrice || 0),
-        retail_price: retailPriceNumber,
+        retail_price: context.retailPriceNumber,
         min_stock: Number(minStock || 0),
         description: description.trim() || null,
         category_id: resolvedCategoryId,
@@ -325,28 +349,54 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
           purchaseUom: {
             uom_id: purchaseUomId,
             purpose: 'PURCHASE',
-            factor_to_base: purchaseFactorNumber,
+            factor_to_base: context.purchaseFactorNumber,
             is_default_purchase: true,
           },
-          saleUoms: normalizedSaleUoms,
+          saleUoms: context.normalizedSaleUoms,
         });
         if (mode === 'reactivate') {
           onReactivated?.(result);
         } else {
           onUpdated?.(result);
         }
+
+        logMaterialsAudit({
+          branch_id: branchId,
+          branch_name: branchName,
+          user_id: currentUser.id,
+          user_name: currentUser.name,
+          action_type: 'ACTUALIZAR',
+          entity_type: 'producto',
+          entity_id: String(result.product.id),
+          description: `Producto actualizado: ${result.product.name}`,
+          justification,
+          previous_data: existingProduct as unknown as Record<string, unknown>,
+          new_data: result.product as unknown as Record<string, unknown>,
+        });
       } else {
         const result = await purchasesService.createProductWithUoms({
           product: payload,
           purchaseUom: {
             uom_id: purchaseUomId,
             purpose: 'PURCHASE',
-            factor_to_base: purchaseFactorNumber,
+            factor_to_base: context.purchaseFactorNumber,
             is_default_purchase: true,
           },
-          saleUoms: normalizedSaleUoms,
+          saleUoms: context.normalizedSaleUoms,
         });
         onCreated(result);
+
+        logMaterialsAudit({
+          branch_id: branchId,
+          branch_name: branchName,
+          user_id: currentUser.id,
+          user_name: currentUser.name,
+          action_type: 'CREAR',
+          entity_type: 'producto',
+          entity_id: String(result.product.id),
+          description: `Producto creado: ${result.product.name}`,
+          new_data: result.product as unknown as Record<string, unknown>,
+        });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo guardar el producto.';
@@ -354,6 +404,32 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSave = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!buildSaveContext()) return;
+
+    if (mode === 'edit' || mode === 'reactivate') {
+      setSaveObservation('');
+      setSaveObservationError(null);
+      setIsSaveConfirmOpen(true);
+      return;
+    }
+
+    await submitSave(null);
+  };
+
+  const handleConfirmSave = async () => {
+    const observation = saveObservation.trim();
+    if (!observation) {
+      setSaveObservationError('La observación es obligatoria para actualizar el producto.');
+      return;
+    }
+
+    setSaveObservationError(null);
+    setIsSaveConfirmOpen(false);
+    await submitSave(observation);
   };
 
   const handleCreateUom = async () => {
@@ -682,6 +758,34 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
           </div>
         </form>
       </div>
+
+      <ConfirmModal
+        isOpen={isSaveConfirmOpen}
+        title={mode === 'reactivate' ? 'Reactivar producto' : 'Guardar cambios'}
+        description={
+          mode === 'reactivate'
+            ? 'Antes de reactivar el producto, registre una observación obligatoria.'
+            : 'Antes de guardar la edición, registre una observación obligatoria.'
+        }
+        confirmText={mode === 'reactivate' ? 'Reactivar' : 'Guardar'}
+        cancelText="Cancelar"
+        noteLabel="Observación obligatoria"
+        notePlaceholder="Explique brevemente el motivo del cambio"
+        noteValue={saveObservation}
+        noteRequired
+        noteError={saveObservationError}
+        isProcessing={saving}
+        onNoteChange={(value) => {
+          setSaveObservation(value);
+          if (saveObservationError) setSaveObservationError(null);
+        }}
+        onConfirm={handleConfirmSave}
+        onCancel={() => {
+          setIsSaveConfirmOpen(false);
+          setSaveObservation('');
+          setSaveObservationError(null);
+        }}
+      />
 
       {error && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">

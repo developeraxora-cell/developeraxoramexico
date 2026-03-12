@@ -94,6 +94,8 @@ export interface CartItem {
   factorUsed?: number;
   saleType?: 'MAYOR' | 'MENOR';
   barcodeScanned?: string;
+  specialUnitPrice?: number | null;
+  specialPriceNote?: string | null;
 }
 
 export interface Sale {

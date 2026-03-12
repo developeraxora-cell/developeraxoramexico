@@ -16,6 +16,7 @@ import {
 } from '../../services/concretera/catalog.service';
 import { purchasesService } from '../../services/concretera/purchases.service';
 import { formatCurrency, formatNumber } from '../../services/currency';
+import { logConcreteraAudit } from '../../services/audit/audit.service';
 
 interface PurchasesScreenProps {
   selectedBranchId: string;
@@ -98,6 +99,8 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
   const [isClearHistoryOpen, setIsClearHistoryOpen] = useState(false);
+  const [clearHistoryObservation, setClearHistoryObservation] = useState('');
+  const [clearHistoryObservationError, setClearHistoryObservationError] = useState<string | null>(null);
   const [isPurchaseDetailOpen, setIsPurchaseDetailOpen] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<PurchaseHistoryEntry | null>(null);
   const [purchaseItems, setPurchaseItems] = useState<PurchaseItemDetail[]>([]);
@@ -773,11 +776,33 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       return;
     }
 
+    const observation = clearHistoryObservation.trim();
+    if (!observation) {
+      setClearHistoryObservationError('La observación es obligatoria para eliminar el historial.');
+      return;
+    }
+
     setIsClearHistoryOpen(false);
+    setClearHistoryObservation('');
+    setClearHistoryObservationError(null);
     showFeedback('loading', 'Limpiando historial', 'Eliminando registros...');
 
     try {
       const result = await purchasesService.clearPurchaseHistory(branchId);
+      logConcreteraAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ELIMINAR',
+        entity_type: 'compra',
+        entity_id: `branch:${branchId}:history`,
+        description: `Historial de compras eliminado (${result.deleted} registros)`,
+        justification: observation,
+        previous_data: {
+          deleted_count: result.deleted,
+        },
+      });
       setFeedbackOpen(false);
       showFeedback('success', 'Historial eliminado', `Se eliminaron ${result.deleted} compras.`);
       await loadHistory();
@@ -887,7 +912,11 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
           {viewMode === 'HISTORY' && (
             <button
-              onClick={() => setIsClearHistoryOpen(true)}
+              onClick={() => {
+                setClearHistoryObservation('');
+                setClearHistoryObservationError(null);
+                setIsClearHistoryOpen(true);
+              }}
               className="px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest border border-orange-200 text-orange-600 bg-orange-50 hover:bg-orange-100"
             >
               <span className="inline-flex items-center gap-2">
@@ -1388,6 +1417,8 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         existingProduct={reactivateProduct}
         existingUoms={reactivateUoms}
         allowBarcodeEdit={false}
+        currentUser={currentUser}
+        branchName={selectedBranch?.name ?? null}
         onClose={() => {
           setIsNewProductOpen(false);
           setPendingBarcode('');
@@ -1404,8 +1435,22 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         description="Se eliminarán todas las compras registradas en esta sucursal. Esta acción no modifica el stock."
         confirmText="Eliminar"
         cancelText="Cancelar"
+        noteLabel="Observación obligatoria"
+        notePlaceholder="Explique por qué se eliminará el historial"
+        noteValue={clearHistoryObservation}
+        noteRequired
+        noteError={clearHistoryObservationError}
+        isProcessing={feedbackOpen && feedbackType === 'loading'}
+        onNoteChange={(value) => {
+          setClearHistoryObservation(value);
+          if (clearHistoryObservationError) setClearHistoryObservationError(null);
+        }}
         onConfirm={handleClearHistory}
-        onCancel={() => setIsClearHistoryOpen(false)}
+        onCancel={() => {
+          setIsClearHistoryOpen(false);
+          setClearHistoryObservation('');
+          setClearHistoryObservationError(null);
+        }}
       />
 
       <FeedbackModal

@@ -9,6 +9,7 @@ import CustomerScreen from './components/Customers/CustomerScreen';
 import UsersScreen from './components/Users/UsersScreen';
 import BranchesScreen from './components/Branches/BranchesScreen';
 import ReportsScreen from './components/Reports/ReportsScreen';
+import AuditScreen from './components/Audit/AuditScreen';
 import ConcretePOSScreen from './components/Concrete/ConcretePOSScreen';
 import ConcretePurchasesScreen from './components/Concrete/ConcretePurchasesScreen';
 import ConcreteInventoryScreen from './components/Concrete/ConcreteInventoryScreen';
@@ -264,6 +265,20 @@ const App: React.FC = () => {
         return <CustomerScreen selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'inventory':
         return <InventoryScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
+      case 'audit':
+        return <AuditScreen key="audit-materiales" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'concrete-audit':
+        return (
+          <AuditScreen
+            key="audit-concretera"
+            selectedBranchId={selectedBranchId}
+            branches={activeBranches}
+            currentUser={currentUser}
+            module="concretera"
+            title="Auditoría"
+            subtitle="Trazabilidad de cambios en Concretera por sucursal."
+          />
+        );
       case 'branches':
         return <BranchesScreen branches={branches} setBranches={setBranches} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} currentUser={currentUser} />;
       case 'users':

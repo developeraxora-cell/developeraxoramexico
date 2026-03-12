@@ -5,6 +5,7 @@ import { Eye, FileDown, Plus, Wallet } from 'lucide-react';
 import { formatCurrency } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
+import { logMaterialsAudit } from '../../services/audit/audit.service';
 
 interface CustomerScreenProps {
   selectedBranchId: string;
@@ -262,7 +263,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setError(null);
 
     try {
-      await creditService.createCustomer({
+      const customer = await creditService.createCustomer({
         branch_id: branchId,
         name: formData.name,
         phone: formData.phone || null,
@@ -272,6 +273,19 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         policy: formData.policy,
         allow_cash_if_blocked: formData.allow_cash_if_blocked,
       });
+
+      logMaterialsAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'CREAR',
+        entity_type: 'cliente',
+        entity_id: String(customer.id),
+        description: `Cliente creado: ${customer.name}`,
+        new_data: customer as unknown as Record<string, unknown>,
+      });
+
       setIsCreateModalOpen(false);
       setFormData(defaultCustomerForm);
       setCurrentPage(1);

@@ -43,8 +43,9 @@ const Layout: React.FC<LayoutProps> = ({
       items: [
         { id: 'pos', label: 'Caja / Venta', icon: '🛒', roles: [Role.ADMIN, Role.CAJERO, Role.ALMACEN] },
         { id: 'purchases', label: 'Compras / Entradas', icon: '📥', roles: [Role.ADMIN, Role.ALMACEN] },
-        { id: 'inventory', label: 'Inventario / Auditoría', icon: '📦', roles: [Role.ADMIN, Role.ALMACEN] },
+        { id: 'inventory', label: 'Inventario', icon: '📦', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'customers', label: 'Clientes / Crédito', icon: '👥', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
+        { id: 'audit', label: 'Auditoría', icon: '📋', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'reports', label: 'Reportes', icon: '📊', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'branches', label: 'Sucursales', icon: '🏢', roles: [Role.ADMIN] },
         { id: 'users', label: 'Personal / Usuarios', icon: '🛡️', roles: [Role.ADMIN] },
@@ -57,8 +58,9 @@ const Layout: React.FC<LayoutProps> = ({
       items: [
         { id: 'concrete-pos', label: 'Caja / Venta', icon: '🛒', roles: [Role.ADMIN, Role.CAJERO, Role.ALMACEN] },
         { id: 'concrete-purchases', label: 'Compras / Entradas', icon: '📥', roles: [Role.ADMIN, Role.ALMACEN] },
-        { id: 'concrete-inventory', label: 'Inventario / Auditoría', icon: '📦', roles: [Role.ADMIN, Role.ALMACEN] },
+        { id: 'concrete-inventory', label: 'Inventario', icon: '📦', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'concrete-customers', label: 'Clientes / Crédito', icon: '👥', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
+        { id: 'concrete-audit', label: 'Auditoría', icon: '📋', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'concrete-reports', label: 'Reportes', icon: '📊', roles: [Role.ADMIN, Role.ALMACEN] },
       ]
     },

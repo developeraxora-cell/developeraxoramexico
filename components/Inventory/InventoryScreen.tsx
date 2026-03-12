@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ban, History, PenLine } from 'lucide-react';
 import { Branch, User } from '../../types';
+import { logMaterialsAudit } from '../../services/audit/audit.service';
 import {
   catalogService,
   type Category,
@@ -11,7 +12,7 @@ import {
   type ProductUom,
   type Uom,
 } from '../../services/inventory/catalog.service';
-import { formatCurrency } from '../../services/currency';
+import { formatCurrency, formatNumber } from '../../services/currency';
 import ConfirmModal from '../common/ConfirmModal';
 import NewProductModal from './NewProductModal';
 
@@ -41,8 +42,13 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
   const [error, setError] = useState<string | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [productToRemove, setProductToRemove] = useState<Product | null>(null);
+  const [statusObservation, setStatusObservation] = useState('');
+  const [statusObservationError, setStatusObservationError] = useState<string | null>(null);
+  const [deleteObservation, setDeleteObservation] = useState('');
+  const [deleteObservationError, setDeleteObservationError] = useState<string | null>(null);
   const [priceProduct, setPriceProduct] = useState<Product | null>(null);
   const [priceValue, setPriceValue] = useState<string>('');
+  const [priceObservation, setPriceObservation] = useState('');
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [editUoms, setEditUoms] = useState<ProductUom[]>([]);
@@ -63,6 +69,11 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     return selectedBranchId || null;
   }, [branches, selectedBranchId]);
 
+  const selectedBranch = useMemo(
+    () => branches.find((b) => b.id === selectedBranchId) ?? null,
+    [branches, selectedBranchId]
+  );
+
   const uomById = useMemo(() => {
     return uoms.reduce<Record<string, Uom>>((acc, uom) => {
       acc[uom.id] = uom;
@@ -71,7 +82,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
   }, [uoms]);
 
   const formatQty = useCallback((value: number) => {
-    return Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 3 });
+    return formatNumber(Number(value || 0), undefined, { maximumFractionDigits: 3 });
   }, []);
 
   const formatDateTime = useCallback((value: string) => {
@@ -115,17 +126,73 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     loadProducts();
   }, [loadProducts]);
 
+  const openStatusModal = (product: Product) => {
+    setProductToDelete(product);
+    setStatusObservation('');
+    setStatusObservationError(null);
+  };
+
+  const closeStatusModal = () => {
+    setProductToDelete(null);
+    setStatusObservation('');
+    setStatusObservationError(null);
+  };
+
+  const openRemoveModal = (product: Product) => {
+    setProductToRemove(product);
+    setDeleteObservation('');
+    setDeleteObservationError(null);
+  };
+
+  const closeRemoveModal = () => {
+    setProductToRemove(null);
+    setDeleteObservation('');
+    setDeleteObservationError(null);
+  };
+
   const handleConfirmDeleteProduct = useCallback(async () => {
     if (!productToDelete) return;
+
+    const justification = statusObservation.trim();
+    if (!justification) {
+      setStatusObservationError(
+        productToDelete.is_active === false
+          ? 'La observación es obligatoria para activar el producto.'
+          : 'La observación es obligatoria para desactivar el producto.'
+      );
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
+    setStatusObservationError(null);
     try {
+      const previousProduct = productToDelete;
       if (productToDelete.is_active === false) {
         await catalogService.activateProduct(productToDelete.id);
       } else {
         await catalogService.deactivateProduct(productToDelete.id);
       }
-      setProductToDelete(null);
+      logMaterialsAudit({
+        branch_id: branchId ?? '',
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ACTUALIZAR',
+        entity_type: 'producto',
+        entity_id: String(previousProduct.id),
+        description: previousProduct.is_active === false
+          ? `Producto activado: ${previousProduct.name}`
+          : `Producto desactivado: ${previousProduct.name}`,
+        justification,
+        previous_data: previousProduct as unknown as Record<string, unknown>,
+        new_data: {
+          ...previousProduct,
+          is_active: previousProduct.is_active === false,
+          notes: justification,
+        },
+      });
+      closeStatusModal();
       await loadProducts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo actualizar el estado del producto.';
@@ -133,15 +200,36 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     } finally {
       setIsSaving(false);
     }
-  }, [productToDelete, loadProducts]);
+  }, [branchId, currentUser.id, currentUser.name, loadProducts, productToDelete, selectedBranch?.name, statusObservation]);
 
   const handleConfirmRemoveProduct = useCallback(async () => {
     if (!productToRemove) return;
+
+    const justification = deleteObservation.trim();
+    if (!justification) {
+      setDeleteObservationError('La observación es obligatoria para eliminar el producto.');
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
+    setDeleteObservationError(null);
     try {
+      const previousProduct = productToRemove;
       await catalogService.deleteProduct(productToRemove.id);
-      setProductToRemove(null);
+      closeRemoveModal();
+      logMaterialsAudit({
+        branch_id: branchId ?? '',
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ELIMINAR',
+        entity_type: 'producto',
+        entity_id: String(previousProduct.id),
+        description: `Producto eliminado: ${previousProduct.name}`,
+        justification,
+        previous_data: previousProduct as unknown as Record<string, unknown>,
+      });
       await loadProducts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo eliminar el producto.';
@@ -149,11 +237,12 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     } finally {
       setIsSaving(false);
     }
-  }, [productToRemove, loadProducts]);
+  }, [branchId, currentUser.id, currentUser.name, deleteObservation, loadProducts, productToRemove, selectedBranch?.name]);
 
   const handleOpenPriceModal = (product: Product) => {
     setPriceProduct(product);
     setPriceValue(String(Number((product as any).retail_price ?? (product as any).precio ?? 0)));
+    setPriceObservation('');
   };
 
   const handleOpenEditProduct = async (product: Product) => {
@@ -178,10 +267,36 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       setError('El precio debe ser mayor a 0.');
       return;
     }
+
+    const justification = priceObservation.trim();
+    if (!justification) {
+      setError('La observación es obligatoria para actualizar el precio del producto.');
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
     try {
+      const previousPrice = Number((priceProduct as any).retail_price ?? (priceProduct as any).precio ?? 0);
       await catalogService.updateProductPrice(priceProduct.id, nextPrice);
+      logMaterialsAudit({
+        branch_id: branchId ?? '',
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ACTUALIZAR',
+        entity_type: 'producto',
+        entity_id: String(priceProduct.id),
+        description: `Precio actualizado: ${priceProduct.name}`,
+        justification,
+        previous_data: {
+          retail_price: previousPrice,
+        },
+        new_data: {
+          retail_price: nextPrice,
+          notes: justification,
+        },
+      });
       setPriceProduct(null);
       await loadProducts();
     } catch (err) {
@@ -221,16 +336,42 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       return;
     }
 
+    const observation = manualStockNotes.trim();
+    if (!observation) {
+      setError('La observación es obligatoria para guardar el ajuste de stock.');
+      return;
+    }
+
     setIsSavingStock(true);
     setError(null);
     try {
+      const previousQty = manualStockModal.currentStock;
       await catalogService.adjustProductStock({
         branch_id: branchId,
         product_id: manualStockModal.product.id,
         new_qty_base: nextQty,
         reason: manualStockReason.trim() || null,
-        notes: manualStockNotes.trim() || null,
+        notes: observation,
         created_by: currentUser.name || currentUser.username || null,
+      });
+      logMaterialsAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ACTUALIZAR',
+        entity_type: 'producto',
+        entity_id: String(manualStockModal.product.id),
+        description: `Stock ajustado manualmente para ${manualStockModal.product.name}`,
+        justification: observation,
+        previous_data: {
+          stock: previousQty,
+        },
+        new_data: {
+          stock: nextQty,
+          reason: manualStockReason.trim() || null,
+          notes: observation,
+        },
       });
       closeManualStockModal();
       await loadProducts();
@@ -403,7 +544,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                 const stock = Number((product as any).stock ?? stockByProduct[product.id] ?? 0);
                 const minStock = Number((product as any).min_stock ?? 0);
                 const stockLabel = Number.isFinite(stock)
-                  ? stock.toLocaleString(undefined, { maximumFractionDigits: 3 })
+                  ? formatNumber(Number(stock), undefined, { maximumFractionDigits: 3 })
                   : '0';
                 const baseCode = uomById[product.base_uom_id]?.code || '—';
                 const stockStatus = stock <= minStock
@@ -443,7 +584,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                     </span>
                   </td>
                   <td className="p-5 text-right text-xs font-black text-slate-600">
-                    {minStock.toLocaleString(undefined, { maximumFractionDigits: 3 })}{' '}
+                    {formatNumber(Number(minStock), undefined, { maximumFractionDigits: 3 })}{' '}
                     <span className="text-[9px] font-black text-slate-400">{baseCode}</span>
                   </td>
                   <td className="p-5 text-center text-xs font-bold">
@@ -492,7 +633,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                         </button>
                       )}
                       <button
-                        onClick={() => setProductToDelete(product)}
+                        onClick={() => openStatusModal(product)}
                         className={`w-8 h-8 flex items-center justify-center rounded-lg ${
                           isActive ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'
                         }`}
@@ -562,7 +703,21 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
         confirmText={productToDelete?.is_active === false ? 'Activar' : 'Desactivar'}
         cancelText="Cancelar"
         onConfirm={handleConfirmDeleteProduct}
-        onCancel={() => setProductToDelete(null)}
+        noteLabel="Observación obligatoria"
+        notePlaceholder={
+          productToDelete?.is_active === false
+            ? 'Explique por qué se está activando el producto'
+            : 'Explique por qué se está desactivando el producto'
+        }
+        noteValue={statusObservation}
+        noteRequired
+        noteError={statusObservationError}
+        isProcessing={isSaving}
+        onNoteChange={(value) => {
+          setStatusObservation(value);
+          if (statusObservationError) setStatusObservationError(null);
+        }}
+        onCancel={closeStatusModal}
       />
 
       <ConfirmModal
@@ -572,8 +727,18 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
         icon="🗑️"
         confirmText="Eliminar"
         cancelText="Cancelar"
+        noteLabel="Observación obligatoria"
+        notePlaceholder="Explique por qué se eliminará este producto"
+        noteValue={deleteObservation}
+        noteRequired
+        noteError={deleteObservationError}
+        isProcessing={isSaving}
+        onNoteChange={(value) => {
+          setDeleteObservation(value);
+          if (deleteObservationError) setDeleteObservationError(null);
+        }}
         onConfirm={handleConfirmRemoveProduct}
-        onCancel={() => setProductToRemove(null)}
+        onCancel={closeRemoveModal}
       />
 
       {priceProduct && (
@@ -597,6 +762,16 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                 value={priceValue}
                 onChange={(e) => setPriceValue(e.target.value)}
               />
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Observación *</label>
+                <textarea
+                  rows={3}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                  placeholder="Explique por qué se actualiza el precio"
+                  value={priceObservation}
+                  onChange={(e) => setPriceObservation(e.target.value)}
+                />
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPriceProduct(null)}
@@ -666,11 +841,11 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Observación (opcional)</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Observación *</label>
                 <textarea
                   rows={3}
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500 resize-none"
-                  placeholder="Detalle del ajuste manual"
+                  placeholder="Detalle obligatorio del ajuste manual"
                   value={manualStockNotes}
                   onChange={(e) => setManualStockNotes(e.target.value)}
                   disabled={isSavingStock}
@@ -844,6 +1019,8 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
         existingProduct={null}
         existingUoms={[]}
         allowBarcodeEdit
+        currentUser={currentUser}
+        branchName={selectedBranch?.name ?? null}
         onClose={() => {
           setIsNewProductOpen(false);
           setPendingBarcode('');
@@ -866,6 +1043,8 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
         existingProduct={editProduct}
         existingUoms={editUoms}
         allowBarcodeEdit
+        currentUser={currentUser}
+        branchName={selectedBranch?.name ?? null}
         onClose={() => {
           setIsEditOpen(false);
           setEditProduct(null);
