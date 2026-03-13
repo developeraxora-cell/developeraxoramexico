@@ -47,7 +47,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
   const style = config[type];
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className={`${style.accent} p-6 text-white flex justify-between items-center`}>
           <div className="flex items-center gap-3">

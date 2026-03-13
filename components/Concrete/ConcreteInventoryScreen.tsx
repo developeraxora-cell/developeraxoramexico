@@ -14,6 +14,7 @@ import {
 } from '../../services/concretera/catalog.service';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import ConfirmModal from '../common/ConfirmModal';
+import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 import ConcreteNewProductModal from './ConcreteNewProductModal';
 
 interface InventoryScreenProps {
@@ -62,6 +63,10 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
   const [historyData, setHistoryData] = useState<ProductMovementHistory | null>(null);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<FeedbackType>('error');
+  const [feedbackTitle, setFeedbackTitle] = useState('');
+  const [feedbackDescription, setFeedbackDescription] = useState('');
 
   const getErrorMessage = (err: unknown, fallback: string) => {
     if (!err) return fallback;
@@ -102,6 +107,13 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '—';
     return date.toLocaleString();
+  }, []);
+
+  const showFeedback = useCallback((type: FeedbackType, title: string, description?: string) => {
+    setFeedbackType(type);
+    setFeedbackTitle(title);
+    setFeedbackDescription(description ?? '');
+    setFeedbackOpen(true);
   }, []);
 
   const loadProducts = useCallback(async () => {
@@ -367,18 +379,18 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
 
     const nextQty = Number(manualStockValue);
     if (!Number.isFinite(nextQty) || nextQty < 0) {
-      setError('El nuevo stock debe ser un número mayor o igual a 0.');
+      showFeedback('error', 'Stock inválido', 'El nuevo stock debe ser un número mayor o igual a 0.');
       return;
     }
 
     if (nextQty === manualStockModal.currentStock) {
-      setError('No hay cambios en el stock para guardar.');
+      showFeedback('alert', 'Sin cambios', 'No hay cambios en el stock para guardar.');
       return;
     }
 
     const observation = manualStockNotes.trim();
     if (!observation) {
-      setError('La observación es obligatoria para guardar el ajuste de stock.');
+      showFeedback('error', 'Observación obligatoria', 'Debe ingresar una observación para guardar el ajuste de stock.');
       return;
     }
 
@@ -416,7 +428,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       await loadProducts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo guardar el ajuste de stock.';
-      setError(message);
+      showFeedback('error', 'Error al guardar stock', message);
     } finally {
       setIsSavingStock(false);
     }
@@ -778,6 +790,14 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
         }}
         onConfirm={handleConfirmRemoveProduct}
         onCancel={closeRemoveModal}
+      />
+
+      <FeedbackModal
+        isOpen={feedbackOpen}
+        type={feedbackType}
+        title={feedbackTitle}
+        description={feedbackDescription}
+        onClose={() => setFeedbackOpen(false)}
       />
 
       {priceProduct && (
