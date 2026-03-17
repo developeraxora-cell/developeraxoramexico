@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, DieselTank, Vehicle, Driver, DieselLog, User } from '../../types';
 import DieselTankCard from './DieselTankCard';
 import DeleteLogModal from './DeleteLogModal';
 import EditCapacityModal from './EditCapacityModal';
 import StatusModal, { StatusType } from '../common/StatusModal';
 import ConfirmModal from '../common/ConfirmModal';
+import { formatCurrency, formatNumber } from '../../services/currency';
 import {
   dieselTanksService,
   vehiclesService,
@@ -27,6 +29,17 @@ interface DieselScreenProps {
   selectedBranchId: string;
   branches: Branch[];
 }
+
+let watermarkPngBytesPromise: Promise<ArrayBuffer | null> | null = null;
+
+const getWatermarkPngBytes = async () => {
+  if (!watermarkPngBytesPromise) {
+    watermarkPngBytesPromise = fetch('/lopar-watermark.png')
+      .then((response) => (response.ok ? response.arrayBuffer() : null))
+      .catch(() => null);
+  }
+  return watermarkPngBytesPromise;
+};
 
 const DieselScreen: React.FC<DieselScreenProps> = ({
   tanks, setTanks, vehicles, setVehicles, drivers, setDrivers, logs, setLogs, currentUser, selectedBranchId, branches
@@ -51,6 +64,9 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
     title: '',
   });
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [logsDateFrom, setLogsDateFrom] = useState('');
+  const [logsDateTo, setLogsDateTo] = useState('');
+  const [isExportingLogs, setIsExportingLogs] = useState(false);
 
   const selectedBranch = useMemo(
     () => branches.find(b => b.id === selectedBranchId),
@@ -87,6 +103,24 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
     [tanks, branchIdsForQuery]
   );
 
+  const branchLogs = useMemo(
+    () => logs.filter((log) => branchTanks.some((tank) => tank.id === log.tankId)),
+    [logs, branchTanks]
+  );
+
+  const visibleBranchLogs = useMemo(() => {
+    const fromDate = logsDateFrom ? new Date(`${logsDateFrom}T00:00:00`) : null;
+    const toDate = logsDateTo ? new Date(`${logsDateTo}T23:59:59.999`) : null;
+
+    return branchLogs.filter((log) => {
+      const createdAt = log.createdAt;
+      if (!(createdAt instanceof Date) || Number.isNaN(createdAt.getTime())) return false;
+      if (fromDate && createdAt < fromDate) return false;
+      if (toDate && createdAt > toDate) return false;
+      return true;
+    });
+  }, [branchLogs, logsDateFrom, logsDateTo]);
+
   const [cargaData, setCargaData] = useState({ tankId: '', vehicleId: '', driverId: '', amount: 0, odometer: 0, notes: '' });
   const [recepcionData, setRecepcionData] = useState({ tankId: '', amount: 0, costPerLiter: 22.50, supplier: '', invoiceNumber: '', notes: '' });
   const [newVehicle, setNewVehicle] = useState({ plate: '', description: '' });
@@ -99,6 +133,36 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
   const recepcionMax = selectedRecepcionTank ? selectedRecepcionTank.maxCapacity - selectedRecepcionTank.currentQty : undefined;
   const showStatus = (type: StatusType, title: string, description?: string, icon?: string) => {
     setStatusModal({ isOpen: true, type, title, description, icon });
+  };
+
+  const toInputDate = (date: Date) => {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const formatDieselDate = (date: Date) => {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '—';
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  const formatDieselDateTime = (date: Date) => {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '—';
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mi = String(date.getMinutes()).padStart(2, '0');
+    const ss = String(date.getSeconds()).padStart(2, '0');
+    return `${formatDieselDate(date)}, ${hh}:${mi}:${ss}`;
+  };
+
+  const formatFilterDate = (value: string) => {
+    if (!value) return '';
+    const [yyyy, mm, dd] = value.split('-');
+    if (!yyyy || !mm || !dd) return value;
+    return `${dd}/${mm}/${yyyy}`;
   };
 
   useEffect(() => {
@@ -163,7 +227,6 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
   const loadLogs = async () => {
     // Solo cargar logs de tanques que pertenecen a esta sucursal
     const data = await dieselLogsService.getAll(200);
-    console.log("logs", data);
     setLogs(data.map(l => ({
       id: l.id,
       type: l.type,
@@ -195,11 +258,6 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const branchLogs = logs.filter(l => {
-      const logTank = tanks.find(t => t.id === l.tankId);
-      return logTank?.branchId === selectedBranchId;
-    });
-    console.log("branchLogs", branchLogs);
     const monthlySupplies = branchLogs
       .filter(l => l.type === 'RECEPCION' && l.createdAt >= startOfMonth && l.status === "ACTIVO")
       .reduce((acc, l) => acc + l.amount, 0);
@@ -213,7 +271,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
     const globalStatus = totalCapacity > 0 ? (currentQty / totalCapacity) * 100 : 0;
 
     return { globalStatus, monthlySupplies, monthlyDispatches };
-  }, [logs, branchTanks, tanks, selectedBranchId]);
+  }, [branchLogs, branchTanks]);
 
   const handleAddVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -419,6 +477,268 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
     }
   };
 
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const openPdfPreview = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const previewWindow = window.open('', '_blank');
+
+    if (previewWindow && !previewWindow.closed) {
+      try {
+        previewWindow.document.title = filename;
+        previewWindow.location.href = url;
+      } catch {
+        downloadBlob(blob, filename);
+      }
+    } else {
+      downloadBlob(blob, filename);
+    }
+
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+
+  const handleExportVisibleLogsPdf = async () => {
+    if (visibleBranchLogs.length === 0) {
+      showStatus('warning', 'Sin registros', 'No hay movimientos visibles para exportar.', '⚠️');
+      return;
+    }
+
+    setIsExportingLogs(true);
+    showStatus('loading', 'Generando PDF', 'Preparando historial visible...', '⏳');
+
+    try {
+      const pdfDoc = await PDFDocument.create();
+      const fontRegular = await pdfDoc.embedFont('Helvetica');
+      const fontBold = await pdfDoc.embedFont('Helvetica-Bold');
+      const pageSize: [number, number] = [595.28, 841.89];
+      const [pageWidth, pageHeight] = pageSize;
+      const marginX = 32;
+      const marginBottom = 70;
+      const frameHeight = pageHeight - 140;
+      const frameY = marginBottom;
+      const tableWidth = pageWidth - marginX * 2;
+
+      const branchTitle = (selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL').toUpperCase();
+      const hasDateFilter = Boolean(logsDateFrom || logsDateTo);
+      const fromLabel = logsDateFrom ? formatFilterDate(logsDateFrom) : 'INICIO';
+      const toLabel = logsDateTo ? formatFilterDate(logsDateTo) : 'HOY';
+      const rangeLabel = `${fromLabel} / ${toLabel}`;
+      const totalVisibleCost = visibleBranchLogs.reduce((acc, log) => acc + Number(log.totalCost ?? 0), 0);
+
+      let watermarkImage: any = null;
+      try {
+        const logoBytes = await getWatermarkPngBytes();
+        if (logoBytes) watermarkImage = await pdfDoc.embedPng(logoBytes);
+      } catch {
+        watermarkImage = null;
+      }
+
+      const drawWatermark = (targetPage: any) => {
+        if (!watermarkImage) return;
+        const dims = watermarkImage.scale(0.50);
+        targetPage.drawImage(watermarkImage, {
+          x: (pageWidth - dims.width) / 2,
+          y: (pageHeight - dims.height) / 2,
+          width: dims.width,
+          height: dims.height,
+          opacity: 0.1,
+        });
+      };
+
+      const truncateText = (text: string, maxWidth: number, font: any, size: number) => {
+        if (font.widthOfTextAtSize(text, size) <= maxWidth) return text;
+        const ellipsis = '...';
+        const ellipsisWidth = font.widthOfTextAtSize(ellipsis, size);
+        let trimmed = text;
+        while (trimmed.length > 0 && font.widthOfTextAtSize(trimmed, size) + ellipsisWidth > maxWidth) {
+          trimmed = trimmed.slice(0, -1);
+        }
+        return `${trimmed}${ellipsis}`;
+      };
+
+      const columns = [
+        { key: 'fecha', label: 'FECHA', width: 92 },
+        { key: 'tipo', label: 'TIPO', width: 52 },
+        { key: 'detalle', label: 'DETALLE', width: 112 },
+        { key: 'cantidad', label: 'CANT.', width: 62 },
+        { key: 'precio', label: 'PRECIO', width: 70 },
+        { key: 'observacion', label: 'OBSERVACIÓN', width: 95 },
+        { key: 'estado', label: 'ESTADO', width: 48 },
+      ] as const;
+
+      const colXs = columns.reduce<number[]>((acc, column, index) => {
+        if (index === 0) return [marginX, marginX + column.width];
+        return [...acc, acc[acc.length - 1] + column.width];
+      }, []);
+
+      const drawCenteredCellText = (
+        targetPage: any,
+        text: string,
+        colIndex: number,
+        yPos: number,
+        size: number,
+        font: any,
+        color?: any
+      ) => {
+        const colStart = colXs[colIndex];
+        const colEnd = colXs[colIndex + 1];
+        const colWidth = colEnd - colStart;
+        const safeText = truncateText(text, colWidth - 8, font, size);
+        const textWidth = font.widthOfTextAtSize(safeText, size);
+        const x = colStart + Math.max(0, (colWidth - textWidth) / 2);
+        targetPage.drawText(safeText, { x, y: yPos, size, font, color });
+      };
+
+      const drawCommonFrame = (targetPage: any, pageNumber: number) => {
+        drawWatermark(targetPage);
+
+        const title = `DIESEL ${branchTitle}`;
+        const titleSize = 14;
+        const titleWidth = fontBold.widthOfTextAtSize(title, titleSize);
+        targetPage.drawText(title, {
+          x: (pageWidth - titleWidth) / 2,
+          y: pageHeight - 40,
+          size: titleSize,
+          font: fontBold,
+        });
+
+        targetPage.drawRectangle({
+          x: marginX,
+          y: frameY,
+          width: tableWidth,
+          height: frameHeight,
+          borderWidth: 1,
+          borderColor: rgb(0, 0, 0),
+        });
+
+        const infoTopY = pageHeight - 105;
+        targetPage.drawText(`FECHA REPORTE: ${formatDieselDate(new Date())}`, { x: marginX + 12, y: infoTopY, size: 10, font: fontBold });
+        if (hasDateFilter) {
+          targetPage.drawText(`RANGO: ${rangeLabel}`, { x: marginX + 12, y: infoTopY - 20, size: 9, font: fontRegular });
+        }
+        targetPage.drawText('HISTORIAL COMPLETO', { x: pageWidth - marginX - 160, y: infoTopY, size: 10, font: fontBold });
+        targetPage.drawText(`REGISTROS: ${visibleBranchLogs.length}`, { x: pageWidth - marginX - 160, y: infoTopY - 20, size: 9, font: fontRegular });
+        targetPage.drawText(`PÁGINA: ${pageNumber}`, { x: pageWidth - marginX - 160, y: infoTopY - 38, size: 9, font: fontRegular });
+        targetPage.drawText(`Página ${pageNumber}`, { x: pageWidth - marginX - 40, y: 52, size: 7 });
+      };
+
+      const drawTableHeader = (targetPage: any, topY: number) => {
+        const headerHeight = 20;
+        targetPage.drawRectangle({
+          x: marginX,
+          y: topY - headerHeight,
+          width: tableWidth,
+          height: headerHeight,
+          color: rgb(0, 0, 0),
+        });
+
+        columns.forEach((column, colIndex) => {
+          drawCenteredCellText(targetPage, column.label, colIndex, topY - 14, 7, fontBold, rgb(1, 1, 1));
+        });
+      };
+
+      let pageNumber = 1;
+      let page = pdfDoc.addPage(pageSize);
+      drawCommonFrame(page, pageNumber);
+      const firstTableTop = pageHeight - 188;
+      drawTableHeader(page, firstTableTop);
+
+      const headerHeight = 20;
+      const rowHeight = 18;
+      let rowY = firstTableTop - headerHeight - 14;
+
+      for (const log of visibleBranchLogs) {
+        if (rowY < 110) {
+          pageNumber += 1;
+          page = pdfDoc.addPage(pageSize);
+          drawCommonFrame(page, pageNumber);
+          drawTableHeader(page, firstTableTop);
+          rowY = firstTableTop - headerHeight - 14;
+        }
+
+        page.drawRectangle({
+          x: marginX,
+          y: rowY - 4,
+          width: tableWidth,
+          height: rowHeight,
+          borderWidth: 0.5,
+          borderColor: rgb(0, 0, 0),
+        });
+
+        for (let i = 1; i < colXs.length - 1; i += 1) {
+          page.drawLine({
+            start: { x: colXs[i], y: rowY - 4 },
+            end: { x: colXs[i], y: rowY - 4 + rowHeight },
+            thickness: 0.5,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+        const isDeleted = log.status === 'ELIMINADO';
+        const detail = log.type === 'CARGA'
+          ? (vehicles.find((vehicle) => vehicle.id === log.vehicleId)?.description ?? '—')
+          : (log.supplier ?? '—');
+        const observation = isDeleted ? (log.deleteObservation || '—') : (log.notes || '—');
+
+        const rowValues = [
+          formatDieselDateTime(log.createdAt),
+          log.type === 'CARGA' ? 'SALIDA' : 'ENTRADA',
+          detail,
+          `${formatNumber(log.amount)} L`,
+          log.costPerLiter ? formatCurrency(log.costPerLiter) : '—',
+          observation,
+          log.status || 'ACTIVO',
+        ];
+
+        rowValues.forEach((value, index) => {
+          drawCenteredCellText(page, value, index, rowY + 4, 7, fontRegular);
+        });
+        rowY -= rowHeight;
+      }
+
+      if (rowY < 108) {
+        pageNumber += 1;
+        page = pdfDoc.addPage(pageSize);
+        drawCommonFrame(page, pageNumber);
+      }
+
+      page.drawRectangle({
+        x: marginX,
+        y: 70,
+        width: tableWidth,
+        height: 22,
+        color: rgb(0, 0, 0),
+      });
+      page.drawText(`TOTAL ENTRADA: ${formatCurrency(totalVisibleCost)}`, {
+        x: pageWidth - marginX - 220,
+        y: 74,
+        size: 14,
+        color: rgb(1, 1, 1),
+        font: fontBold,
+      });
+
+      const pdfBytes = await pdfDoc.save();
+      const safeBranchToken = branchTitle.replace(/\s+/g, '-').replace(/[^A-Z0-9-]/g, '');
+      const fileName = `DIESEL-${safeBranchToken}-${toInputDate(new Date())}.pdf`;
+      openPdfPreview(new Blob([pdfBytes], { type: 'application/pdf' }), fileName);
+      showStatus('success', 'PDF generado', 'Se exportó el historial visible.', '✅');
+    } catch (error: any) {
+      console.error(error);
+      showStatus('error', 'Error al exportar', error?.message || 'No se pudo generar el PDF.', '❌');
+    } finally {
+      setIsExportingLogs(false);
+    }
+  };
+
   return (
     <div className="bg-slate-50 min-h-screen pb-24 font-sans antialiased text-slate-900">
       <style>{`
@@ -527,15 +847,55 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
 
           {activeView === 'logs' && (
             <div className="space-y-6">
-              <div className="flex justify-between items-center px-4">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logs de Movimientos</h3>
-                <button
-                  onClick={handleResetCalculations}
-                  disabled={isLoading}
-                  className="px-4 py-2 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-red-200 hover:bg-red-600 transition-all active:scale-95"
-                >
-                  {isLoading ? 'Reiniciando...' : 'Reiniciar Cálculos'}
-                </button>
+              <div className="flex flex-col gap-4 px-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logs de Movimientos</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[170px_170px_auto_auto] gap-2">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Desde</span>
+                      <input
+                        type="date"
+                        value={logsDateFrom}
+                        onChange={(e) => setLogsDateFrom(e.target.value)}
+                        className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Hasta</span>
+                      <input
+                        type="date"
+                        value={logsDateTo}
+                        onChange={(e) => setLogsDateTo(e.target.value)}
+                        className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </label>
+                    <button
+                      onClick={() => {
+                        setLogsDateFrom('');
+                        setLogsDateTo('');
+                      }}
+                      className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                    >
+                      Limpiar
+                    </button>
+                    <button
+                      onClick={handleExportVisibleLogsPdf}
+                      disabled={isExportingLogs}
+                      className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-slate-300 hover:bg-black transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {isExportingLogs ? 'Exportando...' : 'Descargar PDF'}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleResetCalculations}
+                    disabled={isLoading}
+                    className="px-4 py-2 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-red-200 hover:bg-red-600 transition-all active:scale-95"
+                  >
+                    {isLoading ? 'Reiniciando...' : 'Reiniciar Cálculos'}
+                  </button>
+                </div>
               </div>
               <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4">
                 <div className="overflow-x-auto">
@@ -553,11 +913,18 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {logs.filter(l => branchTanks.some(t => t.id === l.tankId)).map(log => {
+                      {visibleBranchLogs.length === 0 && (
+                        <tr>
+                          <td colSpan={8} className="p-6 text-center text-sm font-bold text-slate-400">
+                            No hay movimientos en el rango seleccionado.
+                          </td>
+                        </tr>
+                      )}
+                      {visibleBranchLogs.map(log => {
                         const isDeleted = log.status === 'ELIMINADO';
                         return (
                           <tr key={log.id} className={`hover:bg-slate-50 transition-colors ${isDeleted ? 'opacity-60' : ''}`}>
-                            <td className="p-6 text-xs text-slate-500 font-bold">{log.createdAt.toLocaleDateString()}</td>
+                            <td className="p-6 text-xs text-slate-500 font-bold">{formatDieselDateTime(log.createdAt)}</td>
                             <td className="p-6">
                               <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${log.type === 'CARGA' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
                                 {log.type === 'CARGA' ? 'Salida' : 'Entrada'}
@@ -568,9 +935,9 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                                 {log.type === 'CARGA' ? vehicles.find(v => v.id === log.vehicleId)?.description : log.supplier}
                               </p>
                             </td>
-                            <td className="p-6 text-right font-black text-sm">{log.amount.toLocaleString()} L</td>
-                            <td className="p-6 text-right font-black text-sm">{log.costPerLiter ? `$ ${log.costPerLiter?.toLocaleString()}` : '———'}</td>
-                            <td className="text-sm font-black text-slate-800 uppercase">
+                            <td className="p-6 text-right font-black text-sm">{formatNumber(log.amount)} L</td>
+                            <td className="p-6 text-right font-black text-sm">{log.costPerLiter ? formatCurrency(log.costPerLiter) : '———'}</td>
+                            <td className="p-6 text-sm font-black text-slate-800 uppercase">
                               {isDeleted ? (log.deleteObservation || '—') : (log.notes || '———')}
                             </td>
                             <td className="p-6 text-right font-black text-sm">{log.status || 'ACTIVO'}</td>

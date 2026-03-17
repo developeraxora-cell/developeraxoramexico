@@ -105,6 +105,7 @@ const POSScreen: React.FC<POSProps> = ({
   const [salesHistoryTotal, setSalesHistoryTotal] = useState(0);
   const [salesHistoryDateFrom, setSalesHistoryDateFrom] = useState('');
   const [salesHistoryDateTo, setSalesHistoryDateTo] = useState('');
+  const [salesHistorySaleNumber, setSalesHistorySaleNumber] = useState('');
   const [isSaleDetailOpen, setIsSaleDetailOpen] = useState(false);
   const [saleDetail, setSaleDetail] = useState<{
     id: string;
@@ -215,6 +216,14 @@ const POSScreen: React.FC<POSProps> = ({
     if (!branchId) return;
     setIsSalesHistoryLoading(true);
     try {
+      const saleNumberRaw = salesHistorySaleNumber.trim();
+      const parsedSaleNumber = Number(saleNumberRaw);
+      if (saleNumberRaw && (!Number.isInteger(parsedSaleNumber) || parsedSaleNumber <= 0)) {
+        setSalesHistory([]);
+        setSalesHistoryTotal(0);
+        return;
+      }
+
       let countQuery = supabase
         .from('inventory_transactions')
         .select('id', { count: 'exact', head: true })
@@ -226,6 +235,9 @@ const POSScreen: React.FC<POSProps> = ({
       }
       if (salesHistoryDateTo) {
         countQuery = countQuery.lte('created_at', `${salesHistoryDateTo}T23:59:59.999`);
+      }
+      if (saleNumberRaw) {
+        countQuery = countQuery.eq('id', parsedSaleNumber);
       }
 
       const { count, error: countError } = await countQuery;
@@ -245,6 +257,9 @@ const POSScreen: React.FC<POSProps> = ({
       }
       if (salesHistoryDateTo) {
         transactionsQuery = transactionsQuery.lte('created_at', `${salesHistoryDateTo}T23:59:59.999`);
+      }
+      if (saleNumberRaw) {
+        transactionsQuery = transactionsQuery.eq('id', parsedSaleNumber);
       }
 
       const { data: transactions, error: txError } = await transactionsQuery
@@ -293,7 +308,7 @@ const POSScreen: React.FC<POSProps> = ({
     } finally {
       setIsSalesHistoryLoading(false);
     }
-  }, [branchId, salesHistoryDateFrom, salesHistoryDateTo, salesHistoryPage]);
+  }, [branchId, salesHistoryDateFrom, salesHistoryDateTo, salesHistoryPage, salesHistorySaleNumber]);
 
   const openSaleDetail = async (sale: { id: string; created_at: string; nombre_cliente: string | null }) => {
     setSaleDetail(sale);
@@ -2047,7 +2062,7 @@ const POSScreen: React.FC<POSProps> = ({
               </button>
             </div>
             <div className="p-6 overflow-y-auto">
-              <div className="mb-4 grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3">
+              <div className="mb-4 grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-3">
                 <label className="flex flex-col gap-1">
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Desde</span>
                   <input
@@ -2072,11 +2087,26 @@ const POSScreen: React.FC<POSProps> = ({
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">N° venta</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Ej: 125"
+                    value={salesHistorySaleNumber}
+                    onChange={(e) => {
+                      setSalesHistorySaleNumber(e.target.value.replace(/\D/g, ''));
+                      setSalesHistoryPage(1);
+                    }}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </label>
                 <div className="flex items-end">
                   <button
                     onClick={() => {
                       setSalesHistoryDateFrom('');
                       setSalesHistoryDateTo('');
+                      setSalesHistorySaleNumber('');
                       setSalesHistoryPage(1);
                     }}
                     className="w-full md:w-auto px-4 py-3 rounded-xl bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest hover:bg-slate-200"
@@ -2089,6 +2119,7 @@ const POSScreen: React.FC<POSProps> = ({
                 <table className="w-full text-left">
                   <thead className="bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest">
                     <tr>
+                      <th className="p-4 text-center">N° Venta</th>
                       <th className="p-4">Fecha</th>
                       <th className="p-4">Cliente</th>
                       <th className="p-4 text-center">Nª de Productos</th>
@@ -2099,16 +2130,17 @@ const POSScreen: React.FC<POSProps> = ({
                   <tbody className="divide-y divide-slate-100">
                     {isSalesHistoryLoading && (
                       <tr>
-                        <td colSpan={5} className="p-6 text-center text-slate-400 text-sm">Cargando ventas...</td>
+                        <td colSpan={6} className="p-6 text-center text-slate-400 text-sm">Cargando ventas...</td>
                       </tr>
                     )}
                     {!isSalesHistoryLoading && salesHistory.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="p-6 text-center text-slate-400 text-sm">No hay ventas registradas.</td>
+                        <td colSpan={6} className="p-6 text-center text-slate-400 text-sm">No hay ventas registradas.</td>
                       </tr>
                     )}
                     {!isSalesHistoryLoading && salesHistory.map((sale) => (
                       <tr key={sale.id} className="hover:bg-slate-50">
+                        <td className="p-4 text-center text-xs font-black text-slate-700">#{sale.id}</td>
                         <td className="p-4 text-xs font-bold text-slate-700">{formatLocalDateTime(sale.created_at)}</td>
                         <td className="p-4 text-xs font-bold text-slate-700">{sale.nombre_cliente || 'Público General'}</td>
                         <td className="p-4 text-center text-xs font-bold text-slate-600">{sale.items_count}</td>
