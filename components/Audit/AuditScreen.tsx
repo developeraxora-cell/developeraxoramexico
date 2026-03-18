@@ -32,6 +32,7 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const effectiveSearch = debouncedSearch.length >= 3 ? debouncedSearch : '';
 
   const branchId = useMemo(() => {
     const match = branches.find((b) => b.id === selectedBranchId);
@@ -59,6 +60,8 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
       return;
     }
 
+    const controller = new AbortController();
+
     const run = async () => {
       setIsLoading(true);
       setError(null);
@@ -68,16 +71,18 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
           branch_id: branchId,
           action_type: actionFilter || undefined,
           entity_type: entityFilter || undefined,
-          search: debouncedSearch || undefined,
+          search: effectiveSearch || undefined,
           date_from: dateFrom || undefined,
           date_to: dateTo || undefined,
           page,
           page_size: PAGE_SIZE,
+          signal: controller.signal,
         });
 
         setRows(result.rows);
         setTotal(result.total);
       } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         const message = err instanceof Error ? err.message : 'No se pudo cargar la auditoría.';
         setError(message);
         setRows([]);
@@ -88,7 +93,10 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
     };
 
     void run();
-  }, [actionFilter, branchId, dateFrom, dateTo, debouncedSearch, entityFilter, module, page]);
+    return () => {
+      controller.abort();
+    };
+  }, [actionFilter, branchId, dateFrom, dateTo, effectiveSearch, entityFilter, module, page]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -99,6 +107,10 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
   };
 
   const extractObservation = (row: AuditLogRow) => {
+    if (typeof row.observation === 'string' && row.observation.trim()) {
+      return row.observation.trim();
+    }
+
     const candidateKeys = ['notes', 'note', 'observacion', 'observation', 'reason'];
     const snapshots = [row.new_data, row.previous_data];
 
@@ -197,7 +209,7 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por descripción, usuario, entidad u observación..."
+              placeholder="Buscar por descripción, usuario, entidad u observación (mín. 3 letras)..."
               className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>

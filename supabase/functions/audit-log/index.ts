@@ -34,6 +34,7 @@ const MONGODB_DB = Deno.env.get('MONGODB_DB') ?? 'materials_audit';
 const MONGODB_COLLECTION = Deno.env.get('MONGODB_COLLECTION') ?? 'audit_logs';
 
 let mongoClient: MongoClient | null = null;
+let indexesEnsured = false;
 
 const moduleAliases: Record<string, string[]> = {
   materiales: ['materiales', 'materials'],
@@ -146,6 +147,48 @@ const getMongoClient = async () => {
   return mongoClient;
 };
 
+const extractObservation = (row: Record<string, unknown>) => {
+  const directObservation = row.observation;
+  if (typeof directObservation === 'string' && directObservation.trim()) {
+    return directObservation.trim();
+  }
+
+  const justification = row.justification;
+  if (typeof justification === 'string' && justification.trim()) {
+    return justification.trim();
+  }
+
+  const candidateKeys = ['notes', 'note', 'observacion', 'observation', 'reason'];
+  const snapshots = [row.new_data, row.previous_data];
+
+  for (const snapshot of snapshots) {
+    if (!snapshot || typeof snapshot !== 'object') continue;
+    for (const key of candidateKeys) {
+      const value = (snapshot as Record<string, unknown>)[key];
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim();
+      }
+    }
+  }
+
+  return null;
+};
+
+const ensureIndexes = async (collection: any) => {
+  if (indexesEnsured) return;
+
+  await collection.createIndexes([
+    { key: { log_id: 1 }, name: 'audit_log_id_unique', unique: true },
+    { key: { module: 1, branch_id: 1, timestamp: -1 }, name: 'audit_module_branch_timestamp' },
+    { key: { module: 1, action_type: 1, timestamp: -1 }, name: 'audit_module_action_timestamp' },
+    { key: { module: 1, entity_type: 1, timestamp: -1 }, name: 'audit_module_entity_timestamp' },
+    { key: { branch_id: 1, timestamp: -1 }, name: 'audit_branch_timestamp' },
+    { key: { user_id: 1, timestamp: -1 }, name: 'audit_user_timestamp' },
+  ]);
+
+  indexesEnsured = true;
+};
+
 const validatePayload = (payload: Partial<AuditLogPayload>) => {
   const requiredFields = [
     'branch_id',
@@ -240,16 +283,50 @@ Deno.serve(async (request) => {
       const client = await getMongoClient();
       const db = client.db(MONGODB_DB);
       const collection = db.collection(MONGODB_COLLECTION);
+      await ensureIndexes(collection);
 
-      const [total, rows] = await Promise.all([
+      const projection = {
+        _id: 0,
+        log_id: 1,
+        branch_id: 1,
+        branch_name: 1,
+        user_id: 1,
+        user_name: 1,
+        action_type: 1,
+        module: 1,
+        entity_type: 1,
+        entity_id: 1,
+        description: 1,
+        justification: 1,
+        timestamp: 1,
+        observation: 1,
+        'new_data.notes': 1,
+        'new_data.note': 1,
+        'new_data.observacion': 1,
+        'new_data.observation': 1,
+        'new_data.reason': 1,
+        'previous_data.notes': 1,
+        'previous_data.note': 1,
+        'previous_data.observacion': 1,
+        'previous_data.observation': 1,
+        'previous_data.reason': 1,
+      };
+
+      const [total, rawRows] = await Promise.all([
         collection.countDocuments(filter),
         collection
           .find(filter)
+          .project(projection)
           .sort({ timestamp: -1, _id: -1 })
           .skip(skip)
           .limit(pageSize)
           .toArray(),
       ]);
+
+      const rows = rawRows.map((row) => ({
+        ...row,
+        observation: extractObservation(row),
+      }));
 
       return jsonResponse(200, {
         ok: true,
@@ -309,6 +386,11 @@ Deno.serve(async (request) => {
       justification: payload.justification?.trim() || null,
       previous_data: payload.previous_data ?? null,
       new_data: payload.new_data ?? null,
+      observation: payload.justification?.trim() || extractObservation({
+        new_data: payload.new_data ?? null,
+        previous_data: payload.previous_data ?? null,
+        justification: payload.justification ?? null,
+      }),
       timestamp: payload.timestamp ? new Date(payload.timestamp) : new Date(),
       ip_address: payload.ip_address ?? clientIp,
       user_agent: userAgent,
@@ -318,6 +400,7 @@ Deno.serve(async (request) => {
     const client = await getMongoClient();
     const db = client.db(MONGODB_DB);
     const collection = db.collection(MONGODB_COLLECTION);
+    await ensureIndexes(collection);
 
     await collection.insertOne(document);
 

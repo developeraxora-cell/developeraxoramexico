@@ -11,6 +11,7 @@ export interface AuditLogRow {
   entity_id: string;
   description: string;
   justification?: string | null;
+  observation?: string | null;
   previous_data?: Record<string, unknown> | null;
   new_data?: Record<string, unknown> | null;
   timestamp: string;
@@ -58,6 +59,7 @@ export const auditReadService = {
     page_size?: number;
     date_from?: string;
     date_to?: string;
+    signal?: AbortSignal;
   }) {
     if (!AUDIT_API_URL) {
       throw new Error('Audit API no configurada.');
@@ -77,6 +79,7 @@ export const auditReadService = {
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: buildHeaders(),
+      signal: params.signal,
     });
 
     const payload = await response.json().catch(() => ({}));
