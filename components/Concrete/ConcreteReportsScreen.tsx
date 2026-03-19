@@ -242,6 +242,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
         .from('concrete_inventory_transactions')
         .select('id, type, created_at, purchase_date, reference, notes, nombre_cliente, is_credit, concrete_suppliers ( name )')
         .eq('branch_id', branchId)
+        .eq('is_deleted', false)
         .gte('created_at', rangeStart.toISOString())
         .lte('created_at', rangeEnd.toISOString())
         .order('created_at', { ascending: false });

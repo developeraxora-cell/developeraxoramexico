@@ -40,6 +40,12 @@ export interface CreateSaleInput {
   cartItems: SaleCartItemInput[];
 }
 
+export interface DeleteSaleInput {
+  sale_id: string;
+  deleted_by: string;
+  delete_note: string;
+}
+
 export interface CreateProductInput {
   branch_id: string;
   sku: string;
@@ -369,6 +375,17 @@ export const purchasesService = {
     }
 
     return transaction;
+  },
+
+  async deleteSale(input: DeleteSaleInput) {
+    const { data, error } = await supabase.rpc('delete_inventory_sale', {
+      p_sale_id: Number(input.sale_id),
+      p_deleted_by: input.deleted_by,
+      p_delete_note: input.delete_note,
+    });
+
+    if (error) throw error;
+    return data;
   },
 
   async createProductWithUoms(input: {

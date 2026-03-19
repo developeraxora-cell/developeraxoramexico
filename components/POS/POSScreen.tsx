@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { BadgeDollarSign, Eye, FileDown, RotateCcw } from 'lucide-react';
+import { BadgeDollarSign, Eye, FileDown, RotateCcw, Trash2 } from 'lucide-react';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, Product as PosProduct, CartItem, ProductConversion, User } from '../../types';
 import { UNITS } from '../../constants';
@@ -11,6 +11,7 @@ import { supabase } from '../../services/supabaseClient';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { logMaterialsAudit } from '../../services/audit/audit.service';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
+import ConfirmModal from '../common/ConfirmModal';
 import CustomerSearchSelect from '../common/CustomerSearchSelect';
 
 interface POSProps {
@@ -106,6 +107,16 @@ const POSScreen: React.FC<POSProps> = ({
   const [salesHistoryDateFrom, setSalesHistoryDateFrom] = useState('');
   const [salesHistoryDateTo, setSalesHistoryDateTo] = useState('');
   const [salesHistorySaleNumber, setSalesHistorySaleNumber] = useState('');
+  const [saleToDelete, setSaleToDelete] = useState<{
+    id: string;
+    created_at: string;
+    nombre_cliente: string | null;
+    items_count: number;
+    total_amount: number;
+  } | null>(null);
+  const [deleteSaleNote, setDeleteSaleNote] = useState('');
+  const [deleteSaleError, setDeleteSaleError] = useState<string | null>(null);
+  const [isDeletingSale, setIsDeletingSale] = useState(false);
   const [isSaleDetailOpen, setIsSaleDetailOpen] = useState(false);
   const [saleDetail, setSaleDetail] = useState<{
     id: string;
@@ -228,6 +239,7 @@ const POSScreen: React.FC<POSProps> = ({
         .from('inventory_transactions')
         .select('id', { count: 'exact', head: true })
         .eq('branch_id', branchId)
+        .eq('is_deleted', false)
         .eq('type', 'SALE');
 
       if (salesHistoryDateFrom) {
@@ -250,6 +262,7 @@ const POSScreen: React.FC<POSProps> = ({
         .from('inventory_transactions')
         .select('id, reference, notes, direccion_cliente, created_at, nombre_cliente, created_by')
         .eq('branch_id', branchId)
+        .eq('is_deleted', false)
         .eq('type', 'SALE');
 
       if (salesHistoryDateFrom) {
@@ -371,6 +384,68 @@ const POSScreen: React.FC<POSProps> = ({
     if (!isSalesHistoryOpen) return;
     void loadSalesHistory();
   }, [isSalesHistoryOpen, loadSalesHistory]);
+
+  const openDeleteSaleModal = (sale: {
+    id: string;
+    created_at: string;
+    nombre_cliente: string | null;
+    items_count: number;
+    total_amount: number;
+  }) => {
+    setSaleToDelete(sale);
+    setDeleteSaleNote('');
+    setDeleteSaleError(null);
+  };
+
+  const handleDeleteSale = async () => {
+    if (!saleToDelete) return;
+    const normalizedNote = deleteSaleNote.trim();
+    if (!normalizedNote) {
+      setDeleteSaleError('La observación es obligatoria para eliminar la venta.');
+      return;
+    }
+
+    setIsDeletingSale(true);
+    setDeleteSaleError(null);
+    try {
+      await purchasesService.deleteSale({
+        sale_id: saleToDelete.id,
+        deleted_by: currentUser.id,
+        delete_note: normalizedNote,
+      });
+
+      logMaterialsAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ELIMINAR',
+        entity_type: 'venta',
+        entity_id: String(saleToDelete.id),
+        description: `Venta eliminada #${saleToDelete.id}`,
+        justification: normalizedNote,
+        previous_data: {
+          sale_id: saleToDelete.id,
+          customer_name: saleToDelete.nombre_cliente ?? 'PUBLICO GENERAL',
+          created_at: saleToDelete.created_at,
+          items_count: saleToDelete.items_count,
+          total_amount: saleToDelete.total_amount,
+        },
+        new_data: {
+          deleted: true,
+          notes: normalizedNote,
+        },
+      });
+
+      setSaleToDelete(null);
+      await Promise.all([loadBranchCatalog(), loadSalesHistory()]);
+      showFeedback('success', 'Venta eliminada', 'Se restauró el stock y la venta ya no contará en reportes.');
+    } catch (err: any) {
+      setDeleteSaleError(err?.message ?? 'No se pudo eliminar la venta.');
+    } finally {
+      setIsDeletingSale(false);
+    }
+  };
 
   const openSpecialPriceModal = (item: CartItem) => {
     setSpecialPriceModal({
@@ -2161,6 +2236,13 @@ const POSScreen: React.FC<POSProps> = ({
                             >
                               <Eye className="w-4 h-4 mx-auto" />
                             </button>
+                            <button
+                              onClick={() => openDeleteSaleModal(sale)}
+                              className="w-8 h-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50"
+                              title="Eliminar venta"
+                            >
+                              <Trash2 className="w-4 h-4 mx-auto" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -2196,6 +2278,31 @@ const POSScreen: React.FC<POSProps> = ({
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={Boolean(saleToDelete)}
+        title="Eliminar venta"
+        description={`La venta #${saleToDelete?.id ?? '—'} será eliminada del historial activo, se restaurará el stock y dejará de contar en reportes.`}
+        confirmText="Eliminar venta"
+        cancelText="Cancelar"
+        noteLabel="Observación obligatoria"
+        notePlaceholder="Explique por qué se eliminará esta venta"
+        noteValue={deleteSaleNote}
+        noteRequired
+        noteError={deleteSaleError}
+        isProcessing={isDeletingSale}
+        onNoteChange={(value) => {
+          setDeleteSaleNote(value);
+          if (deleteSaleError) setDeleteSaleError(null);
+        }}
+        onConfirm={handleDeleteSale}
+        onCancel={() => {
+          if (isDeletingSale) return;
+          setSaleToDelete(null);
+          setDeleteSaleNote('');
+          setDeleteSaleError(null);
+        }}
+      />
     </div>
   );
 };

@@ -473,6 +473,7 @@ export const catalogService = {
         concrete_inventory_transactions!inner (
           id,
           type,
+          is_deleted,
           branch_id,
           reference,
           notes,
@@ -482,6 +483,7 @@ export const catalogService = {
       `)
       .eq('product_id', productId)
       .eq('concrete_inventory_transactions.branch_id', branchId)
+      .eq('concrete_inventory_transactions.is_deleted', false)
       .in('concrete_inventory_transactions.type', ['PURCHASE', 'SALE'])
       .order('created_at', { ascending: false, foreignTable: 'concrete_inventory_transactions' })
       .limit(safeLimit);
