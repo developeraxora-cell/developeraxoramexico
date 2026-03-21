@@ -176,6 +176,19 @@ const getLevelBadge = (level: AlertLevel) => {
   return 'bg-emerald-100 text-emerald-700 border border-emerald-200';
 };
 
+const getAlertTypeBadge = (type: AlertRow['alertType']) => {
+  switch (type) {
+    case 'TIEMPO':
+      return 'bg-blue-50 text-blue-700 border border-blue-200';
+    case 'LIMITE':
+      return 'bg-orange-50 text-orange-700 border border-orange-200';
+    case 'MIXTO':
+      return 'bg-violet-50 text-violet-700 border border-violet-200';
+    default:
+      return 'bg-slate-100 text-slate-500 border border-slate-200';
+  }
+};
+
 const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchId, branches, currentUser, module }) => {
   const [customers, setCustomers] = useState<AlertCustomer[]>([]);
   const [openNotes, setOpenNotes] = useState<AlertNote[]>([]);
@@ -323,34 +336,76 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
     };
   }, [alertRows]);
 
+  const filterCounters = useMemo(
+    () => ({
+      RELEVANTES: alertRows.filter((row) => row.level !== 'NORMAL').length,
+      CRITICOS: alertRows.filter((row) => row.level === 'CRITICO').length,
+      TIEMPO: alertRows.filter((row) => row.hasOverdue || row.isNearDue).length,
+      LIMITE: alertRows.filter((row) => row.isOverLimit || row.isNearLimit).length,
+      TODOS: alertRows.length,
+    }),
+    [alertRows]
+  );
+
   const moduleLabel = module === 'concretera' ? 'CONCRETERA' : 'MATERIALES';
 
   return (
     <div className="space-y-8">
-      <div className="rounded-[32px] border border-slate-200 bg-white px-6 py-8 shadow-[0_20px_60px_-45px_rgba(15,23,42,0.35)]">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-          <div className="w-full grid gap-3 sm:grid-cols-2 xl:min-w-[420px] xl:grid-cols-4">
-            <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-red-500">Vencidos</p>
-              <p className="mt-2 text-3xl font-black text-slate-900">{kpis.criticalTime}</p>
+      <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_20px_60px_-45px_rgba(15,23,42,0.35)]">
+        <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_42%,#f8fafc_100%)] px-6 py-7">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/15">
+                  <AlertTriangle size={24} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-orange-500">
+                    Monitoreo de cartera
+                  </p>
+                  <p className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    {moduleLabel} · {selectedBranch?.name ?? 'Sucursal activa'}
+                  </p>
+                </div>
+              </div>
+              <div className="relative mt-5 w-full max-w-2xl">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
+                <input
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Buscar por cliente, teléfono o observación..."
+                  className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-orange-300"
+                />
+              </div>
             </div>
-            <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-500">Por vencer 7 días</p>
-              <p className="mt-2 text-3xl font-black text-slate-900">{kpis.warningTime}</p>
-            </div>
-            <div className="rounded-2xl border border-red-100 bg-slate-900 px-4 py-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/60">Límite excedido</p>
-              <p className="mt-2 text-3xl font-black text-white">{kpis.criticalLimit}</p>
-            </div>
-            <div className="rounded-2xl border border-amber-100 bg-white px-4 py-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Límite preventivo</p>
-              <p className="mt-2 text-3xl font-black text-slate-900">{kpis.warningLimit}</p>
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[520px] xl:grid-cols-4">
+              <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-red-500">Vencidos</p>
+                <p className="mt-2 text-3xl font-black text-slate-900">{kpis.criticalTime}</p>
+                <p className="mt-1 text-xs font-semibold text-red-500">Con nota ya fuera de plazo</p>
+              </div>
+              <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-500">Por vencer 7 días</p>
+                <p className="mt-2 text-3xl font-black text-slate-900">{kpis.warningTime}</p>
+                <p className="mt-1 text-xs font-semibold text-amber-600">Seguimiento preventivo</p>
+              </div>
+              <div className="rounded-2xl border border-slate-900 bg-slate-900 px-4 py-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/60">Límite excedido</p>
+                <p className="mt-2 text-3xl font-black text-white">{kpis.criticalLimit}</p>
+                <p className="mt-1 text-xs font-semibold text-white/70">Bloqueo recomendado</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Límite preventivo</p>
+                <p className="mt-2 text-3xl font-black text-slate-900">{kpis.warningLimit}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">Desde {LIMIT_WARNING_THRESHOLD}% de uso</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
       <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-45px_rgba(15,23,42,0.35)]">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-5">
           <div className="flex flex-wrap gap-2">
             {[
               { id: 'RELEVANTES', label: 'Relevantes' },
@@ -370,19 +425,9 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
                   : 'border border-slate-200 bg-white text-slate-500 hover:border-orange-200 hover:text-orange-500'
                   }`}
               >
-                {option.label}
+                {option.label} <span className="ml-1 opacity-70">({filterCounters[option.id as AlertFilter]})</span>
               </button>
             ))}
-          </div>
-
-          <div className="relative w-full xl:max-w-md">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
-            <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Buscar por cliente, teléfono o observación..."
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-orange-300 focus:bg-white"
-            />
           </div>
         </div>
 
@@ -429,10 +474,15 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
                   pagedRows.map((row) => (
                     <tr key={row.customerId} className="align-top hover:bg-slate-50/80">
                       <td className="px-5 py-4">
-                        <div className="space-y-1">
-                          <p className="font-black uppercase tracking-tight text-slate-900">{row.customerName}</p>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-black uppercase tracking-tight text-slate-900">{row.customerName}</p>
+                            <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                              {row.creditDays} días
+                            </span>
+                          </div>
                           <p className="text-xs font-semibold text-slate-400">
-                            {row.phone || row.address || `${row.creditDays} días de crédito`}
+                            {row.phone || row.address || 'Sin dato adicional'}
                           </p>
                         </div>
                       </td>
@@ -442,8 +492,16 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
                         {formatCurrency(row.available)}
                       </td>
                       <td className="px-5 py-4 text-center">
-                        <div className="inline-flex min-w-[88px] items-center justify-center rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">
-                          {formatNumber(row.utilizationPct, 'en-US', { maximumFractionDigits: 0 })}%
+                        <div className="mx-auto flex w-[100px] flex-col gap-2">
+                          <div className="inline-flex items-center justify-center rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">
+                            {formatNumber(row.utilizationPct, 'en-US', { maximumFractionDigits: 0 })}%
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className={`h-full rounded-full ${row.isOverLimit ? 'bg-red-500' : row.isNearLimit ? 'bg-amber-400' : 'bg-emerald-500'}`}
+                              style={{ width: `${Math.min(100, Math.max(0, row.utilizationPct))}%` }}
+                            />
+                          </div>
                         </div>
                       </td>
                       <td className="px-5 py-4 text-center font-semibold text-slate-700">{formatDate(row.nextDueDate)}</td>
@@ -466,10 +524,15 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
                       </td>
                       <td className="px-5 py-4">
                         <div className="space-y-2">
-                          <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${getLevelBadge(row.level)}`}>
-                            {row.level}
-                          </span>
-                          <p className="text-xs font-semibold leading-5 text-slate-500">{row.message}</p>
+                          <div className="flex flex-wrap gap-2">
+                            <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${getLevelBadge(row.level)}`}>
+                              {row.level}
+                            </span>
+                            <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${getAlertTypeBadge(row.alertType)}`}>
+                              {row.alertType}
+                            </span>
+                          </div>
+                          <p className="max-w-sm text-xs font-semibold leading-5 text-slate-500">{row.message}</p>
                         </div>
                       </td>
                     </tr>
@@ -504,7 +567,6 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
