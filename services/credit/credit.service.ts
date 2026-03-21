@@ -216,6 +216,18 @@ export const creditService = {
     return (data ?? []) as CreditNote[];
   },
 
+  async listOpenNotesByBranch(branchId: string) {
+    const { data, error } = await supabase
+      .from('credit_notes')
+      .select('*')
+      .eq('branch_id', branchId)
+      .gt('balance', 0)
+      .order('due_date', { ascending: true });
+
+    if (error) throw error;
+    return (data ?? []) as CreditNote[];
+  },
+
   async listPaymentsByNoteIds(noteIds: string[]) {
     if (noteIds.length === 0) return [] as CreditPayment[];
 

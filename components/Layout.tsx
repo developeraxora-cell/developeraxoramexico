@@ -32,7 +32,7 @@ const Layout: React.FC<LayoutProps> = ({
   children, activeTab, setActiveTab, currentUser, onLogout,
   selectedBranchId, setSelectedBranchId, branches, onReset
 }) => {
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(['materiales', 'concretera', 'logistica']);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navigation: NavGroup[] = [
@@ -45,6 +45,7 @@ const Layout: React.FC<LayoutProps> = ({
         { id: 'purchases', label: 'Compras / Entradas', icon: '📥', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'inventory', label: 'Inventario', icon: '📦', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'customers', label: 'Clientes / Crédito', icon: '👥', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
+        { id: 'customer-alerts', label: 'Alertas clientes', icon: '🚨', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
         { id: 'audit', label: 'Auditoría', icon: '📋', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'reports', label: 'Reportes', icon: '📊', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'branches', label: 'Sucursales', icon: '🏢', roles: [Role.ADMIN] },
@@ -60,6 +61,7 @@ const Layout: React.FC<LayoutProps> = ({
         { id: 'concrete-purchases', label: 'Compras / Entradas', icon: '📥', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'concrete-inventory', label: 'Inventario', icon: '📦', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'concrete-customers', label: 'Clientes / Crédito', icon: '👥', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
+        { id: 'concrete-customer-alerts', label: 'Alertas clientes', icon: '🚨', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
         { id: 'concrete-audit', label: 'Auditoría', icon: '📋', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'concrete-reports', label: 'Reportes', icon: '📊', roles: [Role.ADMIN, Role.ALMACEN] },
       ]

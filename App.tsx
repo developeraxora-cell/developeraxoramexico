@@ -15,6 +15,7 @@ import ConcretePurchasesScreen from './components/Concrete/ConcretePurchasesScre
 import ConcreteInventoryScreen from './components/Concrete/ConcreteInventoryScreen';
 import ConcreteCustomersScreen from './components/Concrete/ConcreteCustomersScreen';
 import ConcreteReportsScreen from './components/Concrete/ConcreteReportsScreen';
+import CreditAlertsScreen from './components/CreditAlerts/CreditAlertsScreen';
 import {
   dieselTanksService,
   vehiclesService,
@@ -263,6 +264,15 @@ const App: React.FC = () => {
         return <PurchasesScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
       case 'customers':
         return <CustomerScreen selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'customer-alerts':
+        return (
+          <CreditAlertsScreen
+            selectedBranchId={selectedBranchId}
+            branches={activeBranches}
+            currentUser={currentUser}
+            module="materiales"
+          />
+        );
       case 'inventory':
         return <InventoryScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
       case 'audit':
@@ -289,6 +299,15 @@ const App: React.FC = () => {
         return <ConcretePurchasesScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
       case 'concrete-customers':
         return <ConcreteCustomersScreen selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'concrete-customer-alerts':
+        return (
+          <CreditAlertsScreen
+            selectedBranchId={selectedBranchId}
+            branches={activeBranches}
+            currentUser={currentUser}
+            module="concretera"
+          />
+        );
       case 'concrete-inventory':
         return <ConcreteInventoryScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
       case 'concrete-reports':

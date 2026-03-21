@@ -1,0 +1,513 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Clock3, CreditCard, Search } from 'lucide-react';
+import { Branch, User } from '../../types';
+import { formatCurrency, formatNumber } from '../../services/currency';
+import { creditService as materialsCreditService } from '../../services/credit/credit.service';
+import { creditService as concreteCreditService } from '../../services/concretera/credit.service';
+
+interface CreditAlertsScreenProps {
+  selectedBranchId: string;
+  branches: Branch[];
+  currentUser: User;
+  module: 'materiales' | 'concretera';
+}
+
+interface AlertCustomer {
+  id: string;
+  name: string;
+  phone: string | null;
+  address: string | null;
+  credit_limit: number;
+  default_credit_days: number;
+  late_tolerance_days: number;
+  is_active: boolean;
+}
+
+interface AlertNote {
+  id: string;
+  customer_id: string;
+  due_date: string;
+  balance: number;
+}
+
+type AlertFilter = 'RELEVANTES' | 'CRITICOS' | 'TIEMPO' | 'LIMITE' | 'TODOS';
+type AlertLevel = 'CRITICO' | 'PREVENTIVO' | 'NORMAL';
+
+interface AlertRow {
+  customerId: string;
+  customerName: string;
+  phone: string | null;
+  address: string | null;
+  creditDays: number;
+  creditLimit: number;
+  debt: number;
+  available: number;
+  utilizationPct: number;
+  nextDueDate: string | null;
+  daysToDue: number | null;
+  overdueCount: number;
+  openNotesCount: number;
+  hasOverdue: boolean;
+  isNearDue: boolean;
+  isNearLimit: boolean;
+  isOverLimit: boolean;
+  level: AlertLevel;
+  alertType: 'TIEMPO' | 'LIMITE' | 'MIXTO' | 'NINGUNO';
+  message: string;
+}
+
+interface CreditApi {
+  listCustomersByBranch(branchId: string): Promise<AlertCustomer[]>;
+  listOpenNotesByBranch(branchId: string): Promise<AlertNote[]>;
+}
+
+const PAGE_SIZE = 10;
+const DUE_SOON_DAYS = 7;
+const LIMIT_WARNING_THRESHOLD = 80;
+
+const formatDate = (value: string | null) => {
+  if (!value) return 'Sin notas';
+  return new Date(`${value}T00:00:00Z`).toLocaleDateString('es-PE', {
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+};
+
+const getDayDiff = (dateValue: string, today: Date) => {
+  const dueDate = new Date(`${dateValue}T00:00:00Z`);
+  const todayUtc = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  return Math.floor((dueDate.getTime() - todayUtc.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+const buildAlertRow = (customer: AlertCustomer, notes: AlertNote[], today: Date): AlertRow => {
+  const debt = notes.reduce((acc, note) => acc + Number(note.balance ?? 0), 0);
+  const creditLimit = Number(customer.credit_limit ?? 0);
+  const available = creditLimit - debt;
+  const utilizationPct = creditLimit > 0 ? (debt / creditLimit) * 100 : 0;
+  const sortedNotes = [...notes].sort((a, b) => a.due_date.localeCompare(b.due_date));
+  const nextDueDate = sortedNotes[0]?.due_date ?? null;
+  const daysToDue = nextDueDate ? getDayDiff(nextDueDate, today) : null;
+  const toleranceDays = Number(customer.late_tolerance_days ?? 0);
+  const overdueCount = sortedNotes.filter((note) => getDayDiff(note.due_date, today) < -toleranceDays).length;
+  const hasOverdue = overdueCount > 0;
+  const isNearDue = !hasOverdue && daysToDue !== null && daysToDue >= 0 && daysToDue <= DUE_SOON_DAYS;
+  const isOverLimit = creditLimit > 0 && debt >= creditLimit;
+  const isNearLimit = !isOverLimit && creditLimit > 0 && utilizationPct >= LIMIT_WARNING_THRESHOLD;
+
+  let level: AlertLevel = 'NORMAL';
+  let alertType: AlertRow['alertType'] = 'NINGUNO';
+  let message = 'Sin alertas inmediatas';
+
+  if (hasOverdue && isOverLimit) {
+    level = 'CRITICO';
+    alertType = 'MIXTO';
+    message = `Tiene ${overdueCount} nota(s) vencida(s) y superó su límite.`;
+  } else if (hasOverdue) {
+    level = 'CRITICO';
+    alertType = 'TIEMPO';
+    message = `Tiene ${overdueCount} nota(s) vencida(s).`;
+  } else if (isOverLimit) {
+    level = 'CRITICO';
+    alertType = 'LIMITE';
+    message = 'Alcanzó o superó su límite de crédito.';
+  } else if (isNearDue && isNearLimit) {
+    level = 'PREVENTIVO';
+    alertType = 'MIXTO';
+    message = `Vence en ${daysToDue} día(s) y ya usa ${formatNumber(utilizationPct, 'en-US', { maximumFractionDigits: 0 })}% del límite.`;
+  } else if (isNearDue) {
+    level = 'PREVENTIVO';
+    alertType = 'TIEMPO';
+    message = `Su siguiente nota vence en ${daysToDue} día(s).`;
+  } else if (isNearLimit) {
+    level = 'PREVENTIVO';
+    alertType = 'LIMITE';
+    message = `Usa ${formatNumber(utilizationPct, 'en-US', { maximumFractionDigits: 0 })}% del límite.`;
+  }
+
+  return {
+    customerId: customer.id,
+    customerName: customer.name,
+    phone: customer.phone,
+    address: customer.address,
+    creditDays: Number(customer.default_credit_days ?? 0),
+    creditLimit,
+    debt,
+    available,
+    utilizationPct,
+    nextDueDate,
+    daysToDue,
+    overdueCount,
+    openNotesCount: sortedNotes.length,
+    hasOverdue,
+    isNearDue,
+    isNearLimit,
+    isOverLimit,
+    level,
+    alertType,
+    message,
+  };
+};
+
+const rowMatchesFilter = (row: AlertRow, filter: AlertFilter) => {
+  switch (filter) {
+    case 'CRITICOS':
+      return row.level === 'CRITICO';
+    case 'TIEMPO':
+      return row.hasOverdue || row.isNearDue;
+    case 'LIMITE':
+      return row.isOverLimit || row.isNearLimit;
+    case 'TODOS':
+      return true;
+    case 'RELEVANTES':
+    default:
+      return row.level !== 'NORMAL';
+  }
+};
+
+const getLevelBadge = (level: AlertLevel) => {
+  if (level === 'CRITICO') {
+    return 'bg-red-100 text-red-700 border border-red-200';
+  }
+  if (level === 'PREVENTIVO') {
+    return 'bg-amber-100 text-amber-700 border border-amber-200';
+  }
+  return 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+};
+
+const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchId, branches, currentUser, module }) => {
+  const [customers, setCustomers] = useState<AlertCustomer[]>([]);
+  const [openNotes, setOpenNotes] = useState<AlertNote[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [filter, setFilter] = useState<AlertFilter>('RELEVANTES');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const selectedBranch = useMemo(
+    () => branches.find((branch) => branch.id === selectedBranchId) ?? null,
+    [branches, selectedBranchId]
+  );
+
+  const branchId = useMemo(() => {
+    const match = branches.find((branch) => branch.id === selectedBranchId);
+    if (match?.dbId !== undefined) return String(match.dbId);
+    return selectedBranchId || '';
+  }, [branches, selectedBranchId]);
+
+  const creditApi: CreditApi = useMemo(
+    () => (module === 'concretera' ? concreteCreditService : materialsCreditService),
+    [module]
+  );
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim().toLowerCase());
+      setCurrentPage(1);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadData = async () => {
+      if (!branchId) {
+        if (isMounted) {
+          setCustomers([]);
+          setOpenNotes([]);
+        }
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const [customerRows, noteRows] = await Promise.all([
+          creditApi.listCustomersByBranch(branchId),
+          creditApi.listOpenNotesByBranch(branchId),
+        ]);
+
+        if (!isMounted) return;
+        setCustomers((customerRows ?? []).filter((customer) => customer.is_active !== false));
+        setOpenNotes(noteRows ?? []);
+      } catch (err) {
+        if (!isMounted) return;
+        const message = err instanceof Error ? err.message : 'No se pudieron cargar las alertas.';
+        setError(message);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [branchId, creditApi]);
+
+  const alertRows = useMemo(() => {
+    const today = new Date();
+    const notesByCustomer = openNotes.reduce<Record<string, AlertNote[]>>((acc, note) => {
+      if (!acc[note.customer_id]) acc[note.customer_id] = [];
+      acc[note.customer_id].push(note);
+      return acc;
+    }, {});
+
+    return customers
+      .map((customer) => buildAlertRow(customer, notesByCustomer[customer.id] ?? [], today))
+      .sort((left, right) => {
+        const priority = { CRITICO: 0, PREVENTIVO: 1, NORMAL: 2 };
+        const levelDiff = priority[left.level] - priority[right.level];
+        if (levelDiff !== 0) return levelDiff;
+
+        if (left.hasOverdue !== right.hasOverdue) return left.hasOverdue ? -1 : 1;
+        if (left.isOverLimit !== right.isOverLimit) return left.isOverLimit ? -1 : 1;
+
+        if (left.daysToDue === null && right.daysToDue !== null) return 1;
+        if (left.daysToDue !== null && right.daysToDue === null) return -1;
+        if (left.daysToDue !== null && right.daysToDue !== null && left.daysToDue !== right.daysToDue) {
+          return left.daysToDue - right.daysToDue;
+        }
+
+        if (left.utilizationPct !== right.utilizationPct) return right.utilizationPct - left.utilizationPct;
+        return left.customerName.localeCompare(right.customerName);
+      });
+  }, [customers, openNotes]);
+
+  const filteredRows = useMemo(() => {
+    const baseRows = alertRows.filter((row) => rowMatchesFilter(row, filter));
+    if (!debouncedSearchTerm) return baseRows;
+
+    return baseRows.filter((row) =>
+      [
+        row.customerName,
+        row.phone ?? '',
+        row.address ?? '',
+        row.message,
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(debouncedSearchTerm)
+    );
+  }, [alertRows, debouncedSearchTerm, filter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const pagedRows = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredRows.slice(start, start + PAGE_SIZE);
+  }, [currentPage, filteredRows]);
+
+  const kpis = useMemo(() => {
+    const criticalTime = alertRows.filter((row) => row.hasOverdue).length;
+    const warningTime = alertRows.filter((row) => !row.hasOverdue && row.isNearDue).length;
+    const criticalLimit = alertRows.filter((row) => row.isOverLimit).length;
+    const warningLimit = alertRows.filter((row) => !row.isOverLimit && row.isNearLimit).length;
+
+    return {
+      criticalTime,
+      warningTime,
+      criticalLimit,
+      warningLimit,
+    };
+  }, [alertRows]);
+
+  const moduleLabel = module === 'concretera' ? 'CONCRETERA' : 'MATERIALES';
+
+  return (
+    <div className="space-y-8">
+      <div className="rounded-[32px] border border-slate-200 bg-white px-6 py-8 shadow-[0_20px_60px_-45px_rgba(15,23,42,0.35)]">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="w-full grid gap-3 sm:grid-cols-2 xl:min-w-[420px] xl:grid-cols-4">
+            <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-red-500">Vencidos</p>
+              <p className="mt-2 text-3xl font-black text-slate-900">{kpis.criticalTime}</p>
+            </div>
+            <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-500">Por vencer 7 días</p>
+              <p className="mt-2 text-3xl font-black text-slate-900">{kpis.warningTime}</p>
+            </div>
+            <div className="rounded-2xl border border-red-100 bg-slate-900 px-4 py-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/60">Límite excedido</p>
+              <p className="mt-2 text-3xl font-black text-white">{kpis.criticalLimit}</p>
+            </div>
+            <div className="rounded-2xl border border-amber-100 bg-white px-4 py-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Límite preventivo</p>
+              <p className="mt-2 text-3xl font-black text-slate-900">{kpis.warningLimit}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-45px_rgba(15,23,42,0.35)]">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'RELEVANTES', label: 'Relevantes' },
+              { id: 'CRITICOS', label: 'Críticos' },
+              { id: 'TIEMPO', label: 'Por tiempo' },
+              { id: 'LIMITE', label: 'Por límite' },
+              { id: 'TODOS', label: 'Todos' },
+            ].map((option) => (
+              <button
+                key={option.id}
+                onClick={() => {
+                  setFilter(option.id as AlertFilter);
+                  setCurrentPage(1);
+                }}
+                className={`rounded-2xl px-4 py-2 text-xs font-black uppercase tracking-[0.18em] transition ${filter === option.id
+                  ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/15'
+                  : 'border border-slate-200 bg-white text-slate-500 hover:border-orange-200 hover:text-orange-500'
+                  }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="relative w-full xl:max-w-md">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
+            <input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Buscar por cliente, teléfono o observación..."
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-orange-300 focus:bg-white"
+            />
+          </div>
+        </div>
+
+        <div className="mt-6 overflow-hidden rounded-[28px] border border-slate-200">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-900 text-white">
+                <tr className="text-left text-[11px] font-black uppercase tracking-[0.16em]">
+                  <th className="px-5 py-4">Cliente</th>
+                  <th className="px-5 py-4 text-right">Límite</th>
+                  <th className="px-5 py-4 text-right">Deuda</th>
+                  <th className="px-5 py-4 text-right">Disponible</th>
+                  <th className="px-5 py-4 text-center">% Uso</th>
+                  <th className="px-5 py-4 text-center">Próx. vence</th>
+                  <th className="px-5 py-4 text-center">Días</th>
+                  <th className="px-5 py-4 text-center">Notas</th>
+                  <th className="px-5 py-4">Alerta</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {isLoading && (
+                  <tr>
+                    <td colSpan={9} className="px-5 py-16 text-center text-sm font-semibold text-slate-400">
+                      Cargando alertas de crédito...
+                    </td>
+                  </tr>
+                )}
+                {!isLoading && error && (
+                  <tr>
+                    <td colSpan={9} className="px-5 py-16 text-center text-sm font-semibold text-red-500">
+                      {error}
+                    </td>
+                  </tr>
+                )}
+                {!isLoading && !error && pagedRows.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="px-5 py-16 text-center text-sm font-semibold text-slate-400">
+                      No hay clientes que coincidan con los filtros actuales.
+                    </td>
+                  </tr>
+                )}
+                {!isLoading &&
+                  !error &&
+                  pagedRows.map((row) => (
+                    <tr key={row.customerId} className="align-top hover:bg-slate-50/80">
+                      <td className="px-5 py-4">
+                        <div className="space-y-1">
+                          <p className="font-black uppercase tracking-tight text-slate-900">{row.customerName}</p>
+                          <p className="text-xs font-semibold text-slate-400">
+                            {row.phone || row.address || `${row.creditDays} días de crédito`}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-right font-bold text-slate-900">{formatCurrency(row.creditLimit)}</td>
+                      <td className="px-5 py-4 text-right font-bold text-slate-900">{formatCurrency(row.debt)}</td>
+                      <td className={`px-5 py-4 text-right font-bold ${row.available < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {formatCurrency(row.available)}
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <div className="inline-flex min-w-[88px] items-center justify-center rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">
+                          {formatNumber(row.utilizationPct, 'en-US', { maximumFractionDigits: 0 })}%
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-center font-semibold text-slate-700">{formatDate(row.nextDueDate)}</td>
+                      <td className="px-5 py-4 text-center">
+                        {row.daysToDue === null ? (
+                          <span className="text-xs font-semibold text-slate-400">Sin deuda</span>
+                        ) : row.daysToDue < 0 ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-black text-red-600">
+                            <Clock3 size={12} /> {Math.abs(row.daysToDue)} atraso
+                          </span>
+                        ) : (
+                          <span className="text-xs font-black text-slate-700">{row.daysToDue} día(s)</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <div className="space-y-1 text-xs font-semibold text-slate-500">
+                          <p>{row.openNotesCount} abiertas</p>
+                          <p className={row.overdueCount > 0 ? 'font-black text-red-600' : ''}>{row.overdueCount} vencidas</p>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="space-y-2">
+                          <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${getLevelBadge(row.level)}`}>
+                            {row.level}
+                          </span>
+                          <p className="text-xs font-semibold leading-5 text-slate-500">{row.message}</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex flex-col gap-4 border-t border-slate-200 bg-slate-50 px-5 py-4 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <p className="font-semibold">
+              {filteredRows.length} cliente(s) encontrados · vista de {Math.min(PAGE_SIZE, pagedRows.length)} registro(s)
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={currentPage === 1}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-black text-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                ‹
+              </button>
+              <span className="rounded-xl bg-slate-900 px-3 py-2 font-black text-white">
+                {currentPage}
+              </span>
+              <span className="font-semibold text-slate-400">/ {totalPages}</span>
+              <button
+                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-black text-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                ›
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+export default CreditAlertsScreen;
