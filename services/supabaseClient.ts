@@ -314,6 +314,16 @@ export const vehiclesService = {
         return data as VehicleDB;
     },
 
+    // Eliminar vehículo
+    async delete(id: string) {
+        const { error } = await supabase
+            .from('vehicles')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
     // Activar/Desactivar vehículo
     async toggleActive(id: string) {
         const { data: vehicle } = await supabase
@@ -380,6 +390,16 @@ export const driversService = {
 
         if (error) throw error;
         return data as DriverDB;
+    },
+
+    // Eliminar conductor
+    async delete(id: string) {
+        const { error } = await supabase
+            .from('drivers')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
     },
 
     // Activar/Desactivar conductor

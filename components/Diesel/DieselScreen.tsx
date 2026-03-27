@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { PDFDocument, rgb } from 'pdf-lib';
+import { Pencil, Trash2 } from 'lucide-react';
 import { Branch, DieselTank, Vehicle, Driver, DieselLog, User } from '../../types';
 import DieselTankCard from './DieselTankCard';
 import DeleteLogModal from './DeleteLogModal';
@@ -125,12 +126,20 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
   const [recepcionData, setRecepcionData] = useState({ tankId: '', amount: 0, costPerLiter: 22.50, supplier: '', invoiceNumber: '', notes: '' });
   const [newVehicle, setNewVehicle] = useState({ plate: '', description: '' });
   const [newDriver, setNewDriver] = useState({ name: '', license: '' });
+  const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
+  const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
+  const [isVehicleDeleteConfirmOpen, setIsVehicleDeleteConfirmOpen] = useState(false);
+  const [editingDriverId, setEditingDriverId] = useState<string | null>(null);
+  const [driverToDelete, setDriverToDelete] = useState<Driver | null>(null);
+  const [isDriverDeleteConfirmOpen, setIsDriverDeleteConfirmOpen] = useState(false);
   const [editMaxCapacity, setEditMaxCapacity] = useState(0);
   const [deleteObservation, setDeleteObservation] = useState('');
   const [logToDelete, setLogToDelete] = useState<DieselLog | null>(null);
   const selectedCargaTank = branchTanks.find(t => t.id === cargaData.tankId);
   const selectedRecepcionTank = branchTanks.find(t => t.id === recepcionData.tankId);
   const recepcionMax = selectedRecepcionTank ? selectedRecepcionTank.maxCapacity - selectedRecepcionTank.currentQty : undefined;
+  const activeVehicles = useMemo(() => vehicles.filter(v => v.active), [vehicles]);
+  const activeDrivers = useMemo(() => drivers.filter(d => d.active), [drivers]);
   const showStatus = (type: StatusType, title: string, description?: string, icon?: string) => {
     setStatusModal({ isOpen: true, type, title, description, icon });
   };
@@ -277,17 +286,70 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
     e.preventDefault();
     setIsLoading(true);
     try {
-      await vehiclesService.create({
-        plate: newVehicle.plate.toUpperCase(),
-        description: newVehicle.description,
-        active: true,
-        branch_id: selectedBranchId
-      });
+      if (editingVehicleId) {
+        await vehiclesService.update(editingVehicleId, {
+          plate: newVehicle.plate.toUpperCase(),
+          description: newVehicle.description,
+        });
+      } else {
+        await vehiclesService.create({
+          plate: newVehicle.plate.toUpperCase(),
+          description: newVehicle.description,
+          active: true,
+          branch_id: selectedBranchId
+        });
+      }
       await loadVehicles();
       setIsAssetModalOpen(null);
       setNewVehicle({ plate: '', description: '' });
+      setEditingVehicleId(null);
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOpenCreateVehicle = () => {
+    setEditingVehicleId(null);
+    setNewVehicle({ plate: '', description: '' });
+    setIsAssetModalOpen('vehicle');
+  };
+
+  const handleOpenEditVehicle = (vehicle: Vehicle) => {
+    setEditingVehicleId(vehicle.id);
+    setNewVehicle({ plate: vehicle.plate, description: vehicle.description });
+    setIsAssetModalOpen('vehicle');
+  };
+
+  const handleAskDeleteVehicle = (vehicle: Vehicle) => {
+    setVehicleToDelete(vehicle);
+    setIsVehicleDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteVehicle = async () => {
+    if (!vehicleToDelete) return;
+    setIsLoading(true);
+    showStatus('loading', 'Eliminando unidad', 'Procesando cambios...', '⏳');
+    try {
+      try {
+        await vehiclesService.delete(vehicleToDelete.id);
+        showStatus('success', 'Unidad eliminada', 'Se eliminó correctamente del catálogo.', '✅');
+      } catch (err: any) {
+        const message = String(err?.message || '');
+        if (err?.code === '23503' || message.toLowerCase().includes('foreign key')) {
+          await vehiclesService.update(vehicleToDelete.id, { active: false });
+          showStatus('success', 'Unidad desactivada', 'Tiene historial relacionado, por eso quedó inactiva en lugar de borrarse.', '✅');
+        } else {
+          throw err;
+        }
+      }
+      await loadVehicles();
+      setIsVehicleDeleteConfirmOpen(false);
+      setVehicleToDelete(null);
+    } catch (err: any) {
+      setError(err.message);
+      showStatus('error', 'No se pudo eliminar', err.message, '❌');
     } finally {
       setIsLoading(false);
     }
@@ -297,17 +359,70 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
     e.preventDefault();
     setIsLoading(true);
     try {
-      await driversService.create({
-        name: newDriver.name,
-        license: newDriver.license.toUpperCase(),
-        active: true,
-        branch_id: selectedBranchId
-      });
+      if (editingDriverId) {
+        await driversService.update(editingDriverId, {
+          name: newDriver.name,
+          license: newDriver.license.toUpperCase(),
+        });
+      } else {
+        await driversService.create({
+          name: newDriver.name,
+          license: newDriver.license.toUpperCase(),
+          active: true,
+          branch_id: selectedBranchId
+        });
+      }
       await loadDrivers();
       setIsAssetModalOpen(null);
       setNewDriver({ name: '', license: '' });
+      setEditingDriverId(null);
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOpenCreateDriver = () => {
+    setEditingDriverId(null);
+    setNewDriver({ name: '', license: '' });
+    setIsAssetModalOpen('driver');
+  };
+
+  const handleOpenEditDriver = (driver: Driver) => {
+    setEditingDriverId(driver.id);
+    setNewDriver({ name: driver.name, license: driver.license });
+    setIsAssetModalOpen('driver');
+  };
+
+  const handleAskDeleteDriver = (driver: Driver) => {
+    setDriverToDelete(driver);
+    setIsDriverDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteDriver = async () => {
+    if (!driverToDelete) return;
+    setIsLoading(true);
+    showStatus('loading', 'Eliminando operador', 'Procesando cambios...', '⏳');
+    try {
+      try {
+        await driversService.delete(driverToDelete.id);
+        showStatus('success', 'Operador eliminado', 'Se eliminó correctamente del catálogo.', '✅');
+      } catch (err: any) {
+        const message = String(err?.message || '');
+        if (err?.code === '23503' || message.toLowerCase().includes('foreign key')) {
+          await driversService.update(driverToDelete.id, { active: false });
+          showStatus('success', 'Operador desactivado', 'Tiene historial relacionado, por eso quedó inactivo en lugar de borrarse.', '✅');
+        } else {
+          throw err;
+        }
+      }
+      await loadDrivers();
+      setIsDriverDeleteConfirmOpen(false);
+      setDriverToDelete(null);
+    } catch (err: any) {
+      setError(err.message);
+      showStatus('error', 'No se pudo eliminar', err.message, '❌');
     } finally {
       setIsLoading(false);
     }
@@ -975,7 +1090,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                 <div className="space-y-6">
                   <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 ml-2">Flota Activa</h3>
                   <div className="space-y-3">
-                    {vehicles.map(v => (
+                    {activeVehicles.map(v => (
                       <div key={v.id} className="bg-white p-5 rounded-3xl border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-xl">🚛</div>
@@ -984,19 +1099,40 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                             <p className="text-[10px] font-mono text-orange-600 font-bold tracking-wider">{v.plate}</p>
                           </div>
                         </div>
-                        <div className={`px-3 py-1 rounded-full text-[8px] font-black ${v.active ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-300'}`}>
-                          {v.active ? 'ACTIVO' : 'INACTIVO'}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenEditVehicle(v)}
+                            className="w-9 h-9 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            title="Editar unidad"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleAskDeleteVehicle(v)}
+                            className="w-9 h-9 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors"
+                            title="Eliminar unidad"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <div className={`px-3 py-1 rounded-full text-[8px] font-black ${v.active ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-300'}`}>
+                            {v.active ? 'ACTIVO' : 'INACTIVO'}
+                          </div>
                         </div>
                       </div>
                     ))}
-                    <button onClick={() => setIsAssetModalOpen('vehicle')} className="w-full py-4 bg-slate-100 text-slate-500 rounded-3xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-200 hover:bg-slate-200 transition-colors">+ Añadir Unidad</button>
+                    {activeVehicles.length === 0 && (
+                      <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 text-center text-xs font-bold text-slate-400">
+                        No hay unidades activas registradas en esta sucursal.
+                      </div>
+                    )}
+                    <button onClick={handleOpenCreateVehicle} className="w-full py-4 bg-slate-100 text-slate-500 rounded-3xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-200 hover:bg-slate-200 transition-colors">+ Añadir Unidad</button>
                   </div>
                 </div>
 
                 <div className="space-y-6">
                   <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 ml-2">Operadores Registrados</h3>
                   <div className="space-y-3">
-                    {drivers.map(d => (
+                    {activeDrivers.map(d => (
                       <div key={d.id} className="bg-white p-5 rounded-3xl border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-xl">👷</div>
@@ -1005,12 +1141,33 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                             <p className="text-[10px] font-mono text-blue-600 tracking-wider font-bold">{d.license}</p>
                           </div>
                         </div>
-                        <div className={`px-3 py-1 rounded-full text-[8px] font-black ${d.active ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-300'}`}>
-                          {d.active ? 'OPERANDO' : 'INACTIVO'}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenEditDriver(d)}
+                            className="w-9 h-9 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            title="Editar operador"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleAskDeleteDriver(d)}
+                            className="w-9 h-9 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors"
+                            title="Eliminar operador"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <div className={`px-3 py-1 rounded-full text-[8px] font-black ${d.active ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-300'}`}>
+                            {d.active ? 'OPERANDO' : 'INACTIVO'}
+                          </div>
                         </div>
                       </div>
                     ))}
-                    <button onClick={() => setIsAssetModalOpen('driver')} className="w-full py-4 bg-slate-100 text-slate-500 rounded-3xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-200 hover:bg-slate-200 transition-colors">+ Añadir Operador</button>
+                    {activeDrivers.length === 0 && (
+                      <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 text-center text-xs font-bold text-slate-400">
+                        No hay operadores activos registrados en esta sucursal.
+                      </div>
+                    )}
+                    <button onClick={handleOpenCreateDriver} className="w-full py-4 bg-slate-100 text-slate-500 rounded-3xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-200 hover:bg-slate-200 transition-colors">+ Añadir Operador</button>
                   </div>
                 </div>
               </div>
@@ -1162,24 +1319,72 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
         onCancel={() => setIsResetConfirmOpen(false)}
       />
 
+      <ConfirmModal
+        isOpen={isVehicleDeleteConfirmOpen}
+        title="Eliminar unidad"
+        description={vehicleToDelete ? `Se eliminará ${vehicleToDelete.description} del listado activo.` : undefined}
+        icon="🗑️"
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        isProcessing={isLoading}
+        onConfirm={handleConfirmDeleteVehicle}
+        onCancel={() => {
+          setIsVehicleDeleteConfirmOpen(false);
+          setVehicleToDelete(null);
+        }}
+      />
+
+      <ConfirmModal
+        isOpen={isDriverDeleteConfirmOpen}
+        title="Eliminar operador"
+        description={driverToDelete ? `Se eliminará a ${driverToDelete.name} del listado activo.` : undefined}
+        icon="🗑️"
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        isProcessing={isLoading}
+        onConfirm={handleConfirmDeleteDriver}
+        onCancel={() => {
+          setIsDriverDeleteConfirmOpen(false);
+          setDriverToDelete(null);
+        }}
+      />
+
       {isAssetModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
-              <h3 className="text-lg font-black uppercase tracking-tighter">Nuevo {isAssetModalOpen === 'vehicle' ? 'Vehículo' : 'Operador'}</h3>
-              <button onClick={() => setIsAssetModalOpen(null)} className="text-2xl font-black">&times;</button>
+              <h3 className="text-lg font-black uppercase tracking-tighter">
+                {isAssetModalOpen === 'vehicle'
+                  ? editingVehicleId
+                    ? 'Editar Vehículo'
+                    : 'Nuevo Vehículo'
+                  : editingDriverId
+                    ? 'Editar Operador'
+                    : 'Nuevo Operador'}
+              </h3>
+              <button onClick={() => {
+                setIsAssetModalOpen(null);
+                setEditingVehicleId(null);
+                setNewVehicle({ plate: '', description: '' });
+                setEditingDriverId(null);
+                setNewDriver({ name: '', license: '' });
+              }} className="text-2xl font-black">&times;</button>
             </div>
             {isAssetModalOpen === 'vehicle' ? (
               <form onSubmit={handleAddVehicle} className="p-8 space-y-4">
                 <input required placeholder="PLACA (EX. KW-22-MX)" className="w-full p-4 bg-slate-50 rounded-xl font-black text-xs uppercase appearance-none border-2 border-transparent focus:border-orange-500 outline-none" value={newVehicle.plate} onChange={e => setNewVehicle({ ...newVehicle, plate: e.target.value })} />
                 <input required placeholder="DESCRIPCIÓN" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-sm border-2 border-transparent focus:border-orange-500 outline-none" value={newVehicle.description} onChange={e => setNewVehicle({ ...newVehicle, description: e.target.value })} />
-                <button type="submit" disabled={isLoading} className="w-full py-4 bg-orange-500 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-lg">AGREGAR UNIDAD</button>
+                <button type="submit" disabled={isLoading} className="w-full py-4 bg-orange-500 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-lg">
+                  {editingVehicleId ? 'GUARDAR CAMBIOS' : 'AGREGAR UNIDAD'}
+                </button>
               </form>
             ) : (
               <form onSubmit={handleAddDriver} className="p-8 space-y-4">
                 <input required placeholder="NOMBRE COMPLETO" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-sm border-2 border-transparent focus:border-orange-500 outline-none" value={newDriver.name} onChange={e => setNewDriver({ ...newDriver, name: e.target.value })} />
                 <input required placeholder="LICENCIA / ID" className="w-full p-4 bg-slate-50 rounded-xl font-mono text-sm border-2 border-transparent focus:border-orange-500 outline-none" value={newDriver.license} onChange={e => setNewDriver({ ...newDriver, license: e.target.value })} />
-                <button type="submit" disabled={isLoading} className="w-full py-4 bg-blue-600 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-lg">AGREGAR OPERADOR</button>
+                <button type="submit" disabled={isLoading} className="w-full py-4 bg-blue-600 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-lg">
+                  {editingDriverId ? 'GUARDAR CAMBIOS' : 'AGREGAR OPERADOR'}
+                </button>
               </form>
             )}
           </div>
