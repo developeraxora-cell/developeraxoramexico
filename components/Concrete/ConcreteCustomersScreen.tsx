@@ -38,7 +38,6 @@ const createDefaultNoteForm = (creditDays = 30) => {
   const issueDate = toDateInput(new Date());
   return {
     folio: '',
-    sale_reference: '',
     issue_date: issueDate,
     due_date: addDaysToDate(issueDate, creditDays),
     total: 0,
@@ -330,7 +329,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setNoteModalMode('edit');
     setNoteForm({
       folio: note.folio,
-      sale_reference: note.sale_reference ?? '',
       issue_date: note.issue_date,
       due_date: note.due_date,
       total: Number(note.total ?? 0),
@@ -381,7 +379,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           branch_id: branchId,
           customer_id: selectedCustomer.id,
           folio: noteForm.folio,
-          sale_reference: noteForm.sale_reference,
           issue_date: noteForm.issue_date,
           due_date: noteForm.due_date,
           total,
@@ -404,7 +401,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         if (!editingNote) return;
         savedNote = await creditService.updateCreditNote(editingNote.id, {
           folio: noteForm.folio,
-          sale_reference: noteForm.sale_reference,
           issue_date: noteForm.issue_date,
           due_date: noteForm.due_date,
           total,
@@ -760,23 +756,19 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nota de venta</label>
-                  <input
-                    placeholder="Referencia de la venta"
-                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                    value={noteForm.sale_reference}
-                    onChange={(e) => setNoteForm((prev) => ({ ...prev, sale_reference: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monto total</label>
                   <input
                     type="number"
                     min={0}
                     step="0.01"
                     className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                    value={noteForm.total}
-                    onChange={(e) => setNoteForm((prev) => ({ ...prev, total: Number(e.target.value) }))}
+                    value={noteForm.total === 0 ? '' : noteForm.total}
+                    onChange={(e) =>
+                      setNoteForm((prev) => ({
+                        ...prev,
+                        total: e.target.value === '' ? 0 : Number(e.target.value),
+                      }))
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -879,7 +871,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 <thead className="bg-slate-900 text-white text-[10px] uppercase tracking-widest">
                   <tr>
                     <th className="p-4">Folio</th>
-                    <th className="p-4">Nota venta</th>
                     <th className="p-4">Emisión</th>
                     <th className="p-4">Vence</th>
                     <th className="p-4 text-right">Total</th>
@@ -892,7 +883,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   {pagedHistoryNotes.map((note) => (
                     <tr key={note.id} className="hover:bg-slate-50">
                       <td className="p-4 text-xs font-bold text-slate-700">{note.folio}</td>
-                      <td className="p-4 text-xs text-slate-500">{note.sale_reference || '—'}</td>
                       <td className="p-4 text-xs text-slate-500">{note.issue_date}</td>
                       <td className="p-4 text-xs text-slate-500">{note.due_date}</td>
                       <td className="p-4 text-right text-xs font-bold">{formatCurrency(Number(note.total))}</td>
@@ -933,7 +923,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   ))}
                   {historyNotes.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
+                      <td colSpan={7} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
                     </tr>
                   )}
                 </tbody>
