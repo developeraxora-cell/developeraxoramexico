@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Branch, User } from '../../types';
 import { creditService, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPaymentMethod, type CreditSummary } from '../../services/concretera/credit.service';
-import { Eye, FileDown, Plus, Trash2, Wallet } from 'lucide-react';
+import { Eye, FileDown, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
 import { formatCurrency } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
@@ -25,6 +25,27 @@ const defaultCustomerForm = {
 };
 
 const MODAL_PAGE_SIZE = 5;
+const toDateInput = (value: Date) => value.toISOString().slice(0, 10);
+const addDaysToDate = (base: string, days: number) => {
+  const next = new Date(`${base}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + Math.max(1, days));
+  return toDateInput(next);
+};
+
+type NoteModalMode = 'create' | 'edit';
+
+const createDefaultNoteForm = (creditDays = 30) => {
+  const issueDate = toDateInput(new Date());
+  return {
+    folio: '',
+    sale_reference: '',
+    issue_date: issueDate,
+    due_date: addDaysToDate(issueDate, creditDays),
+    total: 0,
+    notes: '',
+    justification: '',
+  };
+};
 
 const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branches, currentUser }) => {
   const PAGE_SIZE = 5;
@@ -44,6 +65,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [historyPage, setHistoryPage] = useState(1);
   const [paymentPage, setPaymentPage] = useState(1);
   const [formData, setFormData] = useState(defaultCustomerForm);
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [noteModalMode, setNoteModalMode] = useState<NoteModalMode>('create');
+  const [editingNote, setEditingNote] = useState<CreditNoteWithStatus | null>(null);
+  const [noteForm, setNoteForm] = useState(createDefaultNoteForm());
+  const [noteFormError, setNoteFormError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<CreditPaymentMethod>('EFECTIVO');
   const [paymentNotes, setPaymentNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -287,6 +313,134 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         days_overdue: overdue ? diffDays : 0,
       } as CreditNoteWithStatus;
     });
+  };
+
+  const openCreateNoteModal = (customer: CreditCustomer) => {
+    setSelectedCustomer(customer);
+    setEditingNote(null);
+    setNoteModalMode('create');
+    setNoteForm(createDefaultNoteForm(customer.default_credit_days || 30));
+    setNoteFormError(null);
+    setIsNoteModalOpen(true);
+  };
+
+  const openEditNoteModal = (note: CreditNoteWithStatus) => {
+    if (!selectedCustomer) return;
+    setEditingNote(note);
+    setNoteModalMode('edit');
+    setNoteForm({
+      folio: note.folio,
+      sale_reference: note.sale_reference ?? '',
+      issue_date: note.issue_date,
+      due_date: note.due_date,
+      total: Number(note.total ?? 0),
+      notes: note.notes ?? '',
+      justification: '',
+    });
+    setNoteFormError(null);
+    setIsNoteModalOpen(true);
+  };
+
+  const refreshCustomerNotes = async (customer: CreditCustomer) => {
+    const notes = await creditService.listNotesByCustomer(customer.id);
+    setHistoryNotes(buildHistoryNotes(notes, customer));
+    return notes;
+  };
+
+  const handleSubmitNote = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedCustomer) return;
+
+    const total = Number(noteForm.total);
+    if (!noteForm.issue_date || !noteForm.due_date) {
+      setNoteFormError('Debe indicar la fecha de registro y vencimiento.');
+      return;
+    }
+    if (noteForm.due_date < noteForm.issue_date) {
+      setNoteFormError('La fecha de vencimiento no puede ser menor a la de registro.');
+      return;
+    }
+    if (!Number.isFinite(total) || total <= 0) {
+      setNoteFormError('El monto total debe ser mayor a 0.');
+      return;
+    }
+    if (noteModalMode === 'edit' && !noteForm.justification.trim()) {
+      setNoteFormError('La observación es obligatoria para editar el crédito.');
+      return;
+    }
+
+    setIsLoading(true);
+    setNoteFormError(null);
+    showFeedback('loading', noteModalMode === 'create' ? 'Registrando crédito' : 'Actualizando crédito', 'Guardando cambios...');
+
+    try {
+      let savedNote: CreditNote;
+
+      if (noteModalMode === 'create') {
+        savedNote = await creditService.createCreditNote({
+          branch_id: branchId,
+          customer_id: selectedCustomer.id,
+          folio: noteForm.folio,
+          sale_reference: noteForm.sale_reference,
+          issue_date: noteForm.issue_date,
+          due_date: noteForm.due_date,
+          total,
+          credit_days_applied: selectedCustomer.default_credit_days || 30,
+          notes: noteForm.notes || null,
+        });
+
+        logConcreteraAudit({
+          branch_id: branchId,
+          branch_name: selectedBranch?.name ?? null,
+          user_id: currentUser.id,
+          user_name: currentUser.name,
+          action_type: 'CREAR',
+          entity_type: 'nota_credito',
+          entity_id: String(savedNote.id),
+          description: `Crédito creado: ${savedNote.folio}`,
+          new_data: savedNote as unknown as Record<string, unknown>,
+        });
+      } else {
+        if (!editingNote) return;
+        savedNote = await creditService.updateCreditNote(editingNote.id, {
+          folio: noteForm.folio,
+          sale_reference: noteForm.sale_reference,
+          issue_date: noteForm.issue_date,
+          due_date: noteForm.due_date,
+          total,
+          notes: noteForm.notes || null,
+        });
+
+        logConcreteraAudit({
+          branch_id: branchId,
+          branch_name: selectedBranch?.name ?? null,
+          user_id: currentUser.id,
+          user_name: currentUser.name,
+          action_type: 'ACTUALIZAR',
+          entity_type: 'nota_credito',
+          entity_id: String(savedNote.id),
+          description: `Crédito actualizado: ${savedNote.folio}`,
+          justification: noteForm.justification.trim(),
+          previous_data: editingNote as unknown as Record<string, unknown>,
+          new_data: savedNote as unknown as Record<string, unknown>,
+        });
+      }
+
+      if (isHistoryModalOpen) {
+        await refreshCustomerNotes(selectedCustomer);
+      }
+      await loadCustomers();
+      setIsNoteModalOpen(false);
+      setEditingNote(null);
+      setNoteForm(createDefaultNoteForm(selectedCustomer.default_credit_days || 30));
+      showFeedback('success', noteModalMode === 'create' ? 'Crédito registrado' : 'Crédito actualizado');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo guardar el crédito.';
+      setNoteFormError(message);
+      showFeedback('error', 'No se pudo guardar', message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRequestDeleteNote = (note: CreditNoteWithStatus) => {
@@ -583,6 +737,118 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         </div>
       )}
 
+      {isNoteModalOpen && selectedCustomer && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden">
+            <div className="bg-slate-900 p-6 text-white">
+              <h3 className="text-xl font-black uppercase tracking-tighter">
+                {noteModalMode === 'create' ? 'Nuevo crédito' : 'Editar crédito'}
+              </h3>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-orange-300">
+                {selectedCustomer.name}
+              </p>
+            </div>
+            <form onSubmit={handleSubmitNote} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Folio</label>
+                  <input
+                    placeholder="Automático si lo deja vacío"
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                    value={noteForm.folio}
+                    onChange={(e) => setNoteForm((prev) => ({ ...prev, folio: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nota de venta</label>
+                  <input
+                    placeholder="Referencia de la venta"
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                    value={noteForm.sale_reference}
+                    onChange={(e) => setNoteForm((prev) => ({ ...prev, sale_reference: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monto total</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                    value={noteForm.total}
+                    onChange={(e) => setNoteForm((prev) => ({ ...prev, total: Number(e.target.value) }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha de registro</label>
+                  <input
+                    type="date"
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                    value={noteForm.issue_date}
+                    onChange={(e) => setNoteForm((prev) => ({ ...prev, issue_date: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha de vencimiento</label>
+                  <input
+                    type="date"
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                    value={noteForm.due_date}
+                    onChange={(e) => setNoteForm((prev) => ({ ...prev, due_date: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Notas</label>
+                <textarea
+                  rows={3}
+                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm resize-none"
+                  value={noteForm.notes}
+                  onChange={(e) => setNoteForm((prev) => ({ ...prev, notes: e.target.value }))}
+                />
+              </div>
+              {noteModalMode === 'edit' && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observación obligatoria</label>
+                  <textarea
+                    rows={3}
+                    className="w-full p-3 bg-amber-50 rounded-xl border border-amber-200 text-sm resize-none"
+                    placeholder="Indique por qué se modifica el crédito"
+                    value={noteForm.justification}
+                    onChange={(e) => setNoteForm((prev) => ({ ...prev, justification: e.target.value }))}
+                  />
+                </div>
+              )}
+              {noteFormError && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-600">
+                  {noteFormError}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNoteModalOpen(false);
+                    setEditingNote(null);
+                    setNoteFormError(null);
+                    setNoteForm(createDefaultNoteForm(selectedCustomer.default_credit_days || 30));
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase"
+                >
+                  {noteModalMode === 'create' ? 'Guardar crédito' : 'Guardar cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {isHistoryModalOpen && selectedCustomer && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-4xl h-[80vh] overflow-hidden flex flex-col">
@@ -591,18 +857,29 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 <h3 className="text-2xl font-black tracking-tighter">Notas de Crédito</h3>
                 <p className="text-orange-400 font-bold tracking-widest uppercase text-[10px] mt-1">{selectedCustomer.name}</p>
               </div>
-              <button
-                onClick={() => setIsHistoryModalOpen(false)}
-                className="bg-white/10 w-10 h-10 rounded-2xl flex items-center justify-center text-2xl hover:bg-red-500 transition-all"
-              >
-                &times;
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => openCreateNoteModal(selectedCustomer)}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white"
+                >
+                  <Plus className="h-4 w-4" />
+                  Nuevo crédito
+                </button>
+                <button
+                  onClick={() => setIsHistoryModalOpen(false)}
+                  className="bg-white/10 w-10 h-10 rounded-2xl flex items-center justify-center text-2xl hover:bg-red-500 transition-all"
+                >
+                  &times;
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
               <table className="w-full text-left bg-white rounded-3xl overflow-hidden border border-slate-200">
                 <thead className="bg-slate-900 text-white text-[10px] uppercase tracking-widest">
                   <tr>
                     <th className="p-4">Folio</th>
+                    <th className="p-4">Nota venta</th>
                     <th className="p-4">Emisión</th>
                     <th className="p-4">Vence</th>
                     <th className="p-4 text-right">Total</th>
@@ -615,6 +892,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   {pagedHistoryNotes.map((note) => (
                     <tr key={note.id} className="hover:bg-slate-50">
                       <td className="p-4 text-xs font-bold text-slate-700">{note.folio}</td>
+                      <td className="p-4 text-xs text-slate-500">{note.sale_reference || '—'}</td>
                       <td className="p-4 text-xs text-slate-500">{note.issue_date}</td>
                       <td className="p-4 text-xs text-slate-500">{note.due_date}</td>
                       <td className="p-4 text-right text-xs font-bold">{formatCurrency(Number(note.total))}</td>
@@ -632,20 +910,30 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                         </span>
                       </td>
                       <td className="p-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleRequestDeleteNote(note)}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500 transition-colors hover:bg-red-100"
-                          title="Eliminar nota"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditNoteModal(note)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600 transition-colors hover:bg-sky-100"
+                            title="Editar nota"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRequestDeleteNote(note)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500 transition-colors hover:bg-red-100"
+                            title="Eliminar nota"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                   {historyNotes.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
+                      <td colSpan={8} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
                     </tr>
                   )}
                 </tbody>

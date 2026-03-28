@@ -24,6 +24,7 @@ export interface CreditNote {
   branch_id: string;
   customer_id: string;
   folio: string;
+  sale_reference?: string | null;
   issue_date: string;
   credit_days_applied: number;
   due_date: string;
@@ -64,6 +65,19 @@ export interface CreditCustomersPage {
 }
 
 const normalizeNumber = (value: unknown) => Number(value ?? 0);
+const DAY_IN_MS = 1000 * 60 * 60 * 24;
+
+const toDateOnly = (value: string | Date) => {
+  if (typeof value === 'string') return value.slice(0, 10);
+  return value.toISOString().slice(0, 10);
+};
+
+const diffDaysInclusive = (issueDate: string, dueDate: string) => {
+  const issue = new Date(`${issueDate}T00:00:00Z`);
+  const due = new Date(`${dueDate}T00:00:00Z`);
+  const diff = Math.round((due.getTime() - issue.getTime()) / DAY_IN_MS);
+  return Math.max(1, diff);
+};
 
 const computeStatus = (note: CreditNote, today: Date, toleranceDays: number) => {
   const balance = Number(note.balance ?? 0);
@@ -331,25 +345,35 @@ export const creditService = {
     customer_id: string;
     total: number;
     credit_days_applied: number;
+    folio?: string | null;
+    sale_reference?: string | null;
+    issue_date?: string;
+    due_date?: string;
     notes?: string | null;
     inventory_transaction_id?: string | null;
   }) {
-    const issueDate = new Date();
-    const dueDate = new Date(issueDate);
-    dueDate.setDate(dueDate.getDate() + Number(input.credit_days_applied || 0));
+    const issueDate = input.issue_date ? toDateOnly(input.issue_date) : toDateOnly(new Date());
+    const creditDays = Math.max(1, Number(input.credit_days_applied || 0) || 1);
+    const dueDate = input.due_date
+      ? toDateOnly(input.due_date)
+      : toDateOnly(new Date(new Date(`${issueDate}T00:00:00Z`).getTime() + creditDays * DAY_IN_MS));
 
-    const folio = `CR-${input.branch_id}-${issueDate.getFullYear()}${String(issueDate.getMonth() + 1).padStart(2, '0')}${String(issueDate.getDate()).padStart(2, '0')}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+    const creditDaysApplied = input.due_date ? diffDaysInclusive(issueDate, dueDate) : creditDays;
+    const issueDateForFolio = new Date(`${issueDate}T00:00:00Z`);
+    const folio = input.folio?.trim()
+      || `CR-${input.branch_id}-${issueDateForFolio.getUTCFullYear()}${String(issueDateForFolio.getUTCMonth() + 1).padStart(2, '0')}${String(issueDateForFolio.getUTCDate()).padStart(2, '0')}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
 
     const payload = {
       branch_id: input.branch_id,
       customer_id: input.customer_id,
       folio,
-      issue_date: issueDate.toISOString().slice(0, 10),
-      credit_days_applied: input.credit_days_applied,
-      due_date: dueDate.toISOString().slice(0, 10),
-      total: input.total,
+      sale_reference: input.sale_reference?.trim() || null,
+      issue_date: issueDate,
+      credit_days_applied: creditDaysApplied,
+      due_date: dueDate,
+      total: Number(input.total),
       paid_amount: 0,
-      balance: input.total,
+      balance: Number(input.total),
       notes: input.notes ?? null,
       inventory_transaction_id: input.inventory_transaction_id ?? null,
     };
@@ -357,6 +381,47 @@ export const creditService = {
     const { data, error } = await supabase
       .from('credit_notes')
       .insert([payload])
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data as CreditNote;
+  },
+
+  async updateCreditNote(noteId: string, updates: {
+    folio?: string | null;
+    sale_reference?: string | null;
+    issue_date?: string;
+    due_date?: string;
+    total?: number;
+    notes?: string | null;
+  }) {
+    const current = await creditService.getNoteById(noteId);
+    const issueDate = toDateOnly(updates.issue_date ?? current.issue_date);
+    const dueDate = toDateOnly(updates.due_date ?? current.due_date);
+    const total = Number(updates.total ?? current.total);
+    const paidAmount = Number(current.paid_amount ?? 0);
+
+    if (total < paidAmount) {
+      throw new Error('El total no puede ser menor al monto ya abonado.');
+    }
+
+    const payload = {
+      folio: updates.folio?.trim() || current.folio,
+      sale_reference: updates.sale_reference?.trim() || null,
+      issue_date: issueDate,
+      due_date: dueDate,
+      credit_days_applied: diffDaysInclusive(issueDate, dueDate),
+      total,
+      balance: total - paidAmount,
+      notes: updates.notes ?? null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from('credit_notes')
+      .update(payload)
+      .eq('id', noteId)
       .select('*')
       .single();
 
