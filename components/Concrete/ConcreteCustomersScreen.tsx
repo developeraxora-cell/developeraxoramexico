@@ -22,6 +22,8 @@ const defaultCustomerForm = {
   allow_cash_if_blocked: true,
 };
 
+const MODAL_PAGE_SIZE = 5;
+
 const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branches, currentUser }) => {
   const PAGE_SIZE = 5;
   const [customers, setCustomers] = useState<CreditCustomer[]>([]);
@@ -37,6 +39,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [openNotes, setOpenNotes] = useState<CreditNote[]>([]);
   const [noteRows, setNoteRows] = useState<Record<string, number>>({});
   const [historyNotes, setHistoryNotes] = useState<CreditNoteWithStatus[]>([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [paymentPage, setPaymentPage] = useState(1);
   const [formData, setFormData] = useState(defaultCustomerForm);
   const [paymentMethod, setPaymentMethod] = useState<CreditPaymentMethod>('EFECTIVO');
   const [paymentNotes, setPaymentNotes] = useState('');
@@ -70,6 +74,16 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   };
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCustomers / PAGE_SIZE)), [totalCustomers, PAGE_SIZE]);
+  const historyTotalPages = useMemo(() => Math.max(1, Math.ceil(historyNotes.length / MODAL_PAGE_SIZE)), [historyNotes.length]);
+  const paymentTotalPages = useMemo(() => Math.max(1, Math.ceil(openNotes.length / MODAL_PAGE_SIZE)), [openNotes.length]);
+  const pagedHistoryNotes = useMemo(() => {
+    const start = (historyPage - 1) * MODAL_PAGE_SIZE;
+    return historyNotes.slice(start, start + MODAL_PAGE_SIZE);
+  }, [historyNotes, historyPage]);
+  const pagedOpenNotes = useMemo(() => {
+    const start = (paymentPage - 1) * MODAL_PAGE_SIZE;
+    return openNotes.slice(start, start + MODAL_PAGE_SIZE);
+  }, [openNotes, paymentPage]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -117,6 +131,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const handleOpenHistory = async (customer: CreditCustomer) => {
     setSelectedCustomer(customer);
     setIsHistoryModalOpen(true);
+    setHistoryPage(1);
     setError(null);
     try {
       const notes = await creditService.listNotesByCustomer(customer.id);
@@ -141,6 +156,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const handleOpenPayment = async (customer: CreditCustomer) => {
     setSelectedCustomer(customer);
     setIsPaymentModalOpen(true);
+    setPaymentPage(1);
     setError(null);
     try {
       const notes = await creditService.listOpenNotesByCustomer(customer.id);
@@ -526,7 +542,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {historyNotes.map((note) => (
+                  {pagedHistoryNotes.map((note) => (
                     <tr key={note.id} className="hover:bg-slate-50">
                       <td className="p-4 text-xs font-bold text-slate-700">{note.folio}</td>
                       <td className="p-4 text-xs text-slate-500">{note.issue_date}</td>
@@ -554,6 +570,34 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   )}
                 </tbody>
               </table>
+              {historyNotes.length > 0 && (
+                <div className="mt-4 flex items-center justify-between px-2">
+                  <p className="text-xs text-slate-400">
+                    Mostrando {pagedHistoryNotes.length} de {historyNotes.length} notas
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setHistoryPage((prev) => Math.max(1, prev - 1))}
+                      disabled={historyPage <= 1}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold disabled:opacity-40"
+                    >
+                      Anterior
+                    </button>
+                    <span className="text-xs font-black text-slate-700">
+                      {historyPage} / {historyTotalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setHistoryPage((prev) => Math.min(historyTotalPages, prev + 1))}
+                      disabled={historyPage >= historyTotalPages}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold disabled:opacity-40"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -589,14 +633,18 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   <thead className="bg-slate-100 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                     <tr>
                       <th className="p-3">Folio</th>
+                      <th className="p-3">Registro</th>
+                      <th className="p-3">Vence</th>
                       <th className="p-3 text-right">Saldo</th>
                       <th className="p-3 text-right">Abono</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {openNotes.map((note) => (
+                    {pagedOpenNotes.map((note) => (
                       <tr key={note.id}>
                         <td className="p-3 text-xs font-bold text-slate-700">{note.folio}</td>
+                        <td className="p-3 text-xs text-slate-500">{note.issue_date}</td>
+                        <td className="p-3 text-xs text-slate-500">{note.due_date}</td>
                         <td className="p-3 text-right text-xs font-black text-red-600">{formatCurrency(Number(note.balance))}</td>
                         <td className="p-3 text-right">
                           <input
@@ -613,7 +661,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     ))}
                     {openNotes.length === 0 && (
                       <tr>
-                        <td colSpan={3} className="p-6 text-center text-slate-400 text-sm">
+                        <td colSpan={5} className="p-6 text-center text-slate-400 text-sm">
                           No hay notas abiertas.
                         </td>
                       </tr>
@@ -621,6 +669,34 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   </tbody>
                 </table>
               </div>
+              {openNotes.length > 0 && (
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-xs text-slate-400">
+                    Mostrando {pagedOpenNotes.length} de {openNotes.length} notas
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={paymentPage <= 1}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold disabled:opacity-40"
+                    >
+                      Anterior
+                    </button>
+                    <span className="text-xs font-black text-slate-700">
+                      {paymentPage} / {paymentTotalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentPage((prev) => Math.min(paymentTotalPages, prev + 1))}
+                      disabled={paymentPage >= paymentTotalPages}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold disabled:opacity-40"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="flex gap-2">
                 <button
                   type="button"
