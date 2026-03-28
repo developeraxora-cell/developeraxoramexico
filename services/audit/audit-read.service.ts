@@ -7,7 +7,7 @@ export interface AuditLogRow {
   user_name?: string | null;
   action_type: 'CREAR' | 'ACTUALIZAR' | 'ELIMINAR' | 'VENTA' | 'COMPRA' | 'CREATE' | 'UPDATE' | 'DELETE' | 'SALE' | 'PURCHASE';
   module: 'materiales' | 'concretera' | 'materials';
-  entity_type: 'producto' | 'cliente' | 'venta' | 'compra' | 'product' | 'client' | 'sale' | 'purchase';
+  entity_type: 'producto' | 'cliente' | 'venta' | 'compra' | 'nota_credito' | 'product' | 'client' | 'sale' | 'purchase';
   entity_id: string;
   description: string;
   justification?: string | null;

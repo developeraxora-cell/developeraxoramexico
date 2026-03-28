@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Branch, User } from '../../types';
 import { creditService, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPaymentMethod, type CreditSummary } from '../../services/concretera/credit.service';
-import { Eye, FileDown, Plus, Wallet } from 'lucide-react';
+import { Eye, FileDown, Plus, Trash2, Wallet } from 'lucide-react';
 import { formatCurrency } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
+import ConfirmModal from '../common/ConfirmModal';
+import { logConcreteraAudit } from '../../services/audit/audit.service';
 
 interface CustomerScreenProps {
   selectedBranchId: string;
@@ -50,6 +52,10 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('alert');
   const [feedbackTitle, setFeedbackTitle] = useState('');
   const [feedbackDescription, setFeedbackDescription] = useState('');
+  const [noteToDelete, setNoteToDelete] = useState<CreditNoteWithStatus | null>(null);
+  const [isDeleteNoteModalOpen, setIsDeleteNoteModalOpen] = useState(false);
+  const [deleteNoteJustification, setDeleteNoteJustification] = useState('');
+  const [deleteNoteError, setDeleteNoteError] = useState<string | null>(null);
 
   const branchId = useMemo(() => {
     const match = branches.find((b) => b.id === selectedBranchId);
@@ -265,6 +271,69 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo registrar el abono.';
       setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const buildHistoryNotes = (notes: CreditNote[], customer: CreditCustomer) => {
+    return notes.map((note) => {
+      const dueDate = new Date(`${note.due_date}T00:00:00Z`);
+      const diffDays = Math.floor((Date.now() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      const overdue = note.balance > 0 && diffDays > (customer.late_tolerance_days ?? 0);
+      return {
+        ...note,
+        status: note.balance <= 0 ? 'PAGADA' : overdue ? 'VENCIDA' : 'ABIERTA',
+        days_overdue: overdue ? diffDays : 0,
+      } as CreditNoteWithStatus;
+    });
+  };
+
+  const handleRequestDeleteNote = (note: CreditNoteWithStatus) => {
+    setNoteToDelete(note);
+    setDeleteNoteJustification('');
+    setDeleteNoteError(null);
+    setIsDeleteNoteModalOpen(true);
+  };
+
+  const handleConfirmDeleteNote = async () => {
+    if (!selectedCustomer || !noteToDelete) return;
+    if (!deleteNoteJustification.trim()) {
+      setDeleteNoteError('La observación es obligatoria.');
+      return;
+    }
+
+    setIsLoading(true);
+    showFeedback('loading', 'Eliminando nota', 'Procesando eliminación...');
+
+    try {
+      await creditService.deleteNote(noteToDelete.id);
+
+      logConcreteraAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ELIMINAR',
+        entity_type: 'nota_credito',
+        entity_id: String(noteToDelete.id),
+        description: `Nota de crédito eliminada: ${noteToDelete.folio}`,
+        justification: deleteNoteJustification.trim(),
+        previous_data: noteToDelete as unknown as Record<string, unknown>,
+      });
+
+      const refreshedNotes = await creditService.listNotesByCustomer(selectedCustomer.id);
+      setHistoryNotes(buildHistoryNotes(refreshedNotes, selectedCustomer));
+      setIsDeleteNoteModalOpen(false);
+      setNoteToDelete(null);
+      setDeleteNoteJustification('');
+      setDeleteNoteError(null);
+      await loadCustomers();
+      showFeedback('success', 'Nota eliminada', 'La nota y sus abonos asociados fueron eliminados.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo eliminar la nota.';
+      setError(message);
+      showFeedback('error', 'No se pudo eliminar', message);
     } finally {
       setIsLoading(false);
     }
@@ -539,6 +608,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     <th className="p-4 text-right">Total</th>
                     <th className="p-4 text-right">Saldo</th>
                     <th className="p-4 text-center">Estado</th>
+                    <th className="p-4 text-center">Acción</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -561,11 +631,21 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                           {note.status}
                         </span>
                       </td>
+                      <td className="p-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleRequestDeleteNote(note)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500 transition-colors hover:bg-red-100"
+                          title="Eliminar nota"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                   {historyNotes.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
+                      <td colSpan={7} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
                     </tr>
                   )}
                 </tbody>
@@ -716,6 +796,32 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={isDeleteNoteModalOpen}
+        title="Eliminar nota de crédito"
+        description={noteToDelete ? `Se eliminará la nota ${noteToDelete.folio} y sus abonos asociados.` : undefined}
+        icon="🗑️"
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        noteLabel="Observación obligatoria"
+        notePlaceholder="Indique por qué se elimina la nota"
+        noteValue={deleteNoteJustification}
+        noteRequired
+        noteError={deleteNoteError}
+        isProcessing={isLoading}
+        onNoteChange={(value) => {
+          setDeleteNoteJustification(value);
+          if (deleteNoteError) setDeleteNoteError(null);
+        }}
+        onConfirm={handleConfirmDeleteNote}
+        onCancel={() => {
+          setIsDeleteNoteModalOpen(false);
+          setNoteToDelete(null);
+          setDeleteNoteJustification('');
+          setDeleteNoteError(null);
+        }}
+      />
     </div>
   );
 };

@@ -311,6 +311,22 @@ export const creditService = {
     return data as CreditNote;
   },
 
+  async deleteNote(noteId: string) {
+    const { error: paymentsError } = await concreteDb
+      .from('concrete_credit_payments')
+      .delete()
+      .eq('note_id', noteId);
+
+    if (paymentsError) throw paymentsError;
+
+    const { error } = await concreteDb
+      .from('concrete_credit_notes')
+      .delete()
+      .eq('id', noteId);
+
+    if (error) throw error;
+  },
+
   async createCreditNote(input: {
     branch_id: string;
     customer_id: string;

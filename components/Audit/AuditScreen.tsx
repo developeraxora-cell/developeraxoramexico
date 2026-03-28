@@ -185,6 +185,8 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
       case 'compra':
       case 'purchase':
         return 'Compra';
+      case 'nota_credito':
+        return 'Nota de crédito';
       default:
         return entityType;
     }

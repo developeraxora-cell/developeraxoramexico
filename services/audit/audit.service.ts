@@ -1,6 +1,6 @@
 export type AuditActionType = 'CREAR' | 'ACTUALIZAR' | 'ELIMINAR' | 'VENTA' | 'COMPRA';
 export type AuditModule = 'materiales' | 'concretera';
-export type AuditEntityType = 'producto' | 'cliente' | 'venta' | 'compra';
+export type AuditEntityType = 'producto' | 'cliente' | 'venta' | 'compra' | 'nota_credito';
 
 export interface AuditLogInput {
   log_id?: string;
