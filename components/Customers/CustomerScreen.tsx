@@ -57,6 +57,7 @@ const createDefaultPaymentEditForm = () => ({
   notes: '',
   justification: '',
 });
+const ALPHABET_FILTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branches, currentUser }) => {
   const PAGE_SIZE = 5;
@@ -66,6 +67,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [summaries, setSummaries] = useState<Record<string, CreditSummary>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [selectedLetter, setSelectedLetter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -174,7 +176,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setError(null);
 
     try {
-      const pageData = await creditService.listCustomersByBranchPaged(branchId, currentPage, PAGE_SIZE, debouncedSearchTerm);
+      const pageData = await creditService.listCustomersByBranchPaged(branchId, currentPage, PAGE_SIZE, debouncedSearchTerm, selectedLetter);
       const summaryMap = await creditService.getSummariesForCustomers(pageData.rows);
       setCustomers(pageData.rows);
       setTotalCustomers(pageData.total);
@@ -185,7 +187,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     } finally {
       setIsLoading(false);
     }
-  }, [branchId, currentPage, debouncedSearchTerm, PAGE_SIZE]);
+  }, [branchId, currentPage, debouncedSearchTerm, PAGE_SIZE, selectedLetter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedLetter]);
 
   useEffect(() => {
     loadCustomers();
@@ -863,6 +869,24 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           <Plus className="w-4 h-4" />
           Nuevo Cliente
         </button>
+      </div>
+
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-2">
+        {ALPHABET_FILTERS.map((letter) => {
+          const isActive = selectedLetter === letter;
+          return (
+            <button
+              key={letter}
+              type="button"
+              onClick={() => setSelectedLetter((prev) => (prev === letter ? '' : letter))}
+              className={`h-9 min-w-9 rounded-xl px-3 text-xs font-black uppercase transition-colors ${
+                isActive ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {letter}
+            </button>
+          );
+        })}
       </div>
 
       {error && (

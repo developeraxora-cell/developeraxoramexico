@@ -142,7 +142,7 @@ export const creditService = {
     return (data ?? []) as CreditCustomer[];
   },
 
-  async listCustomersByBranchPaged(branchId: string, page: number, pageSize: number, searchTerm = '') {
+  async listCustomersByBranchPaged(branchId: string, page: number, pageSize: number, searchTerm = '', startsWith = '') {
     const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
     const safePageSize = Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : 5;
     const from = (safePage - 1) * safePageSize;
@@ -157,6 +157,12 @@ export const creditService = {
     if (term) {
       const escaped = term.replace(/[%_,]/g, '');
       query = query.or(`name.ilike.%${escaped}%,phone.ilike.%${escaped}%,address.ilike.%${escaped}%`);
+    }
+
+    const initial = startsWith.trim();
+    if (initial) {
+      const escapedInitial = initial.replace(/[%_,]/g, '');
+      query = query.ilike('name', `${escapedInitial}%`);
     }
 
     const { data, error, count } = await query.order('name').range(from, to);
