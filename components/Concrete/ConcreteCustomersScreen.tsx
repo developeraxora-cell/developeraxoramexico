@@ -867,13 +867,9 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       />
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="border-b border-slate-200 px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-500">
-          Seleccionados {selectedCustomerIds.length}
-        </div>
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">
             <tr>
-              <th className="p-4 text-center">Sel.</th>
               <th className="p-4">Cliente</th>
               <th className="p-4 text-right">Límite</th>
               <th className="p-4 text-right">Deuda actual</th>
@@ -888,14 +884,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               const available = summary?.disponible_credito ?? 0;
               return (
                 <tr key={customer.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="p-4 text-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedCustomerIds.includes(customer.id)}
-                      onChange={() => toggleCustomerSelection(customer.id)}
-                      className="h-4 w-4 rounded border-slate-300"
-                    />
-                  </td>
                   <td className="p-4">
                     <p className="font-bold text-slate-800">{customer.name}</p>
                     <p className="text-[10px] text-slate-400">{customer.phone || '—'}</p>
@@ -910,25 +898,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   <td className="p-4 text-right font-black text-green-600">{formatCurrency(available)}</td>
                   <td className="p-4 text-center space-x-2">
                     <button
-                      onClick={() => handleOpenEditCustomer(customer)}
-                      className="bg-sky-100 p-2 rounded-lg"
-                      title="Editar cliente"
-                    >
-                      <Pencil className="w-4 h-4 text-sky-700" />
-                    </button>
-                    <button
                       onClick={() => handleDownloadCustomerPdf(customer)}
                       className="bg-slate-100 p-2 rounded-lg"
                       title="Exportar PDF"
                     >
                       <FileDown className="w-4 h-4 text-slate-600" />
-                    </button>
-                    <button
-                      onClick={() => handleOpenPaymentHistory(customer)}
-                      className="bg-violet-100 p-2 rounded-lg"
-                      title="Historial de abonos"
-                    >
-                      <Wallet className="w-4 h-4 text-violet-700" />
                     </button>
                     <button
                       onClick={() => handleOpenHistory(customer)}
@@ -950,7 +924,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
             })}
             {!isLoading && customers.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-slate-400 text-sm">
+                <td colSpan={5} className="p-6 text-center text-slate-400 text-sm">
                   No hay clientes registrados en esta sucursal.
                 </td>
               </tr>
@@ -1299,14 +1273,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  type="button"
-                  onClick={() => openCreateNoteModal(selectedCustomer)}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white"
-                >
-                  <Plus className="h-4 w-4" />
-                  Nuevo crédito
-                </button>
-                <button
                   onClick={() => setIsHistoryModalOpen(false)}
                   className="bg-white/10 w-10 h-10 rounded-2xl flex items-center justify-center text-2xl hover:bg-red-500 transition-all"
                 >
@@ -1315,22 +1281,9 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <input
-                  type="text"
-                  placeholder="Buscar por folio..."
-                  className="w-full md:max-w-xs rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
-                  value={historySearchTerm}
-                  onChange={(e) => {
-                    setHistorySearchTerm(e.target.value);
-                    setHistoryPage(1);
-                  }}
-                />
-              </div>
               <table className="w-full text-left bg-white rounded-3xl overflow-hidden border border-slate-200">
                 <thead className="bg-slate-900 text-white text-[10px] uppercase tracking-widest">
                   <tr>
-                    <th className="p-4 text-center">Sel.</th>
                     <th className="p-4">Folio</th>
                     <th className="p-4">Emisión</th>
                     <th className="p-4">Vence</th>
@@ -1343,14 +1296,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 <tbody className="divide-y divide-slate-100">
                   {pagedHistoryNotes.map((note) => (
                     <tr key={note.id} className="hover:bg-slate-50">
-                      <td className="p-4 text-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedHistoryNoteIds.includes(note.id)}
-                          onChange={() => toggleHistoryNoteSelection(note.id)}
-                          className="h-4 w-4 rounded border-slate-300"
-                        />
-                      </td>
                       <td className="p-4 text-xs font-bold text-slate-700">{note.folio}</td>
                       <td className="p-4 text-xs text-slate-500">{note.issue_date}</td>
                       <td className="p-4 text-xs text-slate-500">{note.due_date}</td>
@@ -1369,38 +1314,28 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                         </span>
                       </td>
                       <td className="p-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openEditNoteModal(note)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600 transition-colors hover:bg-sky-100"
-                            title="Editar nota"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRequestDeleteNote(note)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500 transition-colors hover:bg-red-100"
-                            title="Eliminar nota"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRequestDeleteNote(note)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500 transition-colors hover:bg-red-100"
+                          title="Eliminar nota"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </td>
                     </tr>
                   ))}
-                  {filteredHistoryNotes.length === 0 && (
+                  {historyNotes.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
+                      <td colSpan={7} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
                     </tr>
                   )}
                 </tbody>
               </table>
-              {filteredHistoryNotes.length > 0 && (
+              {historyNotes.length > 0 && (
                 <div className="mt-4 flex items-center justify-between px-2">
                   <p className="text-xs text-slate-400">
-                    Mostrando {pagedHistoryNotes.length} de {filteredHistoryNotes.length} notas
+                    Mostrando {pagedHistoryNotes.length} de {historyNotes.length} notas
                   </p>
                   <div className="flex items-center gap-2">
                     <button
