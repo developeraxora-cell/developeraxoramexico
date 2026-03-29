@@ -64,6 +64,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [noteRows, setNoteRows] = useState<Record<string, number>>({});
   const [historyNotes, setHistoryNotes] = useState<CreditNoteWithStatus[]>([]);
   const [historySearchTerm, setHistorySearchTerm] = useState('');
+  const [selectedHistoryNoteIds, setSelectedHistoryNoteIds] = useState<string[]>([]);
   const [historyPage, setHistoryPage] = useState(1);
   const [paymentPage, setPaymentPage] = useState(1);
   const [formData, setFormData] = useState(defaultCustomerForm);
@@ -177,6 +178,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setSelectedCustomer(customer);
     setIsHistoryModalOpen(true);
     setHistorySearchTerm('');
+    setSelectedHistoryNoteIds([]);
     setHistoryPage(1);
     setError(null);
     try {
@@ -216,6 +218,12 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       const message = err instanceof Error ? err.message : 'No se pudieron cargar notas.';
       setError(message);
     }
+  };
+
+  const toggleHistoryNoteSelection = (noteId: string) => {
+    setSelectedHistoryNoteIds((prev) =>
+      prev.includes(noteId) ? prev.filter((id) => id !== noteId) : [...prev, noteId]
+    );
   };
 
   const handleDownloadCustomerPdf = async (customer: CreditCustomer) => {
@@ -1060,7 +1068,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-              <div className="mb-4">
+              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <input
                   type="text"
                   placeholder="Buscar por folio..."
@@ -1075,6 +1083,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               <table className="w-full text-left bg-white rounded-3xl overflow-hidden border border-slate-200">
                 <thead className="bg-slate-900 text-white text-[10px] uppercase tracking-widest">
                   <tr>
+                    <th className="p-4 text-center">Sel.</th>
                     <th className="p-4">Folio</th>
                     <th className="p-4">Emisión</th>
                     <th className="p-4">Vence</th>
@@ -1087,6 +1096,14 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 <tbody className="divide-y divide-slate-100">
                   {pagedHistoryNotes.map((note) => (
                     <tr key={note.id} className="hover:bg-slate-50">
+                      <td className="p-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedHistoryNoteIds.includes(note.id)}
+                          onChange={() => toggleHistoryNoteSelection(note.id)}
+                          className="h-4 w-4 rounded border-slate-300"
+                        />
+                      </td>
                       <td className="p-4 text-xs font-bold text-slate-700">{note.folio}</td>
                       <td className="p-4 text-xs text-slate-500">{note.issue_date}</td>
                       <td className="p-4 text-xs text-slate-500">{note.due_date}</td>
@@ -1128,7 +1145,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   ))}
                   {filteredHistoryNotes.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
+                      <td colSpan={8} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
                     </tr>
                   )}
                 </tbody>
