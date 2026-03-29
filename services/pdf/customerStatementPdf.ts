@@ -52,8 +52,25 @@ const toFileToken = (value: string | null | undefined, fallback: string) => {
 };
 
 const formatLocalDateTime = (value: string) => {
-  const normalized = value.endsWith('Z') ? value : `${value}Z`;
-  return new Date(normalized).toLocaleString();
+  const raw = String(value ?? '').trim();
+  if (!raw) return '-';
+
+  const normalized = raw.includes('T')
+    ? raw
+    : raw.includes(' ')
+      ? raw.replace(' ', 'T')
+      : `${raw}T00:00:00`;
+
+  const withZone = /[zZ]|[+-]\d{2}:\d{2}$/.test(normalized) ? normalized : `${normalized}Z`;
+  const parsed = new Date(withZone);
+
+  if (Number.isNaN(parsed.getTime())) {
+    const fallback = new Date(raw);
+    if (Number.isNaN(fallback.getTime())) return raw;
+    return fallback.toLocaleString();
+  }
+
+  return parsed.toLocaleString();
 };
 
 const openPdfPreview = (blob: Blob, filename: string, targetWindow?: Window | null) => {

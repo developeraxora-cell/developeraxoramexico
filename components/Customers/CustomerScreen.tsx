@@ -22,6 +22,7 @@ const defaultCustomerForm = {
   default_credit_days: 30,
   policy: 'CERO_TOLERANCIA' as const,
   allow_cash_if_blocked: true,
+  justification: '',
 };
 
 const MODAL_PAGE_SIZE = 5;
@@ -55,12 +56,14 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<CreditCustomer | null>(null);
   const [openNotes, setOpenNotes] = useState<CreditNote[]>([]);
   const [noteRows, setNoteRows] = useState<Record<string, number>>({});
   const [historyNotes, setHistoryNotes] = useState<CreditNoteWithStatus[]>([]);
+  const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [historyPage, setHistoryPage] = useState(1);
   const [paymentPage, setPaymentPage] = useState(1);
   const [formData, setFormData] = useState(defaultCustomerForm);
@@ -105,12 +108,17 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   };
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCustomers / PAGE_SIZE)), [totalCustomers, PAGE_SIZE]);
-  const historyTotalPages = useMemo(() => Math.max(1, Math.ceil(historyNotes.length / MODAL_PAGE_SIZE)), [historyNotes.length]);
+  const filteredHistoryNotes = useMemo(() => {
+    const term = historySearchTerm.trim().toLowerCase();
+    if (!term) return historyNotes;
+    return historyNotes.filter((note) => (note.folio ?? '').toLowerCase().includes(term));
+  }, [historyNotes, historySearchTerm]);
+  const historyTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredHistoryNotes.length / MODAL_PAGE_SIZE)), [filteredHistoryNotes.length]);
   const paymentTotalPages = useMemo(() => Math.max(1, Math.ceil(openNotes.length / MODAL_PAGE_SIZE)), [openNotes.length]);
   const pagedHistoryNotes = useMemo(() => {
     const start = (historyPage - 1) * MODAL_PAGE_SIZE;
-    return historyNotes.slice(start, start + MODAL_PAGE_SIZE);
-  }, [historyNotes, historyPage]);
+    return filteredHistoryNotes.slice(start, start + MODAL_PAGE_SIZE);
+  }, [filteredHistoryNotes, historyPage]);
   const pagedOpenNotes = useMemo(() => {
     const start = (paymentPage - 1) * MODAL_PAGE_SIZE;
     return openNotes.slice(start, start + MODAL_PAGE_SIZE);
@@ -159,9 +167,16 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     }
   }, [currentPage, totalPages]);
 
+  useEffect(() => {
+    if (historyPage > historyTotalPages) {
+      setHistoryPage(historyTotalPages);
+    }
+  }, [historyPage, historyTotalPages]);
+
   const handleOpenHistory = async (customer: CreditCustomer) => {
     setSelectedCustomer(customer);
     setIsHistoryModalOpen(true);
+    setHistorySearchTerm('');
     setHistoryPage(1);
     setError(null);
     try {
@@ -532,6 +547,69 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     }
   };
 
+  const handleOpenEditCustomer = (customer: CreditCustomer) => {
+    setSelectedCustomer(customer);
+    setFormData({
+      name: customer.name,
+      phone: customer.phone ?? '',
+      address: customer.address ?? '',
+      credit_limit: Number(customer.credit_limit ?? 0),
+      default_credit_days: Number(customer.default_credit_days) === 15 ? 15 : 30,
+      policy: 'CERO_TOLERANCIA',
+      allow_cash_if_blocked: customer.allow_cash_if_blocked ?? true,
+      justification: '',
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateCustomer = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedCustomer) return;
+    if (!formData.justification.trim()) {
+      setError('La observación es obligatoria para editar el cliente.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const updated = await creditService.updateCustomer(selectedCustomer.id, {
+        name: formData.name,
+        phone: formData.phone || null,
+        address: formData.address || null,
+        credit_limit: Number(formData.credit_limit),
+        default_credit_days: Number(formData.default_credit_days) === 15 ? 15 : 30,
+        policy: 'CERO_TOLERANCIA',
+        allow_cash_if_blocked: formData.allow_cash_if_blocked,
+      });
+
+      logMaterialsAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ACTUALIZAR',
+        entity_type: 'cliente',
+        entity_id: String(updated.id),
+        description: `Cliente actualizado: ${updated.name}`,
+        justification: formData.justification.trim(),
+        previous_data: selectedCustomer as unknown as Record<string, unknown>,
+        new_data: updated as unknown as Record<string, unknown>,
+      });
+
+      setIsEditModalOpen(false);
+      setSelectedCustomer(null);
+      setFormData(defaultCustomerForm);
+      await loadCustomers();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo actualizar el cliente.';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
@@ -596,6 +674,13 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   </td>
                   <td className="p-4 text-right font-black text-green-600">{formatCurrency(available)}</td>
                   <td className="p-4 text-center space-x-2">
+                    <button
+                      onClick={() => handleOpenEditCustomer(customer)}
+                      className="bg-sky-100 p-2 rounded-lg"
+                      title="Editar cliente"
+                    >
+                      <Pencil className="w-4 h-4 text-sky-700" />
+                    </button>
                     <button
                       onClick={() => handleDownloadCustomerPdf(customer)}
                       className="bg-slate-100 p-2 rounded-lg"
@@ -746,6 +831,114 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         </div>
       )}
 
+      {isEditModalOpen && selectedCustomer && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in">
+            <div className="bg-sky-700 p-6 text-white">
+              <h3 className="text-xl font-black uppercase tracking-tighter">Editar Cliente</h3>
+              <p className="text-[10px] font-bold uppercase tracking-widest">Sucursal {selectedBranchId || '—'}</p>
+            </div>
+            <form onSubmit={handleUpdateCustomer} className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre del cliente</label>
+                <input
+                  required
+                  placeholder="Nombre"
+                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                  value={formData.name}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Teléfono</label>
+                <input
+                  placeholder="Teléfono"
+                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                  value={formData.phone}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dirección</label>
+                <input
+                  placeholder="Dirección"
+                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                  value={formData.address}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Límite de crédito</label>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="Límite"
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                    value={formData.credit_limit === 0 ? '' : formData.credit_limit}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        credit_limit: e.target.value === '' ? 0 : Number(e.target.value),
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Días de crédito</label>
+                  <select
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                    value={formData.default_credit_days}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, default_credit_days: Number(e.target.value) }))}
+                  >
+                    <option value={15}>15 días</option>
+                    <option value={30}>30 días</option>
+                  </select>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-xs text-slate-600 font-bold">
+                <input
+                  type="checkbox"
+                  checked={formData.allow_cash_if_blocked}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, allow_cash_if_blocked: e.target.checked }))}
+                />
+                Permitir contado si está bloqueado
+              </label>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observación obligatoria</label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Indique por qué se modifica el cliente"
+                  className="w-full p-3 bg-amber-50 rounded-xl border border-amber-200 text-sm resize-none"
+                  value={formData.justification}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, justification: e.target.value }))}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setSelectedCustomer(null);
+                    setFormData(defaultCustomerForm);
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 rounded-xl bg-sky-700 text-white font-black text-[10px] uppercase"
+                >
+                  Guardar cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {isNoteModalOpen && selectedCustomer && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden">
@@ -880,6 +1073,18 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+              <div className="mb-4">
+                <input
+                  type="text"
+                  placeholder="Buscar por folio..."
+                  className="w-full md:max-w-xs rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
+                  value={historySearchTerm}
+                  onChange={(e) => {
+                    setHistorySearchTerm(e.target.value);
+                    setHistoryPage(1);
+                  }}
+                />
+              </div>
               <table className="w-full text-left bg-white rounded-3xl overflow-hidden border border-slate-200">
                 <thead className="bg-slate-900 text-white text-[10px] uppercase tracking-widest">
                   <tr>
@@ -934,17 +1139,17 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       </td>
                     </tr>
                   ))}
-                  {historyNotes.length === 0 && (
+                  {filteredHistoryNotes.length === 0 && (
                     <tr>
                       <td colSpan={7} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
                     </tr>
                   )}
                 </tbody>
               </table>
-              {historyNotes.length > 0 && (
+              {filteredHistoryNotes.length > 0 && (
                 <div className="mt-4 flex items-center justify-between px-2">
                   <p className="text-xs text-slate-400">
-                    Mostrando {pagedHistoryNotes.length} de {historyNotes.length} notas
+                    Mostrando {pagedHistoryNotes.length} de {filteredHistoryNotes.length} notas
                   </p>
                   <div className="flex items-center gap-2">
                     <button
