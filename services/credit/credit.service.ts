@@ -313,6 +313,41 @@ export const creditService = {
     return data as CreditPayment;
   },
 
+  async updatePayment(paymentId: string, updates: {
+    paid_at?: string;
+    amount?: number;
+    method?: CreditPaymentMethod;
+    reference?: string | null;
+    notes?: string | null;
+  }) {
+    const payload = {
+      ...(updates.paid_at ? { paid_at: updates.paid_at } : {}),
+      ...(updates.amount !== undefined ? { amount: Number(updates.amount) } : {}),
+      ...(updates.method ? { method: updates.method } : {}),
+      ...(updates.reference !== undefined ? { reference: updates.reference ?? null } : {}),
+      ...(updates.notes !== undefined ? { notes: updates.notes ?? null } : {}),
+    };
+
+    const { data, error } = await supabase
+      .from('credit_payments')
+      .update(payload)
+      .eq('id', paymentId)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data as CreditPayment;
+  },
+
+  async deletePayment(paymentId: string) {
+    const { error } = await supabase
+      .from('credit_payments')
+      .delete()
+      .eq('id', paymentId);
+
+    if (error) throw error;
+  },
+
   async getNoteById(noteId: string) {
     const { data, error } = await supabase
       .from('credit_notes')

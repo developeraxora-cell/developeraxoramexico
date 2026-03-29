@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Branch, User } from '../../types';
-import { creditService, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPaymentMethod, type CreditSummary } from '../../services/concretera/credit.service';
+import { creditService, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentMethod, type CreditSummary } from '../../services/concretera/credit.service';
 import { Eye, FileDown, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
 import { formatCurrency } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
@@ -47,6 +47,15 @@ const createDefaultNoteForm = (creditDays = 30) => {
   };
 };
 
+const createDefaultPaymentEditForm = () => ({
+  paid_at: '',
+  amount: 0,
+  method: 'EFECTIVO' as CreditPaymentMethod,
+  reference: '',
+  notes: '',
+  justification: '',
+});
+
 const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branches, currentUser }) => {
   const PAGE_SIZE = 5;
   const [customers, setCustomers] = useState<CreditCustomer[]>([]);
@@ -75,6 +84,17 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [noteFormError, setNoteFormError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<CreditPaymentMethod>('EFECTIVO');
   const [paymentNotes, setPaymentNotes] = useState('');
+  const [paymentHistory, setPaymentHistory] = useState<CreditPayment[]>([]);
+  const [paymentHistoryPage, setPaymentHistoryPage] = useState(1);
+  const [isPaymentHistoryModalOpen, setIsPaymentHistoryModalOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<CreditPayment | null>(null);
+  const [isEditPaymentModalOpen, setIsEditPaymentModalOpen] = useState(false);
+  const [paymentEditForm, setPaymentEditForm] = useState(createDefaultPaymentEditForm());
+  const [paymentEditError, setPaymentEditError] = useState<string | null>(null);
+  const [paymentToDelete, setPaymentToDelete] = useState<CreditPayment | null>(null);
+  const [isDeletePaymentModalOpen, setIsDeletePaymentModalOpen] = useState(false);
+  const [deletePaymentJustification, setDeletePaymentJustification] = useState('');
+  const [deletePaymentError, setDeletePaymentError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -116,6 +136,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   }, [historyNotes, historySearchTerm]);
   const historyTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredHistoryNotes.length / MODAL_PAGE_SIZE)), [filteredHistoryNotes.length]);
   const paymentTotalPages = useMemo(() => Math.max(1, Math.ceil(openNotes.length / MODAL_PAGE_SIZE)), [openNotes.length]);
+  const paymentHistoryTotalPages = useMemo(() => Math.max(1, Math.ceil(paymentHistory.length / MODAL_PAGE_SIZE)), [paymentHistory.length]);
   const pagedHistoryNotes = useMemo(() => {
     const start = (historyPage - 1) * MODAL_PAGE_SIZE;
     return filteredHistoryNotes.slice(start, start + MODAL_PAGE_SIZE);
@@ -124,6 +145,10 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     const start = (paymentPage - 1) * MODAL_PAGE_SIZE;
     return openNotes.slice(start, start + MODAL_PAGE_SIZE);
   }, [openNotes, paymentPage]);
+  const pagedPaymentHistory = useMemo(() => {
+    const start = (paymentHistoryPage - 1) * MODAL_PAGE_SIZE;
+    return paymentHistory.slice(start, start + MODAL_PAGE_SIZE);
+  }, [paymentHistory, paymentHistoryPage]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -174,6 +199,12 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     }
   }, [historyPage, historyTotalPages]);
 
+  useEffect(() => {
+    if (paymentHistoryPage > paymentHistoryTotalPages) {
+      setPaymentHistoryPage(paymentHistoryTotalPages);
+    }
+  }, [paymentHistoryPage, paymentHistoryTotalPages]);
+
   const handleOpenHistory = async (customer: CreditCustomer) => {
     setSelectedCustomer(customer);
     setIsHistoryModalOpen(true);
@@ -220,10 +251,171 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     }
   };
 
+  const loadPaymentHistory = async (customer: CreditCustomer) => {
+    const notes = await creditService.listNotesByCustomer(customer.id);
+    setHistoryNotes(buildHistoryNotes(notes, customer));
+    const payments = await creditService.listPaymentsByNoteIds(notes.map((note) => note.id));
+    setPaymentHistory(payments);
+    return { notes, payments };
+  };
+
+  const handleOpenPaymentHistory = async (customer: CreditCustomer) => {
+    setSelectedCustomer(customer);
+    setPaymentHistoryPage(1);
+    setError(null);
+    setIsLoading(true);
+    try {
+      await loadPaymentHistory(customer);
+      setIsPaymentHistoryModalOpen(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo cargar el historial de abonos.';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const toggleHistoryNoteSelection = (noteId: string) => {
     setSelectedHistoryNoteIds((prev) =>
       prev.includes(noteId) ? prev.filter((id) => id !== noteId) : [...prev, noteId]
     );
+  };
+
+  const getPaymentNote = (noteId: string) => historyNotes.find((note) => note.id === noteId) ?? openNotes.find((note) => note.id === noteId) ?? null;
+
+  const openEditPaymentModal = (payment: CreditPayment) => {
+    setEditingPayment(payment);
+    setPaymentEditForm({
+      paid_at: String(payment.paid_at ?? '').slice(0, 16),
+      amount: Number(payment.amount ?? 0),
+      method: payment.method,
+      reference: payment.reference ?? '',
+      notes: payment.notes ?? '',
+      justification: '',
+    });
+    setPaymentEditError(null);
+    setIsEditPaymentModalOpen(true);
+  };
+
+  const handleUpdatePayment = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedCustomer || !editingPayment) return;
+    if (!paymentEditForm.justification.trim()) {
+      setPaymentEditError('La observación es obligatoria.');
+      return;
+    }
+
+    const targetNote = getPaymentNote(editingPayment.note_id);
+    const amount = Number(paymentEditForm.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setPaymentEditError('El abono debe ser mayor a 0.');
+      return;
+    }
+    if (!targetNote) {
+      setPaymentEditError('No se encontró la nota asociada al abono.');
+      return;
+    }
+    const otherPayments = paymentHistory
+      .filter((payment) => payment.note_id === editingPayment.note_id && payment.id !== editingPayment.id)
+      .reduce((acc, payment) => acc + Number(payment.amount ?? 0), 0);
+    const maxAllowed = Number(targetNote.total ?? 0) - otherPayments;
+    if (amount > maxAllowed) {
+      setPaymentEditError('El abono supera el saldo permitido para esa nota.');
+      return;
+    }
+
+    setIsLoading(true);
+    setPaymentEditError(null);
+    showFeedback('loading', 'Actualizando abono', 'Guardando cambios...');
+
+    try {
+      const updated = await creditService.updatePayment(editingPayment.id, {
+        paid_at: paymentEditForm.paid_at ? new Date(paymentEditForm.paid_at).toISOString() : undefined,
+        amount,
+        method: paymentEditForm.method,
+        reference: paymentEditForm.reference || null,
+        notes: paymentEditForm.notes || null,
+      });
+
+      logConcreteraAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ACTUALIZAR',
+        entity_type: 'abono_credito',
+        entity_id: String(updated.id),
+        description: `Abono actualizado para nota ${targetNote.folio}`,
+        justification: paymentEditForm.justification.trim(),
+        previous_data: editingPayment as unknown as Record<string, unknown>,
+        new_data: updated as unknown as Record<string, unknown>,
+      });
+
+      await loadCustomers();
+      await refreshCustomerNotes(selectedCustomer);
+      await loadPaymentHistory(selectedCustomer);
+      setIsEditPaymentModalOpen(false);
+      setEditingPayment(null);
+      setPaymentEditForm(createDefaultPaymentEditForm());
+      showFeedback('success', 'Abono actualizado');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo actualizar el abono.';
+      setPaymentEditError(message);
+      showFeedback('error', 'No se pudo actualizar', message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRequestDeletePayment = (payment: CreditPayment) => {
+    setPaymentToDelete(payment);
+    setDeletePaymentJustification('');
+    setDeletePaymentError(null);
+    setIsDeletePaymentModalOpen(true);
+  };
+
+  const handleConfirmDeletePayment = async () => {
+    if (!selectedCustomer || !paymentToDelete) return;
+    if (!deletePaymentJustification.trim()) {
+      setDeletePaymentError('La observación es obligatoria.');
+      return;
+    }
+
+    setIsLoading(true);
+    showFeedback('loading', 'Eliminando abono', 'Procesando eliminación...');
+
+    try {
+      await creditService.deletePayment(paymentToDelete.id);
+
+      const note = getPaymentNote(paymentToDelete.note_id);
+      logConcreteraAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ELIMINAR',
+        entity_type: 'abono_credito',
+        entity_id: String(paymentToDelete.id),
+        description: `Abono eliminado${note ? ` de nota ${note.folio}` : ''}`,
+        justification: deletePaymentJustification.trim(),
+        previous_data: paymentToDelete as unknown as Record<string, unknown>,
+      });
+
+      await loadCustomers();
+      await refreshCustomerNotes(selectedCustomer);
+      await loadPaymentHistory(selectedCustomer);
+      setIsDeletePaymentModalOpen(false);
+      setPaymentToDelete(null);
+      setDeletePaymentJustification('');
+      setDeletePaymentError(null);
+      showFeedback('success', 'Abono eliminado');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo eliminar el abono.';
+      setDeletePaymentError(message);
+      showFeedback('error', 'No se pudo eliminar', message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDownloadCustomerPdf = async (customer: CreditCustomer) => {
@@ -682,6 +874,13 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       title="Exportar PDF"
                     >
                       <FileDown className="w-4 h-4 text-slate-600" />
+                    </button>
+                    <button
+                      onClick={() => handleOpenPaymentHistory(customer)}
+                      className="bg-violet-100 p-2 rounded-lg"
+                      title="Historial de abonos"
+                    >
+                      <Wallet className="w-4 h-4 text-violet-700" />
                     </button>
                     <button
                       onClick={() => handleOpenHistory(customer)}
@@ -1297,6 +1496,205 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         </div>
       )}
 
+      {isPaymentHistoryModalOpen && selectedCustomer && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[65] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-5xl h-[80vh] overflow-hidden flex flex-col">
+            <div className="bg-violet-700 p-6 text-white flex justify-between items-start">
+              <div>
+                <h3 className="text-2xl font-black tracking-tighter">Historial de Abonos</h3>
+                <p className="text-violet-100 font-bold tracking-widest uppercase text-[10px] mt-1">{selectedCustomer.name}</p>
+              </div>
+              <button
+                onClick={() => setIsPaymentHistoryModalOpen(false)}
+                className="bg-white/10 w-10 h-10 rounded-2xl flex items-center justify-center text-2xl hover:bg-red-500 transition-all"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+              <table className="w-full text-left bg-white rounded-3xl overflow-hidden border border-slate-200">
+                <thead className="bg-slate-900 text-white text-[10px] uppercase tracking-widest">
+                  <tr>
+                    <th className="p-4">Fecha</th>
+                    <th className="p-4">Folio</th>
+                    <th className="p-4">Método</th>
+                    <th className="p-4 text-right">Monto</th>
+                    <th className="p-4">Referencia</th>
+                    <th className="p-4">Nota</th>
+                    <th className="p-4 text-center">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {pagedPaymentHistory.map((payment) => {
+                    const note = getPaymentNote(payment.note_id);
+                    return (
+                      <tr key={payment.id} className="hover:bg-slate-50">
+                        <td className="p-4 text-xs text-slate-500">{String(payment.paid_at ?? '').replace('T', ' ').slice(0, 16)}</td>
+                        <td className="p-4 text-xs font-bold text-slate-700">{note?.folio ?? '—'}</td>
+                        <td className="p-4 text-xs font-bold text-slate-700">{payment.method}</td>
+                        <td className="p-4 text-right text-xs font-black text-emerald-600">{formatCurrency(Number(payment.amount ?? 0))}</td>
+                        <td className="p-4 text-xs text-slate-500">{payment.reference || '—'}</td>
+                        <td className="p-4 text-xs text-slate-500">{payment.notes || '—'}</td>
+                        <td className="p-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditPaymentModal(payment)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600 transition-colors hover:bg-sky-100"
+                              title="Editar abono"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRequestDeletePayment(payment)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500 transition-colors hover:bg-red-100"
+                              title="Eliminar abono"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {paymentHistory.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-slate-400 text-sm">Sin abonos registrados.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+              {paymentHistory.length > 0 && (
+                <div className="mt-4 flex items-center justify-between px-2">
+                  <p className="text-xs text-slate-400">
+                    Mostrando {pagedPaymentHistory.length} de {paymentHistory.length} abonos
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentHistoryPage((prev) => Math.max(1, prev - 1))}
+                      disabled={paymentHistoryPage <= 1}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold disabled:opacity-40"
+                    >
+                      Anterior
+                    </button>
+                    <span className="text-xs font-black text-slate-700">
+                      {paymentHistoryPage} / {paymentHistoryTotalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentHistoryPage((prev) => Math.min(paymentHistoryTotalPages, prev + 1))}
+                      disabled={paymentHistoryPage >= paymentHistoryTotalPages}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold disabled:opacity-40"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isEditPaymentModalOpen && editingPayment && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="bg-violet-700 p-6 text-white">
+              <h3 className="text-xl font-black uppercase tracking-tighter">Editar Abono</h3>
+            </div>
+            <form onSubmit={handleUpdatePayment} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</label>
+                  <input
+                    type="datetime-local"
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                    value={paymentEditForm.paid_at}
+                    onChange={(e) => setPaymentEditForm((prev) => ({ ...prev, paid_at: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monto</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                    value={paymentEditForm.amount === 0 ? '' : paymentEditForm.amount}
+                    onChange={(e) => setPaymentEditForm((prev) => ({ ...prev, amount: e.target.value === '' ? 0 : Number(e.target.value) }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Método</label>
+                  <select
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                    value={paymentEditForm.method}
+                    onChange={(e) => setPaymentEditForm((prev) => ({ ...prev, method: e.target.value as CreditPaymentMethod }))}
+                  >
+                    <option value="EFECTIVO">Efectivo</option>
+                    <option value="TRANSFERENCIA">Transferencia</option>
+                    <option value="TARJETA">Tarjeta</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Referencia</label>
+                  <input
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                    value={paymentEditForm.reference}
+                    onChange={(e) => setPaymentEditForm((prev) => ({ ...prev, reference: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nota del abono</label>
+                <textarea
+                  rows={3}
+                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm resize-none"
+                  value={paymentEditForm.notes}
+                  onChange={(e) => setPaymentEditForm((prev) => ({ ...prev, notes: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observación obligatoria</label>
+                <textarea
+                  rows={3}
+                  className="w-full p-3 bg-amber-50 rounded-xl border border-amber-200 text-sm resize-none"
+                  value={paymentEditForm.justification}
+                  onChange={(e) => setPaymentEditForm((prev) => ({ ...prev, justification: e.target.value }))}
+                />
+              </div>
+              {paymentEditError && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-600">
+                  {paymentEditError}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditPaymentModalOpen(false);
+                    setEditingPayment(null);
+                    setPaymentEditForm(createDefaultPaymentEditForm());
+                    setPaymentEditError(null);
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 rounded-xl bg-violet-700 text-white font-black text-[10px] uppercase"
+                >
+                  Guardar cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <ConfirmModal
         isOpen={isDeleteNoteModalOpen}
         title="Eliminar nota de crédito"
@@ -1320,6 +1718,32 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           setNoteToDelete(null);
           setDeleteNoteJustification('');
           setDeleteNoteError(null);
+        }}
+      />
+
+      <ConfirmModal
+        isOpen={isDeletePaymentModalOpen}
+        title="Eliminar abono"
+        description="Se eliminará el abono seleccionado y se recalculará el saldo de la nota."
+        icon="🗑️"
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        noteLabel="Observación obligatoria"
+        notePlaceholder="Indique por qué se elimina el abono"
+        noteValue={deletePaymentJustification}
+        noteRequired
+        noteError={deletePaymentError}
+        isProcessing={isLoading}
+        onNoteChange={(value) => {
+          setDeletePaymentJustification(value);
+          if (deletePaymentError) setDeletePaymentError(null);
+        }}
+        onConfirm={handleConfirmDeletePayment}
+        onCancel={() => {
+          setIsDeletePaymentModalOpen(false);
+          setPaymentToDelete(null);
+          setDeletePaymentJustification('');
+          setDeletePaymentError(null);
         }}
       />
     </div>

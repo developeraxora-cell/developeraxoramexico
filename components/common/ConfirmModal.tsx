@@ -43,7 +43,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const disabled = isConfirmDisabled || isProcessing || isNoteInvalid;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
       <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in">
         <div className="bg-amber-500 p-6 text-white flex justify-between items-center">
           <div className="flex items-center gap-3">
