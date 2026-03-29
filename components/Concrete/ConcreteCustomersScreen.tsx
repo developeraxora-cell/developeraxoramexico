@@ -47,6 +47,8 @@ const createDefaultNoteForm = (creditDays = 30) => {
   };
 };
 
+const getCustomerSelectionStorageKey = (branchId: string) => `concretera:selected-credit-customers:${branchId || 'default'}`;
+
 const createDefaultPaymentEditForm = () => ({
   paid_at: '',
   amount: 0,
@@ -59,6 +61,8 @@ const createDefaultPaymentEditForm = () => ({
 const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branches, currentUser }) => {
   const PAGE_SIZE = 5;
   const [customers, setCustomers] = useState<CreditCustomer[]>([]);
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
+  const [hasLoadedCustomerSelection, setHasLoadedCustomerSelection] = useState(false);
   const [summaries, setSummaries] = useState<Record<string, CreditSummary>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -194,6 +198,32 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   }, [currentPage, totalPages]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setHasLoadedCustomerSelection(false);
+    try {
+      const raw = window.localStorage.getItem(getCustomerSelectionStorageKey(branchId));
+      const parsed = raw ? JSON.parse(raw) : [];
+      setSelectedCustomerIds(Array.isArray(parsed) ? parsed.filter((value) => typeof value === 'string') : []);
+    } catch {
+      setSelectedCustomerIds([]);
+    } finally {
+      setHasLoadedCustomerSelection(true);
+    }
+  }, [branchId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !hasLoadedCustomerSelection) return;
+    try {
+      window.localStorage.setItem(
+        getCustomerSelectionStorageKey(branchId),
+        JSON.stringify(selectedCustomerIds)
+      );
+    } catch {
+      // no-op
+    }
+  }, [branchId, selectedCustomerIds, hasLoadedCustomerSelection]);
+
+  useEffect(() => {
     if (historyPage > historyTotalPages) {
       setHistoryPage(historyTotalPages);
     }
@@ -230,6 +260,12 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       const message = err instanceof Error ? err.message : 'No se pudo cargar notas.';
       setError(message);
     }
+  };
+
+  const toggleCustomerSelection = (customerId: string) => {
+    setSelectedCustomerIds((prev) =>
+      prev.includes(customerId) ? prev.filter((id) => id !== customerId) : [...prev, customerId]
+    );
   };
 
   const handleOpenPayment = async (customer: CreditCustomer) => {
@@ -831,9 +867,13 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       />
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="border-b border-slate-200 px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-500">
+          Seleccionados {selectedCustomerIds.length}
+        </div>
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">
             <tr>
+              <th className="p-4 text-center">Sel.</th>
               <th className="p-4">Cliente</th>
               <th className="p-4 text-right">Límite</th>
               <th className="p-4 text-right">Deuda actual</th>
@@ -848,9 +888,17 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               const available = summary?.disponible_credito ?? 0;
               return (
                 <tr key={customer.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="p-4 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedCustomerIds.includes(customer.id)}
+                      onChange={() => toggleCustomerSelection(customer.id)}
+                      className="h-4 w-4 rounded border-slate-300"
+                    />
+                  </td>
                   <td className="p-4">
-                  <p className="font-bold text-slate-800">{customer.name}</p>
-                  <p className="text-[10px] text-slate-400">{customer.phone || '—'}</p>
+                    <p className="font-bold text-slate-800">{customer.name}</p>
+                    <p className="text-[10px] text-slate-400">{customer.phone || '—'}</p>
                   <p className="text-[10px] text-slate-400">{customer.address || 'Sin dirección'}</p>
                 </td>
                   <td className="p-4 text-right font-mono text-sm">{formatCurrency(Number(customer.credit_limit))}</td>
@@ -902,7 +950,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
             })}
             {!isLoading && customers.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-6 text-center text-slate-400 text-sm">
+                <td colSpan={6} className="p-6 text-center text-slate-400 text-sm">
                   No hay clientes registrados en esta sucursal.
                 </td>
               </tr>
