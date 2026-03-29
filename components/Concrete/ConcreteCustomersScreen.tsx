@@ -7,7 +7,6 @@ import { generateCustomerStatementPdf } from '../../services/pdf/customerStateme
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 import ConfirmModal from '../common/ConfirmModal';
 import { logConcreteraAudit } from '../../services/audit/audit.service';
-
 interface CustomerScreenProps {
   selectedBranchId: string;
   branches: Branch[];
@@ -317,6 +316,104 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     );
   };
 
+  const handleDownloadCustomerPdf = async (customer: CreditCustomer) => {
+    showFeedback('loading', 'Generando PDF', 'Preparando estado de cuenta...');
+
+    try {
+      const [notes, summary] = await Promise.all([
+        creditService.listNotesByCustomer(customer.id),
+        summaries[customer.id] ? Promise.resolve(summaries[customer.id]) : creditService.getCustomerSummary(customer),
+      ]);
+
+      const noteIds = notes.map((note) => note.id);
+      const payments = await creditService.listPaymentsByNoteIds(noteIds);
+
+      const withStatus = notes.map((note) => {
+        const dueDate = new Date(`${note.due_date}T00:00:00Z`);
+        const diffDays = Math.floor((Date.now() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        const overdue = note.balance > 0 && diffDays > (customer.late_tolerance_days ?? 0);
+        return {
+          ...note,
+          status: note.balance <= 0 ? 'PAGADA' : overdue ? 'VENCIDA' : 'ABIERTA',
+          days_overdue: overdue ? diffDays : 0,
+        } as CreditNoteWithStatus;
+      });
+
+      await generateCustomerStatementPdf({
+        moduleLabel: 'CONCRETERA',
+        branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          address: customer.address,
+          credit_limit: Number(customer.credit_limit ?? 0),
+        },
+        debt: summary.saldo_total_pendiente,
+        available: summary.disponible_credito,
+        notes: withStatus.map((note) => ({
+          id: note.id,
+          folio: note.folio,
+          issue_date: note.issue_date,
+          due_date: note.due_date,
+          total: Number(note.total ?? 0),
+          paid_amount: Number(note.paid_amount ?? 0),
+          balance: Number(note.balance ?? 0),
+          status: note.status,
+        })),
+        payments: payments.map((payment) => ({
+          note_id: payment.note_id,
+          paid_at: payment.paid_at,
+          amount: Number(payment.amount ?? 0),
+          method: payment.method,
+          reference: payment.reference ?? null,
+        })),
+      });
+      setFeedbackOpen(false);
+    } catch (err) {
+      setFeedbackOpen(false);
+      const message = err instanceof Error ? err.message : 'No se pudo generar el PDF del cliente.';
+      showFeedback('error', 'PDF no disponible', message);
+      setError(message);
+    }
+  };
+
+  const handleRegisterPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCustomer) return;
+
+    const entries = Object.entries(noteRows).filter(([, amount]) => amount > 0);
+    if (entries.length === 0) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      for (const [noteId, amount] of entries) {
+        const note = openNotes.find((n) => n.id === noteId);
+        if (!note) continue;
+        const safeAmount = Math.min(amount, Number(note.balance));
+        if (safeAmount <= 0) continue;
+        await creditService.createPayment({
+          note_id: noteId,
+          amount: safeAmount,
+          method: paymentMethod,
+          notes: paymentNotes || null,
+        });
+      }
+
+      setIsPaymentModalOpen(false);
+      setPaymentNotes('');
+      setPaymentMethod('EFECTIVO');
+      await loadCustomers();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo registrar el abono.';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const getPaymentNote = (noteId: string) => historyNotes.find((note) => note.id === noteId) ?? openNotes.find((note) => note.id === noteId) ?? null;
 
   const openEditPaymentModal = (payment: CreditPayment) => {
@@ -449,104 +546,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       const message = err instanceof Error ? err.message : 'No se pudo eliminar el abono.';
       setDeletePaymentError(message);
       showFeedback('error', 'No se pudo eliminar', message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDownloadCustomerPdf = async (customer: CreditCustomer) => {
-    showFeedback('loading', 'Generando PDF', 'Preparando estado de cuenta...');
-
-    try {
-      const [notes, summary] = await Promise.all([
-        creditService.listNotesByCustomer(customer.id),
-        summaries[customer.id] ? Promise.resolve(summaries[customer.id]) : creditService.getCustomerSummary(customer),
-      ]);
-
-      const noteIds = notes.map((note) => note.id);
-      const payments = await creditService.listPaymentsByNoteIds(noteIds);
-
-      const withStatus = notes.map((note) => {
-        const dueDate = new Date(`${note.due_date}T00:00:00Z`);
-        const diffDays = Math.floor((Date.now() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-        const overdue = note.balance > 0 && diffDays > (customer.late_tolerance_days ?? 0);
-        return {
-          ...note,
-          status: note.balance <= 0 ? 'PAGADA' : overdue ? 'VENCIDA' : 'ABIERTA',
-          days_overdue: overdue ? diffDays : 0,
-        } as CreditNoteWithStatus;
-      });
-
-      await generateCustomerStatementPdf({
-        moduleLabel: 'CONCRETERA',
-        branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
-        customer: {
-          id: customer.id,
-          name: customer.name,
-          phone: customer.phone,
-          address: customer.address,
-          credit_limit: Number(customer.credit_limit ?? 0),
-        },
-        debt: summary.saldo_total_pendiente,
-        available: summary.disponible_credito,
-        notes: withStatus.map((note) => ({
-          id: note.id,
-          folio: note.folio,
-          issue_date: note.issue_date,
-          due_date: note.due_date,
-          total: Number(note.total ?? 0),
-          paid_amount: Number(note.paid_amount ?? 0),
-          balance: Number(note.balance ?? 0),
-          status: note.status,
-        })),
-        payments: payments.map((payment) => ({
-          note_id: payment.note_id,
-          paid_at: payment.paid_at,
-          amount: Number(payment.amount ?? 0),
-          method: payment.method,
-          reference: payment.reference ?? null,
-        })),
-      });
-      setFeedbackOpen(false);
-    } catch (err) {
-      setFeedbackOpen(false);
-      const message = err instanceof Error ? err.message : 'No se pudo generar el PDF del cliente.';
-      showFeedback('error', 'PDF no disponible', message);
-      setError(message);
-    }
-  };
-
-  const handleRegisterPayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCustomer) return;
-
-    const entries = Object.entries(noteRows).filter(([, amount]) => amount > 0);
-    if (entries.length === 0) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      for (const [noteId, amount] of entries) {
-        const note = openNotes.find((n) => n.id === noteId);
-        if (!note) continue;
-        const safeAmount = Math.min(amount, Number(note.balance));
-        if (safeAmount <= 0) continue;
-        await creditService.createPayment({
-          note_id: noteId,
-          amount: safeAmount,
-          method: paymentMethod,
-          notes: paymentNotes || null,
-        });
-      }
-
-      setIsPaymentModalOpen(false);
-      setPaymentNotes('');
-      setPaymentMethod('EFECTIVO');
-      await loadCustomers();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'No se pudo registrar el abono.';
-      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -748,7 +747,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setError(null);
 
     try {
-      await creditService.createCustomer({
+      const customer = await creditService.createCustomer({
         branch_id: branchId,
         name: formData.name,
         phone: formData.phone || null,
@@ -758,6 +757,19 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         policy: 'CERO_TOLERANCIA',
         allow_cash_if_blocked: formData.allow_cash_if_blocked,
       });
+
+      logConcreteraAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'CREAR',
+        entity_type: 'cliente',
+        entity_id: String(customer.id),
+        description: `Cliente creado: ${customer.name}`,
+        new_data: customer as unknown as Record<string, unknown>,
+      });
+
       setIsCreateModalOpen(false);
       setFormData(defaultCustomerForm);
       setCurrentPage(1);
@@ -867,9 +879,13 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       />
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="border-b border-slate-200 px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-500">
+          Seleccionados {selectedCustomerIds.length}
+        </div>
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">
             <tr>
+              <th className="p-4 text-center">Sel.</th>
               <th className="p-4">Cliente</th>
               <th className="p-4 text-right">Límite</th>
               <th className="p-4 text-right">Deuda actual</th>
@@ -884,11 +900,19 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               const available = summary?.disponible_credito ?? 0;
               return (
                 <tr key={customer.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="p-4 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedCustomerIds.includes(customer.id)}
+                      onChange={() => toggleCustomerSelection(customer.id)}
+                      className="h-4 w-4 rounded border-slate-300"
+                    />
+                  </td>
                   <td className="p-4">
                     <p className="font-bold text-slate-800">{customer.name}</p>
                     <p className="text-[10px] text-slate-400">{customer.phone || '—'}</p>
-                  <p className="text-[10px] text-slate-400">{customer.address || 'Sin dirección'}</p>
-                </td>
+                    <p className="text-[10px] text-slate-400">{customer.address || 'Sin dirección'}</p>
+                  </td>
                   <td className="p-4 text-right font-mono text-sm">{formatCurrency(Number(customer.credit_limit))}</td>
                   <td className="p-4 text-right">
                     <span className={`font-black ${debt > 0 ? 'text-red-600' : 'text-slate-400'}`}>
@@ -898,11 +922,25 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   <td className="p-4 text-right font-black text-green-600">{formatCurrency(available)}</td>
                   <td className="p-4 text-center space-x-2">
                     <button
+                      onClick={() => handleOpenEditCustomer(customer)}
+                      className="bg-sky-100 p-2 rounded-lg"
+                      title="Editar cliente"
+                    >
+                      <Pencil className="w-4 h-4 text-sky-700" />
+                    </button>
+                    <button
                       onClick={() => handleDownloadCustomerPdf(customer)}
                       className="bg-slate-100 p-2 rounded-lg"
                       title="Exportar PDF"
                     >
                       <FileDown className="w-4 h-4 text-slate-600" />
+                    </button>
+                    <button
+                      onClick={() => handleOpenPaymentHistory(customer)}
+                      className="bg-violet-100 p-2 rounded-lg"
+                      title="Historial de abonos"
+                    >
+                      <Wallet className="w-4 h-4 text-violet-700" />
                     </button>
                     <button
                       onClick={() => handleOpenHistory(customer)}
@@ -924,7 +962,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
             })}
             {!isLoading && customers.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-6 text-center text-slate-400 text-sm">
+                <td colSpan={6} className="p-6 text-center text-slate-400 text-sm">
                   No hay clientes registrados en esta sucursal.
                 </td>
               </tr>
@@ -1273,6 +1311,14 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               </div>
               <div className="flex items-center gap-3">
                 <button
+                  type="button"
+                  onClick={() => openCreateNoteModal(selectedCustomer)}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white"
+                >
+                  <Plus className="h-4 w-4" />
+                  Nuevo crédito
+                </button>
+                <button
                   onClick={() => setIsHistoryModalOpen(false)}
                   className="bg-white/10 w-10 h-10 rounded-2xl flex items-center justify-center text-2xl hover:bg-red-500 transition-all"
                 >
@@ -1281,9 +1327,22 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <input
+                  type="text"
+                  placeholder="Buscar por folio..."
+                  className="w-full md:max-w-xs rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
+                  value={historySearchTerm}
+                  onChange={(e) => {
+                    setHistorySearchTerm(e.target.value);
+                    setHistoryPage(1);
+                  }}
+                />
+              </div>
               <table className="w-full text-left bg-white rounded-3xl overflow-hidden border border-slate-200">
                 <thead className="bg-slate-900 text-white text-[10px] uppercase tracking-widest">
                   <tr>
+                    <th className="p-4 text-center">Sel.</th>
                     <th className="p-4">Folio</th>
                     <th className="p-4">Emisión</th>
                     <th className="p-4">Vence</th>
@@ -1296,6 +1355,14 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 <tbody className="divide-y divide-slate-100">
                   {pagedHistoryNotes.map((note) => (
                     <tr key={note.id} className="hover:bg-slate-50">
+                      <td className="p-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedHistoryNoteIds.includes(note.id)}
+                          onChange={() => toggleHistoryNoteSelection(note.id)}
+                          className="h-4 w-4 rounded border-slate-300"
+                        />
+                      </td>
                       <td className="p-4 text-xs font-bold text-slate-700">{note.folio}</td>
                       <td className="p-4 text-xs text-slate-500">{note.issue_date}</td>
                       <td className="p-4 text-xs text-slate-500">{note.due_date}</td>
@@ -1314,28 +1381,38 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                         </span>
                       </td>
                       <td className="p-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleRequestDeleteNote(note)}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500 transition-colors hover:bg-red-100"
-                          title="Eliminar nota"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditNoteModal(note)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600 transition-colors hover:bg-sky-100"
+                            title="Editar nota"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRequestDeleteNote(note)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500 transition-colors hover:bg-red-100"
+                            title="Eliminar nota"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
-                  {historyNotes.length === 0 && (
+                  {filteredHistoryNotes.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
+                      <td colSpan={8} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
                     </tr>
                   )}
                 </tbody>
               </table>
-              {historyNotes.length > 0 && (
+              {filteredHistoryNotes.length > 0 && (
                 <div className="mt-4 flex items-center justify-between px-2">
                   <p className="text-xs text-slate-400">
-                    Mostrando {pagedHistoryNotes.length} de {historyNotes.length} notas
+                    Mostrando {pagedHistoryNotes.length} de {filteredHistoryNotes.length} notas
                   </p>
                   <div className="flex items-center gap-2">
                     <button
@@ -1413,9 +1490,12 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                             type="number"
                             min={0}
                             className="w-24 p-2 bg-white border border-slate-200 rounded-xl text-xs text-right"
-                            value={noteRows[note.id] ?? 0}
+                            value={(noteRows[note.id] ?? 0) === 0 ? '' : (noteRows[note.id] ?? 0)}
                             onChange={(e) =>
-                              setNoteRows((prev) => ({ ...prev, [note.id]: Number(e.target.value) }))
+                              setNoteRows((prev) => ({
+                                ...prev,
+                                [note.id]: e.target.value === '' ? 0 : Number(e.target.value),
+                              }))
                             }
                           />
                         </td>

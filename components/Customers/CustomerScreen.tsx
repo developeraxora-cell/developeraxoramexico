@@ -1491,9 +1491,12 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                             type="number"
                             min={0}
                             className="w-24 p-2 bg-white border border-slate-200 rounded-xl text-xs text-right"
-                            value={noteRows[note.id] ?? 0}
+                            value={(noteRows[note.id] ?? 0) === 0 ? '' : (noteRows[note.id] ?? 0)}
                             onChange={(e) =>
-                              setNoteRows((prev) => ({ ...prev, [note.id]: Number(e.target.value) }))
+                              setNoteRows((prev) => ({
+                                ...prev,
+                                [note.id]: e.target.value === '' ? 0 : Number(e.target.value),
+                              }))
                             }
                           />
                         </td>
