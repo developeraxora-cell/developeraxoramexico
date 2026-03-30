@@ -90,6 +90,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   const [history, setHistory] = useState<PurchaseHistoryEntry[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [uoms, setUoms] = useState<Uom[]>([]);
+  const [purchaseUomsByProduct, setPurchaseUomsByProduct] = useState<Record<string, ProductUom[]>>({});
   const [pendingBarcode, setPendingBarcode] = useState('');
   const [pendingUomSelection, setPendingUomSelection] = useState<PendingUomSelection | null>(null);
   const [isNewProductOpen, setIsNewProductOpen] = useState(false);
@@ -351,6 +352,14 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     });
   };
 
+  const ensurePurchaseUoms = useCallback(async (productId: string) => {
+    if (purchaseUomsByProduct[productId]) return purchaseUomsByProduct[productId];
+    const rows = await catalogService.listProductUoms(productId);
+    const validRows = rows.filter((uom) => Boolean(uom && uom.uom_id));
+    setPurchaseUomsByProduct((prev) => ({ ...prev, [productId]: validRows }));
+    return validRows;
+  }, [purchaseUomsByProduct]);
+
   const addProductToCart = async (product: Product, barcodeOverride?: string) => {
     if (!product) return;
     if (product.is_active === false) {
@@ -364,12 +373,14 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
 
     const defaultUom = await catalogService.getDefaultPurchaseUom(product.id);
     if (defaultUom && defaultUom.uom_id) {
+      await ensurePurchaseUoms(product.id);
       addToCart(product, defaultUom);
       return;
     }
 
-    const purchaseUoms = await catalogService.getPurchaseUoms(product.id);
+    const purchaseUoms = await catalogService.listProductUoms(product.id);
     const validPurchaseUoms = purchaseUoms.filter((uom) => Boolean(uom && uom.uom_id));
+    setPurchaseUomsByProduct((prev) => ({ ...prev, [product.id]: validPurchaseUoms }));
 
     if (validPurchaseUoms.length === 0) {
       showFeedback('alert', 'UOM requerida', 'Este producto no tiene UOM de compra válida.');
@@ -420,6 +431,53 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
 
   const removeCartItem = (productId: string, uomId: string) => {
     setCartItems((prev) => prev.filter((item) => !(item.product_id === productId && item.product_uom_id === uomId)));
+  };
+
+  const handlePurchaseUomChange = async (productId: string, currentUomId: string, nextUomId: string) => {
+    if (!nextUomId || nextUomId === currentUomId) return;
+
+    const availableUoms = await ensurePurchaseUoms(productId);
+    const nextUom = availableUoms.find((uom) => String(uom.id) === String(nextUomId));
+    if (!nextUom) return;
+
+    const uomMeta = uomById[nextUom.uom_id];
+    const nextUomName = uomMeta?.name ?? 'UOM';
+    const nextUomCode = uomMeta?.code ?? '';
+
+    setCartItems((prev) => {
+      const currentItem = prev.find((item) => item.product_id === productId && item.product_uom_id === currentUomId);
+      if (!currentItem) return prev;
+
+      const duplicateIndex = prev.findIndex(
+        (item) => item.product_id === productId && item.product_uom_id === nextUomId
+      );
+
+      if (duplicateIndex >= 0) {
+        return prev
+          .map((item, index) =>
+            index === duplicateIndex
+              ? {
+                  ...item,
+                  qty: item.qty + currentItem.qty,
+                  unit_price: currentItem.unit_price > 0 ? currentItem.unit_price : item.unit_price,
+                }
+              : item
+          )
+          .filter((item) => !(item.product_id === productId && item.product_uom_id === currentUomId));
+      }
+
+      return prev.map((item) =>
+        item.product_id === productId && item.product_uom_id === currentUomId
+          ? {
+              ...item,
+              product_uom_id: String(nextUom.id),
+              uom_name: nextUomName,
+              uom_code: nextUomCode,
+              factor_to_base: Number(nextUom.factor_to_base ?? 1),
+            }
+          : item
+      );
+    });
   };
 
   const showFeedback = (type: FeedbackType, title: string, description?: string) => {
@@ -1082,9 +1140,30 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                     <div className="col-span-5">
                       <p className="font-black text-xs text-slate-800 uppercase">{item.product_name}</p>
                       <p className="text-[9px] text-slate-400 font-mono">{item.barcode}</p>
-                      <p className="text-[9px] text-slate-500">
-                        UOM: {item.uom_name} {item.uom_code ? `(${item.uom_code})` : ''} · Factor {item.factor_to_base}
-                      </p>
+                      <div className="mt-2">
+                        <label className="text-[8px] font-black text-slate-400 uppercase block mb-1">Unidad de compra</label>
+                        <select
+                          className="w-full p-2 bg-white border border-slate-200 rounded-xl font-black text-[11px] text-slate-700"
+                          value={item.product_uom_id}
+                          onFocus={() => {
+                            void ensurePurchaseUoms(item.product_id);
+                          }}
+                          onChange={(e) => {
+                            void handlePurchaseUomChange(item.product_id, item.product_uom_id, e.target.value);
+                          }}
+                        >
+                          {(purchaseUomsByProduct[item.product_id] ?? []).map((uom) => {
+                            const uomMeta = uomById[uom.uom_id];
+                            const label = uomMeta?.name ?? 'UOM';
+                            const code = uomMeta?.code ? ` (${uomMeta.code})` : '';
+                            return (
+                              <option key={uom.id} value={String(uom.id)}>
+                                {label}{code} · Factor {uom.factor_to_base}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
                     </div>
                     <div className="col-span-3">
                       <label className="text-[8px] font-black text-slate-400 uppercase block mb-1">Cantidad</label>
@@ -1108,8 +1187,12 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                         min={0}
                         step="0.01"
                         className="w-full p-2 bg-white border border-slate-200 rounded-xl font-black text-xs text-red-600"
-                        value={item.unit_price}
-                        onChange={(e) => updateCartItem(item.product_id, item.product_uom_id, { unit_price: Number(e.target.value) })}
+                        value={item.unit_price === 0 ? '' : item.unit_price}
+                        onChange={(e) =>
+                          updateCartItem(item.product_id, item.product_uom_id, {
+                            unit_price: e.target.value === '' ? 0 : Number(e.target.value),
+                          })
+                        }
                       />
                     </div>
                     <div className="col-span-1 text-right">
