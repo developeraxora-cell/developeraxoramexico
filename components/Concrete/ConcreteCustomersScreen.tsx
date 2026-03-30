@@ -8,6 +8,7 @@ import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 import ConfirmModal from '../common/ConfirmModal';
 import { logConcreteraAudit } from '../../services/audit/audit.service';
 import { supabase } from '../../services/supabaseClient';
+import { customerSelectionService } from '../../services/shared/customerSelection.service';
 interface CustomerScreenProps {
   selectedBranchId: string;
   branches: Branch[];
@@ -47,8 +48,6 @@ const createDefaultNoteForm = (creditDays = 30) => {
   };
 };
 
-const getCustomerSelectionStorageKey = (branchId: string) => `concretera:selected-credit-customers:${branchId || 'default'}`;
-
 const createDefaultPaymentEditForm = () => ({
   paid_at: '',
   amount: 0,
@@ -77,7 +76,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const PAGE_SIZE = 5;
   const [customers, setCustomers] = useState<CreditCustomer[]>([]);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
-  const [hasLoadedCustomerSelection, setHasLoadedCustomerSelection] = useState(false);
   const [summaries, setSummaries] = useState<Record<string, CreditSummary>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -243,30 +241,39 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   }, [currentPage, totalPages]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    setHasLoadedCustomerSelection(false);
-    try {
-      const raw = window.localStorage.getItem(getCustomerSelectionStorageKey(branchId));
-      const parsed = raw ? JSON.parse(raw) : [];
-      setSelectedCustomerIds(Array.isArray(parsed) ? parsed.filter((value) => typeof value === 'string') : []);
-    } catch {
-      setSelectedCustomerIds([]);
-    } finally {
-      setHasLoadedCustomerSelection(true);
-    }
-  }, [branchId]);
+    let active = true;
+    setSelectedCustomerIds([]);
+    if (!branchId) return () => {
+      active = false;
+    };
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || !hasLoadedCustomerSelection) return;
-    try {
-      window.localStorage.setItem(
-        getCustomerSelectionStorageKey(branchId),
-        JSON.stringify(selectedCustomerIds)
-      );
-    } catch {
-      // no-op
-    }
-  }, [branchId, selectedCustomerIds, hasLoadedCustomerSelection]);
+    void customerSelectionService.listSelectedCustomerIds('concretera', branchId)
+      .then((ids) => {
+        if (!active) return;
+        setSelectedCustomerIds(ids);
+      })
+      .catch(() => {
+        if (!active) return;
+        setSelectedCustomerIds([]);
+      });
+
+    const channel = customerSelectionService.subscribe({
+      module: 'concretera',
+      branchId,
+      onSelectionChange: (customerId, selected) => {
+        if (!active) return;
+        setSelectedCustomerIds((prev) => {
+          if (selected) return prev.includes(customerId) ? prev : [...prev, customerId];
+          return prev.filter((id) => id !== customerId);
+        });
+      },
+    });
+
+    return () => {
+      active = false;
+      customerSelectionService.unsubscribe(channel);
+    };
+  }, [branchId]);
 
   useEffect(() => {
     if (historyPage > historyTotalPages) {
@@ -308,9 +315,26 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   };
 
   const toggleCustomerSelection = (customerId: string) => {
+    const isSelected = selectedCustomerIds.includes(customerId);
+    const nextSelected = !isSelected;
     setSelectedCustomerIds((prev) =>
-      prev.includes(customerId) ? prev.filter((id) => id !== customerId) : [...prev, customerId]
+      nextSelected ? (prev.includes(customerId) ? prev : [...prev, customerId]) : prev.filter((id) => id !== customerId)
     );
+    void customerSelectionService.setSelected({
+      module: 'concretera',
+      branchId,
+      customerId,
+      selected: nextSelected,
+      updatedBy: currentUser.id,
+      updatedByName: currentUser.name,
+    }).catch((err) => {
+      setSelectedCustomerIds((prev) =>
+        isSelected ? (prev.includes(customerId) ? prev : [...prev, customerId]) : prev.filter((id) => id !== customerId)
+      );
+      const message = err instanceof Error ? err.message : 'No se pudo sincronizar la selección del cliente.';
+      setError(message);
+      showFeedback('error', 'No se pudo sincronizar', message);
+    });
   };
 
   const handleOpenPayment = async (customer: CreditCustomer) => {
