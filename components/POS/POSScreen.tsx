@@ -58,6 +58,7 @@ const POSScreen: React.FC<POSProps> = ({
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<CreditCustomer | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'CREDITO'>('EFECTIVO');
+  const [saleNotes, setSaleNotes] = useState('');
   const [creditCustomers, setCreditCustomers] = useState<CreditCustomer[]>([]);
   const [isCustomerSearchLoading, setIsCustomerSearchLoading] = useState(false);
   const [creditCheck, setCreditCheck] = useState<{
@@ -738,6 +739,7 @@ const POSScreen: React.FC<POSProps> = ({
     customerAddress: string;
     cashierName: string;
     branchName: string;
+    saleNotes: string | null;
   }) => {
     const pdfDoc = await PDFDocument.create();
     const fontRegular = await pdfDoc.embedFont('Helvetica');
@@ -795,11 +797,12 @@ const POSScreen: React.FC<POSProps> = ({
     page.drawText(`CLIENTE:  ${input.customerName.toUpperCase()}`, { x: marginX + 10, y: infoTop - 24, size: 10, font: fontBold });
     page.drawText(`DIRECCION:  ${input.customerAddress.toUpperCase()}`, { x: marginX + 10, y: infoTop - 48, size: 10, font: fontBold });
     page.drawText(input.paymentMethod === 'CREDITO' ? 'CREDITO' : 'LIQUIDADO', { x: marginX + 10, y: infoTop - 72, size: 10, font: fontBold });
+    page.drawText(`OBSERVACION:  ${(input.saleNotes?.trim() || '-').toUpperCase()}`, { x: marginX + 10, y: infoTop - 96, size: 10, font: fontBold });
     page.drawText('NOTA DE VENTA', { x: rightInfoX + 18, y: infoTop, size: 12, font: fontBold });
     page.drawText(String(input.saleId), { x: rightInfoX + 70, y: infoTop - 24, size: 12, font: fontBold });
     page.drawText(`CAJERO:  ${input.cashierName.toUpperCase()}`, { x: rightInfoX - 42, y: infoTop - 72, size: 10, font: fontBold });
 
-    const tableTop = infoTop - 120;
+    const tableTop = infoTop - 144;
     const tableWidth = width - marginX * 2;
     const colRatios = [0.36, 0.2, 0.14, 0.15, 0.15];
     const colXs = colRatios.reduce<number[]>((acc, ratio) => {
@@ -878,6 +881,7 @@ const POSScreen: React.FC<POSProps> = ({
     nombre_cliente: string | null;
     direccion_cliente: string | null;
     created_by: string | null;
+    notes: string | null;
   }) => {
     showFeedback('loading', 'Generando PDF', 'Preparando documento de venta...');
     try {
@@ -921,6 +925,7 @@ const POSScreen: React.FC<POSProps> = ({
         customerAddress: sale.direccion_cliente ?? '-',
         cashierName: sale.created_by || currentUser.name,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+        saleNotes: sale.notes,
       });
       setFeedbackOpen(false);
     } catch (err) {
@@ -1021,6 +1026,7 @@ const POSScreen: React.FC<POSProps> = ({
     setCreditCustomers([]);
     setCreditCheck(null);
     setPaymentMethod('EFECTIVO');
+    setSaleNotes('');
     setIsCustomerSearchLoading(false);
   }, [branchId]);
 
@@ -1082,6 +1088,7 @@ const POSScreen: React.FC<POSProps> = ({
     try {
       const saleCartSnapshot = cart.map((item) => ({ ...item }));
       const paymentMethodSnapshot = paymentMethod;
+      const saleNotesSnapshot = saleNotes.trim();
       const customerSnapshot = selectedCustomer;
       const totalSnapshot = cartTotal;
       const specialPriceItems = saleCartSnapshot.filter((item) => Number(item.specialUnitPrice ?? 0) > 0);
@@ -1105,13 +1112,14 @@ const POSScreen: React.FC<POSProps> = ({
         customerAddress: customerSnapshot?.address ?? '-',
         cashierName: currentUser.name,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+        saleNotes: saleNotesSnapshot || null,
       };
 
       showFeedback('loading', 'Procesando pago', 'Registrando venta...');
       const transaction = await purchasesService.createSale({
         branch_id: branchId,
         reference: null,
-        notes: null,
+        notes: saleNotesSnapshot || null,
         created_by: currentUser.id,
         nombre_cliente: customerSnapshot?.name || null,
         direccion_cliente: customerSnapshot?.address || null,
@@ -1139,6 +1147,7 @@ const POSScreen: React.FC<POSProps> = ({
         new_data: {
           branch_id: branchId,
           payment_method: paymentMethodSnapshot,
+          notes: saleNotesSnapshot || null,
           customer_id: customerSnapshot?.id ?? null,
           customer_name: customerSnapshot?.name ?? null,
           customer_address: customerSnapshot?.address ?? null,
@@ -1180,6 +1189,7 @@ const POSScreen: React.FC<POSProps> = ({
       setCreditCustomers([]);
       setCreditCheck(null);
       setPaymentMethod('EFECTIVO');
+      setSaleNotes('');
 
       window.setTimeout(() => {
         void generateSalePdf({
@@ -1663,6 +1673,19 @@ const POSScreen: React.FC<POSProps> = ({
                 {m}
               </button>
             ))}
+          </div>
+
+          <div className="mb-4">
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Observación de la venta (opcional)
+            </label>
+            <textarea
+              rows={3}
+              value={saleNotes}
+              onChange={(e) => setSaleNotes(e.target.value)}
+              placeholder="Agregue una nota para esta venta"
+              className="w-full resize-none rounded-2xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-500"
+            />
           </div>
 
           <div className="flex justify-between items-end mb-6">
@@ -2335,6 +2358,7 @@ const POSScreen: React.FC<POSProps> = ({
                       <th className="p-4 text-center">N° Venta</th>
                       <th className="p-4">Fecha</th>
                       <th className="p-4">Cliente</th>
+                      <th className="p-4">Nota</th>
                       <th className="p-4 text-center">Tipo</th>
                       <th className="p-4 text-center">Nª de Productos</th>
                       <th className="p-4 text-right">Total</th>
@@ -2344,12 +2368,12 @@ const POSScreen: React.FC<POSProps> = ({
                   <tbody className="divide-y divide-slate-100">
                     {isSalesHistoryLoading && (
                       <tr>
-                        <td colSpan={7} className="p-6 text-center text-slate-400 text-sm">Cargando ventas...</td>
+                        <td colSpan={8} className="p-6 text-center text-slate-400 text-sm">Cargando ventas...</td>
                       </tr>
                     )}
                     {!isSalesHistoryLoading && salesHistory.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="p-6 text-center text-slate-400 text-sm">No hay ventas registradas.</td>
+                        <td colSpan={8} className="p-6 text-center text-slate-400 text-sm">No hay ventas registradas.</td>
                       </tr>
                     )}
                     {!isSalesHistoryLoading && salesHistory.map((sale) => (
@@ -2357,6 +2381,7 @@ const POSScreen: React.FC<POSProps> = ({
                         <td className="p-4 text-center text-xs font-black text-slate-700">#{sale.id}</td>
                         <td className="p-4 text-xs font-bold text-slate-700">{formatLocalDateTime(sale.created_at)}</td>
                         <td className="p-4 text-xs font-bold text-slate-700">{sale.nombre_cliente || 'Público General'}</td>
+                        <td className="p-4 text-xs font-semibold text-slate-500">{sale.notes?.trim() || '—'}</td>
                         <td className="p-4 text-center">
                           <span className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${
                             sale.payment_method === 'CREDITO'
