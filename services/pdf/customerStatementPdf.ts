@@ -28,6 +28,21 @@ interface CustomerPaymentRow {
   reference: string | null;
 }
 
+interface CustomerSaleDetailItem {
+  product_name: string;
+  presentation: string;
+  sale_type: string;
+  qty: number;
+  subtotal: number;
+}
+
+interface CustomerSaleDetailRow {
+  note_id: string;
+  folio: string;
+  created_at: string;
+  items: CustomerSaleDetailItem[];
+}
+
 interface CustomerStatementPdfInput {
   moduleLabel: 'MATERIALES' | 'CONCRETERA';
   branchName: string;
@@ -36,6 +51,7 @@ interface CustomerStatementPdfInput {
   available: number;
   notes: CustomerNoteRow[];
   payments: CustomerPaymentRow[];
+  saleDetails?: CustomerSaleDetailRow[];
   previewWindow?: Window | null;
 }
 
@@ -125,6 +141,182 @@ const drawCellText = (
   const textWidth = font.widthOfTextAtSize(safe, size);
   const textX = xStart + Math.max(4, (colWidth - textWidth) / 2);
   page.drawText(safe, { x: textX, y, size, font, color });
+};
+
+const drawSalesDetailPages = async (
+  pdfDoc: PDFDocument,
+  input: CustomerStatementPdfInput,
+  fontRegular: any,
+  fontBold: any,
+  watermarkImage: any
+) => {
+  const saleDetails = (input.saleDetails ?? []).filter((sale) => sale.items.length > 0);
+  if (saleDetails.length === 0) return;
+
+  const pageSize: [number, number] = [595.28, 841.89];
+  const marginX = 30;
+  const frameY = 75;
+  const frameTop = pageSize[1] - 70;
+  const frameHeight = frameTop - frameY;
+  const frameWidth = pageSize[0] - marginX * 2;
+  const headers = ['PRODUCTO', 'PRESENTACION', 'TIPO DE VENTA', 'CANTIDAD', 'SUB TOTAL'];
+  const ratios = [0.35, 0.2, 0.18, 0.11, 0.16];
+  const xs = ratios.reduce<number[]>((acc, ratio) => {
+    acc.push(acc[acc.length - 1] + frameWidth * ratio);
+    return acc;
+  }, [marginX]);
+
+  const startPage = (pageNumber: number) => {
+    const page = pdfDoc.addPage(pageSize);
+    const { width, height } = page.getSize();
+
+    if (watermarkImage) {
+      const dims = watermarkImage.scale(0.5);
+      page.drawImage(watermarkImage, {
+        x: (width - dims.width) / 2,
+        y: (height - dims.height) / 2 - 40,
+        width: dims.width,
+        height: dims.height,
+        opacity: 0.12,
+      });
+    }
+
+    page.drawRectangle({
+      x: marginX,
+      y: frameY,
+      width: frameWidth,
+      height: frameHeight,
+      borderWidth: 1,
+      borderColor: rgb(0, 0, 0),
+    });
+
+    const title = `${input.moduleLabel} ${(input.branchName || 'SUCURSAL').toUpperCase()}`;
+    const titleWidth = fontBold.widthOfTextAtSize(title, 14);
+    page.drawText(title, {
+      x: (width - titleWidth) / 2,
+      y: height - 42,
+      size: 14,
+      font: fontBold,
+    });
+
+    const subtitle = 'DETALLE DE VENTAS ASOCIADAS';
+    const subtitleWidth = fontBold.widthOfTextAtSize(subtitle, 10);
+    page.drawText(subtitle, {
+      x: (width - subtitleWidth) / 2,
+      y: height - 62,
+      size: 10,
+      font: fontBold,
+    });
+
+    page.drawText(`CLIENTE: ${input.customer.name.toUpperCase()}`, {
+      x: marginX + 10,
+      y: height - 100,
+      size: 10,
+      font: fontBold,
+    });
+
+    page.drawText(`FECHA: ${new Date().toLocaleString()}`, {
+      x: width - marginX - 170,
+      y: height - 100,
+      size: 10,
+      font: fontBold,
+    });
+
+    page.drawText('KILOMETRO, 3 LAS CANOAS, JESUS MARIA JALISCO   (348) 148 8326', {
+      x: marginX + 80,
+      y: 64,
+      size: 9,
+      font: fontBold,
+    });
+    page.drawText(`Pagina ${pageNumber}`, { x: width - marginX - 52, y: 64, size: 9, font: fontBold });
+
+    return { page, cursorY: height - 130 };
+  };
+
+  const drawTableHeader = (page: any, topY: number) => {
+    page.drawRectangle({ x: marginX, y: topY - 16, width: frameWidth, height: 16, color: rgb(0, 0, 0) });
+    headers.forEach((header, idx) => {
+      drawCellText(page, header, xs[idx], xs[idx + 1], topY - 12, 8, fontBold, rgb(1, 1, 1));
+    });
+  };
+
+  let pageNumber = 2;
+  let { page, cursorY } = startPage(pageNumber);
+
+  for (const sale of saleDetails) {
+    const saleTotal = sale.items.reduce((acc, item) => acc + Number(item.subtotal ?? 0), 0);
+    const minimumBlockHeight = 58 + 16 + 18;
+    if (cursorY - minimumBlockHeight < frameY + 24) {
+      pageNumber += 1;
+      ({ page, cursorY } = startPage(pageNumber));
+    }
+
+    page.drawText(`FOLIO: ${sale.folio}`, {
+      x: marginX + 12,
+      y: cursorY,
+      size: 10,
+      font: fontBold,
+    });
+    page.drawText(`FECHA DE REGISTRO: ${formatLocalDateTime(sale.created_at)}`, {
+      x: marginX + 170,
+      y: cursorY,
+      size: 10,
+      font: fontBold,
+    });
+    page.drawText(`TOTAL: ${formatCurrency(saleTotal)}`, {
+      x: pageSize[0] - marginX - 140,
+      y: cursorY,
+      size: 10,
+      font: fontBold,
+    });
+
+    let tableTop = cursorY - 10;
+    drawTableHeader(page, tableTop);
+    let rowY = tableTop - 32;
+
+    for (const item of sale.items) {
+      if (rowY - 2 < frameY + 24) {
+        pageNumber += 1;
+        ({ page, cursorY } = startPage(pageNumber));
+        page.drawText(`FOLIO: ${sale.folio} (CONTINUA)`, {
+          x: marginX + 12,
+          y: cursorY,
+          size: 10,
+          font: fontBold,
+        });
+        tableTop = cursorY - 10;
+        drawTableHeader(page, tableTop);
+        rowY = tableTop - 32;
+      }
+
+      const rowHeight = 18;
+      page.drawRectangle({
+        x: marginX,
+        y: rowY - 2,
+        width: frameWidth,
+        height: rowHeight,
+        borderWidth: 0.5,
+        borderColor: rgb(0, 0, 0),
+      });
+      for (let c = 1; c < xs.length - 1; c += 1) {
+        page.drawLine({
+          start: { x: xs[c], y: rowY - 2 },
+          end: { x: xs[c], y: rowY + rowHeight - 2 },
+          thickness: 0.5,
+          color: rgb(0, 0, 0),
+        });
+      }
+
+      drawCellText(page, item.product_name ?? '-', xs[0], xs[1], rowY + 4, 8, fontBold);
+      drawCellText(page, item.presentation ?? '-', xs[1], xs[2], rowY + 4, 8, fontRegular);
+      drawCellText(page, item.sale_type ?? '-', xs[2], xs[3], rowY + 4, 8, fontRegular);
+      drawCellText(page, String(item.qty ?? 0), xs[3], xs[4], rowY + 4, 8, fontBold);
+      drawCellText(page, formatCurrency(Number(item.subtotal ?? 0)), xs[4], xs[5], rowY + 4, 8, fontBold);
+      rowY -= rowHeight;
+    }
+
+    cursorY = rowY - 18;
+  }
 };
 
 export const generateCustomerStatementPdf = async (input: CustomerStatementPdfInput) => {
@@ -323,6 +515,8 @@ export const generateCustomerStatementPdf = async (input: CustomerStatementPdfIn
     font: fontBold,
   });
   page.drawText('Pagina 1', { x: width - marginX - 52, y: 64, size: 9, font: fontBold });
+
+  await drawSalesDetailPages(pdfDoc, input, fontRegular, fontBold, watermarkImage);
 
   const pdfBytes = await pdfDoc.save();
   const filename = `${input.moduleLabel}-${toFileToken(input.branchName, 'SUCURSAL')}-CLIENTE-${toFileToken(input.customer.name, 'SIN-NOMBRE')}.pdf`;

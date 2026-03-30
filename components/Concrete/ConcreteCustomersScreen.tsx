@@ -7,6 +7,7 @@ import { generateCustomerStatementPdf } from '../../services/pdf/customerStateme
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 import ConfirmModal from '../common/ConfirmModal';
 import { logConcreteraAudit } from '../../services/audit/audit.service';
+import { supabase } from '../../services/supabaseClient';
 interface CustomerScreenProps {
   selectedBranchId: string;
   branches: Branch[];
@@ -57,6 +58,20 @@ const createDefaultPaymentEditForm = () => ({
   justification: '',
 });
 const ALPHABET_FILTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+type ConcreteSaleSummaryItem = {
+  id: string;
+  qty: number;
+  unit_price: number;
+  product_name: string | null;
+  presentation: string;
+  sale_type: 'Mayoreo' | 'Menudeo' | '—';
+};
+
+type ConcreteSaleSummaryData = {
+  created_at: string;
+  items: ConcreteSaleSummaryItem[];
+};
 
 const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branches, currentUser }) => {
   const PAGE_SIZE = 5;
@@ -326,6 +341,91 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     );
   };
 
+  const inferConcreteSaleType = (row: any): 'Mayoreo' | 'Menudeo' | '—' => {
+    const unitPrice = Number(row.unit_price ?? 0);
+    const wholesale = Number(row.concrete_products?.wholesale_price ?? 0);
+    const retail = Number(row.concrete_products?.retail_price ?? row.concrete_products?.precio ?? 0);
+    const hasWholesale = Number.isFinite(wholesale) && wholesale > 0;
+    const hasRetail = Number.isFinite(retail) && retail > 0;
+
+    if (!hasWholesale && !hasRetail) return '—';
+    if (!hasWholesale && hasRetail) return 'Menudeo';
+    if (hasWholesale && !hasRetail) return 'Mayoreo';
+
+    return Math.abs(unitPrice - wholesale) <= Math.abs(unitPrice - retail) ? 'Mayoreo' : 'Menudeo';
+  };
+
+  const getConcretePresentation = (row: any) => {
+    const attrs = row.concrete_products?.attrs ?? {};
+    const factorUsed = Number(row.factor_used ?? 1);
+    if (attrs && typeof attrs === 'object') {
+      for (const [key, value] of Object.entries(attrs)) {
+        const numericValue = Number(value);
+        if (!Number.isNaN(numericValue) && numericValue === factorUsed) {
+          return key;
+        }
+      }
+    }
+    return row.concrete_product_uoms?.concrete_uoms?.code
+      ?? row.concrete_product_uoms?.concrete_uoms?.name
+      ?? 'Base';
+  };
+
+  const resolveConcreteSaleTransactionId = async (note: CreditNoteWithStatus) => {
+    if (note.inventory_transaction_id) return String(note.inventory_transaction_id);
+
+    const { data: byReference, error } = await supabase
+      .from('concrete_inventory_transactions')
+      .select('id')
+      .eq('branch_id', branchId)
+      .eq('type', 'SALE')
+      .eq('reference', note.folio)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (byReference?.id) return String(byReference.id);
+
+    throw new Error('Esta nota no tiene una venta asociada.');
+  };
+
+  const fetchConcreteNoteSaleSummary = async (note: CreditNoteWithStatus): Promise<ConcreteSaleSummaryData> => {
+    const transactionId = await resolveConcreteSaleTransactionId(note);
+
+    const { data: saleRow, error: saleError } = await supabase
+      .from('concrete_inventory_transactions')
+      .select('created_at')
+      .eq('id', transactionId)
+      .single();
+    if (saleError) throw saleError;
+
+    const { data: itemRows, error: itemsError } = await supabase
+      .from('concrete_inventory_transaction_items')
+      .select(`
+        id,
+        qty,
+        unit_price,
+        factor_used,
+        concrete_products ( name, wholesale_price, retail_price, precio, attrs ),
+        concrete_product_uoms ( concrete_uoms ( name, code ) )
+      `)
+      .eq('transaction_id', transactionId);
+    if (itemsError) throw itemsError;
+
+    const items = (itemRows ?? []).map((row: any) => ({
+      id: String(row.id),
+      qty: Number(row.qty ?? 0),
+      unit_price: Number(row.unit_price ?? 0),
+      product_name: row.concrete_products?.name ?? null,
+      presentation: getConcretePresentation(row),
+      sale_type: inferConcreteSaleType(row),
+    }));
+
+    return {
+      created_at: saleRow.created_at,
+      items,
+    };
+  };
+
   const handleDownloadCustomerPdf = async (customer: CreditCustomer) => {
     showFeedback('loading', 'Generando PDF', 'Preparando estado de cuenta...');
 
@@ -337,6 +437,34 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
       const noteIds = notes.map((note) => note.id);
       const payments = await creditService.listPaymentsByNoteIds(noteIds);
+      const saleDetails = (
+        await Promise.all(
+          notes.map(async (note) => {
+            try {
+              const summary = await fetchConcreteNoteSaleSummary({
+                ...note,
+                status: note.balance <= 0 ? 'PAGADA' : 'ABIERTA',
+                days_overdue: 0,
+              } as CreditNoteWithStatus);
+
+              return {
+                note_id: note.id,
+                folio: note.folio,
+                created_at: summary.created_at,
+                items: summary.items.map((item) => ({
+                  product_name: item.product_name ?? '—',
+                  presentation: item.presentation,
+                  sale_type: item.sale_type,
+                  qty: Number(item.qty ?? 0),
+                  subtotal: Number(item.qty ?? 0) * Number(item.unit_price ?? 0),
+                })),
+              };
+            } catch {
+              return null;
+            }
+          })
+        )
+      ).filter((detail): detail is NonNullable<typeof detail> => Boolean(detail));
 
       const withStatus = notes.map((note) => {
         const dueDate = new Date(`${note.due_date}T00:00:00Z`);
@@ -378,6 +506,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           method: payment.method,
           reference: payment.reference ?? null,
         })),
+        saleDetails,
       });
       setFeedbackOpen(false);
     } catch (err) {

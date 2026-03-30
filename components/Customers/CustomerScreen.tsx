@@ -432,6 +432,34 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
       const noteIds = notes.map((note) => note.id);
       const payments = await creditService.listPaymentsByNoteIds(noteIds);
+      const saleDetails = (
+        await Promise.all(
+          notes.map(async (note) => {
+            try {
+              const summary = await fetchNoteSaleSummary({
+                ...note,
+                status: note.balance <= 0 ? 'PAGADA' : 'ABIERTA',
+                days_overdue: 0,
+              } as CreditNoteWithStatus);
+
+              return {
+                note_id: note.id,
+                folio: note.folio,
+                created_at: summary.created_at,
+                items: summary.items.map((item) => ({
+                  product_name: item.product_name ?? '—',
+                  presentation: item.presentation,
+                  sale_type: item.sale_type,
+                  qty: Number(item.qty ?? 0),
+                  subtotal: Number(item.qty ?? 0) * Number(item.unit_price ?? 0),
+                })),
+              };
+            } catch {
+              return null;
+            }
+          })
+        )
+      ).filter((detail): detail is NonNullable<typeof detail> => Boolean(detail));
 
       const withStatus = notes.map((note) => {
         const dueDate = new Date(`${note.due_date}T00:00:00Z`);
@@ -473,6 +501,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           method: payment.method,
           reference: payment.reference ?? null,
         })),
+        saleDetails,
       });
       setFeedbackOpen(false);
     } catch (err) {
