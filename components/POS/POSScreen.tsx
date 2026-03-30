@@ -4,7 +4,7 @@ import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, Product as PosProduct, CartItem, ProductConversion, User } from '../../types';
 import { UNITS } from '../../constants';
 import { convert, getPriceForUnit } from '../../services/conversionEngine';
-import { creditService, type CreditCustomer, type CreditNoteWithStatus, type CreditPaymentMethod } from '../../services/credit/credit.service';
+import { creditService, type CreditCustomer, type CreditNoteWithStatus, type CreditPaymentMethod, type CustomerAddress } from '../../services/credit/credit.service';
 import { catalogService, type Product as CatalogProduct, type ProductUom, type Uom } from '../../services/inventory/catalog.service';
 import { purchasesService } from '../../services/inventory/purchases.service';
 import { supabase } from '../../services/supabaseClient';
@@ -59,6 +59,13 @@ const POSScreen: React.FC<POSProps> = ({
   const [selectedCustomer, setSelectedCustomer] = useState<CreditCustomer | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'CREDITO'>('EFECTIVO');
   const [saleNotes, setSaleNotes] = useState('');
+  const [customerAddresses, setCustomerAddresses] = useState<CustomerAddress[]>([]);
+  const [selectedCustomerAddressId, setSelectedCustomerAddressId] = useState('');
+  const [isSaleAddressModalOpen, setIsSaleAddressModalOpen] = useState(false);
+  const [isNewSaleAddressModalOpen, setIsNewSaleAddressModalOpen] = useState(false);
+  const [newSaleAddressLabel, setNewSaleAddressLabel] = useState('');
+  const [newSaleAddressValue, setNewSaleAddressValue] = useState('');
+  const [newSaleAddressError, setNewSaleAddressError] = useState<string | null>(null);
   const [creditCustomers, setCreditCustomers] = useState<CreditCustomer[]>([]);
   const [isCustomerSearchLoading, setIsCustomerSearchLoading] = useState(false);
   const [creditCheck, setCreditCheck] = useState<{
@@ -238,6 +245,15 @@ const POSScreen: React.FC<POSProps> = ({
     () => branches.find((b) => b.id === selectedBranchId) ?? null,
     [branches, selectedBranchId]
   );
+  const selectedAddressRecord = useMemo(
+    () => customerAddresses.find((address) => address.id === selectedCustomerAddressId) ?? null,
+    [customerAddresses, selectedCustomerAddressId]
+  );
+  const effectiveSaleAddress = useMemo(() => {
+    if (selectedAddressRecord?.address?.trim()) return selectedAddressRecord.address.trim();
+    if (selectedCustomer?.address?.trim()) return selectedCustomer.address.trim();
+    return '-';
+  }, [selectedAddressRecord, selectedCustomer]);
   const salesHistoryTotalPages = Math.max(1, Math.ceil(salesHistoryTotal / SALES_HISTORY_PAGE_SIZE));
 
   const loadSalesHistory = useCallback(async () => {
@@ -954,6 +970,32 @@ const POSScreen: React.FC<POSProps> = ({
     }
   }, [branchId]);
 
+  useEffect(() => {
+    if (!selectedCustomer?.id) {
+      setCustomerAddresses([]);
+      setSelectedCustomerAddressId('');
+      return;
+    }
+
+    let cancelled = false;
+    creditService.listAddressesByCustomer(selectedCustomer.id)
+      .then((rows) => {
+        if (cancelled) return;
+        setCustomerAddresses(rows);
+        const defaultAddress = rows.find((row) => row.is_default) ?? rows[0] ?? null;
+        setSelectedCustomerAddressId(defaultAddress?.id ?? '');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCustomerAddresses([]);
+        setSelectedCustomerAddressId('');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCustomer?.id]);
+
   const loadBranchCatalog = useCallback(async () => {
     if (!branchId) {
       setBranchProducts([]);
@@ -1027,6 +1069,8 @@ const POSScreen: React.FC<POSProps> = ({
     setCreditCheck(null);
     setPaymentMethod('EFECTIVO');
     setSaleNotes('');
+    setCustomerAddresses([]);
+    setSelectedCustomerAddressId('');
     setIsCustomerSearchLoading(false);
   }, [branchId]);
 
@@ -1060,7 +1104,7 @@ const POSScreen: React.FC<POSProps> = ({
     setPaymentMethod(method);
   };
 
-  const handleCheckout = async () => {
+  const performCheckout = async () => {
     if (cart.length === 0) return;
     if (!branchId) {
       showFeedback('alert', 'Sucursal requerida', 'Seleccione una sucursal antes de vender.');
@@ -1109,7 +1153,7 @@ const POSScreen: React.FC<POSProps> = ({
         })),
         paymentMethod: paymentMethodSnapshot,
         customerName: customerSnapshot?.name ?? 'PUBLICO GENERAL',
-        customerAddress: customerSnapshot?.address ?? '-',
+        customerAddress: effectiveSaleAddress,
         cashierName: currentUser.name,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
         saleNotes: saleNotesSnapshot || null,
@@ -1122,7 +1166,7 @@ const POSScreen: React.FC<POSProps> = ({
         notes: saleNotesSnapshot || null,
         created_by: currentUser.id,
         nombre_cliente: customerSnapshot?.name || null,
-        direccion_cliente: customerSnapshot?.address || null,
+        direccion_cliente: effectiveSaleAddress === '-' ? null : effectiveSaleAddress,
         cartItems: saleCartSnapshot.map((item) => ({
           product_id: item.productId,
           product_uom_id: item.productUomId ?? '',
@@ -1150,7 +1194,7 @@ const POSScreen: React.FC<POSProps> = ({
           notes: saleNotesSnapshot || null,
           customer_id: customerSnapshot?.id ?? null,
           customer_name: customerSnapshot?.name ?? null,
-          customer_address: customerSnapshot?.address ?? null,
+          customer_address: effectiveSaleAddress === '-' ? null : effectiveSaleAddress,
           total_amount: totalSnapshot,
           special_price_items: specialPriceItems.map((item) => ({
             product_id: item.productId,
@@ -1190,6 +1234,8 @@ const POSScreen: React.FC<POSProps> = ({
       setCreditCheck(null);
       setPaymentMethod('EFECTIVO');
       setSaleNotes('');
+      setCustomerAddresses([]);
+      setSelectedCustomerAddressId('');
 
       window.setTimeout(() => {
         void generateSalePdf({
@@ -1203,6 +1249,65 @@ const POSScreen: React.FC<POSProps> = ({
     } catch (err: any) {
       console.error('Error checking out:', err);
       showFeedback('error', 'Error al procesar', err.message ?? 'No se pudo completar la venta.');
+    }
+  };
+
+  const handleCheckout = async () => {
+    if (!selectedCustomer) {
+      await performCheckout();
+      return;
+    }
+
+    setNewSaleAddressError(null);
+    setNewSaleAddressLabel('');
+    setNewSaleAddressValue('');
+    try {
+      await creditService.listAddressesByCustomer(selectedCustomer.id).then((rows) => {
+        setCustomerAddresses(rows);
+        const defaultAddress = rows.find((row) => row.is_default) ?? rows[0] ?? null;
+        setSelectedCustomerAddressId(defaultAddress?.id ?? '');
+      });
+    } catch {
+      setCustomerAddresses([]);
+      setSelectedCustomerAddressId('');
+    }
+    setIsSaleAddressModalOpen(true);
+  };
+
+  const handleConfirmSaleAddress = async () => {
+    if (!selectedCustomer) {
+      setIsSaleAddressModalOpen(false);
+      await performCheckout();
+      return;
+    }
+
+    setIsSaleAddressModalOpen(false);
+    await performCheckout();
+  };
+
+  const handleCreateSaleAddress = async () => {
+    if (!selectedCustomer) return;
+    const normalizedAddress = newSaleAddressValue.trim();
+    if (!normalizedAddress) {
+      setNewSaleAddressError('La nueva dirección es obligatoria.');
+      return;
+    }
+
+    try {
+      const createdAddress = await creditService.addAddress({
+        customer_id: selectedCustomer.id,
+        address: normalizedAddress,
+        label: newSaleAddressLabel.trim() || 'Obra',
+      });
+      const nextAddresses = [createdAddress, ...customerAddresses];
+      setCustomerAddresses(nextAddresses);
+      setSelectedCustomerAddressId(createdAddress.id);
+      setNewSaleAddressLabel('');
+      setNewSaleAddressValue('');
+      setNewSaleAddressError(null);
+      setIsNewSaleAddressModalOpen(false);
+    } catch (err: any) {
+      setNewSaleAddressError(err?.message ?? 'No se pudo guardar la dirección del cliente.');
     }
   };
 
@@ -1454,9 +1559,11 @@ const POSScreen: React.FC<POSProps> = ({
               onSelect={(customer) => {
                 setSelectedCustomer((customer as CreditCustomer | null) ?? null);
                 setCreditCheck(null);
+                setSelectedCustomerAddressId('');
                 if (!customer) {
                   setPaymentMethod('EFECTIVO');
                   setCreditCustomers([]);
+                  setCustomerAddresses([]);
                 }
               }}
               onSearch={handleCustomerSearch}
@@ -1673,19 +1780,6 @@ const POSScreen: React.FC<POSProps> = ({
                 {m}
               </button>
             ))}
-          </div>
-
-          <div className="mb-4">
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
-              Observación de la venta (opcional)
-            </label>
-            <textarea
-              rows={3}
-              value={saleNotes}
-              onChange={(e) => setSaleNotes(e.target.value)}
-              placeholder="Agregue una nota para esta venta"
-              className="w-full resize-none rounded-2xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-500"
-            />
           </div>
 
           <div className="flex justify-between items-end mb-6">
@@ -2544,6 +2638,140 @@ const POSScreen: React.FC<POSProps> = ({
                   className="flex-1 rounded-2xl bg-slate-900 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50"
                 >
                   {isSavingSalePayment ? 'Guardando...' : 'Guardar cambio'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isSaleAddressModalOpen && selectedCustomer && (
+        <div className="fixed inset-0 z-[85] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
+            <div className="bg-slate-900 p-6 text-white">
+              <h3 className="text-xl font-black uppercase tracking-tighter">Confirmar pedido</h3>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-300">{selectedCustomer.name}</p>
+            </div>
+            <div className="space-y-4 p-6">
+              <div>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Dirección guardada</label>
+                <select
+                  value={selectedCustomerAddressId}
+                  onChange={(e) => setSelectedCustomerAddressId(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold"
+                >
+                  <option value="">Dirección principal</option>
+                  {customerAddresses.map((address) => (
+                    <option key={address.id} value={address.id}>
+                      {address.label?.trim() || 'Dirección'} - {address.address}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewSaleAddressError(null);
+                    setNewSaleAddressLabel('');
+                    setNewSaleAddressValue('');
+                    setIsNewSaleAddressModalOpen(true);
+                  }}
+                  className="mt-2 text-[11px] font-black uppercase tracking-widest text-orange-500 transition hover:text-orange-600"
+                >
+                  + Agregar direccion
+                </button>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Dirección seleccionada</p>
+                <p className="mt-2 text-sm font-bold text-slate-700">{effectiveSaleAddress}</p>
+              </div>
+              <div>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observación de la venta</label>
+                <textarea
+                  rows={3}
+                  value={saleNotes}
+                  onChange={(e) => setSaleNotes(e.target.value)}
+                  placeholder="Agregue una observación para esta venta"
+                  className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold"
+                />
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSaleAddressModalOpen(false);
+                  }}
+                  className="flex-1 rounded-2xl bg-slate-100 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleConfirmSaleAddress()}
+                  className="flex-1 rounded-2xl bg-slate-900 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white"
+                >
+                  Continuar venta
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isNewSaleAddressModalOpen && selectedCustomer && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
+            <div className="bg-orange-600 p-6 text-white">
+              <h3 className="text-xl font-black uppercase tracking-tighter">Nueva dirección</h3>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-100">{selectedCustomer.name}</p>
+            </div>
+            <div className="space-y-4 p-6">
+              <div>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Etiqueta</label>
+                <input
+                  value={newSaleAddressLabel}
+                  onChange={(e) => {
+                    setNewSaleAddressLabel(e.target.value);
+                    if (newSaleAddressError) setNewSaleAddressError(null);
+                  }}
+                  placeholder="Ej: Obra, Bodega, Casa"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Dirección</label>
+                <textarea
+                  rows={3}
+                  value={newSaleAddressValue}
+                  onChange={(e) => {
+                    setNewSaleAddressValue(e.target.value);
+                    if (newSaleAddressError) setNewSaleAddressError(null);
+                  }}
+                  placeholder="Escriba la nueva dirección"
+                  className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold"
+                />
+              </div>
+              {newSaleAddressError && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-600">
+                  {newSaleAddressError}
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNewSaleAddressModalOpen(false);
+                    setNewSaleAddressError(null);
+                  }}
+                  className="flex-1 rounded-2xl bg-slate-100 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleCreateSaleAddress()}
+                  className="flex-1 rounded-2xl bg-orange-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white"
+                >
+                  Guardar dirección
                 </button>
               </div>
             </div>

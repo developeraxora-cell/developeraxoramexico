@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, User } from '../../types';
-import { creditService, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentMethod, type CreditSummary } from '../../services/credit/credit.service';
-import { Eye, FileDown, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
+import { creditService, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentMethod, type CreditSummary, type CustomerAddress } from '../../services/credit/credit.service';
+import { Eye, FileDown, MapPin, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
@@ -206,6 +206,16 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [isDeleteNoteModalOpen, setIsDeleteNoteModalOpen] = useState(false);
   const [deleteNoteJustification, setDeleteNoteJustification] = useState('');
   const [deleteNoteError, setDeleteNoteError] = useState<string | null>(null);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [addressCustomer, setAddressCustomer] = useState<CreditCustomer | null>(null);
+  const [addressRows, setAddressRows] = useState<CustomerAddress[]>([]);
+  const [addressLabel, setAddressLabel] = useState('');
+  const [addressValue, setAddressValue] = useState('');
+  const [addressError, setAddressError] = useState<string | null>(null);
+  const [editingAddress, setEditingAddress] = useState<CustomerAddress | null>(null);
+  const [isAddressFormModalOpen, setIsAddressFormModalOpen] = useState(false);
+  const [addressToDelete, setAddressToDelete] = useState<CustomerAddress | null>(null);
+  const [isDeleteAddressModalOpen, setIsDeleteAddressModalOpen] = useState(false);
 
   const branchId = useMemo(() => {
     const match = branches.find((b) => b.id === selectedBranchId);
@@ -228,6 +238,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     if (feedbackType === 'loading') return;
     setFeedbackOpen(false);
   };
+
+  const loadCustomerAddresses = useCallback(async (customerId: string) => {
+    const rows = await creditService.listAddressesByCustomer(customerId);
+    setAddressRows(rows);
+  }, []);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCustomers / PAGE_SIZE)), [totalCustomers, PAGE_SIZE]);
   const filteredHistoryNotes = useMemo(() => {
@@ -1247,6 +1262,87 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setIsEditModalOpen(true);
   };
 
+  const handleOpenAddresses = async (customer: CreditCustomer) => {
+    setAddressCustomer(customer);
+    setAddressRows([]);
+    setAddressLabel('');
+    setAddressValue('');
+    setAddressError(null);
+    setEditingAddress(null);
+    setIsAddressFormModalOpen(false);
+    setAddressToDelete(null);
+    setIsAddressModalOpen(true);
+    try {
+      await loadCustomerAddresses(customer.id);
+    } catch {
+      setAddressError('No se pudieron cargar las direcciones.');
+    }
+  };
+
+  const handleEditAddress = (row: CustomerAddress) => {
+    setEditingAddress(row);
+    setAddressLabel(row.label ?? '');
+    setAddressValue(row.address);
+    setAddressError(null);
+    setIsAddressFormModalOpen(true);
+  };
+
+  const handleSaveAddress = async () => {
+    if (!addressCustomer) return;
+    const normalizedAddress = addressValue.trim();
+    if (!normalizedAddress) {
+      setAddressError('La dirección es obligatoria.');
+      return;
+    }
+
+    try {
+      if (editingAddress) {
+        await creditService.updateAddress(editingAddress.id, {
+          label: addressLabel,
+          address: normalizedAddress,
+        });
+        showFeedback('success', 'Dirección actualizada', `Se actualizó una dirección para ${addressCustomer.name}.`);
+      } else {
+        await creditService.addAddress({
+          customer_id: addressCustomer.id,
+          label: addressLabel,
+          address: normalizedAddress,
+        });
+        showFeedback('success', 'Dirección agregada', `Se agregó una nueva dirección para ${addressCustomer.name}.`);
+      }
+
+      setAddressLabel('');
+      setAddressValue('');
+      setEditingAddress(null);
+      setAddressError(null);
+      setIsAddressFormModalOpen(false);
+      await loadCustomerAddresses(addressCustomer.id);
+    } catch (err: any) {
+      setAddressError(err?.message ?? 'No se pudo guardar la dirección.');
+    }
+  };
+
+  const handleDeleteAddress = async () => {
+    if (!addressCustomer || !addressToDelete) return;
+    try {
+      await creditService.deleteAddress(addressToDelete.id);
+      await loadCustomerAddresses(addressCustomer.id);
+      if (editingAddress?.id === addressToDelete.id) {
+        setEditingAddress(null);
+        setAddressLabel('');
+        setAddressValue('');
+        setIsAddressFormModalOpen(false);
+      }
+      showFeedback('success', 'Dirección eliminada', `Se eliminó una dirección de ${addressCustomer.name}.`);
+      setAddressToDelete(null);
+      setIsDeleteAddressModalOpen(false);
+    } catch (err: any) {
+      setAddressError(err?.message ?? 'No se pudo eliminar la dirección.');
+      setAddressToDelete(null);
+      setIsDeleteAddressModalOpen(false);
+    }
+  };
+
   const handleUpdateCustomer = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!selectedCustomer) return;
@@ -1395,6 +1491,13 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       title="Editar cliente"
                     >
                       <Pencil className="w-4 h-4 text-sky-700" />
+                    </button>
+                    <button
+                      onClick={() => void handleOpenAddresses(customer)}
+                      className="bg-orange-100 p-2 rounded-lg"
+                      title="Direcciones"
+                    >
+                      <MapPin className="w-4 h-4 text-orange-700" />
                     </button>
                     <button
                       onClick={() => handleDownloadCustomerPdf(customer)}
@@ -1657,6 +1760,158 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isAddressModalOpen && addressCustomer && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            <div className="bg-orange-600 p-6 text-white flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-tighter">Direcciones del cliente</h3>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-orange-100">{addressCustomer.name}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsAddressModalOpen(false);
+                  setAddressCustomer(null);
+                  setAddressRows([]);
+                  setAddressLabel('');
+                  setAddressValue('');
+                  setAddressError(null);
+                  setEditingAddress(null);
+                  setIsAddressFormModalOpen(false);
+                  setAddressToDelete(null);
+                }}
+                className="text-2xl text-white/80"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingAddress(null);
+                    setAddressLabel('');
+                    setAddressValue('');
+                    setAddressError(null);
+                    setIsAddressFormModalOpen(true);
+                  }}
+                  className="rounded-xl bg-orange-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white"
+                >
+                  + Nueva dirección
+                </button>
+              </div>
+              <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <tr>
+                      <th className="p-3">Tipo</th>
+                      <th className="p-3">Dirección</th>
+                      <th className="p-3 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {addressRows.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="p-4 text-sm text-slate-400 text-center">No hay direcciones registradas.</td>
+                      </tr>
+                    )}
+                    {addressRows.map((row) => (
+                      <tr key={row.id}>
+                        <td className="p-3 text-xs font-black text-slate-700">{row.is_default ? 'Principal' : (row.label?.trim() || 'Secundaria')}</td>
+                        <td className="p-3 text-sm font-semibold text-slate-700">{row.address}</td>
+                        <td className="p-3">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleEditAddress(row)}
+                              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-sky-600"
+                              title="Editar dirección"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAddressToDelete(row);
+                                setIsDeleteAddressModalOpen(true);
+                              }}
+                              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-500"
+                              title="Eliminar dirección"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAddressFormModalOpen && addressCustomer && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden">
+            <div className="bg-orange-600 p-6 text-white">
+              <h3 className="text-xl font-black uppercase tracking-tighter">
+                {editingAddress ? 'Editar dirección' : 'Nueva dirección'}
+              </h3>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-orange-100">{addressCustomer.name}</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-3">
+                <input
+                  placeholder="Etiqueta opcional"
+                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                  value={addressLabel}
+                  onChange={(e) => setAddressLabel(e.target.value)}
+                />
+                <input
+                  placeholder="Nueva dirección"
+                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                  value={addressValue}
+                  onChange={(e) => {
+                    setAddressValue(e.target.value);
+                    if (addressError) setAddressError(null);
+                  }}
+                />
+              </div>
+              {addressError && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                  {addressError}
+                </div>
+              )}
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddressFormModalOpen(false);
+                    setEditingAddress(null);
+                    setAddressLabel('');
+                    setAddressValue('');
+                    setAddressError(null);
+                  }}
+                  className="rounded-xl bg-slate-100 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSaveAddress()}
+                  className="rounded-xl bg-orange-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white"
+                >
+                  {editingAddress ? 'Guardar cambios' : 'Agregar dirección'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -2383,6 +2638,20 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           setPaymentToDelete(null);
           setDeletePaymentJustification('');
           setDeletePaymentError(null);
+        }}
+      />
+
+      <ConfirmModal
+        isOpen={isDeleteAddressModalOpen}
+        title="Eliminar dirección"
+        description={addressToDelete ? `Se eliminará la dirección "${addressToDelete.label?.trim() || addressToDelete.address}".` : undefined}
+        icon="🗑️"
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        onConfirm={handleDeleteAddress}
+        onCancel={() => {
+          setIsDeleteAddressModalOpen(false);
+          setAddressToDelete(null);
         }}
       />
     </div>

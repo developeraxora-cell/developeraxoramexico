@@ -19,6 +19,16 @@ export interface CreditCustomer {
   updated_at: string | null;
 }
 
+export interface CustomerAddress {
+  id: string;
+  customer_id: string;
+  label: string | null;
+  address: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string | null;
+}
+
 export interface CreditNote {
   id: string;
   branch_id: string;
@@ -113,6 +123,162 @@ const buildSummary = (customer: CreditCustomer, notes: CreditNote[], today: Date
 };
 
 export const creditService = {
+  async listAddressesByCustomer(customerId: string) {
+    const { data, error } = await supabase
+      .from('credit_customer_addresses')
+      .select('*')
+      .eq('customer_id', customerId)
+      .order('is_default', { ascending: false })
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return (data ?? []) as CustomerAddress[];
+  },
+
+  async addAddress(input: {
+    customer_id: string;
+    address: string;
+    label?: string | null;
+    is_default?: boolean;
+  }) {
+    const { data: existingRows, error: existingError } = await supabase
+      .from('credit_customer_addresses')
+      .select('id')
+      .eq('customer_id', input.customer_id);
+
+    if (existingError) throw existingError;
+
+    const shouldBeDefault = input.is_default ?? (existingRows?.length ?? 0) === 0;
+    if (shouldBeDefault) {
+      const { error: resetError } = await supabase
+        .from('credit_customer_addresses')
+        .update({ is_default: false })
+        .eq('customer_id', input.customer_id);
+      if (resetError) throw resetError;
+    }
+
+    const payload = {
+      customer_id: input.customer_id,
+      address: input.address.trim(),
+      label: input.label?.trim() || null,
+      is_default: shouldBeDefault,
+    };
+
+    const { data, error } = await supabase
+      .from('credit_customer_addresses')
+      .insert([payload])
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    if (payload.is_default) {
+      const { error: customerError } = await supabase
+        .from('credit_customers')
+        .update({ address: payload.address })
+        .eq('id', input.customer_id);
+      if (customerError) throw customerError;
+    }
+    return data as CustomerAddress;
+  },
+
+  async updateAddress(addressId: string, input: {
+    label?: string | null;
+    address: string;
+  }) {
+    const { data: current, error: currentError } = await supabase
+      .from('credit_customer_addresses')
+      .select('*')
+      .eq('id', addressId)
+      .single();
+
+    if (currentError) throw currentError;
+
+    const payload = {
+      label: input.label?.trim() || null,
+      address: input.address.trim(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from('credit_customer_addresses')
+      .update(payload)
+      .eq('id', addressId)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    if ((current as CustomerAddress).is_default) {
+      const { error: customerError } = await supabase
+        .from('credit_customers')
+        .update({ address: payload.address })
+        .eq('id', (current as CustomerAddress).customer_id);
+      if (customerError) throw customerError;
+    }
+
+    return data as CustomerAddress;
+  },
+
+  async deleteAddress(addressId: string) {
+    const { data: current, error: currentError } = await supabase
+      .from('credit_customer_addresses')
+      .select('*')
+      .eq('id', addressId)
+      .single();
+
+    if (currentError) throw currentError;
+
+    const customerId = (current as CustomerAddress).customer_id;
+    const deletedWasDefault = Boolean((current as CustomerAddress).is_default);
+
+    const { error: deleteError } = await supabase
+      .from('credit_customer_addresses')
+      .delete()
+      .eq('id', addressId);
+
+    if (deleteError) throw deleteError;
+
+    const { data: remainingRows, error: remainingError } = await supabase
+      .from('credit_customer_addresses')
+      .select('*')
+      .eq('customer_id', customerId)
+      .order('is_default', { ascending: false })
+      .order('created_at', { ascending: true });
+
+    if (remainingError) throw remainingError;
+
+    const remaining = (remainingRows ?? []) as CustomerAddress[];
+    if (remaining.length === 0) {
+      const { error: customerError } = await supabase
+        .from('credit_customers')
+        .update({ address: null })
+        .eq('id', customerId);
+      if (customerError) throw customerError;
+      return;
+    }
+
+    let nextDefault = remaining.find((row) => row.is_default) ?? null;
+    if (deletedWasDefault || !nextDefault) {
+      nextDefault = remaining[0];
+      const { error: resetError } = await supabase
+        .from('credit_customer_addresses')
+        .update({ is_default: false })
+        .eq('customer_id', customerId);
+      if (resetError) throw resetError;
+
+      const { error: defaultError } = await supabase
+        .from('credit_customer_addresses')
+        .update({ is_default: true })
+        .eq('id', nextDefault.id);
+      if (defaultError) throw defaultError;
+    }
+
+    const { error: customerError } = await supabase
+      .from('credit_customers')
+      .update({ address: nextDefault.address })
+      .eq('id', customerId);
+    if (customerError) throw customerError;
+  },
+
   async listCustomersByBranch(branchId: string) {
     const { data, error } = await supabase
       .from('credit_customers')
@@ -198,6 +364,14 @@ export const creditService = {
       .single();
 
     if (error) throw error;
+    if (input.address?.trim()) {
+      await supabase.from('credit_customer_addresses').insert([{
+        customer_id: data.id,
+        address: input.address.trim(),
+        label: 'Principal',
+        is_default: true,
+      }]);
+    }
     return data as CreditCustomer;
   },
 
@@ -210,6 +384,38 @@ export const creditService = {
       .single();
 
     if (error) throw error;
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'address')) {
+      const nextAddress = String(updates.address ?? '').trim();
+      const { data: defaultAddress } = await supabase
+        .from('credit_customer_addresses')
+        .select('id')
+        .eq('customer_id', id)
+        .eq('is_default', true)
+        .maybeSingle();
+
+      if (nextAddress) {
+        if (defaultAddress?.id) {
+          await supabase
+            .from('credit_customer_addresses')
+            .update({ address: nextAddress, label: 'Principal' })
+            .eq('id', defaultAddress.id);
+        } else {
+          await supabase.from('credit_customer_addresses').insert([{
+            customer_id: id,
+            address: nextAddress,
+            label: 'Principal',
+            is_default: true,
+          }]);
+        }
+      } else if (defaultAddress?.id) {
+        await supabase
+          .from('credit_customer_addresses')
+          .delete()
+          .eq('id', defaultAddress.id);
+      }
+    }
+
     return data as CreditCustomer;
   },
 
