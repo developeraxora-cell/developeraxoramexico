@@ -697,7 +697,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     page.drawText(input.paymentMethod === 'CREDITO' ? 'CREDITO' : 'LIQUIDADO', { x: marginX + 10, y: infoTop - 72, size: 10, font: fontBold });
     page.drawText('NOTA DE VENTA', { x: rightInfoX + 18, y: infoTop, size: 12, font: fontBold });
     page.drawText(String(input.saleId), { x: rightInfoX + 70, y: infoTop - 24, size: 12, font: fontBold });
-    page.drawText(`CAJERO:  ${input.cashierName.toUpperCase()}`, { x: rightInfoX, y: infoTop - 72, size: 10, font: fontBold });
+    page.drawText(`CAJERO:  ${input.cashierName.toUpperCase()}`, { x: rightInfoX - 42, y: infoTop - 72, size: 10, font: fontBold });
 
     const tableTop = infoTop - 120;
     const tableWidth = width - marginX * 2;

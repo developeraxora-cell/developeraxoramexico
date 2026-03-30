@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { BadgeDollarSign, Eye, FileDown, RotateCcw, Trash2 } from 'lucide-react';
+import { BadgeDollarSign, CreditCard, Eye, FileDown, RotateCcw, Trash2 } from 'lucide-react';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, Product as PosProduct, CartItem, ProductConversion, User } from '../../types';
 import { UNITS } from '../../constants';
@@ -100,6 +100,9 @@ const POSScreen: React.FC<POSProps> = ({
     created_by: string | null;
     items_count: number;
     total_amount: number;
+    payment_method: 'EFECTIVO' | 'CREDITO';
+    credit_note_id: string | null;
+    credit_paid_amount: number;
   }>>([]);
   const [isSalesHistoryLoading, setIsSalesHistoryLoading] = useState(false);
   const [salesHistoryPage, setSalesHistoryPage] = useState(1);
@@ -136,6 +139,19 @@ const POSScreen: React.FC<POSProps> = ({
     custom_label: string | null;
   }>>([]);
   const [isSaleDetailLoading, setIsSaleDetailLoading] = useState(false);
+  const [salePaymentEditTarget, setSalePaymentEditTarget] = useState<null | {
+    id: string;
+    created_at: string;
+    nombre_cliente: string | null;
+    total_amount: number;
+    payment_method: 'EFECTIVO' | 'CREDITO';
+    credit_note_id: string | null;
+    credit_paid_amount: number;
+  }>(null);
+  const [salePaymentMethodDraft, setSalePaymentMethodDraft] = useState<'EFECTIVO' | 'CREDITO'>('EFECTIVO');
+  const [salePaymentJustification, setSalePaymentJustification] = useState('');
+  const [salePaymentError, setSalePaymentError] = useState<string | null>(null);
+  const [isSavingSalePayment, setIsSavingSalePayment] = useState(false);
   const [specialPriceModal, setSpecialPriceModal] = useState<SpecialPriceModalState | null>(null);
   const [specialPriceValue, setSpecialPriceValue] = useState('');
   const [specialPriceNote, setSpecialPriceNote] = useState('');
@@ -283,6 +299,7 @@ const POSScreen: React.FC<POSProps> = ({
 
       const transactionIds = (transactions ?? []).map((tx) => tx.id);
       let itemsSummary: Record<string, { count: number; total: number }> = {};
+      let creditByTransaction: Record<string, { note_id: string; paid_amount: number }> = {};
 
       if (transactionIds.length > 0) {
         const { data: items, error: itemsError } = await supabase
@@ -299,6 +316,22 @@ const POSScreen: React.FC<POSProps> = ({
           acc[item.transaction_id] = current;
           return acc;
         }, {});
+
+        const { data: creditNotes, error: creditError } = await supabase
+          .from('credit_notes')
+          .select('id, inventory_transaction_id, paid_amount')
+          .in('inventory_transaction_id', transactionIds);
+
+        if (creditError) throw creditError;
+
+        creditByTransaction = (creditNotes ?? []).reduce<Record<string, { note_id: string; paid_amount: number }>>((acc, note: any) => {
+          if (note.inventory_transaction_id == null) return acc;
+          acc[String(note.inventory_transaction_id)] = {
+            note_id: String(note.id),
+            paid_amount: Number(note.paid_amount ?? 0),
+          };
+          return acc;
+        }, {});
       }
 
       const formatted = (transactions ?? []).map((tx) => ({
@@ -311,6 +344,9 @@ const POSScreen: React.FC<POSProps> = ({
         created_at: tx.created_at,
         items_count: itemsSummary[tx.id]?.count ?? 0,
         total_amount: itemsSummary[tx.id]?.total ?? 0,
+        payment_method: creditByTransaction[String(tx.id)] ? 'CREDITO' : 'EFECTIVO',
+        credit_note_id: creditByTransaction[String(tx.id)]?.note_id ?? null,
+        credit_paid_amount: creditByTransaction[String(tx.id)]?.paid_amount ?? 0,
       }));
 
       setSalesHistory(formatted);
@@ -395,6 +431,108 @@ const POSScreen: React.FC<POSProps> = ({
     setSaleToDelete(sale);
     setDeleteSaleNote('');
     setDeleteSaleError(null);
+  };
+
+  const openEditSalePaymentModal = (sale: {
+    id: string;
+    created_at: string;
+    nombre_cliente: string | null;
+    total_amount: number;
+    payment_method: 'EFECTIVO' | 'CREDITO';
+    credit_note_id: string | null;
+    credit_paid_amount: number;
+  }) => {
+    setSalePaymentEditTarget(sale);
+    setSalePaymentMethodDraft(sale.payment_method);
+    setSalePaymentJustification('');
+    setSalePaymentError(null);
+  };
+
+  const closeEditSalePaymentModal = () => {
+    if (isSavingSalePayment) return;
+    setSalePaymentEditTarget(null);
+    setSalePaymentMethodDraft('EFECTIVO');
+    setSalePaymentJustification('');
+    setSalePaymentError(null);
+  };
+
+  const handleSaveSalePaymentMethod = async () => {
+    if (!salePaymentEditTarget) return;
+
+    const justification = salePaymentJustification.trim();
+    if (!justification) {
+      setSalePaymentError('La observación es obligatoria.');
+      return;
+    }
+
+    if (salePaymentMethodDraft === salePaymentEditTarget.payment_method) {
+      setSalePaymentError('No hay cambios en el tipo de venta.');
+      return;
+    }
+
+    setIsSavingSalePayment(true);
+    setSalePaymentError(null);
+
+    try {
+      if (salePaymentMethodDraft === 'CREDITO') {
+        const customerName = salePaymentEditTarget.nombre_cliente?.trim();
+        if (!customerName || /^publico general$/i.test(customerName)) {
+          throw new Error('La venta debe tener un cliente identificado para cambiarla a crédito.');
+        }
+
+        const customers = await creditService.listCustomersByBranch(branchId);
+        const matches = customers.filter((customer) => customer.is_active !== false && customer.name.trim().toLowerCase() === customerName.toLowerCase());
+        if (matches.length !== 1) {
+          throw new Error('No se encontró un cliente único para convertir esta venta a crédito.');
+        }
+
+        await creditService.createCreditNote({
+          branch_id: branchId,
+          customer_id: matches[0].id,
+          total: salePaymentEditTarget.total_amount,
+          credit_days_applied: matches[0].default_credit_days,
+          inventory_transaction_id: salePaymentEditTarget.id,
+          issue_date: salePaymentEditTarget.created_at.slice(0, 10),
+          notes: `Venta convertida a crédito desde historial. ${justification}`,
+        });
+      } else {
+        if (!salePaymentEditTarget.credit_note_id) {
+          throw new Error('La venta no tiene una nota de crédito asociada.');
+        }
+        if (Number(salePaymentEditTarget.credit_paid_amount ?? 0) > 0) {
+          throw new Error('No se puede cambiar a efectivo porque la nota ya tiene abonos registrados.');
+        }
+        await creditService.deleteNote(salePaymentEditTarget.credit_note_id);
+      }
+
+      logMaterialsAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'UPDATE',
+        entity_type: 'venta',
+        entity_id: String(salePaymentEditTarget.id),
+        description: `Tipo de venta actualizado para la venta #${salePaymentEditTarget.id}`,
+        justification,
+        previous_data: {
+          payment_method: salePaymentEditTarget.payment_method,
+          credit_note_id: salePaymentEditTarget.credit_note_id,
+        },
+        new_data: {
+          payment_method: salePaymentMethodDraft,
+        },
+      });
+
+      closeEditSalePaymentModal();
+      await loadSalesHistory();
+      showFeedback('success', 'Tipo de venta actualizado', `La venta #${salePaymentEditTarget.id} ahora está en ${salePaymentMethodDraft}.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo actualizar el tipo de venta.';
+      setSalePaymentError(message);
+    } finally {
+      setIsSavingSalePayment(false);
+    }
   };
 
   const handleDeleteSale = async () => {
@@ -659,7 +797,7 @@ const POSScreen: React.FC<POSProps> = ({
     page.drawText(input.paymentMethod === 'CREDITO' ? 'CREDITO' : 'LIQUIDADO', { x: marginX + 10, y: infoTop - 72, size: 10, font: fontBold });
     page.drawText('NOTA DE VENTA', { x: rightInfoX + 18, y: infoTop, size: 12, font: fontBold });
     page.drawText(String(input.saleId), { x: rightInfoX + 70, y: infoTop - 24, size: 12, font: fontBold });
-    page.drawText(`CAJERO:  ${input.cashierName.toUpperCase()}`, { x: rightInfoX, y: infoTop - 72, size: 10, font: fontBold });
+    page.drawText(`CAJERO:  ${input.cashierName.toUpperCase()}`, { x: rightInfoX - 42, y: infoTop - 72, size: 10, font: fontBold });
 
     const tableTop = infoTop - 120;
     const tableWidth = width - marginX * 2;
@@ -2197,6 +2335,7 @@ const POSScreen: React.FC<POSProps> = ({
                       <th className="p-4 text-center">N° Venta</th>
                       <th className="p-4">Fecha</th>
                       <th className="p-4">Cliente</th>
+                      <th className="p-4 text-center">Tipo</th>
                       <th className="p-4 text-center">Nª de Productos</th>
                       <th className="p-4 text-right">Total</th>
                       <th className="p-4 text-center">Acción</th>
@@ -2205,12 +2344,12 @@ const POSScreen: React.FC<POSProps> = ({
                   <tbody className="divide-y divide-slate-100">
                     {isSalesHistoryLoading && (
                       <tr>
-                        <td colSpan={6} className="p-6 text-center text-slate-400 text-sm">Cargando ventas...</td>
+                        <td colSpan={7} className="p-6 text-center text-slate-400 text-sm">Cargando ventas...</td>
                       </tr>
                     )}
                     {!isSalesHistoryLoading && salesHistory.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="p-6 text-center text-slate-400 text-sm">No hay ventas registradas.</td>
+                        <td colSpan={7} className="p-6 text-center text-slate-400 text-sm">No hay ventas registradas.</td>
                       </tr>
                     )}
                     {!isSalesHistoryLoading && salesHistory.map((sale) => (
@@ -2218,10 +2357,26 @@ const POSScreen: React.FC<POSProps> = ({
                         <td className="p-4 text-center text-xs font-black text-slate-700">#{sale.id}</td>
                         <td className="p-4 text-xs font-bold text-slate-700">{formatLocalDateTime(sale.created_at)}</td>
                         <td className="p-4 text-xs font-bold text-slate-700">{sale.nombre_cliente || 'Público General'}</td>
+                        <td className="p-4 text-center">
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${
+                            sale.payment_method === 'CREDITO'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-emerald-100 text-emerald-700'
+                          }`}>
+                            {sale.payment_method}
+                          </span>
+                        </td>
                         <td className="p-4 text-center text-xs font-bold text-slate-600">{sale.items_count}</td>
                         <td className="p-4 text-right text-sm font-black text-slate-900">{formatCurrency(sale.total_amount)}</td>
                         <td className="p-4 text-center">
                           <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => openEditSalePaymentModal(sale)}
+                              className="w-8 h-8 rounded-lg text-amber-600 hover:text-amber-800 hover:bg-amber-50"
+                              title="Editar tipo de venta"
+                            >
+                              <CreditCard className="w-4 h-4 mx-auto" />
+                            </button>
                             <button
                               onClick={() => handleDownloadSalePdf(sale)}
                               className="w-8 h-8 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100"
@@ -2303,6 +2458,73 @@ const POSScreen: React.FC<POSProps> = ({
           setDeleteSaleError(null);
         }}
       />
+
+      {salePaymentEditTarget && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg overflow-hidden rounded-[32px] bg-white shadow-2xl">
+            <div className="bg-slate-900 p-6 text-white">
+              <h3 className="text-xl font-black uppercase tracking-tighter">Editar tipo de venta</h3>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-300">
+                Venta #{salePaymentEditTarget.id} · {salePaymentEditTarget.nombre_cliente || 'Público General'}
+              </p>
+            </div>
+            <div className="space-y-4 p-6">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tipo actual</p>
+                <p className="mt-1 text-lg font-black text-slate-900">{salePaymentEditTarget.payment_method}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {(['EFECTIVO', 'CREDITO'] as const).map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => setSalePaymentMethodDraft(method)}
+                    className={`rounded-2xl border-2 px-4 py-4 text-sm font-black uppercase tracking-widest transition ${
+                      salePaymentMethodDraft === method
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-slate-200 bg-white text-slate-500 hover:border-orange-300 hover:text-orange-500'
+                    }`}
+                  >
+                    {method}
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observación obligatoria</label>
+                <textarea
+                  rows={4}
+                  value={salePaymentJustification}
+                  onChange={(e) => setSalePaymentJustification(e.target.value)}
+                  placeholder="Explique por qué se está modificando el tipo de venta"
+                  className="w-full resize-none rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-slate-700 outline-none"
+                />
+              </div>
+              {salePaymentError && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-600">
+                  {salePaymentError}
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={closeEditSalePaymentModal}
+                  className="flex-1 rounded-2xl bg-slate-100 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSaveSalePaymentMethod()}
+                  disabled={isSavingSalePayment}
+                  className="flex-1 rounded-2xl bg-slate-900 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50"
+                >
+                  {isSavingSalePayment ? 'Guardando...' : 'Guardar cambio'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
