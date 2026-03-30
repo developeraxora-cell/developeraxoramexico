@@ -97,6 +97,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [selectedHistoryNoteIds, setSelectedHistoryNoteIds] = useState<string[]>([]);
   const [historyPage, setHistoryPage] = useState(1);
   const [paymentPage, setPaymentPage] = useState(1);
+  const [paymentSearchTerm, setPaymentSearchTerm] = useState('');
   const [formData, setFormData] = useState(defaultCustomerForm);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [noteModalMode, setNoteModalMode] = useState<NoteModalMode>('create');
@@ -174,7 +175,12 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     });
   }, [historyNotes, historySearchTerm, historyStatusFilter]);
   const historyTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredHistoryNotes.length / MODAL_PAGE_SIZE)), [filteredHistoryNotes.length]);
-  const paymentTotalPages = useMemo(() => Math.max(1, Math.ceil(openNotes.length / MODAL_PAGE_SIZE)), [openNotes.length]);
+  const filteredOpenNotes = useMemo(() => {
+    const term = paymentSearchTerm.trim().toLowerCase();
+    if (!term) return openNotes;
+    return openNotes.filter((note) => (note.folio ?? '').toLowerCase().includes(term));
+  }, [openNotes, paymentSearchTerm]);
+  const paymentTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredOpenNotes.length / MODAL_PAGE_SIZE)), [filteredOpenNotes.length]);
   const paymentHistoryTotalPages = useMemo(() => Math.max(1, Math.ceil(paymentHistory.length / MODAL_PAGE_SIZE)), [paymentHistory.length]);
   const pagedHistoryNotes = useMemo(() => {
     const start = (historyPage - 1) * MODAL_PAGE_SIZE;
@@ -182,8 +188,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   }, [filteredHistoryNotes, historyPage]);
   const pagedOpenNotes = useMemo(() => {
     const start = (paymentPage - 1) * MODAL_PAGE_SIZE;
-    return openNotes.slice(start, start + MODAL_PAGE_SIZE);
-  }, [openNotes, paymentPage]);
+    return filteredOpenNotes.slice(start, start + MODAL_PAGE_SIZE);
+  }, [filteredOpenNotes, paymentPage]);
   const pagedPaymentHistory = useMemo(() => {
     const start = (paymentHistoryPage - 1) * MODAL_PAGE_SIZE;
     return paymentHistory.slice(start, start + MODAL_PAGE_SIZE);
@@ -311,6 +317,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setSelectedCustomer(customer);
     setIsPaymentModalOpen(true);
     setPaymentPage(1);
+    setPaymentSearchTerm('');
     setError(null);
     try {
       const notes = await creditService.listOpenNotesByCustomer(customer.id);
@@ -1895,16 +1902,25 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   onChange={(e) => setPaymentMethod(e.target.value as CreditPaymentMethod)}
                 >
                   <option value="EFECTIVO">Efectivo</option>
-                  <option value="TRANSFERENCIA">Transferencia</option>
-                  <option value="TARJETA">Tarjeta</option>
-                </select>
+                    <option value="TRANSFERENCIA">Transferencia</option>
+                    <option value="TARJETA">Tarjeta</option>
+                  </select>
                 <input
-                  placeholder="Notas del abono"
+                  placeholder="Buscar por folio..."
                   className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                  value={paymentNotes}
-                  onChange={(e) => setPaymentNotes(e.target.value)}
+                  value={paymentSearchTerm}
+                  onChange={(e) => {
+                    setPaymentSearchTerm(e.target.value);
+                    setPaymentPage(1);
+                  }}
                 />
               </div>
+              <input
+                placeholder="Notas del abono"
+                className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                value={paymentNotes}
+                onChange={(e) => setPaymentNotes(e.target.value)}
+              />
               <div className="border border-slate-200 rounded-2xl overflow-hidden">
                 <table className="w-full text-left">
                   <thead className="bg-slate-100 text-[10px] font-black text-slate-500 uppercase tracking-widest">
@@ -1939,7 +1955,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                         </td>
                       </tr>
                     ))}
-                    {openNotes.length === 0 && (
+                    {filteredOpenNotes.length === 0 && (
                       <tr>
                         <td colSpan={5} className="p-6 text-center text-slate-400 text-sm">
                           No hay notas abiertas.
@@ -1949,10 +1965,10 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   </tbody>
                 </table>
               </div>
-              {openNotes.length > 0 && (
+              {filteredOpenNotes.length > 0 && (
                 <div className="flex items-center justify-between px-1">
                   <p className="text-xs text-slate-400">
-                    Mostrando {pagedOpenNotes.length} de {openNotes.length} notas
+                    Mostrando {pagedOpenNotes.length} de {filteredOpenNotes.length} notas
                   </p>
                   <div className="flex items-center gap-2">
                     <button
