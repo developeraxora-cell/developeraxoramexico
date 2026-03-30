@@ -170,6 +170,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [noteRows, setNoteRows] = useState<Record<string, number>>({});
   const [historyNotes, setHistoryNotes] = useState<CreditNoteWithStatus[]>([]);
   const [historySearchTerm, setHistorySearchTerm] = useState('');
+  const [historyStatusFilter, setHistoryStatusFilter] = useState<'TODAS' | 'VENCIDA' | 'ABIERTA' | 'PAGADA'>('TODAS');
   const [selectedHistoryNoteIds, setSelectedHistoryNoteIds] = useState<string[]>([]);
   const [historyPage, setHistoryPage] = useState(1);
   const [paymentPage, setPaymentPage] = useState(1);
@@ -231,9 +232,12 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCustomers / PAGE_SIZE)), [totalCustomers, PAGE_SIZE]);
   const filteredHistoryNotes = useMemo(() => {
     const term = historySearchTerm.trim().toLowerCase();
-    if (!term) return historyNotes;
-    return historyNotes.filter((note) => (note.folio ?? '').toLowerCase().includes(term));
-  }, [historyNotes, historySearchTerm]);
+    return historyNotes.filter((note) => {
+      const matchesStatus = historyStatusFilter === 'TODAS' || note.status === historyStatusFilter;
+      const matchesTerm = !term || (note.folio ?? '').toLowerCase().includes(term);
+      return matchesStatus && matchesTerm;
+    });
+  }, [historyNotes, historySearchTerm, historyStatusFilter]);
   const historyTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredHistoryNotes.length / MODAL_PAGE_SIZE)), [filteredHistoryNotes.length]);
   const paymentTotalPages = useMemo(() => Math.max(1, Math.ceil(openNotes.length / MODAL_PAGE_SIZE)), [openNotes.length]);
   const paymentHistoryTotalPages = useMemo(() => Math.max(1, Math.ceil(paymentHistory.length / MODAL_PAGE_SIZE)), [paymentHistory.length]);
@@ -1763,16 +1767,42 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
             </div>
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
               <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <input
-                  type="text"
-                  placeholder="Buscar por folio..."
-                  className="w-full md:max-w-xs rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
-                  value={historySearchTerm}
-                  onChange={(e) => {
-                    setHistorySearchTerm(e.target.value);
-                    setHistoryPage(1);
-                  }}
-                />
+                <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                  <input
+                    type="text"
+                    placeholder="Buscar por folio..."
+                    className="w-full md:w-64 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
+                    value={historySearchTerm}
+                    onChange={(e) => {
+                      setHistorySearchTerm(e.target.value);
+                      setHistoryPage(1);
+                    }}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { id: 'TODAS', label: 'Todas' },
+                      { id: 'VENCIDA', label: 'Vencidas' },
+                      { id: 'ABIERTA', label: 'Abiertas' },
+                      { id: 'PAGADA', label: 'Completado' },
+                    ].map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => {
+                          setHistoryStatusFilter(option.id as 'TODAS' | 'VENCIDA' | 'ABIERTA' | 'PAGADA');
+                          setHistoryPage(1);
+                        }}
+                        className={`rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-[0.16em] transition ${
+                          historyStatusFilter === option.id
+                            ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/15'
+                            : 'border border-slate-200 bg-white text-slate-500 hover:border-orange-200 hover:text-orange-500'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
               <table className="w-full text-left bg-white rounded-3xl overflow-hidden border border-slate-200">
                 <thead className="bg-slate-900 text-white text-[10px] uppercase tracking-widest">
