@@ -914,7 +914,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         phone: formData.phone || null,
         address: formData.address || null,
         credit_limit: Number(formData.credit_limit),
-        default_credit_days: Number(formData.default_credit_days) === 15 ? 15 : 30,
+        default_credit_days: 30,
         policy: 'CERO_TOLERANCIA',
         allow_cash_if_blocked: formData.allow_cash_if_blocked,
       });
@@ -1056,7 +1056,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         phone: formData.phone || null,
         address: formData.address || null,
         credit_limit: Number(formData.credit_limit),
-        default_credit_days: Number(formData.default_credit_days) === 15 ? 15 : 30,
+        default_credit_days: Number(selectedCustomer.default_credit_days) === 15 ? 15 : 30,
         policy: 'CERO_TOLERANCIA',
         allow_cash_if_blocked: formData.allow_cash_if_blocked,
       });
@@ -1300,29 +1300,16 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Límite de crédito</label>
-                  <input
-                    type="number"
-                    min={0}
-                    placeholder="Límite"
-                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                    value={formData.credit_limit}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, credit_limit: Number(e.target.value) }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Días de crédito</label>
-                  <select
-                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                    value={formData.default_credit_days}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, default_credit_days: Number(e.target.value) }))}
-                  >
-                    <option value={15}>15 días</option>
-                    <option value={30}>30 días</option>
-                  </select>
-                </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Límite de crédito</label>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Límite"
+                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                  value={formData.credit_limit}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, credit_limit: Number(e.target.value) }))}
+                />
               </div>
               <label className="flex items-center gap-2 text-xs text-slate-600 font-bold">
                 <input
@@ -1388,34 +1375,21 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Límite de crédito</label>
-                  <input
-                    type="number"
-                    min={0}
-                    placeholder="Límite"
-                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                    value={formData.credit_limit === 0 ? '' : formData.credit_limit}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        credit_limit: e.target.value === '' ? 0 : Number(e.target.value),
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Días de crédito</label>
-                  <select
-                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                    value={formData.default_credit_days}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, default_credit_days: Number(e.target.value) }))}
-                  >
-                    <option value={15}>15 días</option>
-                    <option value={30}>30 días</option>
-                  </select>
-                </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Límite de crédito</label>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Límite"
+                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                  value={formData.credit_limit === 0 ? '' : formData.credit_limit}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      credit_limit: e.target.value === '' ? 0 : Number(e.target.value),
+                    }))
+                  }
+                />
               </div>
               <label className="flex items-center gap-2 text-xs text-slate-600 font-bold">
                 <input

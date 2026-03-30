@@ -59,6 +59,7 @@ const POSScreen: React.FC<POSProps> = ({
   const [selectedCustomer, setSelectedCustomer] = useState<CreditCustomer | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'CREDITO'>('EFECTIVO');
   const [saleNotes, setSaleNotes] = useState('');
+  const [saleCreditDays, setSaleCreditDays] = useState<15 | 30>(30);
   const [customerAddresses, setCustomerAddresses] = useState<CustomerAddress[]>([]);
   const [selectedCustomerAddressId, setSelectedCustomerAddressId] = useState('');
   const [isSaleAddressModalOpen, setIsSaleAddressModalOpen] = useState(false);
@@ -1077,6 +1078,7 @@ const POSScreen: React.FC<POSProps> = ({
     setCreditCheck(null);
     setPaymentMethod('EFECTIVO');
     setSaleNotes('');
+    setSaleCreditDays(30);
     setCreditOverrideApproved(false);
     setCreditOverrideNote('');
     setCreditOverrideError(null);
@@ -1089,6 +1091,7 @@ const POSScreen: React.FC<POSProps> = ({
     setCreditOverrideApproved(false);
     setCreditOverrideNote('');
     setCreditOverrideError(null);
+    setSaleCreditDays(30);
   }, [selectedCustomer?.id, cartTotal]);
 
   const runCreditCheck = useCallback(async () => {
@@ -1106,6 +1109,7 @@ const POSScreen: React.FC<POSProps> = ({
       setCreditOverrideApproved(false);
       setCreditOverrideNote('');
       setCreditOverrideError(null);
+      setSaleCreditDays(30);
     }
     if (method === 'CREDITO') {
       if (!selectedCustomer) {
@@ -1255,7 +1259,7 @@ const POSScreen: React.FC<POSProps> = ({
           branch_id: branchId,
           customer_id: customerSnapshot.id,
           total: totalSnapshot,
-          credit_days_applied: customerSnapshot.default_credit_days,
+          credit_days_applied: saleCreditDays,
           inventory_transaction_id: transaction.id,
         });
       }
@@ -1293,6 +1297,7 @@ const POSScreen: React.FC<POSProps> = ({
       setCreditCheck(null);
       setPaymentMethod('EFECTIVO');
       setSaleNotes('');
+      setSaleCreditDays(30);
       setCreditOverrideApproved(false);
       setCreditOverrideNote('');
       setCreditOverrideError(null);
@@ -2782,6 +2787,27 @@ const POSScreen: React.FC<POSProps> = ({
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Dirección seleccionada</p>
                 <p className="mt-2 text-sm font-bold text-slate-700">{effectiveSaleAddress}</p>
               </div>
+              {paymentMethod === 'CREDITO' && (
+                <div>
+                  <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Días de crédito</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[15, 30].map((days) => (
+                      <button
+                        key={days}
+                        type="button"
+                        onClick={() => setSaleCreditDays(days as 15 | 30)}
+                        className={`rounded-2xl border px-4 py-3 text-sm font-black uppercase tracking-widest transition ${
+                          saleCreditDays === days
+                            ? 'border-slate-900 bg-slate-900 text-white'
+                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        {days} días
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observación de la venta</label>
                 <textarea
