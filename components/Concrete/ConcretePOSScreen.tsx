@@ -96,6 +96,9 @@ const POSScreen: React.FC<POSProps> = ({
   } | null>(null);
   const [isCreditBlockedOpen, setIsCreditBlockedOpen] = useState(false);
   const [isCreditLimitOpen, setIsCreditLimitOpen] = useState(false);
+  const [creditOverrideApproved, setCreditOverrideApproved] = useState(false);
+  const [creditOverrideNote, setCreditOverrideNote] = useState('');
+  const [creditOverrideError, setCreditOverrideError] = useState<string | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentNotes, setPaymentNotes] = useState('');
   const [paymentMethodChoice, setPaymentMethodChoice] = useState<CreditPaymentMethod>('EFECTIVO');
@@ -730,6 +733,11 @@ const POSScreen: React.FC<POSProps> = ({
   };
 
   const cartTotal = cart.reduce((acc, curr) => acc + curr.subtotal, 0);
+  const canOverrideOverdueCredit = Boolean(
+    creditCheck &&
+    creditCheck.reason === 'VENCIDAS' &&
+    Number(creditCheck.disponible ?? 0) >= cartTotal
+  );
   const formatLocalDateTime = (value: string) => {
     const normalized = value.endsWith('Z') ? value : `${value}Z`;
     return new Date(normalized).toLocaleString();
@@ -1191,10 +1199,19 @@ const POSScreen: React.FC<POSProps> = ({
     setCreditCheck(null);
     setPaymentMethod('EFECTIVO');
     setSaleNotes('');
+    setCreditOverrideApproved(false);
+    setCreditOverrideNote('');
+    setCreditOverrideError(null);
     setCustomerAddresses([]);
     setSelectedCustomerAddressId('');
     setIsCustomerSearchLoading(false);
   }, [branchId]);
+
+  useEffect(() => {
+    setCreditOverrideApproved(false);
+    setCreditOverrideNote('');
+    setCreditOverrideError(null);
+  }, [selectedCustomer?.id, cartTotal]);
 
   const runCreditCheck = useCallback(async () => {
     if (!selectedCustomer) return null;
@@ -1207,6 +1224,11 @@ const POSScreen: React.FC<POSProps> = ({
   }, [selectedCustomer, cartTotal]);
 
   const handleSelectPaymentMethod = async (method: 'EFECTIVO' | 'CREDITO') => {
+    if (method === 'EFECTIVO') {
+      setCreditOverrideApproved(false);
+      setCreditOverrideNote('');
+      setCreditOverrideError(null);
+    }
     if (method === 'CREDITO') {
       if (!selectedCustomer) {
         alert('⚠️ Seleccione un cliente para habilitar crédito.');
@@ -1244,7 +1266,12 @@ const POSScreen: React.FC<POSProps> = ({
         return;
       }
       const result = await runCreditCheck();
-      if (!result?.allowedCredit) {
+      const canProceedWithOverride = Boolean(
+        creditOverrideApproved &&
+        result?.reason === 'VENCIDAS' &&
+        Number(result?.disponible ?? 0) >= cartTotal
+      );
+      if (!result?.allowedCredit && !canProceedWithOverride) {
         if (result?.reason === 'VENCIDAS') setIsCreditBlockedOpen(true);
         if (result?.reason === 'LIMITE') setIsCreditLimitOpen(true);
         return;
@@ -1255,6 +1282,12 @@ const POSScreen: React.FC<POSProps> = ({
       const saleCartSnapshot = cart.map((item) => ({ ...item }));
       const paymentMethodSnapshot = paymentMethod;
       const saleNotesSnapshot = saleNotes.trim();
+      const creditOverrideSnapshot = paymentMethodSnapshot === 'CREDITO' && creditOverrideApproved
+        ? creditOverrideNote.trim()
+        : '';
+      const mergedSaleNotes = [saleNotesSnapshot, creditOverrideSnapshot ? `AUTORIZACION DE CREDITO: ${creditOverrideSnapshot}` : '']
+        .filter(Boolean)
+        .join(' | ');
       const customerSnapshot = selectedCustomer;
       const concreteMetaSnapshot = { ...concreteMeta };
       const totalSnapshot = cartTotal;
@@ -1282,14 +1315,14 @@ const POSScreen: React.FC<POSProps> = ({
         edad: concreteMetaSnapshot.edad,
         rev: concreteMetaSnapshot.rev,
         descarga: concreteMetaSnapshot.descarga,
-        saleNotes: saleNotesSnapshot || null,
+        saleNotes: mergedSaleNotes || null,
       };
 
       showFeedback('loading', 'Procesando pago', 'Registrando venta...');
       const transaction = await purchasesService.createSale({
         branch_id: branchId,
         reference: null,
-        notes: saleNotesSnapshot || null,
+        notes: mergedSaleNotes || null,
         edad: concreteMetaSnapshot.edad,
         rev: concreteMetaSnapshot.rev,
         descarga: concreteMetaSnapshot.descarga,
@@ -1316,11 +1349,11 @@ const POSScreen: React.FC<POSProps> = ({
         entity_type: 'venta',
         entity_id: String(transaction.id),
         description: `Venta registrada${customerSnapshot?.name ? ` para ${customerSnapshot.name}` : ''}${specialPriceItems.length > 0 ? ' con precio especial' : ''}`,
-        justification: specialPriceJustification,
+        justification: [specialPriceJustification, creditOverrideSnapshot].filter(Boolean).join(' | ') || null,
         new_data: {
           branch_id: branchId,
           payment_method: paymentMethodSnapshot,
-          notes: saleNotesSnapshot || null,
+          notes: mergedSaleNotes || null,
           customer_id: customerSnapshot?.id ?? null,
           customer_name: customerSnapshot?.name ?? null,
           customer_address: effectiveSaleAddress === '-' ? null : effectiveSaleAddress,
@@ -1358,6 +1391,32 @@ const POSScreen: React.FC<POSProps> = ({
           inventory_transaction_id: transaction.id,
         });
       }
+      if (paymentMethodSnapshot === 'CREDITO' && creditOverrideSnapshot && customerSnapshot) {
+        logConcreteraAudit({
+          branch_id: branchId,
+          branch_name: selectedBranch?.name ?? null,
+          user_id: currentUser.id,
+          user_name: currentUser.name,
+          action_type: 'ACTUALIZAR',
+          entity_type: 'credito',
+          entity_id: customerSnapshot.id,
+          description: `Venta a credito autorizada con notas vencidas para ${customerSnapshot.name}`,
+          justification: creditOverrideSnapshot,
+          new_data: {
+            customer_id: customerSnapshot.id,
+            customer_name: customerSnapshot.name,
+            total_amount: totalSnapshot,
+            disponible_credito: creditCheck?.disponible ?? null,
+            notas_vencidas: creditCheck?.vencidas.map((note) => ({
+              id: note.id,
+              folio: note.folio,
+              balance: note.balance,
+              days_overdue: note.days_overdue,
+            })) ?? [],
+            sale_id: String(transaction.id),
+          },
+        });
+      }
       applyLocalSaleStock(saleCartSnapshot);
       showFeedback('success', 'Pago exitoso', `Venta registrada (${paymentMethodSnapshot}).`);
       setCart([]);
@@ -1366,6 +1425,9 @@ const POSScreen: React.FC<POSProps> = ({
       setCreditCheck(null);
       setPaymentMethod('EFECTIVO');
       setSaleNotes('');
+      setCreditOverrideApproved(false);
+      setCreditOverrideNote('');
+      setCreditOverrideError(null);
       setCustomerAddresses([]);
       setSelectedCustomerAddressId('');
       setConcreteMeta(DEFAULT_CONCRETE_META);
@@ -1634,6 +1696,19 @@ const POSScreen: React.FC<POSProps> = ({
       setIsCreditBlockedOpen(false);
       setPaymentMethod('CREDITO');
     }
+  };
+
+  const handleApproveOverdueCredit = () => {
+    if (!selectedCustomer || !creditCheck || !canOverrideOverdueCredit) return;
+    const justification = creditOverrideNote.trim();
+    if (!justification) {
+      setCreditOverrideError('La observación es obligatoria para continuar con crédito vencido.');
+      return;
+    }
+    setCreditOverrideApproved(true);
+    setCreditOverrideError(null);
+    setPaymentMethod('CREDITO');
+    setIsCreditBlockedOpen(false);
   };
 
   const getSaleUoms = (productId: string) => saleUomsByProduct[productId] ?? [];
@@ -2008,6 +2083,29 @@ const POSScreen: React.FC<POSProps> = ({
                   ))}
                 </tbody>
               </table>
+              {canOverrideOverdueCredit && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">Autorización excepcional</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-700">
+                      El cliente no llegó al límite en dinero. Puede continuar la venta a crédito solo si deja una observación obligatoria.
+                    </p>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={creditOverrideNote}
+                    onChange={(e) => {
+                      setCreditOverrideNote(e.target.value);
+                      if (creditOverrideError) setCreditOverrideError(null);
+                    }}
+                    placeholder="Ej: Se autorizó vender con crédito vencido por indicación del encargado."
+                    className="w-full resize-none rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
+                  />
+                  {creditOverrideError && (
+                    <div className="text-xs font-bold text-red-600">{creditOverrideError}</div>
+                  )}
+                </div>
+              )}
               <div className="flex flex-col md:flex-row gap-2 justify-end">
                 {creditCheck.allowCash && (
                   <button
@@ -2026,12 +2124,12 @@ const POSScreen: React.FC<POSProps> = ({
                 >
                   Cobrar/Abonar ahora
                 </button>
-                {creditCheck.policy === 'BLOQUEO_PARCIAL' && (
+                {canOverrideOverdueCredit && (
                   <button
-                    onClick={openPaymentForVencidas}
+                    onClick={handleApproveOverdueCredit}
                     className="px-4 py-2 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase"
                   >
-                    Liquidar vencidas y continuar
+                    Continuar con autorización
                   </button>
                 )}
               </div>
