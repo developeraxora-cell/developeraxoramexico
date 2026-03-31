@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, User } from '../../types';
 import { creditService, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentEvidence, type CreditPaymentMethod, type CreditSummary, type CustomerAddress } from '../../services/concretera/credit.service';
 import { Eye, FileDown, FileImage, MapPin, Paperclip, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
-import { formatCurrency } from '../../services/currency';
+import { formatCurrency, formatNumber } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 import ConfirmModal from '../common/ConfirmModal';
@@ -28,11 +29,77 @@ const defaultCustomerForm = {
 };
 
 const MODAL_PAGE_SIZE = 5;
+let watermarkPngBytesPromise: Promise<ArrayBuffer | null> | null = null;
 const toDateInput = (value: Date) => value.toISOString().slice(0, 10);
 const addDaysToDate = (base: string, days: number) => {
   const next = new Date(`${base}T00:00:00Z`);
   next.setUTCDate(next.getUTCDate() + Math.max(1, days));
   return toDateInput(next);
+};
+const formatLocalDateTime = (value: string) => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '-';
+  const normalized = raw.includes('T')
+    ? raw
+    : raw.includes(' ')
+      ? raw.replace(' ', 'T')
+      : `${raw}T00:00:00`;
+  const withZone = /[zZ]|[+-]\d{2}:\d{2}$/.test(normalized) ? normalized : `${normalized}Z`;
+  const parsed = new Date(withZone);
+  if (Number.isNaN(parsed.getTime())) return raw;
+  return parsed.toLocaleString();
+};
+const getWatermarkPngBytes = async () => {
+  if (!watermarkPngBytesPromise) {
+    watermarkPngBytesPromise = fetch('/lopar-watermark.png')
+      .then((response) => (response.ok ? response.arrayBuffer() : null))
+      .catch(() => null);
+  }
+  return watermarkPngBytesPromise;
+};
+const openPdfPreview = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const previewWindow = window.open('', '_blank');
+
+  if (previewWindow && !previewWindow.closed) {
+    try {
+      previewWindow.document.title = filename;
+      previewWindow.location.href = url;
+    } catch {
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    }
+  } else {
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  }
+
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+};
+const toFileToken = (value: string | null | undefined, fallback: string) => {
+  const source = String(value ?? '');
+  const normalized = typeof source.normalize === 'function' ? source.normalize('NFD') : source;
+  const cleaned = normalized
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toUpperCase();
+  return cleaned || fallback;
+};
+const buildSalePdfFilename = (branchName: string | null | undefined, saleId: string) => {
+  const moduleToken = 'CONCRETERA';
+  const branchToken = toFileToken(branchName, 'SUCURSAL');
+  const saleToken = toFileToken(saleId, '0');
+  return `${moduleToken}-${branchToken}-${saleToken}.pdf`;
 };
 
 type NoteModalMode = 'create' | 'edit';
@@ -73,7 +140,13 @@ type ConcreteSaleSummaryItem = {
 };
 
 type ConcreteSaleSummaryData = {
+  saleId: string;
   created_at: string;
+  nombre_cliente: string | null;
+  direccion_cliente: string | null;
+  created_by: string | null;
+  reference: string | null;
+  notes: string | null;
   items: ConcreteSaleSummaryItem[];
 };
 
@@ -129,6 +202,9 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [isDeletePaymentModalOpen, setIsDeletePaymentModalOpen] = useState(false);
   const [deletePaymentJustification, setDeletePaymentJustification] = useState('');
   const [deletePaymentError, setDeletePaymentError] = useState<string | null>(null);
+  const [expandedHistoryNoteId, setExpandedHistoryNoteId] = useState<string | null>(null);
+  const [noteSaleSummaries, setNoteSaleSummaries] = useState<Record<string, ConcreteSaleSummaryData>>({});
+  const [loadingNoteSaleId, setLoadingNoteSaleId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -186,10 +262,14 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     return historyNotes.filter((note) => {
       const matchesStatus = historyStatusFilter === 'TODAS' || note.status === historyStatusFilter;
       const noteReference = historyNoteReferences[note.id]?.toLowerCase() ?? '';
-      const matchesTerm = !term || getDisplayNoteCode(note).toLowerCase().includes(term) || noteReference.includes(term);
+      const summaryReference = noteSaleSummaries[note.id]?.reference?.toLowerCase() ?? '';
+      const matchesTerm = !term
+        || getDisplayNoteCode(note).toLowerCase().includes(term)
+        || noteReference.includes(term)
+        || summaryReference.includes(term);
       return matchesStatus && matchesTerm;
     });
-  }, [historyNoteReferences, historyNotes, historySearchTerm, historyStatusFilter]);
+  }, [historyNoteReferences, historyNotes, historySearchTerm, historyStatusFilter, noteSaleSummaries]);
   const historyTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredHistoryNotes.length / MODAL_PAGE_SIZE)), [filteredHistoryNotes.length]);
   const filteredOpenNotes = useMemo(() => {
     const term = paymentSearchTerm.trim().toLowerCase();
@@ -308,10 +388,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const handleOpenHistory = async (customer: CreditCustomer) => {
     setSelectedCustomer(customer);
     setIsHistoryModalOpen(true);
-    setHistorySearchTerm('');
-    setSelectedHistoryNoteIds([]);
-    setHistoryPage(1);
-    setError(null);
+      setHistorySearchTerm('');
+      setSelectedHistoryNoteIds([]);
+      setHistoryPage(1);
+      setExpandedHistoryNoteId(null);
+      setError(null);
     try {
       const notes = await creditService.listNotesByCustomer(customer.id);
       const withStatus = notes.map((note) => {
@@ -485,7 +566,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
     const { data: saleRow, error: saleError } = await supabase
       .from('concrete_inventory_transactions')
-      .select('created_at')
+      .select('id, reference, notes, created_at, nombre_cliente, direccion_cliente, created_by')
       .eq('id', transactionId)
       .single();
     if (saleError) throw saleError;
@@ -513,9 +594,219 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     }));
 
     return {
+      saleId: String(saleRow.id),
       created_at: saleRow.created_at,
+      nombre_cliente: saleRow.nombre_cliente ?? selectedCustomer?.name ?? null,
+      direccion_cliente: saleRow.direccion_cliente ?? selectedCustomer?.address ?? null,
+      created_by: saleRow.created_by ?? currentUser.name,
+      reference: saleRow.reference ?? null,
+      notes: saleRow.notes ?? null,
       items,
     };
+  };
+
+  const generateSalePdf = async (input: {
+    saleId: string;
+    createdAt: string;
+    items: Array<{
+      name: string;
+      presentation: string;
+      qty: number;
+      unitPrice: number;
+      subtotal: number;
+    }>;
+    paymentMethod: 'EFECTIVO' | 'CREDITO';
+    customerName: string;
+    customerAddress: string;
+    cashierName: string;
+    branchName: string;
+  }) => {
+    const pdfDoc = await PDFDocument.create();
+    const fontBold = await pdfDoc.embedFont('Helvetica-Bold');
+    const page = pdfDoc.addPage([595.28, 841.89]);
+    const { width, height } = page.getSize();
+
+    let watermarkImage: any = null;
+    try {
+      const logoBytes = await getWatermarkPngBytes();
+      if (logoBytes) {
+        watermarkImage = await pdfDoc.embedPng(logoBytes);
+      }
+    } catch {
+      watermarkImage = null;
+    }
+
+    if (watermarkImage) {
+      const dims = watermarkImage.scale(0.5);
+      page.drawImage(watermarkImage, {
+        x: (width - dims.width) / 2,
+        y: (height - dims.height) / 2 - 40,
+        width: dims.width,
+        height: dims.height,
+        opacity: 0.12,
+      });
+    }
+
+    const marginX = 30;
+    const outerY = 75;
+    const outerTop = height - 70;
+    const outerHeight = outerTop - outerY;
+    page.drawRectangle({
+      x: marginX,
+      y: outerY,
+      width: width - marginX * 2,
+      height: outerHeight,
+      borderWidth: 1,
+      borderColor: rgb(0, 0, 0),
+    });
+
+    const title = `CONCRETERA ${(input.branchName || 'SUCURSAL').toUpperCase()}`;
+    const titleSize = 14;
+    const titleWidth = fontBold.widthOfTextAtSize(title, titleSize);
+    page.drawText(title, {
+      x: (width - titleWidth) / 2,
+      y: height - 42,
+      size: titleSize,
+      font: fontBold,
+    });
+
+    const infoTop = height - 105;
+    const rightInfoX = width - marginX - 155;
+    page.drawText(`FECHA:  ${formatLocalDateTime(input.createdAt)}`, { x: marginX + 10, y: infoTop, size: 10, font: fontBold });
+    page.drawText(`CLIENTE:  ${input.customerName.toUpperCase()}`, { x: marginX + 10, y: infoTop - 24, size: 10, font: fontBold });
+    page.drawText(`DIRECCION:  ${input.customerAddress.toUpperCase()}`, { x: marginX + 10, y: infoTop - 48, size: 10, font: fontBold });
+    page.drawText(input.paymentMethod === 'CREDITO' ? 'CREDITO' : 'LIQUIDADO', { x: marginX + 10, y: infoTop - 72, size: 10, font: fontBold });
+    page.drawText('NOTA DE VENTA', { x: rightInfoX + 18, y: infoTop, size: 12, font: fontBold });
+    page.drawText(String(input.saleId), { x: rightInfoX + 70, y: infoTop - 24, size: 12, font: fontBold });
+    page.drawText(`CAJERO:  ${input.cashierName.toUpperCase()}`, { x: rightInfoX - 42, y: infoTop - 72, size: 10, font: fontBold });
+
+    const tableTop = infoTop - 120;
+    const tableWidth = width - marginX * 2;
+    const colRatios = [0.36, 0.2, 0.14, 0.15, 0.15];
+    const colXs = colRatios.reduce<number[]>((acc, ratio) => {
+      const prev = acc[acc.length - 1];
+      acc.push(prev + tableWidth * ratio);
+      return acc;
+    }, [marginX]);
+    const drawCellText = (text: string, col: number, y: number, size: number, color = rgb(0, 0, 0)) => {
+      const xStart = colXs[col];
+      const xEnd = colXs[col + 1];
+      const colWidth = xEnd - xStart;
+      const available = colWidth - 6;
+      let safe = text ?? '';
+      while (safe.length > 0 && fontBold.widthOfTextAtSize(safe, size) > available) {
+        safe = safe.slice(0, -1);
+      }
+      if (safe !== text && safe.length > 3) safe = `${safe.slice(0, -3)}...`;
+      const textWidth = fontBold.widthOfTextAtSize(safe, size);
+      const textX = xStart + Math.max(3, (colWidth - textWidth) / 2);
+      page.drawText(safe, { x: textX, y, size, font: fontBold, color });
+    };
+
+    page.drawRectangle({ x: marginX, y: tableTop - 16, width: tableWidth, height: 16, color: rgb(0, 0, 0) });
+    ['PRODUCTO', 'PRESENTACION', 'CANTIDAD', 'PRECIO UNITARIO', 'SUBTOTAL'].forEach((header, idx) => {
+      drawCellText(header, idx, tableTop - 12, 8, rgb(1, 1, 1));
+    });
+
+    let rowY = tableTop - 32;
+    const maxRows = Math.min(14, input.items.length);
+    let total = 0;
+    for (let i = 0; i < maxRows; i += 1) {
+      const item = input.items[i];
+      const subtotal = Number(item.subtotal ?? (item.qty * item.unitPrice));
+      total += subtotal;
+      const rowHeight = 18;
+      page.drawRectangle({
+        x: marginX,
+        y: rowY - 2,
+        width: tableWidth,
+        height: rowHeight,
+        borderWidth: 0.5,
+        borderColor: rgb(0, 0, 0),
+      });
+      for (let c = 1; c < colXs.length - 1; c += 1) {
+        page.drawLine({
+          start: { x: colXs[c], y: rowY - 2 },
+          end: { x: colXs[c], y: rowY - 2 + rowHeight },
+          thickness: 0.5,
+          color: rgb(0, 0, 0),
+        });
+      }
+      drawCellText(item.name.toUpperCase(), 0, rowY + 4, 8);
+      drawCellText(item.presentation.toUpperCase(), 1, rowY + 4, 8);
+      drawCellText(Number(item.qty).toFixed(2), 2, rowY + 4, 8);
+      drawCellText(formatCurrency(Number(item.unitPrice)), 3, rowY + 4, 8);
+      drawCellText(formatCurrency(subtotal), 4, rowY + 4, 8);
+      rowY -= rowHeight;
+    }
+
+    page.drawText(`TOTAL:  ${formatCurrency(total)}`, { x: width - marginX - 210, y: 108, size: 20, font: fontBold });
+    page.drawText('KILOMETRO, 3 LAS CANOAS, JESUS MARIA JALISCO   (348) 148 8326', {
+      x: marginX + 80,
+      y: 64,
+      size: 9,
+      font: fontBold,
+    });
+    page.drawText('Página 1', { x: width - marginX - 54, y: 64, size: 9, font: fontBold });
+
+    const pdfBytes = await pdfDoc.save();
+    openPdfPreview(new Blob([pdfBytes], { type: 'application/pdf' }), buildSalePdfFilename(input.branchName, input.saleId));
+  };
+
+  const toggleNoteSaleSummary = async (note: CreditNoteWithStatus) => {
+    if (!note.inventory_transaction_id) {
+      showFeedback('alert', 'Venta no vinculada', 'Esta nota no tiene una venta asociada para mostrar.');
+      return;
+    }
+    if (expandedHistoryNoteId === note.id) {
+      setExpandedHistoryNoteId(null);
+      return;
+    }
+    if (noteSaleSummaries[note.id]) {
+      setExpandedHistoryNoteId(note.id);
+      return;
+    }
+
+    setLoadingNoteSaleId(note.id);
+    try {
+      const summary = await fetchConcreteNoteSaleSummary(note);
+      setNoteSaleSummaries((prev) => ({ ...prev, [note.id]: summary }));
+      setExpandedHistoryNoteId(note.id);
+    } catch (err) {
+      showFeedback('error', 'No se pudo cargar la venta', err instanceof Error ? err.message : 'No se pudo cargar el detalle de la venta.');
+    } finally {
+      setLoadingNoteSaleId(null);
+    }
+  };
+
+  const handlePrintSale = async (note: CreditNoteWithStatus) => {
+    showFeedback('loading', 'Generando PDF', 'Preparando documento de venta...');
+    try {
+      const summary = noteSaleSummaries[note.id] ?? await fetchConcreteNoteSaleSummary(note);
+      if (!noteSaleSummaries[note.id]) {
+        setNoteSaleSummaries((prev) => ({ ...prev, [note.id]: summary }));
+      }
+      await generateSalePdf({
+        saleId: summary.saleId,
+        createdAt: summary.created_at,
+        items: summary.items.map((item) => ({
+          name: item.product_name ?? 'PRODUCTO',
+          presentation: item.presentation,
+          qty: item.qty,
+          unitPrice: item.unit_price,
+          subtotal: Number(item.qty) * Number(item.unit_price),
+        })),
+        paymentMethod: 'CREDITO',
+        customerName: summary.nombre_cliente ?? selectedCustomer?.name ?? 'PUBLICO GENERAL',
+        customerAddress: summary.direccion_cliente ?? selectedCustomer?.address ?? '-',
+        cashierName: summary.created_by ?? currentUser.name,
+        branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+      });
+      setFeedbackOpen(false);
+    } catch (err) {
+      setFeedbackOpen(false);
+      showFeedback('error', 'No se pudo exportar', err instanceof Error ? err.message : 'No se pudo generar el PDF de la venta.');
+    }
   };
 
   const handleDownloadCustomerPdf = async (customer: CreditCustomer) => {
@@ -1970,55 +2261,137 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {pagedHistoryNotes.map((note) => (
-                    <tr key={note.id} className="hover:bg-slate-50">
-                      <td className="p-4 text-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedHistoryNoteIds.includes(note.id)}
-                          onChange={() => toggleHistoryNoteSelection(note.id)}
-                          className="h-4 w-4 rounded border-slate-300"
-                        />
-                      </td>
-                      <td className="p-4 text-xs font-bold text-slate-700">{getDisplayNoteCode(note)}</td>
-                      <td className="p-4 text-xs text-slate-500">{note.issue_date}</td>
-                      <td className="p-4 text-xs text-slate-500">{note.due_date}</td>
-                      <td className="p-4 text-right text-xs font-bold">{formatCurrency(Number(note.total))}</td>
-                      <td className="p-4 text-right text-xs font-black text-red-600">{formatCurrency(Number(note.balance))}</td>
-                      <td className="p-4 text-center">
-                        <span
-                          className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${note.status === 'VENCIDA'
-                              ? 'bg-red-100 text-red-600'
-                              : note.status === 'PAGADA'
-                                ? 'bg-green-100 text-green-600'
-                                : 'bg-amber-100 text-amber-600'
-                            }`}
+                  {pagedHistoryNotes.map((note) => {
+                    const isExpanded = expandedHistoryNoteId === note.id;
+                    const summary = noteSaleSummaries[note.id];
+                    const isLoadingSummary = loadingNoteSaleId === note.id;
+                    const summaryTotal = summary?.items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.unit_price)), 0) ?? 0;
+
+                    return (
+                      <React.Fragment key={note.id}>
+                        <tr
+                          className="cursor-pointer hover:bg-slate-50"
+                          onClick={() => {
+                            void toggleNoteSaleSummary(note);
+                          }}
                         >
-                          {note.status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openEditNoteModal(note)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600 transition-colors hover:bg-sky-100"
-                            title="Editar nota"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRequestDeleteNote(note)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500 transition-colors hover:bg-red-100"
-                            title="Eliminar nota"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                          <td className="p-4 text-center" onClick={(event) => event.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedHistoryNoteIds.includes(note.id)}
+                              onChange={() => toggleHistoryNoteSelection(note.id)}
+                              className="h-4 w-4 rounded border-slate-300"
+                            />
+                          </td>
+                          <td className="p-4 text-xs font-bold text-slate-700">{getDisplayNoteCode(note)}</td>
+                          <td className="p-4 text-xs text-slate-500">{note.issue_date}</td>
+                          <td className="p-4 text-xs text-slate-500">{note.due_date}</td>
+                          <td className="p-4 text-right text-xs font-bold">{formatCurrency(Number(note.total))}</td>
+                          <td className="p-4 text-right text-xs font-black text-red-600">{formatCurrency(Number(note.balance))}</td>
+                          <td className="p-4 text-center">
+                            <span
+                              className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${note.status === 'VENCIDA'
+                                  ? 'bg-red-100 text-red-600'
+                                  : note.status === 'PAGADA'
+                                    ? 'bg-green-100 text-green-600'
+                                    : 'bg-amber-100 text-amber-600'
+                                }`}
+                            >
+                              {note.status}
+                            </span>
+                          </td>
+                          <td className="p-4 text-center" onClick={(event) => event.stopPropagation()}>
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => void handlePrintSale(note)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                                title="Imprimir venta"
+                              >
+                                <FileDown className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openEditNoteModal(note)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600 transition-colors hover:bg-sky-100"
+                                title="Editar nota"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRequestDeleteNote(note)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500 transition-colors hover:bg-red-100"
+                                title="Eliminar nota"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={8} className="bg-slate-50 px-4 py-4">
+                              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                {isLoadingSummary && (
+                                  <p className="text-sm font-semibold text-slate-400">Cargando resumen de la venta...</p>
+                                )}
+                                {!isLoadingSummary && !summary && (
+                                  <p className="text-sm font-semibold text-slate-400">No se pudo cargar el resumen de la venta.</p>
+                                )}
+                                {!isLoadingSummary && summary && (
+                                  <div className="space-y-4">
+                                    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">N° venta</p>
+                                        <p className="mt-1 text-sm font-black text-slate-800">{summary.saleId}</p>
+                                      </div>
+                                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha</p>
+                                        <p className="mt-1 text-sm font-black text-slate-800">{formatLocalDateTime(summary.created_at)}</p>
+                                      </div>
+                                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Referencia</p>
+                                        <p className="mt-1 text-sm font-black text-slate-800">{summary.reference || '—'}</p>
+                                      </div>
+                                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total</p>
+                                        <p className="mt-1 text-sm font-black text-emerald-600">{formatCurrency(summaryTotal)}</p>
+                                      </div>
+                                    </div>
+                                    <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                                      <table className="w-full text-left">
+                                        <thead className="bg-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                          <tr>
+                                            <th className="p-3">Producto</th>
+                                            <th className="p-3">Presentación</th>
+                                            <th className="p-3">Tipo de venta</th>
+                                            <th className="p-3 text-right">Cantidad</th>
+                                            <th className="p-3 text-right">Sub total</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                          {summary.items.map((item) => (
+                                            <tr key={item.id} className="hover:bg-slate-50">
+                                              <td className="p-3 text-xs font-bold text-slate-700">{item.product_name || '—'}</td>
+                                              <td className="p-3 text-xs text-slate-600">{item.presentation}</td>
+                                              <td className="p-3 text-xs text-slate-600">{item.sale_type}</td>
+                                              <td className="p-3 text-right text-xs font-bold text-slate-600">{formatNumber(Number(item.qty))}</td>
+                                              <td className="p-3 text-right text-xs font-black text-slate-900">{formatCurrency(Number(item.qty) * Number(item.unit_price))}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                   {filteredHistoryNotes.length === 0 && (
                     <tr>
                       <td colSpan={8} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
