@@ -123,6 +123,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   const [feedbackTitle, setFeedbackTitle] = useState('');
   const [feedbackDescription, setFeedbackDescription] = useState('');
   const scanInputRef = useRef<HTMLInputElement | null>(null);
+  const actionLockRef = useRef(false);
   const getErrorMessage = (err: unknown, fallback: string) => {
     if (!err) return fallback;
     if (err instanceof Error && err.message) return err.message;
@@ -513,6 +514,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     if (feedbackType === 'loading') return;
     setFeedbackOpen(false);
   };
+  const feedbackLoading = feedbackOpen && feedbackType === 'loading';
 
   const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
@@ -764,6 +766,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   };
 
   const handleSavePurchase = async () => {
+    if (actionLockRef.current) return;
     if (!branchId) {
       showFeedback('alert', 'Sucursal requerida', 'Seleccione una sucursal antes de registrar compras.');
       return;
@@ -824,6 +827,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     setIsSaving(true);
     setError(null);
     showFeedback('loading', 'Registrando compra', 'Procesando información...');
+    actionLockRef.current = true;
 
     try {
       await purchasesService.createPurchase({
@@ -860,10 +864,12 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       showFeedback('error', 'No se pudo guardar', message);
     } finally {
       setIsSaving(false);
+      actionLockRef.current = false;
     }
   };
 
   const handleCreateSupplier = async () => {
+    if (actionLockRef.current) return;
     if (!branchId) {
       showFeedback('alert', 'Sucursal requerida', 'Seleccione una sucursal antes de crear el proveedor.');
       return;
@@ -873,6 +879,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       return;
     }
     setIsSavingSupplier(true);
+    actionLockRef.current = true;
     try {
       const created = await catalogService.createSupplier({
         branch_id: branchId,
@@ -893,6 +900,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       showFeedback('error', 'Error', message);
     } finally {
       setIsSavingSupplier(false);
+      actionLockRef.current = false;
     }
   };
 
@@ -946,6 +954,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   };
 
   const handleDeletePurchase = async () => {
+    if (actionLockRef.current) return;
     if (!branchId || !purchaseToDelete) {
       showFeedback('alert', 'Compra requerida', 'Seleccione una compra válida para eliminar.');
       return;
@@ -973,6 +982,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     setDeletePurchaseObservation('');
     setDeletePurchaseObservationError(null);
     showFeedback('loading', 'Eliminando compra', 'Restaurando inventario y eliminando registro...');
+    actionLockRef.current = true;
 
     try {
       const result = await purchasesService.deletePurchase({
@@ -1012,6 +1022,8 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       const message = err instanceof Error ? err.message : 'No se pudo eliminar la compra.';
       setFeedbackOpen(false);
       showFeedback('error', 'No se pudo eliminar', message);
+    } finally {
+      actionLockRef.current = false;
     }
   };
 
@@ -1368,7 +1380,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 </div>
                 <button
                   onClick={handleSavePurchase}
-                  disabled={cartItems.length === 0 || isSaving}
+                  disabled={cartItems.length === 0 || isSaving || feedbackLoading}
                   className={`px-12 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all ${cartItems.length > 0 && !isSaving
                     ? 'bg-orange-500 text-white hover:bg-orange-600'
                     : 'bg-slate-200 text-slate-400'
@@ -1639,7 +1651,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 <button
                   type="button"
                   onClick={handleCreateSupplier}
-                  disabled={isSavingSupplier}
+                  disabled={isSavingSupplier || feedbackLoading}
                   className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
                 >
                   {isSavingSupplier ? 'Guardando...' : 'Guardar proveedor'}

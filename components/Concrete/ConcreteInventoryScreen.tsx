@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ban, History, PenLine } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { logConcreteraAudit } from '../../services/audit/audit.service';
@@ -67,6 +67,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('error');
   const [feedbackTitle, setFeedbackTitle] = useState('');
   const [feedbackDescription, setFeedbackDescription] = useState('');
+  const actionLockRef = useRef(false);
 
   const getErrorMessage = (err: unknown, fallback: string) => {
     if (!err) return fallback;
@@ -115,6 +116,8 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     setFeedbackDescription(description ?? '');
     setFeedbackOpen(true);
   }, []);
+
+  const feedbackLoading = feedbackOpen && feedbackType === 'loading';
 
   const loadProducts = useCallback(async () => {
     if (!branchId) {
@@ -315,6 +318,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
   };
 
   const handleSavePrice = async () => {
+    if (actionLockRef.current) return;
     if (!priceProduct) return;
     const nextPrice = Number(priceValue || 0);
     if (nextPrice <= 0) {
@@ -326,8 +330,10 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       setError('La observación es obligatoria para actualizar el precio del producto.');
       return;
     }
+    actionLockRef.current = true;
     setIsSaving(true);
     setError(null);
+    showFeedback('loading', 'Guardando precio', 'Actualizando precio del producto...');
     try {
       const previousPrice = Number((priceProduct as any).retail_price ?? (priceProduct as any).precio ?? 0);
       await catalogService.updateProductPrice(priceProduct.id, nextPrice);
@@ -351,10 +357,13 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       });
       setPriceProduct(null);
       await loadProducts();
+      showFeedback('success', 'Precio actualizado');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo actualizar el precio.';
       setError(message);
+      showFeedback('error', 'No se pudo actualizar', message);
     } finally {
+      actionLockRef.current = false;
       setIsSaving(false);
     }
   };
@@ -375,6 +384,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
   };
 
   const handleSaveManualStock = async () => {
+    if (actionLockRef.current) return;
     if (!manualStockModal || !branchId) return;
 
     const nextQty = Number(manualStockValue);
@@ -394,8 +404,10 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       return;
     }
 
+    actionLockRef.current = true;
     setIsSavingStock(true);
     setError(null);
+    showFeedback('loading', 'Guardando ajuste', 'Actualizando stock...');
     try {
       await catalogService.adjustProductStock({
         branch_id: branchId,
@@ -426,10 +438,12 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       });
       closeManualStockModal();
       await loadProducts();
+      showFeedback('success', 'Stock actualizado');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo guardar el ajuste de stock.';
       showFeedback('error', 'Error al guardar stock', message);
     } finally {
+      actionLockRef.current = false;
       setIsSavingStock(false);
     }
   };
@@ -834,15 +848,17 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
               <div className="flex gap-2">
                 <button
                   onClick={() => setPriceProduct(null)}
-                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase"
+                  disabled={feedbackLoading || isSaving}
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSavePrice}
-                  className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase"
+                  disabled={feedbackLoading || isSaving}
+                  className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Guardar
+                  {feedbackLoading || isSaving ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
             </div>
@@ -915,16 +931,16 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                 <button
                   onClick={closeManualStockModal}
                   className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
-                  disabled={isSavingStock}
+                  disabled={isSavingStock || feedbackLoading}
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSaveManualStock}
                   className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
-                  disabled={isSavingStock}
+                  disabled={isSavingStock || feedbackLoading}
                 >
-                  {isSavingStock ? 'Guardando...' : 'Guardar ajuste'}
+                  {isSavingStock || feedbackLoading ? 'Guardando...' : 'Guardar ajuste'}
                 </button>
               </div>
             </div>

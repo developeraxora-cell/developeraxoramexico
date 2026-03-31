@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, User } from '../../types';
 import { creditService, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentEvidence, type CreditPaymentMethod, type CreditSummary, type CustomerAddress } from '../../services/credit/credit.service';
@@ -229,6 +229,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [isAddressFormModalOpen, setIsAddressFormModalOpen] = useState(false);
   const [addressToDelete, setAddressToDelete] = useState<CustomerAddress | null>(null);
   const [isDeleteAddressModalOpen, setIsDeleteAddressModalOpen] = useState(false);
+  const actionLockRef = useRef(false);
 
   const branchId = useMemo(() => {
     const match = branches.find((b) => b.id === selectedBranchId);
@@ -251,6 +252,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     if (feedbackType === 'loading') return;
     setFeedbackOpen(false);
   };
+  const feedbackLoading = feedbackOpen && feedbackType === 'loading';
 
   const loadCustomerAddresses = useCallback(async (customerId: string) => {
     const rows = await creditService.listAddressesByCustomer(customerId);
@@ -923,6 +925,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
   const handleRegisterPayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (actionLockRef.current) return;
     if (!selectedCustomer || !paymentTargetNote) return;
     if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
       setPaymentFormError('El abono debe ser mayor a 0.');
@@ -938,6 +941,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
     setIsLoading(true);
     setError(null);
+    actionLockRef.current = true;
+    showFeedback('loading', 'Registrando abono', 'Guardando el abono...');
 
     try {
       let uploadedEvidences: Awaited<ReturnType<typeof paymentEvidenceUploadService.upload>>[] = [];
@@ -990,11 +995,14 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       await loadCustomers();
       const notes = await creditService.listOpenNotesByCustomer(selectedCustomer.id);
       setOpenNotes(notes);
+      showFeedback('success', 'Abono registrado');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo registrar el abono.';
       setError(message);
+      showFeedback('error', 'No se pudo registrar', message);
     } finally {
       setIsLoading(false);
+      actionLockRef.current = false;
     }
   };
 
@@ -1056,6 +1064,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
   const handleUpdatePayment = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (actionLockRef.current) return;
     if (!selectedCustomer || !editingPayment) return;
     if (!paymentEditForm.justification.trim()) {
       setPaymentEditError('La observación es obligatoria.');
@@ -1084,6 +1093,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setIsLoading(true);
     setPaymentEditError(null);
     showFeedback('loading', 'Actualizando abono', 'Guardando cambios...');
+    actionLockRef.current = true;
 
     try {
       const updated = await creditService.updatePayment(editingPayment.id, {
@@ -1121,6 +1131,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       showFeedback('error', 'No se pudo actualizar', message);
     } finally {
       setIsLoading(false);
+      actionLockRef.current = false;
     }
   };
 
@@ -1132,6 +1143,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   };
 
   const handleConfirmDeletePayment = async () => {
+    if (actionLockRef.current) return;
     if (!selectedCustomer || !paymentToDelete) return;
     if (!deletePaymentJustification.trim()) {
       setDeletePaymentError('La observación es obligatoria.');
@@ -1140,6 +1152,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
     setIsLoading(true);
     showFeedback('loading', 'Eliminando abono', 'Procesando eliminación...');
+    actionLockRef.current = true;
 
     try {
       await creditService.deletePayment(paymentToDelete.id);
@@ -1172,6 +1185,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       showFeedback('error', 'No se pudo eliminar', message);
     } finally {
       setIsLoading(false);
+      actionLockRef.current = false;
     }
   };
 
@@ -1221,6 +1235,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
   const handleSubmitNote = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (actionLockRef.current) return;
     if (!selectedCustomer) return;
 
     const total = Number(noteForm.total);
@@ -1244,6 +1259,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setIsLoading(true);
     setNoteFormError(null);
     showFeedback('loading', noteModalMode === 'create' ? 'Registrando crédito' : 'Actualizando crédito', 'Guardando cambios...');
+    actionLockRef.current = true;
 
     try {
       let savedNote: CreditNote;
@@ -1310,6 +1326,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       showFeedback('error', 'No se pudo guardar', message);
     } finally {
       setIsLoading(false);
+      actionLockRef.current = false;
     }
   };
 
@@ -1321,6 +1338,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   };
 
   const handleConfirmDeleteNote = async () => {
+    if (actionLockRef.current) return;
     if (!selectedCustomer || !noteToDelete) return;
     if (!deleteNoteJustification.trim()) {
       setDeleteNoteError('La observación es obligatoria.');
@@ -1329,6 +1347,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
     setIsLoading(true);
     showFeedback('loading', 'Eliminando nota', 'Procesando eliminación...');
+    actionLockRef.current = true;
 
     try {
       await creditService.deleteNote(noteToDelete.id);
@@ -1360,15 +1379,19 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       showFeedback('error', 'No se pudo eliminar', message);
     } finally {
       setIsLoading(false);
+      actionLockRef.current = false;
     }
   };
 
   const handleCreateCustomer = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (actionLockRef.current) return;
     if (!branchId) return;
 
     setIsLoading(true);
     setError(null);
+    actionLockRef.current = true;
+    showFeedback('loading', 'Creando cliente', 'Guardando cliente...');
 
     try {
       const customer = await creditService.createCustomer({
@@ -1398,11 +1421,14 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       setFormData(defaultCustomerForm);
       setCurrentPage(1);
       await loadCustomers();
+      showFeedback('success', 'Cliente creado');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo crear el cliente.';
       setError(message);
+      showFeedback('error', 'No se pudo crear', message);
     } finally {
       setIsLoading(false);
+      actionLockRef.current = false;
     }
   };
 
@@ -1447,6 +1473,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   };
 
   const handleSaveAddress = async () => {
+    if (actionLockRef.current) return;
     if (!addressCustomer) return;
     const normalizedAddress = addressValue.trim();
     if (!normalizedAddress) {
@@ -1454,6 +1481,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       return;
     }
 
+    actionLockRef.current = true;
     try {
       if (editingAddress) {
         await creditService.updateAddress(editingAddress.id, {
@@ -1478,11 +1506,15 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       await loadCustomerAddresses(addressCustomer.id);
     } catch (err: any) {
       setAddressError(err?.message ?? 'No se pudo guardar la dirección.');
+    } finally {
+      actionLockRef.current = false;
     }
   };
 
   const handleDeleteAddress = async () => {
+    if (actionLockRef.current) return;
     if (!addressCustomer || !addressToDelete) return;
+    actionLockRef.current = true;
     try {
       await creditService.deleteAddress(addressToDelete.id);
       await loadCustomerAddresses(addressCustomer.id);
@@ -1499,11 +1531,14 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       setAddressError(err?.message ?? 'No se pudo eliminar la dirección.');
       setAddressToDelete(null);
       setIsDeleteAddressModalOpen(false);
+    } finally {
+      actionLockRef.current = false;
     }
   };
 
   const handleUpdateCustomer = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (actionLockRef.current) return;
     if (!selectedCustomer) return;
     if (!formData.justification.trim()) {
       setError('La observación es obligatoria para editar el cliente.');
@@ -1512,6 +1547,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
     setIsLoading(true);
     setError(null);
+    actionLockRef.current = true;
+    showFeedback('loading', 'Actualizando cliente', 'Guardando cambios...');
 
     try {
       const updated = await creditService.updateCustomer(selectedCustomer.id, {
@@ -1542,11 +1579,14 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       setSelectedCustomer(null);
       setFormData(defaultCustomerForm);
       await loadCustomers();
+      showFeedback('success', 'Cliente actualizado');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo actualizar el cliente.';
       setError(message);
+      showFeedback('error', 'No se pudo actualizar', message);
     } finally {
       setIsLoading(false);
+      actionLockRef.current = false;
     }
   };
 
@@ -1562,7 +1602,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         />
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="w-full md:w-auto bg-slate-900 text-white px-6 py-3 rounded-xl font-bold inline-flex items-center gap-2"
+          disabled={feedbackLoading || isLoading}
+          className="w-full md:w-auto bg-slate-900 text-white px-6 py-3 rounded-xl font-bold inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <Plus className="w-4 h-4" />
           Nuevo Cliente
@@ -1786,13 +1827,15 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase"
+                  disabled={feedbackLoading}
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase"
+                  disabled={feedbackLoading || isLoading}
+                  className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Guardar
                 </button>
@@ -1881,15 +1924,17 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     setSelectedCustomer(null);
                     setFormData(defaultCustomerForm);
                   }}
-                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase"
+                  disabled={feedbackLoading || isLoading}
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 rounded-xl bg-sky-700 text-white font-black text-[10px] uppercase"
+                  disabled={feedbackLoading || isLoading}
+                  className="flex-1 py-3 rounded-xl bg-sky-700 text-white font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Guardar cambios
+                  {feedbackLoading || isLoading ? 'Guardando...' : 'Guardar cambios'}
                 </button>
               </div>
             </form>
@@ -1933,7 +1978,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     setAddressError(null);
                     setIsAddressFormModalOpen(true);
                   }}
-                  className="rounded-xl bg-orange-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white"
+                  disabled={feedbackLoading || isLoading}
+                  className="rounded-xl bg-orange-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   + Nueva dirección
                 </button>
@@ -2032,16 +2078,18 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     setAddressValue('');
                     setAddressError(null);
                   }}
-                  className="rounded-xl bg-slate-100 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500"
+                  disabled={feedbackLoading || isLoading}
+                  className="rounded-xl bg-slate-100 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleSaveAddress()}
-                  className="rounded-xl bg-orange-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white"
+                  disabled={feedbackLoading || isLoading}
+                  className="rounded-xl bg-orange-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {editingAddress ? 'Guardar cambios' : 'Agregar dirección'}
+                  {feedbackLoading || isLoading ? 'Guardando...' : editingAddress ? 'Guardar cambios' : 'Agregar dirección'}
                 </button>
               </div>
             </div>
@@ -2147,9 +2195,10 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase"
+                  disabled={feedbackLoading || isLoading}
+                  className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {noteModalMode === 'create' ? 'Guardar crédito' : 'Guardar cambios'}
+                  {feedbackLoading || isLoading ? 'Guardando...' : noteModalMode === 'create' ? 'Guardar crédito' : 'Guardar cambios'}
                 </button>
               </div>
             </form>
@@ -2447,7 +2496,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                           <button
                             type="button"
                             onClick={() => openPaymentEntryModal(note)}
-                            className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white"
+                            disabled={feedbackLoading || isLoading}
+                            className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-60 disabled:cursor-not-allowed"
                           >
                             <Wallet className="h-4 w-4" />
                             Abonar
@@ -2497,7 +2547,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 <button
                   type="button"
                   onClick={() => setIsPaymentModalOpen(false)}
-                  className="w-full py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase"
+                  disabled={feedbackLoading || isLoading}
+                  className="w-full py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Cerrar
                 </button>
@@ -2598,15 +2649,17 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     setIsPaymentEntryModalOpen(false);
                     setPaymentTargetNote(null);
                   }}
-                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase"
+                  disabled={feedbackLoading || isLoading}
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 rounded-xl bg-green-600 text-white font-black text-[10px] uppercase"
+                  disabled={feedbackLoading || isLoading}
+                  className="flex-1 py-3 rounded-xl bg-green-600 text-white font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Confirmar Abono
+                  {feedbackLoading || isLoading ? 'Guardando...' : 'Confirmar Abono'}
                 </button>
               </div>
             </form>
@@ -2896,15 +2949,17 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     setPaymentEditForm(createDefaultPaymentEditForm());
                     setPaymentEditError(null);
                   }}
-                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase"
+                  disabled={feedbackLoading || isLoading}
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 rounded-xl bg-violet-700 text-white font-black text-[10px] uppercase"
+                  disabled={feedbackLoading || isLoading}
+                  className="flex-1 py-3 rounded-xl bg-violet-700 text-white font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Guardar cambios
+                  {feedbackLoading || isLoading ? 'Guardando...' : 'Guardar cambios'}
                 </button>
               </div>
             </form>

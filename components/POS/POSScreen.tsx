@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BadgeDollarSign, CreditCard, Eye, FileDown, RotateCcw, Trash2 } from 'lucide-react';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, Product as PosProduct, CartItem, ProductConversion, User } from '../../types';
@@ -169,6 +169,7 @@ const POSScreen: React.FC<POSProps> = ({
   const [specialPriceNote, setSpecialPriceNote] = useState('');
   const [specialPriceError, setSpecialPriceError] = useState<string | null>(null);
   const [qtyDrafts, setQtyDrafts] = useState<Record<string, string>>({});
+  const actionLockRef = useRef(false);
 
   const activeBranchProducts = useMemo(
     () => branchProducts.filter((product) => product.is_active !== false),
@@ -199,6 +200,7 @@ const POSScreen: React.FC<POSProps> = ({
     if (feedbackType === 'loading') return;
     setFeedbackOpen(false);
   };
+  const feedbackLoading = feedbackOpen && feedbackType === 'loading';
 
   const applyLocalSaleStock = (items: CartItem[]) => {
     const deltaByProduct = items.reduce<Record<string, number>>((acc, item) => {
@@ -1132,6 +1134,7 @@ const POSScreen: React.FC<POSProps> = ({
   };
 
   const performCheckout = async () => {
+    if (actionLockRef.current) return;
     if (cart.length === 0) return;
     if (!branchId) {
       showFeedback('alert', 'Sucursal requerida', 'Seleccione una sucursal antes de vender.');
@@ -1161,6 +1164,7 @@ const POSScreen: React.FC<POSProps> = ({
       }
     }
 
+    actionLockRef.current = true;
     try {
       const saleCartSnapshot = cart.map((item) => ({ ...item }));
       const paymentMethodSnapshot = paymentMethod;
@@ -1319,6 +1323,8 @@ const POSScreen: React.FC<POSProps> = ({
     } catch (err: any) {
       console.error('Error checking out:', err);
       showFeedback('error', 'Error al procesar', err.message ?? 'No se pudo completar la venta.');
+    } finally {
+      actionLockRef.current = false;
     }
   };
 
@@ -1574,30 +1580,36 @@ const POSScreen: React.FC<POSProps> = ({
   };
 
   const handleSubmitPayments = async () => {
+    if (actionLockRef.current) return;
     if (!creditCheck) return;
     const entries = Object.entries(noteRows).filter(([, amount]) => amount > 0);
     if (entries.length === 0) return;
 
-    for (const [noteId, amount] of entries) {
-      const note = creditCheck.vencidas.find((n) => n.id === noteId);
-      if (!note) continue;
-      const safeAmount = Math.min(amount, Number(note.balance));
-      if (safeAmount <= 0) continue;
-      await creditService.createPayment({
-        note_id: noteId,
-        amount: safeAmount,
-        method: paymentMethodChoice,
-        notes: paymentNotes || null,
-      });
-    }
+    actionLockRef.current = true;
+    try {
+      for (const [noteId, amount] of entries) {
+        const note = creditCheck.vencidas.find((n) => n.id === noteId);
+        if (!note) continue;
+        const safeAmount = Math.min(amount, Number(note.balance));
+        if (safeAmount <= 0) continue;
+        await creditService.createPayment({
+          note_id: noteId,
+          amount: safeAmount,
+          method: paymentMethodChoice,
+          notes: paymentNotes || null,
+        });
+      }
 
-    setIsPaymentModalOpen(false);
-    setPaymentNotes('');
-    setPaymentMethodChoice('EFECTIVO');
-    const result = await runCreditCheck();
-    if (result?.allowedCredit) {
-      setIsCreditBlockedOpen(false);
-      setPaymentMethod('CREDITO');
+      setIsPaymentModalOpen(false);
+      setPaymentNotes('');
+      setPaymentMethodChoice('EFECTIVO');
+      const result = await runCreditCheck();
+      if (result?.allowedCredit) {
+        setIsCreditBlockedOpen(false);
+        setPaymentMethod('CREDITO');
+      }
+    } finally {
+      actionLockRef.current = false;
     }
   };
 
@@ -1620,6 +1632,15 @@ const POSScreen: React.FC<POSProps> = ({
     const saleUoms = getSaleUoms(productId);
     const baseUom = saleUoms.find((uom) => Number(uom.factor_to_base) === 1);
     return baseUom ?? defaultSaleUomByProduct[productId] ?? null;
+  };
+
+  const formatSaleUomLabel = (productId: string, uom: any) => {
+    const product = (products ?? []).find((row) => String(row.id) === String(productId));
+    const baseUom = product?.baseUnitId ? uomsById[String(product.baseUnitId)] : null;
+    const baseCode = baseUom?.code ?? baseUom?.name ?? 'BASE';
+    const label = uom.uom?.code ?? uom.uom?.name ?? 'UOM';
+    const factor = Number(uom.factor_to_base ?? 1);
+    return factor === 1 ? `${label} (base)` : `${label} = ${factor} ${baseCode}`;
   };
 
   const handleAddFromCatalog = (product: CatalogProduct) => {
@@ -1824,13 +1845,6 @@ const POSScreen: React.FC<POSProps> = ({
                       </div>
                     );
                   }
-                  if (item.saleType === 'MAYOR') {
-                    return (
-                      <div className="flex-1 p-2 border-2 border-slate-200 rounded-lg text-xs font-bold bg-white flex items-center">
-                        {baseSymbol}
-                      </div>
-                    );
-                  }
                   if (saleUoms.length > 0) {
                     return (
                       <select
@@ -1842,7 +1856,7 @@ const POSScreen: React.FC<POSProps> = ({
                         <option value="">Seleccionar</option>
                         {saleUoms.map((uom) => (
                           <option key={uom.id} value={String(uom.id)}>
-                            {uom.uom?.code ?? uom.uom?.name ?? 'UOM'} ({uom.factor_to_base})
+                            {formatSaleUomLabel(item.productId, uom)}
                           </option>
                         ))}
                       </select>
@@ -1902,6 +1916,7 @@ const POSScreen: React.FC<POSProps> = ({
             {(['EFECTIVO', 'CREDITO'] as const).map((m) => (
               <button
                 key={m}
+                disabled={feedbackLoading}
                 onClick={() => handleSelectPaymentMethod(m)}
                 className={`py-3 text-[10px] font-black rounded-xl border-2 transition-all ${paymentMethod === m
                   ? 'bg-orange-500 border-orange-400 text-white shadow-lg'
@@ -1921,7 +1936,7 @@ const POSScreen: React.FC<POSProps> = ({
           </div>
 
           <button
-            disabled={cart.length === 0}
+            disabled={cart.length === 0 || feedbackLoading}
             onClick={handleCheckout}
             className={`w-full py-5 rounded-2xl font-black text-xl shadow-2xl transition-all ${cart.length > 0 ? 'bg-orange-500 active:scale-95' : 'bg-slate-800 text-slate-600'
               }`}
@@ -1989,17 +2004,19 @@ const POSScreen: React.FC<POSProps> = ({
               )}
               <div className="flex flex-col md:flex-row gap-2 justify-end">
                 {creditCheck.allowCash && (
-                  <button
-                    onClick={() => {
-                      setPaymentMethod('EFECTIVO');
-                      setIsCreditBlockedOpen(false);
-                    }}
+                <button
+                  disabled={feedbackLoading}
+                  onClick={() => {
+                    setPaymentMethod('EFECTIVO');
+                    setIsCreditBlockedOpen(false);
+                  }}
                     className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-[10px] font-black uppercase"
                   >
                     Vender contado
                   </button>
                 )}
                 <button
+                  disabled={feedbackLoading}
                   onClick={openPaymentForVencidas}
                   className="px-4 py-2 rounded-xl bg-orange-500 text-white text-[10px] font-black uppercase"
                 >
@@ -2007,6 +2024,7 @@ const POSScreen: React.FC<POSProps> = ({
                 </button>
                 {canOverrideOverdueCredit && (
                   <button
+                    disabled={feedbackLoading}
                     onClick={handleApproveOverdueCredit}
                     className="px-4 py-2 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase"
                   >
@@ -2048,6 +2066,7 @@ const POSScreen: React.FC<POSProps> = ({
               </div>
               <div className="flex justify-end">
                 <button
+                  disabled={feedbackLoading}
                   onClick={() => {
                     setPaymentMethod('EFECTIVO');
                     setIsCreditLimitOpen(false);
@@ -2122,12 +2141,14 @@ const POSScreen: React.FC<POSProps> = ({
               </div>
               <div className="flex gap-2 justify-end">
                 <button
+                  disabled={feedbackLoading}
                   onClick={() => setIsPaymentModalOpen(false)}
                   className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-[10px] font-black uppercase"
                 >
                   Cancelar
                 </button>
                 <button
+                  disabled={feedbackLoading}
                   onClick={handleSubmitPayments}
                   className="px-4 py-2 rounded-xl bg-orange-500 text-white text-[10px] font-black uppercase"
                 >
@@ -2308,7 +2329,7 @@ const POSScreen: React.FC<POSProps> = ({
                 className="w-full p-4 rounded-2xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
               >
                 <p className="text-sm font-black text-slate-900">Venta por mayor</p>
-                <p className="text-[10px] text-slate-500">Usa la unidad base del producto.</p>
+                <p className="text-[10px] text-slate-500">Usa precio mayorista y permite elegir equivalencias configuradas.</p>
               </button>
             </div>
           </div>
@@ -2342,7 +2363,6 @@ const POSScreen: React.FC<POSProps> = ({
                   ? [baseUom, ...saleUoms]
                   : saleUoms;
                 return withBase.map((uom) => {
-                  const label = uom.uom?.code ?? uom.uom?.name ?? 'UOM';
                   return (
                     <button
                       key={uom.id}
@@ -2380,7 +2400,7 @@ const POSScreen: React.FC<POSProps> = ({
                       }}
                       className="w-full p-4 rounded-2xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
                     >
-                      <p className="text-sm font-black text-slate-900">{label}</p>
+                      <p className="text-sm font-black text-slate-900">{formatSaleUomLabel(productId, uom)}</p>
                       <p className="text-[10px] text-slate-500">Factor a base: {uom.factor_to_base}</p>
                     </button>
                   );
