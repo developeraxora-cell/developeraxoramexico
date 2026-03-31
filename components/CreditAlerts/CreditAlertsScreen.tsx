@@ -30,7 +30,7 @@ interface AlertNote {
   balance: number;
 }
 
-type AlertFilter = 'RELEVANTES' | 'CRITICOS' | 'TIEMPO' | 'LIMITE' | 'TODOS';
+type AlertFilter = 'VENCIDOS' | 'POR_VENCER' | 'LIMITE_EXCEDIDO' | 'LIMITE_PREVENTIVO' | 'TODOS';
 type AlertLevel = 'CRITICO' | 'PREVENTIVO' | 'NORMAL';
 
 interface AlertRow {
@@ -152,17 +152,17 @@ const buildAlertRow = (customer: AlertCustomer, notes: AlertNote[], today: Date)
 
 const rowMatchesFilter = (row: AlertRow, filter: AlertFilter) => {
   switch (filter) {
-    case 'CRITICOS':
-      return row.level === 'CRITICO';
-    case 'TIEMPO':
-      return row.hasOverdue || row.isNearDue;
-    case 'LIMITE':
-      return row.isOverLimit || row.isNearLimit;
+    case 'VENCIDOS':
+      return row.hasOverdue;
+    case 'POR_VENCER':
+      return !row.hasOverdue && row.isNearDue;
+    case 'LIMITE_EXCEDIDO':
+      return row.isOverLimit;
+    case 'LIMITE_PREVENTIVO':
+      return !row.isOverLimit && row.isNearLimit;
     case 'TODOS':
-      return true;
-    case 'RELEVANTES':
     default:
-      return row.level !== 'NORMAL';
+      return true;
   }
 };
 
@@ -194,7 +194,7 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
   const [openNotes, setOpenNotes] = useState<AlertNote[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [filter, setFilter] = useState<AlertFilter>('RELEVANTES');
+  const [filter, setFilter] = useState<AlertFilter>('TODOS');
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -342,10 +342,10 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
 
   const filterCounters = useMemo(
     () => ({
-      RELEVANTES: alertRows.filter((row) => row.level !== 'NORMAL').length,
-      CRITICOS: alertRows.filter((row) => row.level === 'CRITICO').length,
-      TIEMPO: alertRows.filter((row) => row.hasOverdue || row.isNearDue).length,
-      LIMITE: alertRows.filter((row) => row.isOverLimit || row.isNearLimit).length,
+      VENCIDOS: alertRows.filter((row) => row.hasOverdue).length,
+      POR_VENCER: alertRows.filter((row) => !row.hasOverdue && row.isNearDue).length,
+      LIMITE_EXCEDIDO: alertRows.filter((row) => row.isOverLimit).length,
+      LIMITE_PREVENTIVO: alertRows.filter((row) => !row.isOverLimit && row.isNearLimit).length,
       TODOS: alertRows.length,
     }),
     [alertRows]
@@ -398,10 +398,10 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap gap-2">
               {[
-                { id: 'RELEVANTES', label: 'Relevantes' },
-                { id: 'CRITICOS', label: 'Críticos' },
-                { id: 'TIEMPO', label: 'Por tiempo' },
-                { id: 'LIMITE', label: 'Por límite' },
+                { id: 'VENCIDOS', label: 'Vencidos' },
+                { id: 'POR_VENCER', label: 'Por vencer 7 días' },
+                { id: 'LIMITE_EXCEDIDO', label: 'Límite excedido' },
+                { id: 'LIMITE_PREVENTIVO', label: 'Límite preventivo' },
                 { id: 'TODOS', label: 'Todos' },
               ].map((option) => (
                 <button
