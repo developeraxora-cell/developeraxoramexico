@@ -81,6 +81,7 @@ const POSScreen: React.FC<POSProps> = ({
   } | null>(null);
   const [isCreditBlockedOpen, setIsCreditBlockedOpen] = useState(false);
   const [isCreditLimitOpen, setIsCreditLimitOpen] = useState(false);
+  const [blockedNotesPage, setBlockedNotesPage] = useState(1);
   const [creditOverrideApproved, setCreditOverrideApproved] = useState(false);
   const [creditOverrideNote, setCreditOverrideNote] = useState('');
   const [creditOverrideError, setCreditOverrideError] = useState<string | null>(null);
@@ -90,6 +91,7 @@ const POSScreen: React.FC<POSProps> = ({
   const [noteRows, setNoteRows] = useState<Record<string, number>>({});
   const [isSaleTypeOpen, setIsSaleTypeOpen] = useState(false);
   const [isUnitSelectOpen, setIsUnitSelectOpen] = useState(false);
+  const [unitSelectionSaleType, setUnitSelectionSaleType] = useState<'MAYOR' | 'MENOR'>('MENOR');
   const [isSaleUomSelectOpen, setIsSaleUomSelectOpen] = useState(false);
   const [pendingCatalogProduct, setPendingCatalogProduct] = useState<CatalogProduct | null>(null);
   const [pendingPrice, setPendingPrice] = useState(0);
@@ -681,6 +683,12 @@ const POSScreen: React.FC<POSProps> = ({
     creditCheck.reason === 'VENCIDAS' &&
     Number(creditCheck.disponible ?? 0) >= cartTotal
   );
+  const blockedNotesTotalPages = Math.max(1, Math.ceil((creditCheck?.vencidas.length ?? 0) / 5));
+  const blockedNotesCurrentPage = Math.min(blockedNotesPage, blockedNotesTotalPages);
+  const blockedNotesPageRows = (creditCheck?.vencidas ?? []).slice(
+    (blockedNotesCurrentPage - 1) * 5,
+    blockedNotesCurrentPage * 5
+  );
   const formatLocalDateTime = (value: string) => {
     const normalized = value.endsWith('Z') ? value : `${value}Z`;
     return new Date(normalized).toLocaleString();
@@ -1096,6 +1104,14 @@ const POSScreen: React.FC<POSProps> = ({
     setCreditOverrideError(null);
     setSaleCreditDays(30);
   }, [selectedCustomer?.id, cartTotal]);
+
+  useEffect(() => {
+    if (!isCreditBlockedOpen) {
+      setBlockedNotesPage(1);
+      return;
+    }
+    setBlockedNotesPage((prev) => Math.min(prev, blockedNotesTotalPages));
+  }, [isCreditBlockedOpen, blockedNotesTotalPages]);
 
   const runCreditCheck = useCallback(async () => {
     if (!selectedCustomer) return null;
@@ -1537,6 +1553,7 @@ const POSScreen: React.FC<POSProps> = ({
         const saleUoms = saleUomsByProduct[item.productId] ?? [];
         const match = saleUoms.find((uom) => String(uom.id) === String(nextUomId));
         const factor = match ? Number(match.factor_to_base) : 1;
+        const product = resolveProductForCart(item.productId);
         const saleTypeResolved = item.saleType ?? 'MENOR';
         const unitPrice = resolveStandardUnitPrice(
           item.productId,
@@ -1968,7 +1985,7 @@ const POSScreen: React.FC<POSProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {creditCheck.vencidas.map((note) => (
+                  {blockedNotesPageRows.map((note) => (
                     <tr key={note.id}>
                       <td className="p-3 text-xs font-bold text-slate-700">{note.folio}</td>
                       <td className="p-3 text-xs text-slate-500">{note.issue_date}</td>
@@ -1979,6 +1996,35 @@ const POSScreen: React.FC<POSProps> = ({
                   ))}
                 </tbody>
               </table>
+              {creditCheck.vencidas.length > 5 && (
+                <div className="flex items-center justify-between gap-3 text-xs font-bold text-slate-500">
+                  <span>
+                    Mostrando {(blockedNotesCurrentPage - 1) * 5 + 1}-
+                    {Math.min(blockedNotesCurrentPage * 5, creditCheck.vencidas.length)} de {creditCheck.vencidas.length} deudas
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={blockedNotesCurrentPage === 1}
+                      onClick={() => setBlockedNotesPage((prev) => Math.max(1, prev - 1))}
+                      className="rounded-xl border border-slate-200 px-3 py-2 text-[10px] font-black uppercase text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Anterior
+                    </button>
+                    <span className="min-w-[48px] text-center text-[10px] font-black uppercase text-slate-500">
+                      {blockedNotesCurrentPage} / {blockedNotesTotalPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={blockedNotesCurrentPage >= blockedNotesTotalPages}
+                      onClick={() => setBlockedNotesPage((prev) => Math.min(blockedNotesTotalPages, prev + 1))}
+                      className="rounded-xl border border-slate-200 px-3 py-2 text-[10px] font-black uppercase text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
+              )}
               {canOverrideOverdueCredit && (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-3">
                   <div>
@@ -2283,6 +2329,7 @@ const POSScreen: React.FC<POSProps> = ({
               <button
                 onClick={() => {
                   setIsSaleTypeOpen(false);
+                  setUnitSelectionSaleType('MENOR');
                   setIsUnitSelectOpen(true);
                 }}
                 className="w-full p-4 rounded-2xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
@@ -2292,39 +2339,9 @@ const POSScreen: React.FC<POSProps> = ({
               </button>
               <button
                 onClick={() => {
-                  const baseUom = getBaseSaleUom(String(pendingCatalogProduct.id));
-                  if (!baseUom) {
-                    showFeedback('alert', 'Unidad base faltante', 'Configure la unidad base de venta.');
-                    return;
-                  }
-                  const mapped: PosProduct = {
-                    id: String(pendingCatalogProduct.id),
-                    sku: pendingCatalogProduct.sku ?? '',
-                    barcode: pendingCatalogProduct.barcode ?? '',
-                    name: pendingCatalogProduct.name,
-                    category: 'CATALOGO',
-                    baseUnitId: pendingCatalogProduct.base_uom_id,
-                    allowsDecimals: pendingCatalogProduct.is_divisible,
-                    minStock: 0,
-                    maxStock: 0,
-                    stocks: pendingStockValue !== undefined ? [{ branchId: branchId, qty: pendingStockValue ?? 0 }] : [],
-                    costPerBaseUnit: 0,
-                    pricePerBaseUnit: Number((pendingCatalogProduct as any).wholesale_price ?? pendingPrice),
-                    productUomId: baseUom.id,
-                  };
-                  addToCart(
-                    mapped,
-                    undefined,
-                    undefined,
-                    pendingStockValue,
-                    baseUom.id,
-                    Number(baseUom.factor_to_base ?? 1),
-                    'MAYOR'
-                  );
                   setIsSaleTypeOpen(false);
-                  setPendingCatalogProduct(null);
-                  setPendingPrice(0);
-                  setPendingStockValue(undefined);
+                  setUnitSelectionSaleType('MAYOR');
+                  setIsUnitSelectOpen(true);
                 }}
                 className="w-full p-4 rounded-2xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
               >
@@ -2348,6 +2365,7 @@ const POSScreen: React.FC<POSProps> = ({
                 onClick={() => {
                   setIsUnitSelectOpen(false);
                   setPendingCatalogProduct(null);
+                  setUnitSelectionSaleType('MENOR');
                 }}
                 className="text-2xl text-slate-300"
               >
@@ -2369,21 +2387,25 @@ const POSScreen: React.FC<POSProps> = ({
                       onClick={() => {
                         const hasStock = Object.prototype.hasOwnProperty.call(branchStock, pendingCatalogProduct.id);
                         const stockValue = pendingStockValue ?? (hasStock ? branchStock[pendingCatalogProduct.id] : undefined);
-                  const mapped: PosProduct = {
-                    id: String(pendingCatalogProduct.id),
-                    sku: pendingCatalogProduct.sku ?? '',
-                    barcode: pendingCatalogProduct.barcode ?? '',
-                    name: pendingCatalogProduct.name,
+                        const mapped: PosProduct = {
+                          id: String(pendingCatalogProduct.id),
+                          sku: pendingCatalogProduct.sku ?? '',
+                          barcode: pendingCatalogProduct.barcode ?? '',
+                          name: pendingCatalogProduct.name,
                           category: 'CATALOGO',
                           baseUnitId: pendingCatalogProduct.base_uom_id,
                           allowsDecimals: pendingCatalogProduct.is_divisible,
                           minStock: 0,
                           maxStock: 0,
-                    stocks: hasStock ? [{ branchId: branchId, qty: stockValue ?? 0 }] : [],
-                    costPerBaseUnit: 0,
-                    pricePerBaseUnit: Number((pendingCatalogProduct as any).retail_price ?? (pendingCatalogProduct as any).precio ?? pendingPrice),
-                    productUomId: uom.id,
-                  };
+                          stocks: hasStock ? [{ branchId: branchId, qty: stockValue ?? 0 }] : [],
+                          costPerBaseUnit: 0,
+                          pricePerBaseUnit: Number(
+                            unitSelectionSaleType === 'MAYOR'
+                              ? ((pendingCatalogProduct as any).wholesale_price ?? pendingPrice)
+                              : ((pendingCatalogProduct as any).retail_price ?? (pendingCatalogProduct as any).precio ?? pendingPrice)
+                          ),
+                          productUomId: uom.id,
+                        };
                         addToCart(
                           mapped,
                           undefined,
@@ -2391,12 +2413,13 @@ const POSScreen: React.FC<POSProps> = ({
                           stockValue,
                           uom.id,
                           Number(uom.factor_to_base ?? 1),
-                          'MENOR'
+                          unitSelectionSaleType
                         );
                         setIsUnitSelectOpen(false);
                         setPendingCatalogProduct(null);
                         setPendingPrice(0);
                         setPendingStockValue(undefined);
+                        setUnitSelectionSaleType('MENOR');
                       }}
                       className="w-full p-4 rounded-2xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
                     >
