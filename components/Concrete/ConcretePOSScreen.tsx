@@ -1560,7 +1560,8 @@ const POSScreen: React.FC<POSProps> = ({
         if (item.id !== itemId) return item;
         const product = branchProducts.find((p) => String(p.id) === item.productId)
           ?? (products ?? []).find((p) => p.id === item.productId);
-        const newQty = updates.qty !== undefined ? updates.qty : item.qty;
+        const requestedQty = updates.qty !== undefined ? Number(updates.qty) : Number(item.qty);
+        const newQty = Number.isFinite(requestedQty) ? Math.max(1, requestedQty) : Math.max(1, Number(item.qty) || 1);
         const newUnitId = updates.unitId !== undefined ? updates.unitId : item.unitId;
         const nextProductUomId = updates.productUomId ?? item.productUomId;
         const shouldResetSpecialPrice =
@@ -1931,8 +1932,13 @@ const POSScreen: React.FC<POSProps> = ({
               <div className="flex gap-2">
                 <input
                   type="number"
+                  min={1}
                   value={item.qty}
-                  onChange={(e) => updateCartItem(item.id, { qty: Number(e.target.value) })}
+                  onChange={(e) => {
+                    const rawValue = e.target.value;
+                    if (rawValue === '') return;
+                    updateCartItem(item.id, { qty: Math.max(1, Number(rawValue)) });
+                  }}
                   className="w-20 p-2 border-2 border-slate-200 rounded-lg text-center font-black"
                 />
                 {(() => {

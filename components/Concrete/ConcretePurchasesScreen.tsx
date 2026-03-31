@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Brush, Eye, FileDown, History, Plus } from 'lucide-react';
+import { Brush, Eye, FileDown, History, Plus, Trash2 } from 'lucide-react';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, User } from '../../types';
 import { supabase } from '../../services/supabaseClient';
@@ -17,6 +17,7 @@ import {
 import { purchasesService } from '../../services/concretera/purchases.service';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { logConcreteraAudit } from '../../services/audit/audit.service';
+import { resolveFactorToBase } from '../../services/uomEquivalence';
 
 interface PurchasesScreenProps {
   selectedBranchId: string;
@@ -54,6 +55,7 @@ interface PurchaseItemDetail {
   qty: number;
   unit_price: number;
   qty_base: number;
+  factor_used: number;
   product: {
     name: string;
     sku: string | null;
@@ -102,6 +104,9 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   const [isClearHistoryOpen, setIsClearHistoryOpen] = useState(false);
   const [clearHistoryObservation, setClearHistoryObservation] = useState('');
   const [clearHistoryObservationError, setClearHistoryObservationError] = useState<string | null>(null);
+  const [purchaseToDelete, setPurchaseToDelete] = useState<PurchaseHistoryEntry | null>(null);
+  const [deletePurchaseObservation, setDeletePurchaseObservation] = useState('');
+  const [deletePurchaseObservationError, setDeletePurchaseObservationError] = useState<string | null>(null);
   const [isPurchaseDetailOpen, setIsPurchaseDetailOpen] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<PurchaseHistoryEntry | null>(null);
   const [purchaseItems, setPurchaseItems] = useState<PurchaseItemDetail[]>([]);
@@ -147,6 +152,17 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       return acc;
     }, {});
   }, [uoms]);
+  const getEffectiveFactor = useCallback((productId: string, factor: number, uomCode?: string | null, uomName?: string | null) => {
+    const product = catalogProducts.find((row) => String(row.id) === String(productId));
+    const baseUom = product?.base_uom_id ? uomById[String(product.base_uom_id)] : undefined;
+    return resolveFactorToBase({
+      configuredFactor: factor,
+      selectedUnitCode: uomCode ?? null,
+      selectedUnitName: uomName ?? null,
+      baseUnitCode: baseUom?.code ?? null,
+      baseUnitName: baseUom?.name ?? null,
+    });
+  }, [catalogProducts, uomById]);
   const loadCatalog = useCallback(async () => {
     setIsCatalogLoading(true);
     setError(null);
@@ -334,6 +350,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         return next;
       }
 
+      const effectiveFactor = getEffectiveFactor(product.id, Number(uom.factor_to_base), uomCode, uomName);
       return [
         {
           product_id: product.id,
@@ -342,7 +359,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
           product_uom_id: uom.id,
           uom_name: uomName,
           uom_code: uomCode,
-          factor_to_base: Number(uom.factor_to_base),
+          factor_to_base: effectiveFactor,
           is_divisible: product.is_divisible,
           qty: 1,
           unit_price: 0,
@@ -473,7 +490,12 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
               product_uom_id: String(nextUom.id),
               uom_name: nextUomName,
               uom_code: nextUomCode,
-              factor_to_base: Number(nextUom.factor_to_base ?? 1),
+              factor_to_base: getEffectiveFactor(
+                productId,
+                Number(nextUom.factor_to_base ?? 1),
+                nextUomCode,
+                nextUomName
+              ),
             }
           : item
       );
@@ -754,6 +776,25 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       return;
     }
 
+    const invalidFactorItem = cartItems.find((item) => {
+      const product = catalogProducts.find((row) => String(row.id) === String(item.product_id));
+      const baseUom = product?.base_uom_id ? uomById[String(product.base_uom_id)] : undefined;
+      const selectedUomCode = (item.uom_code || item.uom_name || '').trim().toUpperCase();
+      const baseUomCode = (baseUom?.code || baseUom?.name || '').trim().toUpperCase();
+      return Boolean(product && baseUomCode && selectedUomCode && selectedUomCode !== baseUomCode && Number(item.factor_to_base) === 1);
+    });
+
+    if (invalidFactorItem) {
+      const product = catalogProducts.find((row) => String(row.id) === String(invalidFactorItem.product_id));
+      const baseUom = product?.base_uom_id ? uomById[String(product.base_uom_id)] : undefined;
+      showFeedback(
+        'alert',
+        'Equivalencia inválida',
+        `La unidad ${invalidFactorItem.uom_code || invalidFactorItem.uom_name} de ${invalidFactorItem.product_name} tiene factor 1, pero su unidad base es ${baseUom?.code || baseUom?.name || 'distinta'}. Corrija la equivalencia del producto antes de registrar la compra.`
+      );
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
     showFeedback('loading', 'Registrando compra', 'Procesando información...');
@@ -773,6 +814,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
           qty: item.qty,
           unit_price: item.unit_price,
           barcode_scanned: item.barcode,
+          factor_to_base: item.factor_to_base,
         })),
       });
 
@@ -871,6 +913,82 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     }
   };
 
+  const handleRequestDeletePurchase = (purchase: PurchaseHistoryEntry) => {
+    setPurchaseToDelete(purchase);
+    setDeletePurchaseObservation('');
+    setDeletePurchaseObservationError(null);
+  };
+
+  const handleDeletePurchase = async () => {
+    if (!branchId || !purchaseToDelete) {
+      showFeedback('alert', 'Compra requerida', 'Seleccione una compra válida para eliminar.');
+      return;
+    }
+
+    const justification = deletePurchaseObservation.trim();
+    if (!justification) {
+      setDeletePurchaseObservationError('La observación es obligatoria para eliminar la compra.');
+      return;
+    }
+
+    const purchaseSnapshot = {
+      id: purchaseToDelete.id,
+      reference: purchaseToDelete.reference,
+      supplier_name: purchaseToDelete.supplier_name ?? null,
+      purchase_date: purchaseToDelete.purchase_date ?? null,
+      created_at: purchaseToDelete.created_at,
+      notes: purchaseToDelete.notes ?? null,
+      items_count: purchaseToDelete.items_count,
+      total_amount: purchaseToDelete.total_amount,
+      is_credit: purchaseToDelete.is_credit ?? false,
+    };
+
+    setPurchaseToDelete(null);
+    setDeletePurchaseObservation('');
+    setDeletePurchaseObservationError(null);
+    showFeedback('loading', 'Eliminando compra', 'Restaurando inventario y eliminando registro...');
+
+    try {
+      const result = await purchasesService.deletePurchase({
+        purchase_id: purchaseSnapshot.id,
+        deleted_by: currentUser.id,
+        delete_note: justification,
+      });
+
+      logConcreteraAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ELIMINAR',
+        entity_type: 'compra',
+        entity_id: purchaseSnapshot.id,
+        description: `Compra eliminada${purchaseSnapshot.supplier_name ? ` de ${purchaseSnapshot.supplier_name}` : ''}`,
+        justification,
+        previous_data: {
+          ...purchaseSnapshot,
+          restored_qty_base: result?.restored_qty_base ?? 0,
+          restored_products: result?.restored_products ?? [],
+          items_deleted: result?.items_deleted ?? purchaseSnapshot.items_count,
+        },
+      });
+
+      if (selectedPurchase?.id === purchaseSnapshot.id) {
+        setIsPurchaseDetailOpen(false);
+        setSelectedPurchase(null);
+        setPurchaseItems([]);
+      }
+
+      setFeedbackOpen(false);
+      showFeedback('success', 'Compra eliminada', 'La compra se eliminó y el inventario fue restaurado.');
+      await Promise.all([loadHistory(), loadCatalog()]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo eliminar la compra.';
+      setFeedbackOpen(false);
+      showFeedback('error', 'No se pudo eliminar', message);
+    }
+  };
+
   const handleOpenPurchaseDetail = async (purchase: PurchaseHistoryEntry) => {
     setSelectedPurchase(purchase);
     setIsPurchaseDetailOpen(true);
@@ -883,6 +1001,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
           id,
           qty,
           unit_price,
+          factor_used,
           qty_base,
           product_id,
           product_uom_id,
@@ -897,6 +1016,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         id: row.id,
         qty: Number(row.qty ?? 0),
         unit_price: Number(row.unit_price ?? 0),
+        factor_used: Number(row.factor_used ?? 1),
         qty_base: Number(row.qty_base ?? 0),
         product: row.concrete_products ?? null,
         uom: row.concrete_product_uoms?.concrete_uoms ?? null,
@@ -1163,6 +1283,14 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                             );
                           })}
                         </select>
+                        <p className="mt-1 text-[9px] font-semibold text-slate-500">
+                          Equivalencia: 1 {item.uom_code || item.uom_name} = {formatNumber(Number(item.factor_to_base))}{' '}
+                          {(() => {
+                            const product = catalogProducts.find((row) => String(row.id) === String(item.product_id));
+                            const baseUom = product?.base_uom_id ? uomById[String(product.base_uom_id)] : undefined;
+                            return baseUom?.code || baseUom?.name || 'base';
+                          })()}
+                        </p>
                       </div>
                     </div>
                     <div className="col-span-3">
@@ -1240,7 +1368,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                   <th className="p-4 text-[10px] font-black uppercase tracking-widest">Notas</th>
                   <th className="p-4 text-[10px] font-black uppercase tracking-widest text-center">Items</th>
                   <th className="p-4 text-[10px] font-black uppercase tracking-widest text-right">Monto Total</th>
-                  <th className="p-4 text-[10px] font-black uppercase tracking-widest text-center">Detalle</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1302,6 +1430,13 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                           title="Descargar PDF"
                         >
                           <FileDown className="w-4 h-4 text-slate-600" />
+                        </button>
+                        <button
+                          onClick={() => handleRequestDeletePurchase(p)}
+                          className="w-8 h-8 text-center rounded-lg bg-red-50 text-slate-500 hover:text-red-700 hover:bg-red-100 flex items-center justify-center"
+                          title="Eliminar compra"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
                         </button>
                       </div>
                     </td>
@@ -1536,6 +1671,30 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         }}
       />
 
+      <ConfirmModal
+        isOpen={Boolean(purchaseToDelete)}
+        title="Eliminar compra"
+        description="Se eliminará la compra seleccionada y se restaurará el inventario relacionado. Si parte del stock ya fue consumido, la eliminación será rechazada."
+        confirmText="Eliminar compra"
+        cancelText="Cancelar"
+        noteLabel="Observación obligatoria"
+        notePlaceholder="Explique por qué se eliminará la compra"
+        noteValue={deletePurchaseObservation}
+        noteRequired
+        noteError={deletePurchaseObservationError}
+        isProcessing={feedbackOpen && feedbackType === 'loading'}
+        onNoteChange={(value) => {
+          setDeletePurchaseObservation(value);
+          if (deletePurchaseObservationError) setDeletePurchaseObservationError(null);
+        }}
+        onConfirm={handleDeletePurchase}
+        onCancel={() => {
+          setPurchaseToDelete(null);
+          setDeletePurchaseObservation('');
+          setDeletePurchaseObservationError(null);
+        }}
+      />
+
       <FeedbackModal
         isOpen={feedbackOpen}
         type={feedbackType}
@@ -1579,7 +1738,9 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                       <th className="p-3 text-[10px] font-black uppercase tracking-widest">Producto</th>
                       <th className="p-3 text-[10px] font-black uppercase tracking-widest">SKU</th>
                       <th className="p-3 text-[10px] font-black uppercase tracking-widest">UOM</th>
+                      <th className="p-3 text-[10px] font-black uppercase tracking-widest text-right">Factor</th>
                       <th className="p-3 text-[10px] font-black uppercase tracking-widest text-right">Cantidad</th>
+                      <th className="p-3 text-[10px] font-black uppercase tracking-widest text-right">Cantidad base</th>
                       <th className="p-3 text-[10px] font-black uppercase tracking-widest text-right">Precio</th>
                       <th className="p-3 text-[10px] font-black uppercase tracking-widest text-right">Subtotal</th>
                     </tr>
@@ -1587,6 +1748,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                   <tbody className="divide-y divide-slate-100">
                     {purchaseItems.map((item) => {
                       const subtotal = Number(item.qty) * Number(item.unit_price);
+                      const baseUom = item.product?.base_uom_id ? uomById[item.product.base_uom_id] : undefined;
                       return (
                         <tr key={item.id} className="hover:bg-slate-50">
                           <td className="p-3 text-xs font-black text-slate-800 uppercase">
@@ -1597,7 +1759,13 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                             {item.uom?.name ?? 'UOM'}{item.uom?.code ? ` (${item.uom?.code})` : ''}
                           </td>
                           <td className="p-3 text-xs font-bold text-slate-600 text-right">
+                            {formatNumber(Number(item.factor_used))}
+                          </td>
+                          <td className="p-3 text-xs font-bold text-slate-600 text-right">
                             {formatNumber(Number(item.qty))}
+                          </td>
+                          <td className="p-3 text-xs font-bold text-slate-600 text-right">
+                            {formatNumber(Number(item.qty_base))} {baseUom?.code ?? baseUom?.name ?? ''}
                           </td>
                           <td className="p-3 text-xs font-bold text-slate-600 text-right">
                             {formatCurrency(Number(item.unit_price))}

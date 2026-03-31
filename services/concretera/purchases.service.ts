@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import type { ProductUom } from './catalog.service';
+import { resolveFactorToBase } from '../uomEquivalence';
 const concreteDb = supabase;
 
 export interface PurchaseCartItemInput {
@@ -8,6 +9,7 @@ export interface PurchaseCartItemInput {
   qty: number;
   unit_price: number;
   barcode_scanned: string;
+  factor_to_base?: number;
 }
 
 export interface CreatePurchaseInput {
@@ -46,6 +48,12 @@ export interface CreateSaleInput {
 
 export interface DeleteSaleInput {
   sale_id: string;
+  deleted_by: string;
+  delete_note: string;
+}
+
+export interface DeletePurchaseInput {
+  purchase_id: string;
   deleted_by: string;
   delete_note: string;
 }
@@ -230,18 +238,66 @@ export const purchasesService = {
     if (txError) throw txError;
 
     const uomIds = [...new Set(cartItems.map((item) => item.product_uom_id))];
+    const productIds = [...new Set(cartItems.map((item) => item.product_id))];
     const { data: uoms, error: uomError } = await concreteDb
       .from('concrete_product_uoms')
-      .select('id, factor_to_base')
+      .select('id, factor_to_base, uom_id, concrete_uoms (code, name)')
       .in('id', uomIds);
 
     if (uomError) throw uomError;
 
-    const factorMap = new Map<string, number>();
-    (uoms ?? []).forEach((row) => factorMap.set(row.id, Number(row.factor_to_base)));
+    const { data: products, error: productError } = await concreteDb
+      .from('concrete_products')
+      .select('id, base_uom_id')
+      .in('id', productIds);
+
+    if (productError) throw productError;
+
+    const baseUomIds = [...new Set((products ?? []).map((row) => row.base_uom_id).filter(Boolean))];
+    const { data: baseUoms, error: baseUomError } = await concreteDb
+      .from('concrete_uoms')
+      .select('id, code, name')
+      .in('id', baseUomIds);
+
+    if (baseUomError) throw baseUomError;
+
+    const productMap = new Map<string, { base_uom_id: string | null }>();
+    (products ?? []).forEach((row) => productMap.set(String(row.id), { base_uom_id: row.base_uom_id }));
+
+    const baseUomMap = new Map<string, { code: string | null; name: string | null }>();
+    (baseUoms ?? []).forEach((row) => {
+      baseUomMap.set(String(row.id), { code: row.code ?? null, name: row.name ?? null });
+    });
+
+    const uomMap = new Map<
+      string,
+      {
+        factor_to_base: number;
+        uom_code: string | null;
+        uom_name: string | null;
+      }
+    >();
+    (uoms ?? []).forEach((row: any) => {
+      uomMap.set(String(row.id), {
+        factor_to_base: Number(row.factor_to_base ?? 1),
+        uom_code: row.concrete_uoms?.code ?? null,
+        uom_name: row.concrete_uoms?.name ?? null,
+      });
+    });
 
     const itemsPayload = cartItems.map((item) => {
-      const factor_used = factorMap.get(item.product_uom_id) ?? 1;
+      const productMeta = productMap.get(String(item.product_id));
+      const baseMeta = productMeta?.base_uom_id ? baseUomMap.get(String(productMeta.base_uom_id)) : undefined;
+      const uomMeta = uomMap.get(String(item.product_uom_id));
+      const factor_used = Number(item.factor_to_base ?? 0) > 0
+        ? Number(item.factor_to_base)
+        : resolveFactorToBase({
+            configuredFactor: uomMeta?.factor_to_base ?? 1,
+            selectedUnitCode: uomMeta?.uom_code,
+            selectedUnitName: uomMeta?.uom_name,
+            baseUnitCode: baseMeta?.code,
+            baseUnitName: baseMeta?.name,
+          });
       const qty_base = Number(item.qty) * Number(factor_used);
 
       return {
@@ -263,15 +319,15 @@ export const purchasesService = {
     if (itemsError) throw itemsError;
 
     const totalsByProduct = buildTotalsByProduct(itemsPayload);
-    const productIds = Object.keys(totalsByProduct);
+    const totalsProductIds = Object.keys(totalsByProduct);
 
     const nowIso = new Date().toISOString();
-    if (productIds.length > 0) {
+    if (totalsProductIds.length > 0) {
       const { data: existingRows, error: stockError } = await concreteDb
         .from('concrete_inventory_stock')
         .select('product_id, qty_base')
         .eq('branch_id', branch_id)
-        .in('product_id', productIds);
+        .in('product_id', totalsProductIds);
 
       if (stockError) throw stockError;
 
@@ -280,7 +336,7 @@ export const purchasesService = {
         existingMap.set(String(row.product_id), Number(row.qty_base ?? 0));
       });
 
-      const stockPayload = productIds.map((product_id) => ({
+      const stockPayload = totalsProductIds.map((product_id) => ({
         branch_id,
         product_id,
         qty_base: (existingMap.get(product_id) ?? 0) + totalsByProduct[product_id],
@@ -393,6 +449,17 @@ export const purchasesService = {
 
     if (error) throw error;
     return data;
+  },
+
+  async deletePurchase(input: DeletePurchaseInput) {
+    const { data, error } = await concreteDb.rpc('delete_concrete_purchase', {
+      p_purchase_id: Number(input.purchase_id),
+      p_deleted_by: input.deleted_by,
+      p_delete_note: input.delete_note,
+    });
+
+    if (error) throw error;
+    return Array.isArray(data) ? data[0] : data;
   },
 
   async createProductWithUoms(input: {
