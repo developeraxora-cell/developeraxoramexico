@@ -563,6 +563,24 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       const titleWidth = fontBold.widthOfTextAtSize(title, titleSize);
       page.drawText(title, { x: (width - titleWidth) / 2, y: headerTop, size: titleSize, font: fontBold });
 
+      const wrapText = (text: string, maxWidth: number, font: any, size: number) => {
+        const words = text.split(/\s+/).filter(Boolean);
+        if (words.length === 0) return [''];
+        const lines: string[] = [];
+        let current = '';
+        for (const word of words) {
+          const next = current ? `${current} ${word}` : word;
+          if (font.widthOfTextAtSize(next, size) <= maxWidth) {
+            current = next;
+            continue;
+          }
+          if (current) lines.push(current);
+          current = word;
+        }
+        if (current) lines.push(current);
+        return lines;
+      };
+
       // Outer border (full page)
       page.drawRectangle({
         x: marginX,
@@ -575,11 +593,19 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
 
       // Info box
       const boxTop = headerTop - 40;
-      const boxHeight = 110;
+      const referenceLabel = purchase.reference?.trim() || 'S/N';
+      const notesLabel = purchase.notes?.trim() || 'Sin notas';
+      const notesLines = wrapText(notesLabel, width - marginX * 2 - 110, fontRegular, 10).slice(0, 3);
+      const boxHeight = 130 + Math.max(0, notesLines.length - 1) * 12;
       page.drawText(`FECHA: ${dateLabel}`, { x: marginX + 12, y: boxTop - 36, size: 12, font: fontBold });
       page.drawText('NOTA DE ENTRADA', { x: width - marginX - 140, y: boxTop - 28, size: 12, font: fontBold });
       page.drawText(String(purchase.id), { x: width - marginX - 90, y: boxTop - 46, size: 12, font: fontBold });
       page.drawText(`USUARIO: ${currentUser.name}`, { x: width - marginX - 180, y: boxTop - 66, size: 11, font: fontRegular });
+      page.drawText(`REFERENCIA: ${referenceLabel}`, { x: marginX + 12, y: boxTop - 58, size: 11, font: fontRegular });
+      page.drawText('NOTAS:', { x: marginX + 12, y: boxTop - 80, size: 11, font: fontBold });
+      notesLines.forEach((line, index) => {
+        page.drawText(line, { x: marginX + 70, y: boxTop - 80 - index * 12, size: 10, font: fontRegular });
+      });
 
       // Table header
       const tableTop = boxTop - boxHeight - 20;

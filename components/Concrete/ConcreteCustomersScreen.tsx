@@ -96,6 +96,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [historyNotes, setHistoryNotes] = useState<CreditNoteWithStatus[]>([]);
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [historyStatusFilter, setHistoryStatusFilter] = useState<'TODAS' | 'VENCIDA' | 'ABIERTA' | 'PAGADA'>('TODAS');
+  const [historyNoteReferences, setHistoryNoteReferences] = useState<Record<string, string>>({});
   const [selectedHistoryNoteIds, setSelectedHistoryNoteIds] = useState<string[]>([]);
   const [historyPage, setHistoryPage] = useState(1);
   const [paymentPage, setPaymentPage] = useState(1);
@@ -181,10 +182,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     const term = historySearchTerm.trim().toLowerCase();
     return historyNotes.filter((note) => {
       const matchesStatus = historyStatusFilter === 'TODAS' || note.status === historyStatusFilter;
-      const matchesTerm = !term || getDisplayNoteCode(note).toLowerCase().includes(term);
+      const noteReference = historyNoteReferences[note.id]?.toLowerCase() ?? '';
+      const matchesTerm = !term || getDisplayNoteCode(note).toLowerCase().includes(term) || noteReference.includes(term);
       return matchesStatus && matchesTerm;
     });
-  }, [historyNotes, historySearchTerm, historyStatusFilter]);
+  }, [historyNoteReferences, historyNotes, historySearchTerm, historyStatusFilter]);
   const historyTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredHistoryNotes.length / MODAL_PAGE_SIZE)), [filteredHistoryNotes.length]);
   const filteredOpenNotes = useMemo(() => {
     const term = paymentSearchTerm.trim().toLowerCase();
@@ -321,6 +323,27 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       });
 
       setHistoryNotes(withStatus);
+      const transactionIds = withStatus
+        .map((note) => note.inventory_transaction_id ? String(note.inventory_transaction_id) : '')
+        .filter(Boolean);
+      if (transactionIds.length > 0) {
+        const { data: txRows, error: txError } = await supabase
+          .from('concrete_inventory_transactions')
+          .select('id, reference')
+          .in('id', transactionIds);
+        if (txError) throw txError;
+        const referencesByTxId = new Map((txRows ?? []).map((row: any) => [String(row.id), String(row.reference ?? '')]));
+        setHistoryNoteReferences(
+          withStatus.reduce<Record<string, string>>((acc, note) => {
+            if (note.inventory_transaction_id) {
+              acc[note.id] = referencesByTxId.get(String(note.inventory_transaction_id)) ?? '';
+            }
+            return acc;
+          }, {})
+        );
+      } else {
+        setHistoryNoteReferences({});
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo cargar notas.';
       setError(message);
