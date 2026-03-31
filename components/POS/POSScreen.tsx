@@ -168,6 +168,7 @@ const POSScreen: React.FC<POSProps> = ({
   const [specialPriceValue, setSpecialPriceValue] = useState('');
   const [specialPriceNote, setSpecialPriceNote] = useState('');
   const [specialPriceError, setSpecialPriceError] = useState<string | null>(null);
+  const [qtyDrafts, setQtyDrafts] = useState<Record<string, string>>({});
 
   const activeBranchProducts = useMemo(
     () => branchProducts.filter((product) => product.is_active !== false),
@@ -1260,6 +1261,8 @@ const POSScreen: React.FC<POSProps> = ({
           customer_id: customerSnapshot.id,
           total: totalSnapshot,
           credit_days_applied: saleCreditDays,
+          folio: String(transaction.id),
+          sale_reference: String(transaction.id),
           inventory_transaction_id: transaction.id,
         });
       }
@@ -1490,6 +1493,29 @@ const POSScreen: React.FC<POSProps> = ({
         };
       })
     );
+  };
+
+  const commitQtyDraft = (itemId: string) => {
+    const draft = qtyDrafts[itemId];
+    if (draft === undefined) return;
+    const normalized = draft.trim();
+    if (!normalized || normalized === '.') {
+      setQtyDrafts((prev) => {
+        const next = { ...prev };
+        delete next[itemId];
+        return next;
+      });
+      return;
+    }
+    const parsed = Number(normalized);
+    if (Number.isFinite(parsed)) {
+      updateCartItem(itemId, { qty: Math.max(1, parsed) });
+    }
+    setQtyDrafts((prev) => {
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
   };
 
   const handleSaleUomChange = (itemId: string, nextUomId: string) => {
@@ -1756,14 +1782,28 @@ const POSScreen: React.FC<POSProps> = ({
               </div>
               <div className="flex gap-2">
                 <input
-                  type="number"
-                  min={1}
-                  value={item.qty}
-                  onChange={(e) => {
-                    const rawValue = e.target.value;
-                    if (rawValue === '') return;
-                    updateCartItem(item.id, { qty: Math.max(1, Number(rawValue)) });
+                  type="text"
+                  inputMode="decimal"
+                  value={qtyDrafts[item.id] ?? String(item.qty)}
+                  onKeyDown={(e) => {
+                    if (e.key === ',' || e.key === '-') {
+                      e.preventDefault();
+                    }
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      commitQtyDraft(item.id);
+                    }
                   }}
+                  onChange={(e) => {
+                    const rawValue = e.target.value.replace(',', '');
+                    if (!/^\d*\.?\d*$/.test(rawValue)) return;
+                    setQtyDrafts((prev) => ({ ...prev, [item.id]: rawValue }));
+                    if (rawValue === '' || rawValue.endsWith('.')) return;
+                    const parsed = Number(rawValue);
+                    if (!Number.isFinite(parsed)) return;
+                    updateCartItem(item.id, { qty: Math.max(1, parsed) });
+                  }}
+                  onBlur={() => commitQtyDraft(item.id)}
                   className="w-20 p-2 border-2 border-slate-200 rounded-lg text-center font-black"
                 />
                 {(() => {

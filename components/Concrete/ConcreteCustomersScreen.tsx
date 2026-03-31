@@ -58,6 +58,10 @@ const createDefaultPaymentEditForm = () => ({
   justification: '',
 });
 const ALPHABET_FILTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const getDisplayNoteCode = (note: Pick<CreditNote, 'folio' | 'sale_reference' | 'inventory_transaction_id'>) =>
+  String(note.sale_reference ?? '').trim()
+  || (note.inventory_transaction_id ? String(note.inventory_transaction_id) : '')
+  || note.folio;
 
 type ConcreteSaleSummaryItem = {
   id: string;
@@ -177,7 +181,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     const term = historySearchTerm.trim().toLowerCase();
     return historyNotes.filter((note) => {
       const matchesStatus = historyStatusFilter === 'TODAS' || note.status === historyStatusFilter;
-      const matchesTerm = !term || (note.folio ?? '').toLowerCase().includes(term);
+      const matchesTerm = !term || getDisplayNoteCode(note).toLowerCase().includes(term);
       return matchesStatus && matchesTerm;
     });
   }, [historyNotes, historySearchTerm, historyStatusFilter]);
@@ -185,7 +189,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const filteredOpenNotes = useMemo(() => {
     const term = paymentSearchTerm.trim().toLowerCase();
     if (!term) return openNotes;
-    return openNotes.filter((note) => (note.folio ?? '').toLowerCase().includes(term));
+    return openNotes.filter((note) => getDisplayNoteCode(note).toLowerCase().includes(term));
   }, [openNotes, paymentSearchTerm]);
   const paymentTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredOpenNotes.length / MODAL_PAGE_SIZE)), [filteredOpenNotes.length]);
   const paymentHistoryTotalPages = useMemo(() => Math.max(1, Math.ceil(paymentHistory.length / MODAL_PAGE_SIZE)), [paymentHistory.length]);
@@ -1903,7 +1907,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                           className="h-4 w-4 rounded border-slate-300"
                         />
                       </td>
-                      <td className="p-4 text-xs font-bold text-slate-700">{note.folio}</td>
+                      <td className="p-4 text-xs font-bold text-slate-700">{getDisplayNoteCode(note)}</td>
                       <td className="p-4 text-xs text-slate-500">{note.issue_date}</td>
                       <td className="p-4 text-xs text-slate-500">{note.due_date}</td>
                       <td className="p-4 text-right text-xs font-bold">{formatCurrency(Number(note.total))}</td>
@@ -2015,7 +2019,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   <tbody className="divide-y divide-slate-100">
                     {pagedOpenNotes.map((note) => (
                       <tr key={note.id}>
-                        <td className="p-3 text-xs font-bold text-slate-700">{note.folio}</td>
+                        <td className="p-3 text-xs font-bold text-slate-700">{getDisplayNoteCode(note)}</td>
                         <td className="p-3 text-xs text-slate-500">{note.issue_date}</td>
                         <td className="p-3 text-xs text-slate-500">{note.due_date}</td>
                         <td className="p-3 text-right text-xs font-black text-red-600">{formatCurrency(Number(note.balance))}</td>
@@ -2089,7 +2093,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
             <div className="bg-green-600 p-6 text-white">
               <h3 className="text-xl font-black uppercase tracking-tighter">Registrar Abono</h3>
               <p className="text-[10px] font-bold uppercase tracking-widest">
-                {paymentTargetNote.folio} · Saldo {formatCurrency(Number(paymentTargetNote.balance ?? 0))}
+                {getDisplayNoteCode(paymentTargetNote)} · Saldo {formatCurrency(Number(paymentTargetNote.balance ?? 0))}
               </p>
             </div>
             <form onSubmit={handleRegisterPayment} className="p-6 space-y-4">
@@ -2224,7 +2228,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     return (
                       <tr key={payment.id} className="hover:bg-slate-50">
                         <td className="p-4 text-xs text-slate-500">{String(payment.paid_at ?? '').replace('T', ' ').slice(0, 16)}</td>
-                        <td className="p-4 text-xs font-bold text-slate-700">{note?.folio ?? '—'}</td>
+                        <td className="p-4 text-xs font-bold text-slate-700">{note ? getDisplayNoteCode(note) : '—'}</td>
                         <td className="p-4 text-xs font-bold text-slate-700">{payment.method}</td>
                         <td className="p-4 text-right text-xs font-black text-emerald-600">{formatCurrency(Number(payment.amount ?? 0))}</td>
                         <td className="p-4 text-xs text-slate-500">{payment.reference || '—'}</td>
@@ -2310,7 +2314,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               <div>
                 <h3 className="text-2xl font-black tracking-tighter">Evidencias del Abono</h3>
                 <p className="text-slate-300 font-bold tracking-widest uppercase text-[10px] mt-1">
-                  {getPaymentNote(selectedPaymentForEvidence.note_id)?.folio ?? 'Sin folio'} · {String(selectedPaymentForEvidence.paid_at ?? '').replace('T', ' ').slice(0, 16)}
+                  {getPaymentNote(selectedPaymentForEvidence.note_id) ? getDisplayNoteCode(getPaymentNote(selectedPaymentForEvidence.note_id) as CreditNote) : 'Sin folio'} · {String(selectedPaymentForEvidence.paid_at ?? '').replace('T', ' ').slice(0, 16)}
                 </p>
               </div>
               <button
