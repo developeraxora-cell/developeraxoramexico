@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, User } from '../../types';
-import { creditService, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentMethod, type CreditSummary, type CustomerAddress } from '../../services/credit/credit.service';
-import { Eye, FileDown, MapPin, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
+import { creditService, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentEvidence, type CreditPaymentMethod, type CreditSummary, type CustomerAddress } from '../../services/credit/credit.service';
+import { Eye, FileDown, FileImage, MapPin, Paperclip, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
@@ -10,6 +10,7 @@ import ConfirmModal from '../common/ConfirmModal';
 import { logMaterialsAudit } from '../../services/audit/audit.service';
 import { supabase } from '../../services/supabaseClient';
 import { customerSelectionService } from '../../services/shared/customerSelection.service';
+import { paymentEvidenceUploadService, validatePaymentEvidenceFile } from '../../services/paymentEvidenceUpload.service';
 
 interface CustomerScreenProps {
   selectedBranchId: string;
@@ -165,7 +166,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<CreditCustomer | null>(null);
   const [openNotes, setOpenNotes] = useState<CreditNote[]>([]);
-  const [noteRows, setNoteRows] = useState<Record<string, number>>({});
   const [historyNotes, setHistoryNotes] = useState<CreditNoteWithStatus[]>([]);
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [historyStatusFilter, setHistoryStatusFilter] = useState<'TODAS' | 'VENCIDA' | 'ABIERTA' | 'PAGADA'>('TODAS');
@@ -180,10 +180,19 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [noteForm, setNoteForm] = useState(createDefaultNoteForm());
   const [noteFormError, setNoteFormError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<CreditPaymentMethod>('EFECTIVO');
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentNotes, setPaymentNotes] = useState('');
+  const [paymentEvidenceFiles, setPaymentEvidenceFiles] = useState<File[]>([]);
+  const [paymentEvidenceError, setPaymentEvidenceError] = useState<string | null>(null);
+  const [paymentFormError, setPaymentFormError] = useState<string | null>(null);
+  const [paymentTargetNote, setPaymentTargetNote] = useState<CreditNote | null>(null);
+  const [isPaymentEntryModalOpen, setIsPaymentEntryModalOpen] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<CreditPayment[]>([]);
+  const [paymentEvidencesByPaymentId, setPaymentEvidencesByPaymentId] = useState<Record<string, CreditPaymentEvidence[]>>({});
   const [paymentHistoryPage, setPaymentHistoryPage] = useState(1);
   const [isPaymentHistoryModalOpen, setIsPaymentHistoryModalOpen] = useState(false);
+  const [selectedPaymentForEvidence, setSelectedPaymentForEvidence] = useState<CreditPayment | null>(null);
+  const [isPaymentEvidenceModalOpen, setIsPaymentEvidenceModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<CreditPayment | null>(null);
   const [isEditPaymentModalOpen, setIsEditPaymentModalOpen] = useState(false);
   const [paymentEditForm, setPaymentEditForm] = useState(createDefaultPaymentEditForm());
@@ -422,15 +431,14 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setIsPaymentModalOpen(true);
     setPaymentPage(1);
     setPaymentSearchTerm('');
+    setPaymentNotes('');
+    setPaymentMethod('EFECTIVO');
+    setPaymentEvidenceFiles([]);
+    setPaymentEvidenceError(null);
     setError(null);
     try {
       const notes = await creditService.listOpenNotesByCustomer(customer.id);
       setOpenNotes(notes);
-      const initRows = notes.reduce<Record<string, number>>((acc, note) => {
-        acc[note.id] = 0;
-        return acc;
-      }, {});
-      setNoteRows(initRows);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudieron cargar notas.';
       setError(message);
@@ -442,6 +450,14 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setHistoryNotes(buildHistoryNotes(notes, customer));
     const payments = await creditService.listPaymentsByNoteIds(notes.map((note) => note.id));
     setPaymentHistory(payments);
+    const evidences = await creditService.listPaymentEvidencesByPaymentIds(payments.map((payment) => String(payment.id)));
+    const groupedEvidences = evidences.reduce<Record<string, CreditPaymentEvidence[]>>((acc, evidence) => {
+      const key = String(evidence.payment_id);
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(evidence);
+      return acc;
+    }, {});
+    setPaymentEvidencesByPaymentId(groupedEvidences);
     return { notes, payments };
   };
 
@@ -876,32 +892,73 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
   const handleRegisterPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCustomer) return;
+    if (!selectedCustomer || !paymentTargetNote) return;
+    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      setPaymentFormError('El abono debe ser mayor a 0.');
+      return;
+    }
 
-    const entries = Object.entries(noteRows).filter(([, amount]) => amount > 0);
-    if (entries.length === 0) return;
+    const safeAmount = Math.min(paymentAmount, Number(paymentTargetNote.balance ?? 0));
+    if (safeAmount <= 0) {
+      setPaymentFormError('El abono supera o no aplica al saldo disponible.');
+      return;
+    }
+    setPaymentFormError(null);
 
     setIsLoading(true);
     setError(null);
 
     try {
-      for (const [noteId, amount] of entries) {
-        const note = openNotes.find((n) => n.id === noteId);
-        if (!note) continue;
-        const safeAmount = Math.min(amount, Number(note.balance));
-        if (safeAmount <= 0) continue;
-        await creditService.createPayment({
-          note_id: noteId,
-          amount: safeAmount,
-          method: paymentMethod,
-          notes: paymentNotes || null,
-        });
+      let uploadedEvidences: Awaited<ReturnType<typeof paymentEvidenceUploadService.upload>>[] = [];
+      if (paymentEvidenceFiles.length > 0) {
+        if (!paymentEvidenceUploadService.isConfigured()) {
+          throw new Error('La carga de evidencias no está configurada.');
+        }
+        uploadedEvidences = await Promise.all(
+          paymentEvidenceFiles.map((file) =>
+            paymentEvidenceUploadService.upload(file, {
+              module: 'materiales',
+              branch_id: branchId,
+              customer_id: selectedCustomer.id,
+            })
+          )
+        );
       }
 
-      setIsPaymentModalOpen(false);
+      const createdPayment = await creditService.createPayment({
+        note_id: paymentTargetNote.id,
+        amount: safeAmount,
+        method: paymentMethod,
+        notes: paymentNotes || null,
+      });
+      if (uploadedEvidences.length > 0) {
+        await Promise.all(
+          uploadedEvidences.map((evidence) =>
+            creditService.createPaymentEvidence({
+              payment_id: String(createdPayment.id),
+              file_url: evidence.file_url,
+              secure_url: evidence.secure_url,
+              public_id: evidence.public_id,
+              resource_type: evidence.resource_type,
+              format: evidence.format,
+              original_filename: evidence.original_filename,
+              bytes: evidence.bytes,
+              uploaded_by: currentUser.name,
+            })
+          )
+        );
+      }
+
+      setIsPaymentEntryModalOpen(false);
       setPaymentNotes('');
       setPaymentMethod('EFECTIVO');
+      setPaymentAmount(0);
+      setPaymentTargetNote(null);
+      setPaymentEvidenceFiles([]);
+      setPaymentEvidenceError(null);
       await loadCustomers();
+      const notes = await creditService.listOpenNotesByCustomer(selectedCustomer.id);
+      setOpenNotes(notes);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo registrar el abono.';
       setError(message);
@@ -909,6 +966,46 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       setIsLoading(false);
     }
   };
+
+  const openPaymentEntryModal = (note: CreditNote) => {
+    setPaymentTargetNote(note);
+    setPaymentMethod('EFECTIVO');
+    setPaymentAmount(0);
+    setPaymentNotes('');
+    setPaymentEvidenceFiles([]);
+    setPaymentEvidenceError(null);
+    setPaymentFormError(null);
+    setIsPaymentEntryModalOpen(true);
+  };
+
+  const handlePaymentEvidenceFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) {
+      setPaymentEvidenceFiles([]);
+      setPaymentEvidenceError(null);
+      return;
+    }
+
+    try {
+      files.forEach(validatePaymentEvidenceFile);
+      setPaymentEvidenceFiles(files);
+      setPaymentEvidenceError(null);
+    } catch (error) {
+      setPaymentEvidenceFiles([]);
+      setPaymentEvidenceError(error instanceof Error ? error.message : 'No se pudo adjuntar la evidencia.');
+      event.target.value = '';
+    }
+  };
+
+  const openPaymentEvidenceModal = (payment: CreditPayment) => {
+    setSelectedPaymentForEvidence(payment);
+    setIsPaymentEvidenceModalOpen(true);
+  };
+
+  const selectedPaymentEvidences = useMemo(() => {
+    if (!selectedPaymentForEvidence) return [] as CreditPaymentEvidence[];
+    return paymentEvidencesByPaymentId[String(selectedPaymentForEvidence.id)] ?? [];
+  }, [paymentEvidencesByPaymentId, selectedPaymentForEvidence]);
 
   const getPaymentNote = (noteId: string) => historyNotes.find((note) => note.id === noteId) ?? openNotes.find((note) => note.id === noteId) ?? null;
 
@@ -2285,17 +2382,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               <h3 className="text-xl font-black uppercase tracking-tighter">Registrar Abono</h3>
               <p className="text-[10px] font-bold uppercase tracking-widest">Para: {selectedCustomer.name}</p>
             </div>
-            <form onSubmit={handleRegisterPayment} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <select
-                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as CreditPaymentMethod)}
-                >
-                  <option value="EFECTIVO">Efectivo</option>
-                    <option value="TRANSFERENCIA">Transferencia</option>
-                    <option value="TARJETA">Tarjeta</option>
-                  </select>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 gap-3">
                 <input
                   placeholder="Buscar por folio..."
                   className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
@@ -2306,12 +2394,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   }}
                 />
               </div>
-              <input
-                placeholder="Notas del abono"
-                className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                value={paymentNotes}
-                onChange={(e) => setPaymentNotes(e.target.value)}
-              />
               <div className="border border-slate-200 rounded-2xl overflow-hidden">
                 <table className="w-full text-left">
                   <thead className="bg-slate-100 text-[10px] font-black text-slate-500 uppercase tracking-widest">
@@ -2320,7 +2402,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       <th className="p-3">Registro</th>
                       <th className="p-3">Vence</th>
                       <th className="p-3 text-right">Saldo</th>
-                      <th className="p-3 text-right">Abono</th>
+                      <th className="p-3 text-right">Acción</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -2331,18 +2413,14 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                         <td className="p-3 text-xs text-slate-500">{note.due_date}</td>
                         <td className="p-3 text-right text-xs font-black text-red-600">{formatCurrency(Number(note.balance))}</td>
                         <td className="p-3 text-right">
-                          <input
-                            type="number"
-                            min={0}
-                            className="w-24 p-2 bg-white border border-slate-200 rounded-xl text-xs text-right"
-                            value={(noteRows[note.id] ?? 0) === 0 ? '' : (noteRows[note.id] ?? 0)}
-                            onChange={(e) =>
-                              setNoteRows((prev) => ({
-                                ...prev,
-                                [note.id]: e.target.value === '' ? 0 : Number(e.target.value),
-                              }))
-                            }
-                          />
+                          <button
+                            type="button"
+                            onClick={() => openPaymentEntryModal(note)}
+                            className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white"
+                          >
+                            <Wallet className="h-4 w-4" />
+                            Abonar
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -2388,6 +2466,107 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 <button
                   type="button"
                   onClick={() => setIsPaymentModalOpen(false)}
+                  className="w-full py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isPaymentEntryModalOpen && paymentTargetNote && selectedCustomer && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[72] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden">
+            <div className="bg-green-600 p-6 text-white">
+              <h3 className="text-xl font-black uppercase tracking-tighter">Registrar Abono</h3>
+              <p className="text-[10px] font-bold uppercase tracking-widest">
+                {paymentTargetNote.folio} · Saldo {formatCurrency(Number(paymentTargetNote.balance ?? 0))}
+              </p>
+            </div>
+            <form onSubmit={handleRegisterPayment} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <select
+                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as CreditPaymentMethod)}
+                >
+                  <option value="EFECTIVO">Efectivo</option>
+                  <option value="TRANSFERENCIA">Transferencia</option>
+                  <option value="TARJETA">Tarjeta</option>
+                </select>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="Monto del abono"
+                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                  value={paymentAmount === 0 ? '' : paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value === '' ? 0 : Number(e.target.value))}
+                />
+              </div>
+              <input
+                placeholder="Notas del abono"
+                className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                value={paymentNotes}
+                onChange={(e) => setPaymentNotes(e.target.value)}
+              />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Evidencia (opcional)</label>
+                  {paymentEvidenceFiles.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentEvidenceFiles([]);
+                        setPaymentEvidenceError(null);
+                      }}
+                      className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-700"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-600 transition-colors hover:border-slate-300">
+                    <Paperclip className="h-4 w-4" />
+                    Adjuntar imagen o PDF
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+                      multiple
+                      className="hidden"
+                      onChange={handlePaymentEvidenceFilesChange}
+                    />
+                  </label>
+                  <span className="text-xs text-slate-400">
+                    {paymentEvidenceFiles.length > 0 ? `${paymentEvidenceFiles.length} archivo(s) listo(s)` : 'Máximo 10 MB por archivo'}
+                  </span>
+                </div>
+                {paymentEvidenceError && <p className="text-xs font-bold text-red-500">{paymentEvidenceError}</p>}
+                {paymentFormError && <p className="text-xs font-bold text-red-500">{paymentFormError}</p>}
+                {paymentEvidenceFiles.length > 0 && (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="space-y-2">
+                      {paymentEvidenceFiles.map((file, index) => (
+                        <div key={`${file.name}-${index}`} className="flex items-center gap-2 text-xs text-slate-600">
+                          <Paperclip className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="truncate">{file.name}</span>
+                          <span className="text-slate-400">({(file.size / (1024 * 1024)).toFixed(2)} MB)</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPaymentEntryModalOpen(false);
+                    setPaymentTargetNote(null);
+                  }}
                   className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase"
                 >
                   Cancelar
@@ -2447,6 +2626,17 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                           <div className="flex items-center justify-center gap-2">
                             <button
                               type="button"
+                              onClick={() => openPaymentEvidenceModal(payment)}
+                              className="inline-flex h-9 min-w-9 items-center justify-center gap-1 rounded-xl bg-slate-100 px-2 text-slate-600 transition-colors hover:bg-slate-200"
+                              title="Ver evidencias"
+                            >
+                              <FileImage className="h-4 w-4" />
+                              <span className="text-[10px] font-black">
+                                {paymentEvidencesByPaymentId[String(payment.id)]?.length ?? 0}
+                              </span>
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => openEditPaymentModal(payment)}
                               className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600 transition-colors hover:bg-sky-100"
                               title="Editar abono"
@@ -2499,6 +2689,94 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       Siguiente
                     </button>
                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isPaymentEvidenceModalOpen && selectedPaymentForEvidence && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[75] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="bg-slate-900 p-6 text-white flex justify-between items-start">
+              <div>
+                <h3 className="text-2xl font-black tracking-tighter">Evidencias del Abono</h3>
+                <p className="text-slate-300 font-bold tracking-widest uppercase text-[10px] mt-1">
+                  {getPaymentNote(selectedPaymentForEvidence.note_id)?.folio ?? 'Sin folio'} · {formatLocalDateTime(selectedPaymentForEvidence.paid_at)}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsPaymentEvidenceModalOpen(false);
+                  setSelectedPaymentForEvidence(null);
+                }}
+                className="bg-white/10 w-10 h-10 rounded-2xl flex items-center justify-center text-2xl hover:bg-red-500 transition-all"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto bg-slate-50 p-6">
+              {selectedPaymentEvidences.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-400">
+                  Este abono no tiene evidencias adjuntas.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {selectedPaymentEvidences.map((evidence) => {
+                    const secureUrl = evidence.secure_url || evidence.file_url;
+                    const isPdf = (evidence.format ?? '').toLowerCase() === 'pdf' || evidence.resource_type === 'raw';
+                    const isImage = evidence.resource_type === 'image' && !isPdf;
+                    return (
+                      <div key={evidence.id} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-black text-slate-800 truncate">
+                              {evidence.original_filename || evidence.public_id || 'EVIDENCIA'}
+                            </p>
+                            <p className="mt-1 text-[11px] text-slate-400">
+                              {formatLocalDateTime(evidence.created_at)}
+                              {evidence.bytes ? ` · ${(Number(evidence.bytes) / (1024 * 1024)).toFixed(2)} MB` : ''}
+                            </p>
+                          </div>
+                          <a
+                            href={secureUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white"
+                          >
+                            <Eye className="h-4 w-4" />
+                            Abrir
+                          </a>
+                        </div>
+                        <div className="mt-4">
+                          {isImage ? (
+                            <a href={secureUrl} target="_blank" rel="noreferrer">
+                              <img
+                                src={secureUrl}
+                                alt={evidence.original_filename || 'Evidencia'}
+                                className="h-56 w-full rounded-2xl object-cover border border-slate-200"
+                              />
+                            </a>
+                          ) : (
+                            <a
+                              href={secureUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex h-56 w-full items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-500"
+                            >
+                              <div className="text-center">
+                                <FileDown className="mx-auto h-10 w-10" />
+                                <p className="mt-3 text-sm font-black uppercase tracking-widest">
+                                  {isPdf ? 'PDF adjunto' : 'Archivo adjunto'}
+                                </p>
+                              </div>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

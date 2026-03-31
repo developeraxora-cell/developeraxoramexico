@@ -57,6 +57,20 @@ export interface CreditPayment {
   notes: string | null;
 }
 
+export interface CreditPaymentEvidence {
+  id: string;
+  payment_id: string;
+  file_url: string;
+  secure_url: string | null;
+  public_id: string | null;
+  resource_type: string;
+  format: string | null;
+  original_filename: string | null;
+  bytes: number | null;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
 export interface CreditNoteWithStatus extends CreditNote {
   status: 'PAGADA' | 'VENCIDA' | 'ABIERTA';
   days_overdue: number;
@@ -467,6 +481,19 @@ export const creditService = {
     return (data ?? []) as CreditPayment[];
   },
 
+  async listPaymentEvidencesByPaymentIds(paymentIds: string[]) {
+    if (paymentIds.length === 0) return [] as CreditPaymentEvidence[];
+
+    const { data, error } = await supabase
+      .from('credit_payment_evidences')
+      .select('*')
+      .in('payment_id', paymentIds)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data ?? []) as CreditPaymentEvidence[];
+  },
+
   async getCustomerSummary(customer: CreditCustomer, today = new Date()) {
     const notes = await creditService.listOpenNotesByCustomer(customer.id);
     return buildSummary(customer, notes, today);
@@ -523,6 +550,37 @@ export const creditService = {
 
     if (error) throw error;
     return data as CreditPayment;
+  },
+
+  async createPaymentEvidence(input: {
+    payment_id: string;
+    file_url: string;
+    secure_url?: string | null;
+    public_id?: string | null;
+    resource_type: string;
+    format?: string | null;
+    original_filename?: string | null;
+    bytes?: number | null;
+    uploaded_by?: string | null;
+  }) {
+    const { data, error } = await supabase
+      .from('credit_payment_evidences')
+      .insert([{
+        payment_id: input.payment_id,
+        file_url: input.file_url,
+        secure_url: input.secure_url ?? null,
+        public_id: input.public_id ?? null,
+        resource_type: input.resource_type,
+        format: input.format ?? null,
+        original_filename: input.original_filename ?? null,
+        bytes: input.bytes ?? null,
+        uploaded_by: input.uploaded_by ?? null,
+      }])
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data as CreditPaymentEvidence;
   },
 
   async updatePayment(paymentId: string, updates: {
