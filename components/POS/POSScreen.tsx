@@ -1431,7 +1431,10 @@ const POSScreen: React.FC<POSProps> = ({
         const product = branchProducts.find((p) => String(p.id) === item.productId)
           ?? (products ?? []).find((p) => p.id === item.productId);
         const requestedQty = updates.qty !== undefined ? Number(updates.qty) : Number(item.qty);
-        const newQty = Number.isFinite(requestedQty) ? Math.max(1, requestedQty) : Math.max(1, Number(item.qty) || 1);
+        const fallbackQty = Number(item.qty);
+        const newQty = Number.isFinite(requestedQty) && requestedQty > 0
+          ? requestedQty
+          : (Number.isFinite(fallbackQty) && fallbackQty > 0 ? fallbackQty : 1);
         const newUnitId = updates.unitId !== undefined ? updates.unitId : item.unitId;
         const nextProductUomId = updates.productUomId ?? item.productUomId;
         const shouldResetSpecialPrice =
@@ -1509,7 +1512,9 @@ const POSScreen: React.FC<POSProps> = ({
     }
     const parsed = Number(normalized);
     if (Number.isFinite(parsed)) {
-      updateCartItem(itemId, { qty: Math.max(1, parsed) });
+      if (parsed > 0) {
+        updateCartItem(itemId, { qty: parsed });
+      }
     }
     setQtyDrafts((prev) => {
       const next = { ...prev };
@@ -1800,8 +1805,8 @@ const POSScreen: React.FC<POSProps> = ({
                     setQtyDrafts((prev) => ({ ...prev, [item.id]: rawValue }));
                     if (rawValue === '' || rawValue.endsWith('.')) return;
                     const parsed = Number(rawValue);
-                    if (!Number.isFinite(parsed)) return;
-                    updateCartItem(item.id, { qty: Math.max(1, parsed) });
+                    if (!Number.isFinite(parsed) || parsed <= 0) return;
+                    updateCartItem(item.id, { qty: parsed });
                   }}
                   onBlur={() => commitQtyDraft(item.id)}
                   className="w-20 p-2 border-2 border-slate-200 rounded-lg text-center font-black"
