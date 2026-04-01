@@ -369,7 +369,7 @@ const POSScreen: React.FC<POSProps> = ({
         created_by: tx.created_by ?? null,
         created_at: tx.created_at,
         items_count: itemsSummary[tx.id]?.count ?? 0,
-        total_amount: itemsSummary[tx.id]?.total ?? 0,
+        total_amount: Number(tx.total_amount ?? itemsSummary[tx.id]?.total ?? 0),
         payment_method: creditByTransaction[String(tx.id)] ? 'CREDITO' : 'EFECTIVO',
         credit_note_id: creditByTransaction[String(tx.id)]?.note_id ?? null,
         credit_paid_amount: creditByTransaction[String(tx.id)]?.paid_amount ?? 0,

@@ -147,6 +147,7 @@ type ConcreteSaleSummaryData = {
   created_by: string | null;
   reference: string | null;
   notes: string | null;
+  total_amount: number;
   items: ConcreteSaleSummaryItem[];
 };
 
@@ -601,6 +602,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       created_by: saleRow.created_by ?? currentUser.name,
       reference: saleRow.reference ?? null,
       notes: saleRow.notes ?? null,
+      total_amount: Number(note.total ?? 0),
       items,
     };
   };
@@ -2265,7 +2267,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     const isExpanded = expandedHistoryNoteId === note.id;
                     const summary = noteSaleSummaries[note.id];
                     const isLoadingSummary = loadingNoteSaleId === note.id;
-                    const summaryTotal = summary?.items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.unit_price)), 0) ?? 0;
+                    const summaryTotal = Number(
+                      summary?.total_amount
+                      ?? summary?.items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.unit_price)), 0)
+                      ?? 0
+                    );
 
                     return (
                       <React.Fragment key={note.id}>
