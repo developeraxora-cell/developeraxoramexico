@@ -1345,21 +1345,21 @@ const POSScreen: React.FC<POSProps> = ({
   };
 
   const handleCheckout = async () => {
-    if (!selectedCustomer) {
-      await performCheckout();
-      return;
-    }
-
     setNewSaleAddressError(null);
     setNewSaleAddressLabel('');
     setNewSaleAddressValue('');
-    try {
-      await creditService.listAddressesByCustomer(selectedCustomer.id).then((rows) => {
-        setCustomerAddresses(rows);
-        const defaultAddress = rows.find((row) => row.is_default) ?? rows[0] ?? null;
-        setSelectedCustomerAddressId(defaultAddress?.id ?? '');
-      });
-    } catch {
+    if (paymentMethod === 'CREDITO' && selectedCustomer) {
+      try {
+        await creditService.listAddressesByCustomer(selectedCustomer.id).then((rows) => {
+          setCustomerAddresses(rows);
+          const defaultAddress = rows.find((row) => row.is_default) ?? rows[0] ?? null;
+          setSelectedCustomerAddressId(defaultAddress?.id ?? '');
+        });
+      } catch {
+        setCustomerAddresses([]);
+        setSelectedCustomerAddressId('');
+      }
+    } else {
       setCustomerAddresses([]);
       setSelectedCustomerAddressId('');
     }
@@ -2842,65 +2842,67 @@ const POSScreen: React.FC<POSProps> = ({
         </div>
       )}
 
-      {isSaleAddressModalOpen && selectedCustomer && (
+      {isSaleAddressModalOpen && (
         <div className="fixed inset-0 z-[85] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-2xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
             <div className="bg-slate-900 p-6 text-white">
               <h3 className="text-xl font-black uppercase tracking-tighter">Confirmar pedido</h3>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-300">{selectedCustomer.name}</p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-300">{selectedCustomer?.name ?? 'PÚBLICO GENERAL'}</p>
             </div>
             <div className="space-y-4 p-6">
-              <div>
-                <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Dirección guardada</label>
-                <select
-                  value={selectedCustomerAddressId}
-                  onChange={(e) => setSelectedCustomerAddressId(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold"
-                >
-                  <option value="">Dirección principal</option>
-                  {customerAddresses.map((address) => (
-                    <option key={address.id} value={address.id}>
-                      {address.label?.trim() || 'Dirección'} - {address.address}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewSaleAddressError(null);
-                    setNewSaleAddressLabel('');
-                    setNewSaleAddressValue('');
-                    setIsNewSaleAddressModalOpen(true);
-                  }}
-                  className="mt-2 text-[11px] font-black uppercase tracking-widest text-orange-500 transition hover:text-orange-600"
-                >
-                  + Agregar direccion
-                </button>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Dirección seleccionada</p>
-                <p className="mt-2 text-sm font-bold text-slate-700">{effectiveSaleAddress}</p>
-              </div>
               {paymentMethod === 'CREDITO' && (
-                <div>
-                  <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Días de crédito</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[15, 30].map((days) => (
-                      <button
-                        key={days}
-                        type="button"
-                        onClick={() => setSaleCreditDays(days as 15 | 30)}
-                        className={`rounded-2xl border px-4 py-3 text-sm font-black uppercase tracking-widest transition ${
-                          saleCreditDays === days
-                            ? 'border-slate-900 bg-slate-900 text-white'
-                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300'
-                        }`}
-                      >
-                        {days} días
-                      </button>
-                    ))}
+                <>
+                  <div>
+                    <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Dirección guardada</label>
+                    <select
+                      value={selectedCustomerAddressId}
+                      onChange={(e) => setSelectedCustomerAddressId(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold"
+                    >
+                      <option value="">Dirección principal</option>
+                      {customerAddresses.map((address) => (
+                        <option key={address.id} value={address.id}>
+                          {address.label?.trim() || 'Dirección'} - {address.address}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewSaleAddressError(null);
+                        setNewSaleAddressLabel('');
+                        setNewSaleAddressValue('');
+                        setIsNewSaleAddressModalOpen(true);
+                      }}
+                      className="mt-2 text-[11px] font-black uppercase tracking-widest text-orange-500 transition hover:text-orange-600"
+                    >
+                      + Agregar direccion
+                    </button>
                   </div>
-                </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Dirección seleccionada</p>
+                    <p className="mt-2 text-sm font-bold text-slate-700">{effectiveSaleAddress}</p>
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Días de crédito</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[15, 30].map((days) => (
+                        <button
+                          key={days}
+                          type="button"
+                          onClick={() => setSaleCreditDays(days as 15 | 30)}
+                          className={`rounded-2xl border px-4 py-3 text-sm font-black uppercase tracking-widest transition ${
+                            saleCreditDays === days
+                              ? 'border-slate-900 bg-slate-900 text-white'
+                              : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          {days} días
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
               <div>
                 <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observación de la venta</label>
