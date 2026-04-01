@@ -1,7 +1,7 @@
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
 };
 
 const CLOUD_NAME = Deno.env.get('CLOUDINARY_CLOUD_NAME') ?? '';
@@ -37,6 +37,7 @@ const buildFolder = (input: {
   customerId?: string | null;
   noteId?: string | null;
   paymentId?: string | null;
+  transactionId?: string | null;
 }) => {
   const parts = [
     BASE_FOLDER || 'grupo-lopar',
@@ -46,6 +47,7 @@ const buildFolder = (input: {
     input.customerId ? `customer-${input.customerId}` : null,
     input.noteId ? `note-${input.noteId}` : null,
     input.paymentId ? `payment-${input.paymentId}` : null,
+    input.transactionId ? `sale-${input.transactionId}` : null,
   ].filter(Boolean);
 
   return parts.join('/');
@@ -63,13 +65,51 @@ Deno.serve(async (request) => {
     });
   }
 
-  if (request.method !== 'POST') {
+  if (request.method !== 'POST' && request.method !== 'DELETE') {
     return jsonResponse(405, { error: 'Método no permitido.' });
   }
 
   try {
     if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
       return jsonResponse(500, { error: 'Cloudinary no está configurado en la función.' });
+    }
+
+    if (request.method === 'DELETE') {
+      const payload = await request.json().catch(() => ({} as Record<string, unknown>));
+      const publicId = String(payload.public_id ?? '').trim();
+      const resourceType = String(payload.resource_type ?? 'image').trim() || 'image';
+
+      if (!publicId) {
+        return jsonResponse(400, { error: 'public_id es obligatorio.' });
+      }
+
+      const timestamp = Math.floor(Date.now() / 1000);
+      const signature = await sha1Hex(`invalidate=true&public_id=${publicId}&timestamp=${timestamp}${API_SECRET}`);
+      const destroyForm = new FormData();
+      destroyForm.append('public_id', publicId);
+      destroyForm.append('invalidate', 'true');
+      destroyForm.append('api_key', API_KEY);
+      destroyForm.append('timestamp', String(timestamp));
+      destroyForm.append('signature', signature);
+
+      const destroyResponse = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/destroy`, {
+        method: 'POST',
+        body: destroyForm,
+      });
+
+      const destroyPayload = await destroyResponse.json().catch(() => ({}));
+      if (!destroyResponse.ok) {
+        const cloudinaryMessage =
+          typeof destroyPayload?.error?.message === 'string'
+            ? destroyPayload.error.message
+            : 'No se pudo eliminar la evidencia de Cloudinary.';
+        return jsonResponse(502, { error: cloudinaryMessage });
+      }
+
+      return jsonResponse(200, {
+        ok: true,
+        result: destroyPayload?.result ?? 'ok',
+      });
     }
 
     const formData = await request.formData();
@@ -89,6 +129,7 @@ Deno.serve(async (request) => {
       customerId: String(formData.get('customer_id') ?? '').trim() || null,
       noteId: String(formData.get('note_id') ?? '').trim() || null,
       paymentId: String(formData.get('payment_id') ?? '').trim() || null,
+      transactionId: String(formData.get('transaction_id') ?? '').trim() || null,
     });
     const timestamp = Math.floor(Date.now() / 1000);
     const signature = await sha1Hex(`folder=${folder}&timestamp=${timestamp}${API_SECRET}`);

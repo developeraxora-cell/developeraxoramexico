@@ -31,7 +31,7 @@ export const paymentEvidenceUploadService = {
     return Boolean(PAYMENT_EVIDENCE_UPLOAD_URL && SUPABASE_ANON_KEY);
   },
 
-  async upload(file: File, payload: { module: 'materiales' | 'concretera'; branch_id: string; customer_id?: string | null; note_id?: string | null; payment_id?: string | null }) {
+  async upload(file: File, payload: { module: 'materiales' | 'concretera'; branch_id: string; customer_id?: string | null; note_id?: string | null; payment_id?: string | null; transaction_id?: string | null }) {
     if (!PAYMENT_EVIDENCE_UPLOAD_URL) {
       throw new Error('La función de carga de evidencias no está configurada.');
     }
@@ -45,6 +45,7 @@ export const paymentEvidenceUploadService = {
     if (payload.customer_id) formData.append('customer_id', payload.customer_id);
     if (payload.note_id) formData.append('note_id', payload.note_id);
     if (payload.payment_id) formData.append('payment_id', payload.payment_id);
+    if (payload.transaction_id) formData.append('transaction_id', payload.transaction_id);
 
     const headers: Record<string, string> = {};
     if (SUPABASE_ANON_KEY) {
@@ -64,5 +65,40 @@ export const paymentEvidenceUploadService = {
     }
 
     return payloadJson as UploadedPaymentEvidence;
+  },
+
+  async delete(payload: { public_id: string; resource_type?: string | null }) {
+    if (!PAYMENT_EVIDENCE_UPLOAD_URL) {
+      throw new Error('La función de carga de evidencias no está configurada.');
+    }
+
+    const publicId = payload.public_id.trim();
+    if (!publicId) {
+      throw new Error('El public_id de la evidencia es obligatorio.');
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (SUPABASE_ANON_KEY) {
+      headers.apikey = SUPABASE_ANON_KEY;
+      headers.Authorization = `Bearer ${SUPABASE_ANON_KEY}`;
+    }
+
+    const response = await fetch(PAYMENT_EVIDENCE_UPLOAD_URL, {
+      method: 'DELETE',
+      headers,
+      body: JSON.stringify({
+        public_id: publicId,
+        resource_type: payload.resource_type?.trim() || 'image',
+      }),
+    });
+
+    const payloadJson = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(String(payloadJson?.error || 'No se pudo eliminar la evidencia.'));
+    }
+
+    return payloadJson as { ok: boolean; result?: string };
   },
 };

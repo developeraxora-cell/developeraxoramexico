@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, User } from '../../types';
-import { creditService, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentEvidence, type CreditPaymentMethod, type CreditSummary, type CustomerAddress } from '../../services/credit/credit.service';
+import { creditService, type CashSaleHistory, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentEvidence, type CreditPaymentMethod, type CreditSummary, type CustomerAddress, type SalePaymentEvidence } from '../../services/credit/credit.service';
 import { Eye, FileDown, FileImage, MapPin, Paperclip, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
@@ -131,6 +131,9 @@ const getDisplayNoteCode = (note: Pick<CreditNote, 'folio' | 'sale_reference' | 
   || (note.inventory_transaction_id ? String(note.inventory_transaction_id) : '')
   || note.folio;
 
+const isZeroCostSaleNote = (value: string | null | undefined) =>
+  String(value ?? '').toUpperCase().includes('SALIDA SIN COSTO');
+
 const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branches, currentUser }) => {
   const PAGE_SIZE = 5;
   type SaleSummaryItem = {
@@ -157,6 +160,21 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     total_amount: number;
     items: SaleSummaryItem[];
   };
+
+  type HistoryModalRow = {
+    rowKey: string;
+    kind: 'credit' | 'cash';
+    saleId: string | null;
+    displayCode: string;
+    issue_date: string;
+    due_date: string | null;
+    total: number;
+    balance: number;
+    status: 'PAGADA' | 'VENCIDA' | 'ABIERTA' | 'EFECTIVO';
+    reference: string | null;
+    note: CreditNoteWithStatus | null;
+    sale: CashSaleHistory | null;
+  };
   const [customers, setCustomers] = useState<CreditCustomer[]>([]);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
   const [summaries, setSummaries] = useState<Record<string, CreditSummary>>({});
@@ -174,6 +192,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [historyNotes, setHistoryNotes] = useState<CreditNoteWithStatus[]>([]);
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [historyStatusFilter, setHistoryStatusFilter] = useState<'TODAS' | 'VENCIDA' | 'ABIERTA' | 'PAGADA'>('TODAS');
+  const [historyView, setHistoryView] = useState<'CREDIT' | 'CASH'>('CREDIT');
   const [selectedHistoryNoteIds, setSelectedHistoryNoteIds] = useState<string[]>([]);
   const [historyPage, setHistoryPage] = useState(1);
   const [paymentPage, setPaymentPage] = useState(1);
@@ -194,10 +213,22 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [isPaymentEntryModalOpen, setIsPaymentEntryModalOpen] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<CreditPayment[]>([]);
   const [paymentEvidencesByPaymentId, setPaymentEvidencesByPaymentId] = useState<Record<string, CreditPaymentEvidence[]>>({});
+  const [cashSaleHistory, setCashSaleHistory] = useState<CashSaleHistory[]>([]);
+  const [cashSaleTotalsById, setCashSaleTotalsById] = useState<Record<string, number>>({});
+  const [saleEvidencesByTransactionId, setSaleEvidencesByTransactionId] = useState<Record<string, SalePaymentEvidence[]>>({});
   const [paymentHistoryPage, setPaymentHistoryPage] = useState(1);
   const [isPaymentHistoryModalOpen, setIsPaymentHistoryModalOpen] = useState(false);
   const [selectedPaymentForEvidence, setSelectedPaymentForEvidence] = useState<CreditPayment | null>(null);
   const [isPaymentEvidenceModalOpen, setIsPaymentEvidenceModalOpen] = useState(false);
+  const [selectedSaleForEvidence, setSelectedSaleForEvidence] = useState<CashSaleHistory | null>(null);
+  const [isSaleEvidenceModalOpen, setIsSaleEvidenceModalOpen] = useState(false);
+  const [saleEvidenceModalMode, setSaleEvidenceModalMode] = useState<'upload' | 'view'>('upload');
+  const [saleEvidenceFiles, setSaleEvidenceFiles] = useState<File[]>([]);
+  const [saleEvidenceError, setSaleEvidenceError] = useState<string | null>(null);
+  const [saleEvidenceToDelete, setSaleEvidenceToDelete] = useState<SalePaymentEvidence | null>(null);
+  const [isDeleteSaleEvidenceModalOpen, setIsDeleteSaleEvidenceModalOpen] = useState(false);
+  const [deleteSaleEvidenceJustification, setDeleteSaleEvidenceJustification] = useState('');
+  const [deleteSaleEvidenceError, setDeleteSaleEvidenceError] = useState<string | null>(null);
   const [editingPayment, setEditingPayment] = useState<CreditPayment | null>(null);
   const [isEditPaymentModalOpen, setIsEditPaymentModalOpen] = useState(false);
   const [paymentEditForm, setPaymentEditForm] = useState(createDefaultPaymentEditForm());
@@ -261,20 +292,60 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   }, []);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCustomers / PAGE_SIZE)), [totalCustomers, PAGE_SIZE]);
-  const filteredHistoryNotes = useMemo(() => {
+  const historyModalRows = useMemo<HistoryModalRow[]>(() => {
+    const creditRows = historyNotes.map((note) => ({
+      rowKey: note.id,
+      kind: 'credit' as const,
+      saleId: note.inventory_transaction_id ? String(note.inventory_transaction_id) : null,
+      displayCode: getDisplayNoteCode(note),
+      issue_date: note.issue_date,
+      due_date: note.due_date,
+      total: Number(note.total ?? 0),
+      balance: Number(note.balance ?? 0),
+      status: note.status,
+      reference: historyNoteReferences[note.id] ?? noteSaleSummaries[note.id]?.reference ?? null,
+      note,
+      sale: null,
+    }));
+    const cashRows = cashSaleHistory.map((sale) => ({
+      rowKey: `cash:${sale.id}`,
+      kind: 'cash' as const,
+      saleId: String(sale.id),
+      displayCode: String(sale.id),
+      issue_date: String(sale.created_at ?? '').slice(0, 10),
+      due_date: null,
+      total: Number(cashSaleTotalsById[String(sale.id)] ?? noteSaleSummaries[`cash:${sale.id}`]?.total_amount ?? 0),
+      balance: 0,
+      status: 'EFECTIVO' as const,
+      reference: sale.reference ?? null,
+      note: null,
+      sale,
+    }));
+    return [...creditRows, ...cashRows].sort((a, b) => {
+      const aTime = new Date(`${a.issue_date}T00:00:00Z`).getTime();
+      const bTime = new Date(`${b.issue_date}T00:00:00Z`).getTime();
+      return bTime - aTime;
+    });
+  }, [cashSaleHistory, cashSaleTotalsById, historyNoteReferences, historyNotes, noteSaleSummaries]);
+  const activeHistoryRows = useMemo(
+    () => historyModalRows.filter((row) => (historyView === 'CREDIT' ? row.kind === 'credit' : row.kind === 'cash')),
+    [historyModalRows, historyView]
+  );
+  const filteredHistoryRows = useMemo(() => {
     const term = historySearchTerm.trim().toLowerCase();
-    return historyNotes.filter((note) => {
-      const matchesStatus = historyStatusFilter === 'TODAS' || note.status === historyStatusFilter;
-      const noteReference = historyNoteReferences[note.id]?.toLowerCase() ?? '';
-      const summaryReference = noteSaleSummaries[note.id]?.reference?.toLowerCase() ?? '';
+    return activeHistoryRows.filter((row) => {
+      const matchesStatus = historyView === 'CASH'
+        ? true
+        : historyStatusFilter === 'TODAS' || row.status === historyStatusFilter;
+      const summaryReference = noteSaleSummaries[row.rowKey]?.reference?.toLowerCase() ?? '';
       const matchesTerm = !term
-        || getDisplayNoteCode(note).toLowerCase().includes(term)
-        || noteReference.includes(term)
+        || row.displayCode.toLowerCase().includes(term)
+        || String(row.reference ?? '').toLowerCase().includes(term)
         || summaryReference.includes(term);
       return matchesStatus && matchesTerm;
     });
-  }, [historyNoteReferences, historyNotes, historySearchTerm, historyStatusFilter, noteSaleSummaries]);
-  const historyTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredHistoryNotes.length / MODAL_PAGE_SIZE)), [filteredHistoryNotes.length]);
+  }, [activeHistoryRows, historySearchTerm, historyStatusFilter, historyView, noteSaleSummaries]);
+  const historyTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredHistoryRows.length / MODAL_PAGE_SIZE)), [filteredHistoryRows.length]);
   const filteredOpenNotes = useMemo(() => {
     const term = paymentSearchTerm.trim().toLowerCase();
     if (!term) return openNotes;
@@ -282,10 +353,10 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   }, [openNotes, paymentSearchTerm]);
   const paymentTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredOpenNotes.length / MODAL_PAGE_SIZE)), [filteredOpenNotes.length]);
   const paymentHistoryTotalPages = useMemo(() => Math.max(1, Math.ceil(paymentHistory.length / MODAL_PAGE_SIZE)), [paymentHistory.length]);
-  const pagedHistoryNotes = useMemo(() => {
+  const pagedHistoryRows = useMemo(() => {
     const start = (historyPage - 1) * MODAL_PAGE_SIZE;
-    return filteredHistoryNotes.slice(start, start + MODAL_PAGE_SIZE);
-  }, [filteredHistoryNotes, historyPage]);
+    return filteredHistoryRows.slice(start, start + MODAL_PAGE_SIZE);
+  }, [filteredHistoryRows, historyPage]);
   const pagedOpenNotes = useMemo(() => {
     const start = (paymentPage - 1) * MODAL_PAGE_SIZE;
     return filteredOpenNotes.slice(start, start + MODAL_PAGE_SIZE);
@@ -390,11 +461,13 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   }, [paymentHistoryPage, paymentHistoryTotalPages]);
 
   const handleOpenHistory = async (customer: CreditCustomer) => {
+    setHistoryView('CREDIT');
     setSelectedCustomer(customer);
     setIsHistoryModalOpen(true);
     setHistorySearchTerm('');
     setSelectedHistoryNoteIds([]);
     setHistoryPage(1);
+    setExpandedHistoryNoteId(null);
     setError(null);
     try {
       const notes = await creditService.listNotesByCustomer(customer.id);
@@ -434,6 +507,26 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo cargar notas.';
       setError(message);
+    }
+  };
+
+  const handleOpenCashSalesHistory = async (customer: CreditCustomer) => {
+    setHistoryView('CASH');
+    setSelectedCustomer(customer);
+    setIsHistoryModalOpen(true);
+    setHistorySearchTerm('');
+    setSelectedHistoryNoteIds([]);
+    setHistoryPage(1);
+    setExpandedHistoryNoteId(null);
+    setError(null);
+    setIsLoading(true);
+    try {
+      await loadPaymentHistory(customer);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudieron cargar ventas en efectivo.';
+      setError(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -492,12 +585,44 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       return acc;
     }, {});
     setPaymentEvidencesByPaymentId(groupedEvidences);
-    return { notes, payments };
+
+    const creditTransactionIds = new Set(notes.map((note) => String(note.inventory_transaction_id ?? '')).filter(Boolean));
+    const cashSalesRaw = branchId ? await creditService.listCashSalesByCustomer(customer.id, branchId, customer.name) : [];
+    const cashSales = cashSalesRaw.filter((sale) => !creditTransactionIds.has(String(sale.id)) && !isZeroCostSaleNote(sale.notes));
+    setCashSaleHistory(cashSales);
+    if (cashSales.length > 0) {
+      const { data: saleItems, error: saleItemsError } = await supabase
+        .from('inventory_transaction_items')
+        .select('transaction_id, qty, unit_price')
+        .in('transaction_id', cashSales.map((sale) => String(sale.id)));
+      if (saleItemsError) throw saleItemsError;
+      const totals = (saleItems ?? []).reduce<Record<string, number>>((acc, item: any) => {
+        const key = String(item.transaction_id);
+        acc[key] = (acc[key] ?? 0) + (Number(item.qty ?? 0) * Number(item.unit_price ?? 0));
+        return acc;
+      }, {});
+      setCashSaleTotalsById(totals);
+    } else {
+      setCashSaleTotalsById({});
+    }
+    const saleEvidences = await creditService.listSaleEvidencesByTransactionIds(cashSales.map((sale) => String(sale.id)));
+    const groupedSaleEvidences = saleEvidences.reduce<Record<string, SalePaymentEvidence[]>>((acc, evidence) => {
+      const key = String(evidence.transaction_id);
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(evidence);
+      return acc;
+    }, {});
+    setSaleEvidencesByTransactionId(groupedSaleEvidences);
+    return { notes, payments, cashSales };
   };
 
   const handleOpenPaymentHistory = async (customer: CreditCustomer) => {
     setSelectedCustomer(customer);
     setPaymentHistoryPage(1);
+    setHistoryPage(1);
+    setHistoryView('CREDIT');
+    setHistorySearchTerm('');
+    setExpandedHistoryNoteId(null);
     setError(null);
     setIsLoading(true);
     try {
@@ -653,9 +778,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     throw new Error('Esta nota no tiene una venta asociada.');
   };
 
-  const fetchNoteSaleSummary = async (note: CreditNoteWithStatus): Promise<SaleSummaryData> => {
-    const transactionId = await resolveSaleTransactionId(note);
-
+  const fetchSaleSummaryByTransactionId = async (transactionId: string, fallback?: {
+    customerName?: string | null;
+    customerAddress?: string | null;
+    totalAmount?: number | null;
+  }): Promise<SaleSummaryData> => {
     const { data: saleRow, error: saleError } = await supabase
       .from('inventory_transactions')
       .select('id, reference, notes, created_at, nombre_cliente, direccion_cliente, created_by')
@@ -708,17 +835,36 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       return item;
     });
 
+    const computedTotal = items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.unit_price)), 0);
+
     return {
       saleId: String(saleRow.id),
       created_at: saleRow.created_at,
-      nombre_cliente: saleRow.nombre_cliente ?? selectedCustomer?.name ?? null,
-      direccion_cliente: saleRow.direccion_cliente ?? selectedCustomer?.address ?? null,
+      nombre_cliente: saleRow.nombre_cliente ?? fallback?.customerName ?? selectedCustomer?.name ?? null,
+      direccion_cliente: saleRow.direccion_cliente ?? fallback?.customerAddress ?? selectedCustomer?.address ?? null,
       created_by: saleRow.created_by ?? currentUser.name,
       reference: saleRow.reference ?? null,
       notes: saleRow.notes ?? null,
-      total_amount: Number(note.total ?? 0),
+      total_amount: Number(fallback?.totalAmount ?? computedTotal ?? 0),
       items,
     };
+  };
+
+  const fetchNoteSaleSummary = async (note: CreditNoteWithStatus): Promise<SaleSummaryData> => {
+    const transactionId = await resolveSaleTransactionId(note);
+    return fetchSaleSummaryByTransactionId(transactionId, {
+      customerName: selectedCustomer?.name ?? null,
+      customerAddress: selectedCustomer?.address ?? null,
+      totalAmount: Number(note.total ?? 0),
+    });
+  };
+
+  const fetchCashSaleSummary = async (sale: CashSaleHistory): Promise<SaleSummaryData> => {
+    return fetchSaleSummaryByTransactionId(String(sale.id), {
+      customerName: sale.nombre_cliente ?? selectedCustomer?.name ?? null,
+      customerAddress: sale.direccion_cliente ?? selectedCustomer?.address ?? null,
+      totalAmount: null,
+    });
   };
 
   const generateSalePdf = async (input: {
@@ -869,25 +1015,27 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     openPdfPreview(new Blob([pdfBytes], { type: 'application/pdf' }), buildSalePdfFilename(input.branchName, input.saleId));
   };
 
-  const toggleNoteSaleSummary = async (note: CreditNoteWithStatus) => {
-    if (!note.inventory_transaction_id) {
-      showFeedback('alert', 'Venta no vinculada', 'Esta nota no tiene una venta asociada para mostrar.');
-      return;
-    }
-    if (expandedHistoryNoteId === note.id) {
+  const toggleHistorySaleSummary = async (row: HistoryModalRow) => {
+    const summaryKey = row.rowKey;
+    if (expandedHistoryNoteId === summaryKey) {
       setExpandedHistoryNoteId(null);
       return;
     }
-    if (noteSaleSummaries[note.id]) {
-      setExpandedHistoryNoteId(note.id);
+    if (noteSaleSummaries[summaryKey]) {
+      setExpandedHistoryNoteId(summaryKey);
       return;
     }
 
-    setLoadingNoteSaleId(note.id);
+    setLoadingNoteSaleId(summaryKey);
     try {
-      const summary = await fetchNoteSaleSummary(note);
-      setNoteSaleSummaries((prev) => ({ ...prev, [note.id]: summary }));
-      setExpandedHistoryNoteId(note.id);
+      const summary = row.kind === 'credit' && row.note
+        ? await fetchNoteSaleSummary(row.note)
+        : row.sale
+          ? await fetchCashSaleSummary(row.sale)
+          : null;
+      if (!summary) throw new Error('No se encontró la venta asociada.');
+      setNoteSaleSummaries((prev) => ({ ...prev, [summaryKey]: summary }));
+      setExpandedHistoryNoteId(summaryKey);
     } catch (err) {
       showFeedback('error', 'No se pudo cargar la venta', err instanceof Error ? err.message : 'No se pudo cargar el detalle de la venta.');
     } finally {
@@ -895,12 +1043,19 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     }
   };
 
-  const handlePrintSale = async (note: CreditNoteWithStatus) => {
+  const handlePrintSaleRow = async (row: HistoryModalRow) => {
     showFeedback('loading', 'Generando PDF', 'Preparando documento de venta...');
     try {
-      const summary = noteSaleSummaries[note.id] ?? await fetchNoteSaleSummary(note);
-      if (!noteSaleSummaries[note.id]) {
-        setNoteSaleSummaries((prev) => ({ ...prev, [note.id]: summary }));
+      const summaryKey = row.rowKey;
+      const summary = noteSaleSummaries[summaryKey]
+        ?? (row.kind === 'credit' && row.note
+          ? await fetchNoteSaleSummary(row.note)
+          : row.sale
+            ? await fetchCashSaleSummary(row.sale)
+            : null);
+      if (!summary) throw new Error('No se pudo resolver la venta.');
+      if (!noteSaleSummaries[summaryKey]) {
+        setNoteSaleSummaries((prev) => ({ ...prev, [summaryKey]: summary }));
       }
       await generateSalePdf({
         saleId: summary.saleId,
@@ -912,7 +1067,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           unitPrice: item.unit_price,
           subtotal: Number(item.qty) * Number(item.unit_price),
         })),
-        paymentMethod: 'CREDITO',
+        paymentMethod: row.kind === 'credit' ? 'CREDITO' : 'EFECTIVO',
         customerName: summary.nombre_cliente ?? selectedCustomer?.name ?? 'PUBLICO GENERAL',
         customerAddress: summary.direccion_cliente ?? selectedCustomer?.address ?? '-',
         cashierName: summary.created_by ?? currentUser.name,
@@ -1043,10 +1198,177 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setIsPaymentEvidenceModalOpen(true);
   };
 
+
+  const handleSaleEvidenceFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) {
+      setSaleEvidenceFiles([]);
+      setSaleEvidenceError(null);
+      return;
+    }
+
+    try {
+      files.forEach(validatePaymentEvidenceFile);
+      setSaleEvidenceFiles(files);
+      setSaleEvidenceError(null);
+    } catch (error) {
+      setSaleEvidenceFiles([]);
+      setSaleEvidenceError(error instanceof Error ? error.message : 'No se pudo adjuntar la evidencia.');
+      event.target.value = '';
+    }
+  };
+
+  const openSaleEvidenceUploadModal = (sale: CashSaleHistory) => {
+    setSelectedSaleForEvidence(sale);
+    setSaleEvidenceModalMode('upload');
+    setSaleEvidenceFiles([]);
+    setSaleEvidenceError(null);
+    setIsSaleEvidenceModalOpen(true);
+  };
+
+  const openSaleEvidenceViewerModal = (sale: CashSaleHistory) => {
+    setSelectedSaleForEvidence(sale);
+    setSaleEvidenceModalMode('view');
+    setSaleEvidenceFiles([]);
+    setSaleEvidenceError(null);
+    setIsSaleEvidenceModalOpen(true);
+  };
+
+  const handleUploadSaleEvidence = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (actionLockRef.current) return;
+    if (!selectedCustomer || !selectedSaleForEvidence) return;
+    if (saleEvidenceFiles.length === 0) {
+      setSaleEvidenceError('Debe adjuntar al menos un archivo.');
+      return;
+    }
+    if (!paymentEvidenceUploadService.isConfigured()) {
+      setSaleEvidenceError('La carga de evidencias no está configurada.');
+      return;
+    }
+
+    setIsLoading(true);
+    setSaleEvidenceError(null);
+    actionLockRef.current = true;
+    showFeedback('loading', 'Adjuntando comprobante', 'Subiendo evidencia de la venta...');
+
+    try {
+      const uploadedEvidences = await Promise.all(
+        saleEvidenceFiles.map((file) =>
+          paymentEvidenceUploadService.upload(file, {
+            module: 'materiales',
+            branch_id: branchId,
+            customer_id: selectedCustomer.id,
+            transaction_id: String(selectedSaleForEvidence.id),
+          })
+        )
+      );
+
+      const created = await Promise.all(
+        uploadedEvidences.map((evidence) =>
+          creditService.createSaleEvidence({
+            transaction_id: String(selectedSaleForEvidence.id),
+            file_url: evidence.file_url,
+            secure_url: evidence.secure_url,
+            public_id: evidence.public_id,
+            resource_type: evidence.resource_type,
+            format: evidence.format,
+            original_filename: evidence.original_filename,
+            bytes: evidence.bytes,
+            uploaded_by: currentUser.name,
+          })
+        )
+      );
+
+      setSaleEvidencesByTransactionId((prev) => ({
+        ...prev,
+        [String(selectedSaleForEvidence.id)]: [...created, ...(prev[String(selectedSaleForEvidence.id)] ?? [])],
+      }));
+      setSaleEvidenceFiles([]);
+      showFeedback('success', 'Comprobante adjuntado', 'La evidencia de pago se registró correctamente.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo registrar la evidencia de la venta.';
+      setSaleEvidenceError(message);
+      showFeedback('error', 'No se pudo adjuntar', message);
+    } finally {
+      setIsLoading(false);
+      actionLockRef.current = false;
+    }
+  };
+
+
+  const requestDeleteSaleEvidence = (evidence: SalePaymentEvidence) => {
+    setSaleEvidenceToDelete(evidence);
+    setDeleteSaleEvidenceJustification('');
+    setDeleteSaleEvidenceError(null);
+    setIsDeleteSaleEvidenceModalOpen(true);
+  };
+
+  const handleConfirmDeleteSaleEvidence = async () => {
+    if (actionLockRef.current) return;
+    if (!selectedSaleForEvidence || !saleEvidenceToDelete) return;
+    if (!deleteSaleEvidenceJustification.trim()) {
+      setDeleteSaleEvidenceError('La observación es obligatoria.');
+      return;
+    }
+
+    setIsLoading(true);
+    setDeleteSaleEvidenceError(null);
+    actionLockRef.current = true;
+    showFeedback('loading', 'Eliminando comprobante', 'Quitando evidencia de la venta...');
+
+    try {
+      if (saleEvidenceToDelete.public_id) {
+        await paymentEvidenceUploadService.delete({
+          public_id: saleEvidenceToDelete.public_id,
+          resource_type: saleEvidenceToDelete.resource_type,
+        });
+      }
+
+      await creditService.deleteSaleEvidence(saleEvidenceToDelete.id);
+
+      setSaleEvidencesByTransactionId((prev) => ({
+        ...prev,
+        [String(selectedSaleForEvidence.id)]: (prev[String(selectedSaleForEvidence.id)] ?? []).filter(
+          (evidence) => evidence.id !== saleEvidenceToDelete.id,
+        ),
+      }));
+
+      logMaterialsAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ELIMINAR',
+        entity_type: 'venta',
+        entity_id: String(selectedSaleForEvidence.id),
+        description: `Comprobante eliminado de la venta en efectivo ${selectedSaleForEvidence.id}`,
+        justification: deleteSaleEvidenceJustification.trim(),
+        previous_data: saleEvidenceToDelete as unknown as Record<string, unknown>,
+      });
+
+      setIsDeleteSaleEvidenceModalOpen(false);
+      setSaleEvidenceToDelete(null);
+      setDeleteSaleEvidenceJustification('');
+      showFeedback('success', 'Comprobante eliminado', 'La evidencia de la venta se eliminó correctamente.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo eliminar la evidencia de la venta.';
+      setDeleteSaleEvidenceError(message);
+      showFeedback('error', 'No se pudo eliminar', message);
+    } finally {
+      setIsLoading(false);
+      actionLockRef.current = false;
+    }
+  };
+
   const selectedPaymentEvidences = useMemo(() => {
     if (!selectedPaymentForEvidence) return [] as CreditPaymentEvidence[];
     return paymentEvidencesByPaymentId[String(selectedPaymentForEvidence.id)] ?? [];
   }, [paymentEvidencesByPaymentId, selectedPaymentForEvidence]);
+  const selectedSaleEvidences = useMemo(() => {
+    if (!selectedSaleForEvidence) return [] as SalePaymentEvidence[];
+    return saleEvidencesByTransactionId[String(selectedSaleForEvidence.id)] ?? [];
+  }, [saleEvidencesByTransactionId, selectedSaleForEvidence]);
 
   const getPaymentNote = (noteId: string) => historyNotes.find((note) => note.id === noteId) ?? openNotes.find((note) => note.id === noteId) ?? null;
 
@@ -1718,9 +2040,16 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     <button
                       onClick={() => handleOpenHistory(customer)}
                       className="bg-slate-100 p-2 rounded-lg"
-                      title="Ver notas"
+                      title="Notas de crédito"
                     >
                       <Eye className="w-4 h-4 text-slate-600" />
+                    </button>
+                    <button
+                      onClick={() => handleOpenCashSalesHistory(customer)}
+                      className="bg-violet-100 p-2 rounded-lg"
+                      title="Ventas en efectivo"
+                    >
+                      <FileImage className="w-4 h-4 text-violet-700" />
                     </button>
                     <button
                       onClick={() => handleOpenPayment(customer)}
@@ -2213,10 +2542,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-4xl h-[80vh] overflow-hidden flex flex-col">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-start">
               <div>
-                <h3 className="text-2xl font-black tracking-tighter">Notas de Crédito</h3>
+                <h3 className="text-2xl font-black tracking-tighter">{historyView === 'CASH' ? 'Ventas en Efectivo' : 'Notas de Crédito'}</h3>
                 <p className="text-orange-400 font-bold tracking-widest uppercase text-[10px] mt-1">{selectedCustomer.name}</p>
               </div>
               <div className="flex items-center gap-3">
+{historyView === 'CREDIT' && (
                 <button
                   type="button"
                   onClick={() => openCreateNoteModal(selectedCustomer)}
@@ -2225,6 +2555,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   <Plus className="h-4 w-4" />
                   Nuevo crédito
                 </button>
+                )}
                 <button
                   onClick={() => setIsHistoryModalOpen(false)}
                   className="bg-white/10 w-10 h-10 rounded-2xl flex items-center justify-center text-2xl hover:bg-red-500 transition-all"
@@ -2238,7 +2569,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 <div className="flex flex-col gap-3 md:flex-row md:items-center">
                   <input
                     type="text"
-                    placeholder="Buscar por folio..."
+                    placeholder={historyView === 'CASH' ? 'Buscar por venta o referencia...' : 'Buscar por folio...'}
                     className="w-full md:w-64 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
                     value={historySearchTerm}
                     onChange={(e) => {
@@ -2246,121 +2577,156 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       setHistoryPage(1);
                     }}
                   />
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { id: 'TODAS', label: 'Todas' },
-                      { id: 'VENCIDA', label: 'Vencidas' },
-                      { id: 'ABIERTA', label: 'Abiertas' },
-                      { id: 'PAGADA', label: 'Completado' },
-                    ].map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => {
-                          setHistoryStatusFilter(option.id as 'TODAS' | 'VENCIDA' | 'ABIERTA' | 'PAGADA');
-                          setHistoryPage(1);
-                        }}
-                        className={`rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-[0.16em] transition ${
-                          historyStatusFilter === option.id
-                            ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/15'
-                            : 'border border-slate-200 bg-white text-slate-500 hover:border-orange-200 hover:text-orange-500'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
+                  {historyView === 'CREDIT' && (
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: 'TODAS', label: 'Todas' },
+                        { id: 'VENCIDA', label: 'Vencidas' },
+                        { id: 'ABIERTA', label: 'Abiertas' },
+                        { id: 'PAGADA', label: 'Completado' },
+                      ].map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => {
+                            setHistoryStatusFilter(option.id as 'TODAS' | 'VENCIDA' | 'ABIERTA' | 'PAGADA');
+                            setHistoryPage(1);
+                          }}
+                          className={`rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-[0.16em] transition ${
+                            historyStatusFilter === option.id
+                              ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/15'
+                              : 'border border-slate-200 bg-white text-slate-500 hover:border-orange-200 hover:text-orange-500'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <table className="w-full text-left bg-white rounded-3xl overflow-hidden border border-slate-200">
                 <thead className="bg-slate-900 text-white text-[10px] uppercase tracking-widest">
                   <tr>
-                    <th className="p-4 text-center">Sel.</th>
+                    {historyView === 'CREDIT' && <th className="p-4 text-center">Sel.</th>}
                     <th className="p-4">Folio</th>
                     <th className="p-4">Emisión</th>
-                    <th className="p-4">Vence</th>
+                    {historyView === 'CREDIT' && <th className="p-4">Vence</th>}
                     <th className="p-4 text-right">Total</th>
-                    <th className="p-4 text-right">Saldo</th>
+                    {historyView === 'CREDIT' && <th className="p-4 text-right">Saldo</th>}
                     <th className="p-4 text-center">Estado</th>
                     <th className="p-4 text-center">Acción</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {pagedHistoryNotes.map((note) => {
-                    const isExpanded = expandedHistoryNoteId === note.id;
-                    const summary = noteSaleSummaries[note.id];
-                    const isLoadingSummary = loadingNoteSaleId === note.id;
+                  {pagedHistoryRows.map((row) => {
+                    const isExpanded = expandedHistoryNoteId === row.rowKey;
+                    const summary = noteSaleSummaries[row.rowKey];
+                    const isLoadingSummary = loadingNoteSaleId === row.rowKey;
                     const summaryTotal = Number(
                       summary?.total_amount
                       ?? summary?.items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.unit_price)), 0)
+                      ?? row.total
                       ?? 0
                     );
+                    const statusClass = row.status === 'VENCIDA'
+                      ? 'bg-red-100 text-red-600'
+                      : row.status === 'PAGADA'
+                        ? 'bg-green-100 text-green-600'
+                        : row.status === 'EFECTIVO'
+                          ? 'bg-sky-100 text-sky-600'
+                          : 'bg-amber-100 text-amber-600';
 
                     return (
-                      <React.Fragment key={note.id}>
+                      <React.Fragment key={row.rowKey}>
                         <tr
                           className="cursor-pointer hover:bg-slate-50"
                           onClick={() => {
-                            void toggleNoteSaleSummary(note);
+                            void toggleHistorySaleSummary(row);
                           }}
                         >
+                          {historyView === 'CREDIT' && (
                           <td className="p-4 text-center" onClick={(event) => event.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              checked={selectedHistoryNoteIds.includes(note.id)}
-                              onChange={() => toggleHistoryNoteSelection(note.id)}
-                              className="h-4 w-4 rounded border-slate-300"
-                            />
+                            {row.kind === 'credit' && row.note ? (
+                              <input
+                                type="checkbox"
+                                checked={selectedHistoryNoteIds.includes(row.note.id)}
+                                onChange={() => toggleHistoryNoteSelection(row.note!.id)}
+                                className="h-4 w-4 rounded border-slate-300"
+                              />
+                            ) : (
+                              <span className="text-slate-300">—</span>
+                            )}
                           </td>
-                          <td className="p-4 text-xs font-bold text-slate-700">{getDisplayNoteCode(note)}</td>
-                          <td className="p-4 text-xs text-slate-500">{note.issue_date}</td>
-                          <td className="p-4 text-xs text-slate-500">{note.due_date}</td>
-                          <td className="p-4 text-right text-xs font-bold">{formatCurrency(Number(note.total))}</td>
-                          <td className="p-4 text-right text-xs font-black text-red-600">{formatCurrency(Number(note.balance))}</td>
+                          )}
+                          <td className="p-4 text-xs font-bold text-slate-700">{row.displayCode}</td>
+                          <td className="p-4 text-xs text-slate-500">{row.issue_date}</td>
+                          {historyView === 'CREDIT' && <td className="p-4 text-xs text-slate-500">{row.due_date || '—'}</td>}
+                          <td className="p-4 text-right text-xs font-bold">{formatCurrency(row.total)}</td>
+                          {historyView === 'CREDIT' && <td className={`p-4 text-right text-xs font-black ${row.balance > 0 ? 'text-red-600' : 'text-slate-400'}`}>{formatCurrency(row.balance)}</td>}
                           <td className="p-4 text-center">
-                            <span
-                              className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${note.status === 'VENCIDA'
-                                  ? 'bg-red-100 text-red-600'
-                                  : note.status === 'PAGADA'
-                                    ? 'bg-green-100 text-green-600'
-                                    : 'bg-amber-100 text-amber-600'
-                                }`}
-                            >
-                              {note.status}
+                            <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${statusClass}`}>
+                              {row.status}
                             </span>
                           </td>
                           <td className="p-4 text-center" onClick={(event) => event.stopPropagation()}>
                             <div className="flex items-center justify-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => void handlePrintSale(note)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
-                                title="Imprimir venta"
-                              >
-                                <FileDown className="h-4 w-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openEditNoteModal(note)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600 transition-colors hover:bg-sky-100"
-                                title="Editar nota"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRequestDeleteNote(note)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500 transition-colors hover:bg-red-100"
-                                title="Eliminar nota"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              {row.kind === 'cash' && row.sale ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => openSaleEvidenceUploadModal(row.sale!)}
+                                    className="inline-flex items-center gap-1 rounded-xl bg-violet-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-violet-600 transition-colors hover:bg-violet-100"
+                                    title="Subir comprobante"
+                                  >
+                                    <Paperclip className="h-4 w-4" />
+                                    Subir
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => openSaleEvidenceViewerModal(row.sale!)}
+                                    className="inline-flex items-center gap-1 rounded-xl bg-sky-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-sky-600 transition-colors hover:bg-sky-100"
+                                    title="Ver documento o imagen"
+                                  >
+                                    <FileImage className="h-4 w-4" />
+                                    Ver
+                                    <span className="rounded-full bg-sky-600 px-1.5 py-0.5 text-[9px] text-white">{saleEvidencesByTransactionId[String(row.sale.id)]?.length ?? 0}</span>
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => void handlePrintSaleRow(row)}
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                                    title="Imprimir venta"
+                                  >
+                                    <FileDown className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditNoteModal(row.note!)}
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600 transition-colors hover:bg-sky-100"
+                                    title="Editar nota"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRequestDeleteNote(row.note!)}
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500 transition-colors hover:bg-red-100"
+                                    title="Eliminar nota"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>
                         {isExpanded && (
                           <tr>
-                            <td colSpan={8} className="bg-slate-50 px-4 py-4">
+                            <td colSpan={historyView === 'CREDIT' ? 8 : 5} className="bg-slate-50 px-4 py-4">
                               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                                 {isLoadingSummary && (
                                   <p className="text-sm font-semibold text-slate-400">Cargando resumen de la venta...</p>
@@ -2421,17 +2787,17 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       </React.Fragment>
                     );
                   })}
-                  {filteredHistoryNotes.length === 0 && (
+                  {filteredHistoryRows.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-400 text-sm">Sin notas registradas.</td>
+                      <td colSpan={historyView === 'CREDIT' ? 8 : 5} className="p-8 text-center text-slate-400 text-sm">Sin ventas registradas.</td>
                     </tr>
                   )}
                 </tbody>
               </table>
-              {filteredHistoryNotes.length > 0 && (
+              {filteredHistoryRows.length > 0 && (
                 <div className="mt-4 flex items-center justify-between px-2">
                   <p className="text-xs text-slate-400">
-                    Mostrando {pagedHistoryNotes.length} de {filteredHistoryNotes.length} notas
+                    Mostrando {pagedHistoryRows.length} de {filteredHistoryRows.length} registros
                   </p>
                   <div className="flex items-center gap-2">
                     <button
@@ -2829,15 +3195,26 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                               {evidence.bytes ? ` · ${(Number(evidence.bytes) / (1024 * 1024)).toFixed(2)} MB` : ''}
                             </p>
                           </div>
-                          <a
-                            href={secureUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white"
-                          >
-                            <Eye className="h-4 w-4" />
-                            Abrir
-                          </a>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={secureUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white"
+                            >
+                              <Eye className="h-4 w-4" />
+                              Abrir
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => requestDeleteSaleEvidence(evidence)}
+                              className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-red-600 transition-colors hover:bg-red-100"
+                              title="Eliminar comprobante"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Eliminar
+                            </button>
+                          </div>
                         </div>
                         <div className="mt-4">
                           {isImage ? (
@@ -2869,6 +3246,168 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   })}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isSaleEvidenceModalOpen && selectedSaleForEvidence && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[75] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="bg-slate-900 p-6 text-white flex justify-between items-start">
+              <div>
+                <h3 className="text-2xl font-black tracking-tighter">{saleEvidenceModalMode === 'upload' ? 'Subir Comprobante' : 'Documentos de Pago'}</h3>
+                <p className="text-slate-300 font-bold tracking-widest uppercase text-[10px] mt-1">
+                  Venta #{selectedSaleForEvidence.id} · {formatLocalDateTime(selectedSaleForEvidence.created_at)}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsSaleEvidenceModalOpen(false);
+                  setSelectedSaleForEvidence(null);
+                  setSaleEvidenceFiles([]);
+                  setSaleEvidenceError(null);
+                  setSaleEvidenceToDelete(null);
+                  setDeleteSaleEvidenceJustification('');
+                  setDeleteSaleEvidenceError(null);
+                }}
+                className="bg-white/10 w-10 h-10 rounded-2xl flex items-center justify-center text-2xl hover:bg-red-500 transition-all"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6">
+              {saleEvidenceModalMode === 'upload' ? (
+              <form onSubmit={handleUploadSaleEvidence} className="rounded-3xl border border-slate-200 bg-white p-5 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-black text-slate-800">Adjuntar comprobante</p>
+                    <p className="text-xs text-slate-400">Imagen o PDF del pago en efectivo.</p>
+                  </div>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-600 transition-colors hover:border-slate-300">
+                    <Paperclip className="h-4 w-4" />
+                    Adjuntar archivo
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+                      multiple
+                      className="hidden"
+                      onChange={handleSaleEvidenceFilesChange}
+                    />
+                  </label>
+                </div>
+                <p className="text-xs text-slate-400">
+                  {saleEvidenceFiles.length > 0 ? `${saleEvidenceFiles.length} archivo(s) listo(s)` : 'Máximo 10 MB por archivo'}
+                </p>
+                {saleEvidenceError && <p className="text-xs font-bold text-red-500">{saleEvidenceError}</p>}
+                {saleEvidenceFiles.length > 0 && (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="space-y-2">
+                      {saleEvidenceFiles.map((file, index) => (
+                        <div key={`${file.name}-${index}`} className="flex items-center gap-2 text-xs text-slate-600">
+                          <Paperclip className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="truncate">{file.name}</span>
+                          <span className="text-slate-400">({(file.size / (1024 * 1024)).toFixed(2)} MB)</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSaleEvidenceFiles([]);
+                      setSaleEvidenceError(null);
+                    }}
+                    className="rounded-xl bg-slate-100 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500"
+                  >
+                    Limpiar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={feedbackLoading || isLoading}
+                    className="rounded-xl bg-violet-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {feedbackLoading || isLoading ? 'Subiendo...' : 'Guardar comprobante'}
+                  </button>
+                </div>
+              </form>
+              ) : null}
+
+              {saleEvidenceModalMode === 'view' && (selectedSaleEvidences.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-400">
+                  Esta venta no tiene comprobantes adjuntos.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {selectedSaleEvidences.map((evidence) => {
+                    const secureUrl = evidence.secure_url || evidence.file_url;
+                    const isPdf = (evidence.format ?? '').toLowerCase() === 'pdf' || evidence.resource_type === 'raw';
+                    const isImage = evidence.resource_type === 'image' && !isPdf;
+                    return (
+                      <div key={evidence.id} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-black text-slate-800 truncate">
+                              {evidence.original_filename || evidence.public_id || 'COMPROBANTE'}
+                            </p>
+                            <p className="mt-1 text-[11px] text-slate-400">
+                              {formatLocalDateTime(evidence.created_at)}
+                              {evidence.bytes ? ` · ${(Number(evidence.bytes) / (1024 * 1024)).toFixed(2)} MB` : ''}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={secureUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white"
+                            >
+                              <Eye className="h-4 w-4" />
+                              Abrir
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => requestDeleteSaleEvidence(evidence)}
+                              className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-red-600 transition-colors hover:bg-red-100"
+                              title="Eliminar comprobante"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Eliminar
+                            </button>
+                          </div>
+                        </div>
+                        <div className="mt-4">
+                          {isImage ? (
+                            <a href={secureUrl} target="_blank" rel="noreferrer">
+                              <img
+                                src={secureUrl}
+                                alt={evidence.original_filename || 'Comprobante'}
+                                className="h-56 w-full rounded-2xl object-cover border border-slate-200"
+                              />
+                            </a>
+                          ) : (
+                            <a
+                              href={secureUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex h-56 w-full items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-500"
+                            >
+                              <div className="text-center">
+                                <FileDown className="mx-auto h-10 w-10" />
+                                <p className="mt-3 text-sm font-black uppercase tracking-widest">
+                                  {isPdf ? 'PDF adjunto' : 'Archivo adjunto'}
+                                </p>
+                              </div>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -3036,6 +3575,32 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         onCancel={() => {
           setIsDeleteAddressModalOpen(false);
           setAddressToDelete(null);
+        }}
+      />
+
+      <ConfirmModal
+        isOpen={isDeleteSaleEvidenceModalOpen}
+        title="Eliminar comprobante"
+        description={saleEvidenceToDelete ? `Se eliminará el comprobante ${saleEvidenceToDelete.original_filename || saleEvidenceToDelete.public_id || ''}.` : 'Se eliminará el comprobante seleccionado.'}
+        icon="🗑️"
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        noteLabel="Observación obligatoria"
+        notePlaceholder="Indique por qué se elimina el comprobante"
+        noteValue={deleteSaleEvidenceJustification}
+        noteRequired
+        noteError={deleteSaleEvidenceError}
+        isProcessing={isLoading}
+        onNoteChange={(value) => {
+          setDeleteSaleEvidenceJustification(value);
+          if (deleteSaleEvidenceError) setDeleteSaleEvidenceError(null);
+        }}
+        onConfirm={handleConfirmDeleteSaleEvidence}
+        onCancel={() => {
+          setIsDeleteSaleEvidenceModalOpen(false);
+          setSaleEvidenceToDelete(null);
+          setDeleteSaleEvidenceJustification('');
+          setDeleteSaleEvidenceError(null);
         }}
       />
     </div>

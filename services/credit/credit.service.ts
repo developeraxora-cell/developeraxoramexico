@@ -71,6 +71,32 @@ export interface CreditPaymentEvidence {
   created_at: string;
 }
 
+export interface CashSaleHistory {
+  id: string;
+  branch_id: string;
+  type: string;
+  reference: string | null;
+  notes: string | null;
+  nombre_cliente: string | null;
+  direccion_cliente: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface SalePaymentEvidence {
+  id: string;
+  transaction_id: string;
+  file_url: string;
+  secure_url: string | null;
+  public_id: string | null;
+  resource_type: string;
+  format: string | null;
+  original_filename: string | null;
+  bytes: number | null;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
 export interface CreditNoteWithStatus extends CreditNote {
   status: 'PAGADA' | 'VENCIDA' | 'ABIERTA';
   days_overdue: number;
@@ -492,6 +518,93 @@ export const creditService = {
 
     if (error) throw error;
     return (data ?? []) as CreditPaymentEvidence[];
+  },
+
+
+  async listCashSalesByCustomer(_customerId: string, branchId: string, customerName?: string | null) {
+    const { data, error } = await supabase
+      .from('inventory_transactions')
+      .select('id, branch_id, type, reference, notes, nombre_cliente, direccion_cliente, created_by, created_at')
+      .eq('branch_id', branchId)
+      .eq('type', 'SALE')
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false })
+      .limit(500);
+
+    if (error) throw error;
+
+    const normalizeCustomerName = (value: string | null | undefined) =>
+      String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+
+    const normalizedName = normalizeCustomerName(customerName);
+    if (!normalizedName) return (data ?? []) as CashSaleHistory[];
+
+    return (data ?? []).filter((sale) => {
+      const candidate = normalizeCustomerName(sale.nombre_cliente);
+      return candidate === normalizedName
+        || candidate.includes(normalizedName)
+        || normalizedName.includes(candidate);
+    }) as CashSaleHistory[];
+  },
+
+  async listSaleEvidencesByTransactionIds(transactionIds: string[]) {
+    if (transactionIds.length === 0) return [] as SalePaymentEvidence[];
+
+    const { data, error } = await supabase
+      .from('inventory_transaction_evidences')
+      .select('*')
+      .in('transaction_id', transactionIds)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data ?? []) as SalePaymentEvidence[];
+  },
+
+  async createSaleEvidence(input: {
+    transaction_id: string;
+    file_url: string;
+    secure_url?: string | null;
+    public_id?: string | null;
+    resource_type: string;
+    format?: string | null;
+    original_filename?: string | null;
+    bytes?: number | null;
+    uploaded_by?: string | null;
+  }) {
+    const { data, error } = await supabase
+      .from('inventory_transaction_evidences')
+      .insert([{
+        transaction_id: input.transaction_id,
+        file_url: input.file_url,
+        secure_url: input.secure_url ?? null,
+        public_id: input.public_id ?? null,
+        resource_type: input.resource_type,
+        format: input.format ?? null,
+        original_filename: input.original_filename ?? null,
+        bytes: input.bytes ?? null,
+        uploaded_by: input.uploaded_by ?? null,
+      }])
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data as SalePaymentEvidence;
+  },
+
+
+  async deleteSaleEvidence(id: string) {
+    const { error } = await supabase
+      .from('inventory_transaction_evidences')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
   },
 
   async getCustomerSummary(customer: CreditCustomer, today = new Date()) {
