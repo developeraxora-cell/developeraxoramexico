@@ -47,6 +47,10 @@ interface SpecialPriceModalState {
 
 let watermarkPngBytesPromise: Promise<ArrayBuffer | null> | null = null;
 const SALES_HISTORY_PAGE_SIZE = 5;
+type SalePaymentMethod = 'EFECTIVO' | 'CREDITO' | 'SIN_COSTO';
+const ZERO_COST_NOTE_PREFIX = 'SALIDA SIN COSTO:';
+const isZeroCostSale = (notes: string | null | undefined) =>
+  String(notes ?? '').trim().toUpperCase().startsWith(ZERO_COST_NOTE_PREFIX);
 
 const getWatermarkPngBytes = async () => {
   if (!watermarkPngBytesPromise) {
@@ -73,8 +77,9 @@ const POSScreen: React.FC<POSProps> = ({
   const [saleUomsByProduct, setSaleUomsByProduct] = useState<Record<string, ProductUom[]>>({});
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<CreditCustomer | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'CREDITO'>('EFECTIVO');
+  const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>('EFECTIVO');
   const [saleNotes, setSaleNotes] = useState('');
+  const [saleNotesError, setSaleNotesError] = useState<string | null>(null);
   const [saleCreditDays, setSaleCreditDays] = useState<15 | 30>(30);
   const [customerAddresses, setCustomerAddresses] = useState<CustomerAddress[]>([]);
   const [selectedCustomerAddressId, setSelectedCustomerAddressId] = useState('');
@@ -134,7 +139,7 @@ const POSScreen: React.FC<POSProps> = ({
     created_by: string | null;
     items_count: number;
     total_amount: number;
-    payment_method: 'EFECTIVO' | 'CREDITO';
+    payment_method: SalePaymentMethod;
     credit_note_id: string | null;
     credit_paid_amount: number;
   }>>([]);
@@ -178,7 +183,7 @@ const POSScreen: React.FC<POSProps> = ({
     created_at: string;
     nombre_cliente: string | null;
     total_amount: number;
-    payment_method: 'EFECTIVO' | 'CREDITO';
+    payment_method: SalePaymentMethod;
     credit_note_id: string | null;
     credit_paid_amount: number;
   }>(null);
@@ -431,7 +436,9 @@ const POSScreen: React.FC<POSProps> = ({
         created_at: tx.created_at,
         items_count: itemsSummary[tx.id]?.count ?? 0,
         total_amount: Number(tx.total_amount ?? itemsSummary[tx.id]?.total ?? 0),
-        payment_method: creditByTransaction[String(tx.id)] ? 'CREDITO' : 'EFECTIVO',
+        payment_method: isZeroCostSale(tx.notes)
+          ? 'SIN_COSTO'
+          : (creditByTransaction[String(tx.id)] ? 'CREDITO' : 'EFECTIVO'),
         credit_note_id: creditByTransaction[String(tx.id)]?.note_id ?? null,
         credit_paid_amount: creditByTransaction[String(tx.id)]?.paid_amount ?? 0,
       }));
@@ -525,10 +532,11 @@ const POSScreen: React.FC<POSProps> = ({
     created_at: string;
     nombre_cliente: string | null;
     total_amount: number;
-    payment_method: 'EFECTIVO' | 'CREDITO';
+    payment_method: SalePaymentMethod;
     credit_note_id: string | null;
     credit_paid_amount: number;
   }) => {
+    if (sale.payment_method === 'SIN_COSTO') return;
     setSalePaymentEditTarget(sale);
     setSalePaymentMethodDraft(sale.payment_method);
     setSalePaymentJustification('');
@@ -823,7 +831,7 @@ const POSScreen: React.FC<POSProps> = ({
       unitPrice: number;
       subtotal: number;
     }>;
-    paymentMethod: 'EFECTIVO' | 'CREDITO';
+    paymentMethod: SalePaymentMethod;
     customerName: string;
     customerAddress: string;
     cashierName: string;
@@ -889,7 +897,14 @@ const POSScreen: React.FC<POSProps> = ({
     page.drawText(`FECHA:  ${formatLocalDateTime(input.createdAt)}`, { x: marginX + 10, y: infoTop, size: 10, font: fontBold });
     page.drawText(`CLIENTE:  ${input.customerName.toUpperCase()}`, { x: marginX + 10, y: infoTop - 24, size: 10, font: fontBold });
     page.drawText(`DIRECCION:  ${input.customerAddress.toUpperCase()}`, { x: marginX + 10, y: infoTop - 48, size: 10, font: fontBold });
-    page.drawText(input.paymentMethod === 'CREDITO' ? 'CREDITO' : 'LIQUIDADO', { x: marginX + 10, y: infoTop - 72, size: 10, font: fontBold });
+    page.drawText(
+      input.paymentMethod === 'CREDITO'
+        ? 'CREDITO'
+        : input.paymentMethod === 'SIN_COSTO'
+          ? 'SIN COSTO'
+          : 'LIQUIDADO',
+      { x: marginX + 10, y: infoTop - 72, size: 10, font: fontBold }
+    );
     page.drawText(`OBSERVACION:  ${(input.saleNotes?.trim() || '-').toUpperCase()}`, { x: marginX + 10, y: infoTop - 96, size: 10, font: fontBold });
     page.drawText('NOTA DE VENTA', { x: rightInfoX + 18, y: infoTop, size: 12, font: fontBold });
     page.drawText(String(input.saleId), { x: rightInfoX + 70, y: infoTop - 24, size: 12, font: fontBold });
@@ -1050,12 +1065,6 @@ const POSScreen: React.FC<POSProps> = ({
         .eq('transaction_id', sale.id);
       if (itemsError) throw itemsError;
 
-      const { data: creditNote } = await supabase
-        .from('concrete_credit_notes')
-        .select('id')
-        .eq('inventory_transaction_id', sale.id)
-        .maybeSingle();
-
       const lines = (itemsData ?? []).map((row: any) => {
         const uomCode = row.concrete_product_uoms?.concrete_uoms?.code ?? row.concrete_product_uoms?.concrete_uoms?.name ?? 'UND';
         const factor = Number(row.factor_used ?? 1);
@@ -1075,7 +1084,7 @@ const POSScreen: React.FC<POSProps> = ({
         saleId: sale.id,
         createdAt: sale.created_at,
         items: lines,
-        paymentMethod: creditNote?.id ? 'CREDITO' : 'EFECTIVO',
+        paymentMethod: sale.payment_method,
         customerName: sale.nombre_cliente ?? 'PUBLICO GENERAL',
         customerAddress: sale.direccion_cliente ?? '-',
         cashierName: sale.created_by || currentUser.name,
@@ -1211,6 +1220,7 @@ const POSScreen: React.FC<POSProps> = ({
     setCreditCheck(null);
     setPaymentMethod('EFECTIVO');
     setSaleNotes('');
+    setSaleNotesError(null);
     setSaleCreditDays(30);
     setCreditOverrideApproved(false);
     setCreditOverrideNote('');
@@ -1225,6 +1235,7 @@ const POSScreen: React.FC<POSProps> = ({
     setCreditOverrideNote('');
     setCreditOverrideError(null);
     setSaleCreditDays(30);
+    setSaleNotesError(null);
   }, [selectedCustomer?.id, cartTotal]);
 
   useEffect(() => {
@@ -1245,13 +1256,14 @@ const POSScreen: React.FC<POSProps> = ({
     return result;
   }, [selectedCustomer, cartTotal]);
 
-  const handleSelectPaymentMethod = async (method: 'EFECTIVO' | 'CREDITO') => {
-    if (method === 'EFECTIVO') {
+  const handleSelectPaymentMethod = async (method: SalePaymentMethod) => {
+    if (method !== 'CREDITO') {
       setCreditOverrideApproved(false);
       setCreditOverrideNote('');
       setCreditOverrideError(null);
       setSaleCreditDays(30);
     }
+    setSaleNotesError(null);
     if (method === 'CREDITO') {
       if (!selectedCustomer) {
         alert('⚠️ Seleccione un cliente para habilitar crédito.');
@@ -1302,20 +1314,39 @@ const POSScreen: React.FC<POSProps> = ({
       }
     }
 
+    if (paymentMethod === 'SIN_COSTO' && !saleNotes.trim()) {
+      setSaleNotesError('La observación es obligatoria para registrar una salida sin costo.');
+      return;
+    }
+
     actionLockRef.current = true;
     try {
-      const saleCartSnapshot = cart.map((item) => ({ ...item }));
       const paymentMethodSnapshot = paymentMethod;
+      const saleCartSnapshot = cart.map((item) => (
+        paymentMethodSnapshot === 'SIN_COSTO'
+          ? {
+              ...item,
+              unitPrice: 0,
+              subtotal: 0,
+              specialUnitPrice: null,
+              specialPriceNote: null,
+            }
+          : { ...item }
+      ));
       const saleNotesSnapshot = saleNotes.trim();
+      const zeroCostSnapshot = paymentMethodSnapshot === 'SIN_COSTO' ? saleNotesSnapshot : '';
       const creditOverrideSnapshot = paymentMethodSnapshot === 'CREDITO' && creditOverrideApproved
         ? creditOverrideNote.trim()
         : '';
-      const mergedSaleNotes = [saleNotesSnapshot, creditOverrideSnapshot ? `AUTORIZACION DE CREDITO: ${creditOverrideSnapshot}` : '']
+      const mergedSaleNotes = [
+        zeroCostSnapshot ? `${ZERO_COST_NOTE_PREFIX} ${zeroCostSnapshot}` : saleNotesSnapshot,
+        creditOverrideSnapshot ? `AUTORIZACION DE CREDITO: ${creditOverrideSnapshot}` : '',
+      ]
         .filter(Boolean)
         .join(' | ');
       const customerSnapshot = selectedCustomer;
       const concreteMetaSnapshot = { ...concreteMeta };
-      const totalSnapshot = cartTotal;
+      const totalSnapshot = paymentMethodSnapshot === 'SIN_COSTO' ? 0 : cartTotal;
       const specialPriceItems = saleCartSnapshot.filter((item) => Number(item.specialUnitPrice ?? 0) > 0);
       const specialPriceJustification = specialPriceItems.length > 0
         ? specialPriceItems
@@ -1373,8 +1404,8 @@ const POSScreen: React.FC<POSProps> = ({
         action_type: 'VENTA',
         entity_type: 'venta',
         entity_id: String(transaction.id),
-        description: `Venta registrada${customerSnapshot?.name ? ` para ${customerSnapshot.name}` : ''}${specialPriceItems.length > 0 ? ' con precio especial' : ''}`,
-        justification: [specialPriceJustification, creditOverrideSnapshot].filter(Boolean).join(' | ') || null,
+        description: `${paymentMethodSnapshot === 'SIN_COSTO' ? 'Salida sin costo registrada' : 'Venta registrada'}${customerSnapshot?.name ? ` para ${customerSnapshot.name}` : ''}${specialPriceItems.length > 0 ? ' con precio especial' : ''}`,
+        justification: [specialPriceJustification, creditOverrideSnapshot, zeroCostSnapshot].filter(Boolean).join(' | ') || null,
         new_data: {
           branch_id: branchId,
           payment_method: paymentMethodSnapshot,
@@ -1445,13 +1476,23 @@ const POSScreen: React.FC<POSProps> = ({
         });
       }
       applyLocalSaleStock(saleCartSnapshot);
-      showFeedback('success', 'Pago exitoso', `Venta registrada (${paymentMethodSnapshot}).`);
+      const paymentMethodLabel = paymentMethodSnapshot === 'SIN_COSTO'
+        ? 'SIN COSTO'
+        : paymentMethodSnapshot === 'CREDITO'
+          ? 'CREDITO'
+          : 'EFECTIVO';
+      showFeedback(
+        'success',
+        paymentMethodSnapshot === 'SIN_COSTO' ? 'Salida registrada' : 'Pago exitoso',
+        `${paymentMethodSnapshot === 'SIN_COSTO' ? 'Movimiento sin costo' : 'Venta'} registrada (${paymentMethodLabel}).`
+      );
       setCart([]);
       setSelectedCustomer(null);
       setCreditCustomers([]);
       setCreditCheck(null);
       setPaymentMethod('EFECTIVO');
       setSaleNotes('');
+      setSaleNotesError(null);
       setSaleCreditDays(30);
       setCreditOverrideApproved(false);
       setCreditOverrideNote('');
@@ -1481,6 +1522,7 @@ const POSScreen: React.FC<POSProps> = ({
     setNewSaleAddressError(null);
     setNewSaleAddressLabel('');
     setNewSaleAddressValue('');
+    setSaleNotesError(null);
     if (paymentMethod === 'CREDITO' && selectedCustomer) {
       try {
         await creditService.listAddressesByCustomer(selectedCustomer.id).then((rows) => {
@@ -1500,6 +1542,10 @@ const POSScreen: React.FC<POSProps> = ({
   };
 
   const handleConfirmSaleAddress = async () => {
+    if (paymentMethod === 'SIN_COSTO' && !saleNotes.trim()) {
+      setSaleNotesError('La observación es obligatoria para registrar una salida sin costo.');
+      return;
+    }
     if (!selectedCustomer) {
       setIsSaleAddressModalOpen(false);
       await performCheckout();
@@ -2103,8 +2149,8 @@ const POSScreen: React.FC<POSProps> = ({
         </div>
 
         <div className="p-6 bg-slate-900 text-white border-t border-slate-800">
-          <div className="grid grid-cols-2 gap-2 mb-6">
-            {(['EFECTIVO', 'CREDITO'] as const).map((m) => (
+          <div className="grid grid-cols-3 gap-2 mb-6">
+            {(['EFECTIVO', 'CREDITO', 'SIN_COSTO'] as const).map((m) => (
               <button
                 key={m}
                 disabled={feedbackLoading}
@@ -2114,7 +2160,7 @@ const POSScreen: React.FC<POSProps> = ({
                   : 'bg-slate-800 border-slate-700 text-slate-500'
                   }`}
               >
-                {m}
+                {m === 'SIN_COSTO' ? 'SIN COSTO' : m}
               </button>
             ))}
           </div>
@@ -2122,7 +2168,7 @@ const POSScreen: React.FC<POSProps> = ({
           <div className="flex justify-between items-end mb-6">
             <div>
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total a Pagar</p>
-              <p className="text-4xl font-black text-orange-400 tracking-tighter">{formatCurrency(cartTotal)}</p>
+              <p className="text-4xl font-black text-orange-400 tracking-tighter">{formatCurrency(paymentMethod === 'SIN_COSTO' ? 0 : cartTotal)}</p>
             </div>
           </div>
 
@@ -2851,22 +2897,26 @@ const POSScreen: React.FC<POSProps> = ({
                           <span className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${
                             sale.payment_method === 'CREDITO'
                               ? 'bg-amber-100 text-amber-700'
-                              : 'bg-emerald-100 text-emerald-700'
+                              : sale.payment_method === 'SIN_COSTO'
+                                ? 'bg-slate-200 text-slate-700'
+                                : 'bg-emerald-100 text-emerald-700'
                           }`}>
-                            {sale.payment_method}
+                            {sale.payment_method === 'SIN_COSTO' ? 'SIN COSTO' : sale.payment_method}
                           </span>
                         </td>
                         <td className="p-4 text-center text-xs font-bold text-slate-600">{sale.items_count}</td>
                         <td className="p-4 text-right text-sm font-black text-slate-900">{formatCurrency(sale.total_amount)}</td>
                         <td className="p-4 text-center">
                           <div className="flex items-center justify-center gap-1">
-                            <button
-                              onClick={() => openEditSalePaymentModal(sale)}
-                              className="w-8 h-8 rounded-lg text-amber-600 hover:text-amber-800 hover:bg-amber-50"
-                              title="Editar tipo de venta"
-                            >
-                              <CreditCard className="w-4 h-4 mx-auto" />
-                            </button>
+                            {sale.payment_method !== 'SIN_COSTO' && (
+                              <button
+                                onClick={() => openEditSalePaymentModal(sale)}
+                                className="w-8 h-8 rounded-lg text-amber-600 hover:text-amber-800 hover:bg-amber-50"
+                                title="Editar tipo de venta"
+                              >
+                                <CreditCard className="w-4 h-4 mx-auto" />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleDownloadSalePdf(sale)}
                               className="w-8 h-8 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100"
@@ -3083,10 +3133,16 @@ const POSScreen: React.FC<POSProps> = ({
                 <textarea
                   rows={3}
                   value={saleNotes}
-                  onChange={(e) => setSaleNotes(e.target.value)}
+                  onChange={(e) => {
+                    setSaleNotes(e.target.value);
+                    if (saleNotesError) setSaleNotesError(null);
+                  }}
                   placeholder="Agregue una observación para esta venta"
                   className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold"
                 />
+                {saleNotesError && (
+                  <p className="mt-2 text-xs font-bold text-red-600">{saleNotesError}</p>
+                )}
               </div>
               <div className="flex flex-wrap gap-3">
                 <button
