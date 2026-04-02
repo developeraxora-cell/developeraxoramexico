@@ -131,7 +131,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
 
     setIsCreateLoading(true);
     actionLockRef.current = true;
-    showFeedback('loading', 'Creando billetera', 'Registrando apertura...');
+    showFeedback('loading', 'Creando saldo a favor', 'Registrando apertura...');
     try {
       const wallet = await walletService.createWallet({
         branch_id: branchId,
@@ -149,7 +149,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
         action_type: 'CREAR',
         entity_type: 'cliente',
         entity_id: selectedCustomer.id,
-        description: `Billetera virtual creada para ${selectedCustomer.name}`,
+        description: `Saldo a favor creado para ${selectedCustomer.name}`,
         new_data: {
           wallet_id: wallet.id,
           customer_id: selectedCustomer.id,
@@ -162,9 +162,9 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
       await loadWallets();
       setIsCreateOpen(false);
       resetCreateState();
-      showFeedback('success', 'Billetera creada', 'La billetera virtual quedó habilitada.');
+      showFeedback('success', 'Saldo a favor creado', 'El saldo a favor quedó habilitado.');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo crear la billetera.';
+      const message = error instanceof Error ? error.message : 'No se pudo crear el saldo a favor.';
       setCreateError(message);
       showFeedback('error', 'No se pudo crear', message);
     } finally {
@@ -195,7 +195,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
 
     setIsRechargeLoading(true);
     actionLockRef.current = true;
-    showFeedback('loading', 'Registrando recarga', 'Actualizando saldo de la billetera...');
+    showFeedback('loading', 'Registrando recarga', 'Actualizando saldo a favor...');
     try {
       await walletService.rechargeWallet({
         wallet_id: walletToRecharge.id,
@@ -213,7 +213,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
         action_type: 'ACTUALIZAR',
         entity_type: 'cliente',
         entity_id: walletToRecharge.customer_id,
-        description: `Recarga de billetera virtual para ${walletToRecharge.customer_name}`,
+        description: `Recarga de saldo a favor para ${walletToRecharge.customer_name}`,
         justification: rechargeNotes.trim() || null,
         new_data: {
           wallet_id: walletToRecharge.id,
@@ -231,7 +231,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
       }
       setIsRechargeOpen(false);
       setWalletToRecharge(null);
-      showFeedback('success', 'Recarga registrada', 'El saldo de la billetera fue actualizado.');
+      showFeedback('success', 'Recarga registrada', 'El saldo a favor fue actualizado.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo registrar la recarga.';
       setRechargeError(message);
@@ -259,7 +259,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
     <div className="flex h-full flex-col gap-6 overflow-hidden p-6">
       <div className="grid gap-4 xl:grid-cols-4">
         <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-widest text-sky-500">Billeteras activas</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-sky-500">Saldos a favor activos</p>
           <p className="mt-3 text-4xl font-black tracking-tighter text-slate-900">{totals.active}</p>
         </div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
@@ -308,12 +308,12 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
           <tbody className="divide-y divide-slate-100">
             {isLoading && (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-slate-400">Cargando billeteras...</td>
+                <td colSpan={6} className="p-6 text-center text-slate-400">Cargando saldos a favor...</td>
               </tr>
             )}
             {!isLoading && filteredWallets.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-slate-400">No hay billeteras virtuales activas.</td>
+                <td colSpan={6} className="p-6 text-center text-slate-400">No hay saldos a favor activos.</td>
               </tr>
             )}
             {!isLoading && filteredWallets.map((wallet) => (

@@ -18,7 +18,7 @@ const WalletHistoryModal: React.FC<WalletHistoryModalProps> = ({ isOpen, wallet,
       <div className="flex max-h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl">
         <div className="flex items-start justify-between bg-slate-900 p-6 text-white">
           <div>
-            <h3 className="text-2xl font-black tracking-tighter">Historial de billetera</h3>
+            <h3 className="text-2xl font-black tracking-tighter">Historial de saldo a favor</h3>
             <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-300">{wallet.customer_name}</p>
           </div>
           <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-2xl transition hover:bg-red-500">&times;</button>

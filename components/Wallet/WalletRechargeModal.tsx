@@ -45,7 +45,7 @@ const WalletRechargeModal: React.FC<WalletRechargeModalProps> = ({
       <div className="w-full max-w-2xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
         <div className="flex items-start justify-between bg-emerald-600 p-6 text-white">
           <div>
-            <h3 className="text-2xl font-black tracking-tighter">Recargar billetera</h3>
+            <h3 className="text-2xl font-black tracking-tighter">Recargar saldo a favor</h3>
             <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-emerald-100">{wallet.customer_name}</p>
           </div>
           <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-2xl transition hover:bg-red-500">&times;</button>

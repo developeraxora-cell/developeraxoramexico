@@ -1341,7 +1341,7 @@ const POSScreen: React.FC<POSProps> = ({
         cash_amount: cashAmountSnapshot,
         credit_amount: creditAmountSnapshot,
         wallet_id: walletSnapshot?.id ?? null,
-        payment_notes: walletAppliedSnapshot > 0 ? `Billetera aplicada: ${formatCurrency(walletAppliedSnapshot)}` : null,
+        payment_notes: walletAppliedSnapshot > 0 ? `Saldo a favor aplicada: ${formatCurrency(walletAppliedSnapshot)}` : null,
         cartItems: saleCartSnapshot.map((item) => ({
           product_id: item.productId,
           product_uom_id: item.productUomId ?? '',
@@ -1452,9 +1452,9 @@ const POSScreen: React.FC<POSProps> = ({
       const paymentMethodLabel = paymentTypeSnapshot === 'SIN_COSTO'
         ? 'SIN COSTO'
         : paymentTypeSnapshot === 'BILLETERA'
-          ? 'BILLETERA VIRTUAL'
+          ? 'SALDO A FAVOR'
           : paymentTypeSnapshot === 'HIBRIDA'
-            ? `VENTA HIBRIDA${creditAmountSnapshot > 0 ? ' (BILLETERA + CREDITO)' : ' (BILLETERA + EFECTIVO)'}`
+            ? `VENTA HIBRIDA${creditAmountSnapshot > 0 ? ' (SALDO A FAVOR + CREDITO)' : ' (SALDO A FAVOR + EFECTIVO)'}`
             : paymentTypeSnapshot === 'CREDITO'
               ? 'CREDITO'
               : 'EFECTIVO';
@@ -1898,7 +1898,7 @@ const POSScreen: React.FC<POSProps> = ({
           )}
           {walletEligible && (
             <div className="px-4 border-l border-slate-100 text-right animate-in fade-in">
-              <p className="text-[9px] font-black text-slate-400 uppercase">Billetera</p>
+              <p className="text-[9px] font-black text-slate-400 uppercase">Saldo a favor</p>
               <p className="text-xl font-black text-violet-600">{formatCurrency(walletAvailableBalance)}</p>
             </div>
           )}
@@ -2850,7 +2850,7 @@ const POSScreen: React.FC<POSProps> = ({
                                     ? 'bg-slate-200 text-slate-700'
                                     : 'bg-emerald-100 text-emerald-700'
                           }`}>
-                            {sale.payment_method === 'SIN_COSTO' ? 'SIN COSTO' : sale.payment_method === 'BILLETERA' ? 'BILLETERA VIRTUAL' : sale.payment_method}
+                            {sale.payment_method === 'SIN_COSTO' ? 'SIN COSTO' : sale.payment_method === 'BILLETERA' ? 'SALDO A FAVOR' : sale.payment_method}
                           </span>
                         </td>
                         <td className="p-4 text-center text-xs font-bold text-slate-600">{sale.items_count}</td>
@@ -3027,14 +3027,14 @@ const POSScreen: React.FC<POSProps> = ({
                 <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-violet-500">Billetera virtual</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-violet-500">Saldo a favor</p>
                       <p className="mt-2 text-sm font-bold text-slate-700">Saldo disponible: {formatCurrency(walletAvailableBalance)}</p>
                       {isWalletLoading && (
                         <p className="mt-1 text-xs font-bold text-slate-400">Consultando saldo...</p>
                       )}
                       {useWalletBalance && (
                         <div className="mt-3 space-y-1 text-xs font-bold text-slate-600">
-                          <p>Aplicado con billetera: {formatCurrency(walletAppliedAmount)}</p>
+                          <p>Aplicado con saldo a favor: {formatCurrency(walletAppliedAmount)}</p>
                           <p>Restante por cubrir: {formatCurrency(remainingAfterWallet)}</p>
                         </div>
                       )}

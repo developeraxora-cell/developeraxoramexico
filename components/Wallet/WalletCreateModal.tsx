@@ -41,7 +41,7 @@ const WalletCreateModal: React.FC<WalletCreateModalProps> = ({
         <div className="flex items-start justify-between bg-slate-900 p-6 text-white">
           <div>
             <h3 className="text-2xl font-black tracking-tighter">Agregar cliente</h3>
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-300">Habilitar billetera virtual</p>
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-300">Habilitar saldo a favor</p>
           </div>
           <button
             type="button"
@@ -113,7 +113,7 @@ const WalletCreateModal: React.FC<WalletCreateModalProps> = ({
               disabled={isLoading}
               className="flex-1 rounded-2xl bg-slate-900 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading ? 'Guardando...' : 'Crear billetera'}
+              {isLoading ? 'Guardando...' : 'Crear saldo a favor'}
             </button>
           </div>
         </form>

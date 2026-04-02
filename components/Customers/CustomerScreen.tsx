@@ -2,11 +2,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, User } from '../../types';
 import { creditService, type CashSaleHistory, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentEvidence, type CreditPaymentMethod, type CreditSummary, type CustomerAddress, type SalePaymentEvidence } from '../../services/credit/credit.service';
-import { Eye, FileDown, FileImage, MapPin, Paperclip, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
+import { walletService, type CustomerWalletMovement, type CustomerWalletSummary } from '../../services/wallet.service';
+import { CreditCard, Eye, FileDown, FileImage, History, MapPin, Paperclip, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 import ConfirmModal from '../common/ConfirmModal';
+import WalletCreateModal from '../Wallet/WalletCreateModal';
+import WalletRechargeModal from '../Wallet/WalletRechargeModal';
+import WalletHistoryModal from '../Wallet/WalletHistoryModal';
 import { logMaterialsAudit } from '../../services/audit/audit.service';
 import { supabase } from '../../services/supabaseClient';
 import { customerSelectionService } from '../../services/shared/customerSelection.service';
@@ -216,6 +220,25 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [cashSaleHistory, setCashSaleHistory] = useState<CashSaleHistory[]>([]);
   const [cashSaleTotalsById, setCashSaleTotalsById] = useState<Record<string, number>>({});
   const [saleEvidencesByTransactionId, setSaleEvidencesByTransactionId] = useState<Record<string, SalePaymentEvidence[]>>({});
+  const [walletsByCustomerId, setWalletsByCustomerId] = useState<Record<string, CustomerWalletSummary>>({});
+  const [isWalletCreateOpen, setIsWalletCreateOpen] = useState(false);
+  const [eligibleWalletCustomers, setEligibleWalletCustomers] = useState<CreditCustomer[]>([]);
+  const [selectedWalletCustomer, setSelectedWalletCustomer] = useState<CreditCustomer | null>(null);
+  const [walletInitialAmount, setWalletInitialAmount] = useState('10000');
+  const [walletCreateNotes, setWalletCreateNotes] = useState('');
+  const [walletCreateError, setWalletCreateError] = useState<string | null>(null);
+  const [isWalletCreateLoading, setIsWalletCreateLoading] = useState(false);
+  const [walletToRecharge, setWalletToRecharge] = useState<CustomerWalletSummary | null>(null);
+  const [isWalletRechargeOpen, setIsWalletRechargeOpen] = useState(false);
+  const [walletRechargeAmount, setWalletRechargeAmount] = useState('');
+  const [walletRechargeReference, setWalletRechargeReference] = useState('');
+  const [walletRechargeNotes, setWalletRechargeNotes] = useState('');
+  const [walletRechargeError, setWalletRechargeError] = useState<string | null>(null);
+  const [isWalletRechargeLoading, setIsWalletRechargeLoading] = useState(false);
+  const [walletToHistory, setWalletToHistory] = useState<CustomerWalletSummary | null>(null);
+  const [walletMovements, setWalletMovements] = useState<CustomerWalletMovement[]>([]);
+  const [isWalletHistoryOpen, setIsWalletHistoryOpen] = useState(false);
+  const [isWalletHistoryLoading, setIsWalletHistoryLoading] = useState(false);
   const [paymentHistoryPage, setPaymentHistoryPage] = useState(1);
   const [isPaymentHistoryModalOpen, setIsPaymentHistoryModalOpen] = useState(false);
   const [selectedPaymentForEvidence, setSelectedPaymentForEvidence] = useState<CreditPayment | null>(null);
@@ -385,6 +408,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     if (!branchId) {
       setCustomers([]);
       setSummaries({});
+      setWalletsByCustomerId({});
       setTotalCustomers(0);
       return;
     }
@@ -393,11 +417,20 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setError(null);
 
     try {
-      const pageData = await creditService.listCustomersByBranchPaged(branchId, currentPage, PAGE_SIZE, debouncedSearchTerm, selectedLetter);
+      const [pageData, branchWallets] = await Promise.all([
+        creditService.listCustomersByBranchPaged(branchId, currentPage, PAGE_SIZE, debouncedSearchTerm, selectedLetter),
+        walletService.listWalletsByBranch(branchId),
+      ]);
       const summaryMap = await creditService.getSummariesForCustomers(pageData.rows);
       setCustomers(pageData.rows);
       setTotalCustomers(pageData.total);
       setSummaries(summaryMap);
+      setWalletsByCustomerId(
+        branchWallets.reduce<Record<string, CustomerWalletSummary>>((acc, wallet) => {
+          acc[wallet.customer_id] = wallet;
+          return acc;
+        }, {})
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo cargar clientes.';
       setError(message);
@@ -466,6 +499,178 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       setPaymentHistoryPage(paymentHistoryTotalPages);
     }
   }, [paymentHistoryPage, paymentHistoryTotalPages]);
+
+  const resetWalletCreateState = () => {
+    setSelectedWalletCustomer(null);
+    setEligibleWalletCustomers([]);
+    setWalletInitialAmount('10000');
+    setWalletCreateNotes('');
+    setWalletCreateError(null);
+    setIsWalletCreateLoading(false);
+  };
+
+  const handleSearchEligibleWalletCustomers = useCallback(async (query: string) => {
+    if (!branchId) return;
+    const data = await walletService.listEligibleCustomers(branchId, query);
+    setEligibleWalletCustomers(data);
+  }, [branchId]);
+
+  const openWalletCreateModal = (customer?: CreditCustomer | null) => {
+    resetWalletCreateState();
+    setIsWalletCreateOpen(true);
+    if (customer) {
+      setSelectedWalletCustomer(customer);
+      setEligibleWalletCustomers([customer]);
+      return;
+    }
+    void handleSearchEligibleWalletCustomers('');
+  };
+
+  const handleCreateWallet = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (actionLockRef.current) return;
+    if (!branchId) return;
+    if (!selectedWalletCustomer) {
+      setWalletCreateError('Seleccione un cliente.');
+      return;
+    }
+
+    const amount = Number(String(walletInitialAmount).replace(/,/g, '').trim());
+    if (!Number.isFinite(amount) || amount < 10000) {
+      setWalletCreateError('El monto inicial mínimo es de 10,000 pesos.');
+      return;
+    }
+
+    setIsWalletCreateLoading(true);
+    actionLockRef.current = true;
+    showFeedback('loading', 'Creando saldo a favor', 'Registrando apertura...');
+
+    try {
+      const wallet = await walletService.createWallet({
+        branch_id: branchId,
+        customer_id: selectedWalletCustomer.id,
+        initial_amount: amount,
+        opened_by: currentUser.name,
+        notes: walletCreateNotes.trim() || null,
+      });
+
+      logMaterialsAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'CREAR',
+        entity_type: 'cliente',
+        entity_id: selectedWalletCustomer.id,
+        description: `Saldo a favor creado para ${selectedWalletCustomer.name}`,
+        new_data: {
+          wallet_id: wallet.id,
+          customer_id: selectedWalletCustomer.id,
+          customer_name: selectedWalletCustomer.name,
+          opened_amount: amount,
+          notes: walletCreateNotes.trim() || null,
+        },
+      });
+
+      await loadCustomers();
+      setIsWalletCreateOpen(false);
+      resetWalletCreateState();
+      showFeedback('success', 'Saldo a favor creado', 'El saldo a favor quedó habilitado.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo crear el saldo a favor.';
+      setWalletCreateError(message);
+      showFeedback('error', 'No se pudo crear', message);
+    } finally {
+      setIsWalletCreateLoading(false);
+      actionLockRef.current = false;
+    }
+  };
+
+  const openWalletRechargeModal = (wallet: CustomerWalletSummary) => {
+    setWalletToRecharge(wallet);
+    setWalletRechargeAmount('');
+    setWalletRechargeReference('');
+    setWalletRechargeNotes('');
+    setWalletRechargeError(null);
+    setIsWalletRechargeOpen(true);
+  };
+
+  const handleRechargeWallet = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (actionLockRef.current) return;
+    if (!walletToRecharge) return;
+
+    const amount = Number(String(walletRechargeAmount).replace(/,/g, '').trim());
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setWalletRechargeError('El monto de la recarga debe ser mayor a 0.');
+      return;
+    }
+
+    setIsWalletRechargeLoading(true);
+    actionLockRef.current = true;
+    showFeedback('loading', 'Registrando recarga', 'Actualizando saldo a favor...');
+
+    try {
+      await walletService.rechargeWallet({
+        wallet_id: walletToRecharge.id,
+        amount,
+        created_by: currentUser.name,
+        reference: walletRechargeReference.trim() || null,
+        notes: walletRechargeNotes.trim() || null,
+      });
+
+      logMaterialsAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ACTUALIZAR',
+        entity_type: 'cliente',
+        entity_id: walletToRecharge.customer_id,
+        description: `Recarga de saldo a favor para ${walletToRecharge.customer_name}`,
+        justification: walletRechargeNotes.trim() || null,
+        new_data: {
+          wallet_id: walletToRecharge.id,
+          amount,
+          reference: walletRechargeReference.trim() || null,
+        },
+      });
+
+      await loadCustomers();
+      if (walletToHistory?.id === walletToRecharge.id) {
+        setIsWalletHistoryLoading(true);
+        const movements = await walletService.listWalletMovements(walletToRecharge.id);
+        setWalletMovements(movements);
+        setIsWalletHistoryLoading(false);
+      }
+      setIsWalletRechargeOpen(false);
+      setWalletToRecharge(null);
+      showFeedback('success', 'Recarga registrada', 'El saldo a favor fue actualizado.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo registrar la recarga.';
+      setWalletRechargeError(message);
+      showFeedback('error', 'No se pudo recargar', message);
+    } finally {
+      setIsWalletRechargeLoading(false);
+      actionLockRef.current = false;
+    }
+  };
+
+  const openWalletHistoryModal = async (wallet: CustomerWalletSummary) => {
+    setWalletToHistory(wallet);
+    setWalletMovements([]);
+    setIsWalletHistoryOpen(true);
+    setIsWalletHistoryLoading(true);
+    try {
+      const movements = await walletService.listWalletMovements(wallet.id);
+      setWalletMovements(movements);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo cargar el historial de saldo a favor.';
+      showFeedback('error', 'No se pudo cargar', message);
+    } finally {
+      setIsWalletHistoryLoading(false);
+    }
+  };
 
   const handleOpenHistory = async (customer: CreditCustomer) => {
     setHistoryView('CREDIT');
@@ -1934,7 +2139,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         <button
           onClick={() => setIsCreateModalOpen(true)}
           disabled={feedbackLoading || isLoading}
-          className="w-full md:w-auto bg-slate-900 text-white px-6 py-3 rounded-xl font-bold inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full md:w-auto bg-slate-900 text-white px-6 py-3 rounded-xl font-bold inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <Plus className="w-4 h-4" />
           Nuevo Cliente
@@ -1973,6 +2178,56 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         onClose={closeFeedback}
       />
 
+      <WalletCreateModal
+        isOpen={isWalletCreateOpen}
+        customers={eligibleWalletCustomers}
+        selectedCustomer={selectedWalletCustomer}
+        initialAmount={walletInitialAmount}
+        notes={walletCreateNotes}
+        error={walletCreateError}
+        isLoading={isWalletCreateLoading}
+        onClose={() => {
+          setIsWalletCreateOpen(false);
+          resetWalletCreateState();
+        }}
+        onSearch={handleSearchEligibleWalletCustomers}
+        onSelectCustomer={setSelectedWalletCustomer}
+        onInitialAmountChange={setWalletInitialAmount}
+        onNotesChange={setWalletCreateNotes}
+        onSubmit={handleCreateWallet}
+      />
+
+      <WalletRechargeModal
+        isOpen={isWalletRechargeOpen}
+        wallet={walletToRecharge}
+        amount={walletRechargeAmount}
+        reference={walletRechargeReference}
+        notes={walletRechargeNotes}
+        error={walletRechargeError}
+        isLoading={isWalletRechargeLoading}
+        onClose={() => {
+          setIsWalletRechargeOpen(false);
+          setWalletToRecharge(null);
+          setWalletRechargeError(null);
+        }}
+        onAmountChange={setWalletRechargeAmount}
+        onReferenceChange={setWalletRechargeReference}
+        onNotesChange={setWalletRechargeNotes}
+        onSubmit={handleRechargeWallet}
+      />
+
+      <WalletHistoryModal
+        isOpen={isWalletHistoryOpen}
+        wallet={walletToHistory}
+        movements={walletMovements}
+        isLoading={isWalletHistoryLoading}
+        onClose={() => {
+          setIsWalletHistoryOpen(false);
+          setWalletToHistory(null);
+          setWalletMovements([]);
+        }}
+      />
+
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="border-b border-slate-200 px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-500">
           Seleccionados {selectedCustomerIds.length}
@@ -1985,7 +2240,10 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               <th className="p-4 text-right">Límite</th>
               <th className="p-4 text-right">Deuda actual</th>
               <th className="p-4 text-right">Disponible</th>
-              <th className="p-4 text-center">Acciones</th>
+              <th className="p-4 text-right">Saldo a favor</th>
+              <th className="p-4 text-center">Cliente</th>
+              <th className="p-4 text-center">Credito</th>
+              <th className="p-4 text-center">Saldo</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -1993,6 +2251,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               const summary = summaries[customer.id];
               const debt = summary?.saldo_total_pendiente ?? 0;
               const available = summary?.disponible_credito ?? 0;
+              const wallet = walletsByCustomerId[customer.id];
               return (
                 <tr key={customer.id} className="hover:bg-slate-50 transition-colors">
                   <td className="p-4 text-center">
@@ -2015,63 +2274,108 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     </span>
                   </td>
                   <td className="p-4 text-right font-black text-green-600">{formatCurrency(available)}</td>
-                  <td className="p-4 text-center space-x-2">
-                    <button
-                      onClick={() => handleOpenEditCustomer(customer)}
-                      className="bg-sky-100 p-2 rounded-lg"
-                      title="Editar cliente"
-                    >
-                      <Pencil className="w-4 h-4 text-sky-700" />
-                    </button>
-                    <button
-                      onClick={() => void handleOpenAddresses(customer)}
-                      className="bg-orange-100 p-2 rounded-lg"
-                      title="Direcciones"
-                    >
-                      <MapPin className="w-4 h-4 text-orange-700" />
-                    </button>
-                    <button
-                      onClick={() => handleDownloadCustomerPdf(customer)}
-                      className="bg-slate-100 p-2 rounded-lg"
-                      title="Exportar PDF"
-                    >
-                      <FileDown className="w-4 h-4 text-slate-600" />
-                    </button>
-                    <button
-                      onClick={() => handleOpenPaymentHistory(customer)}
-                      className="bg-violet-100 p-2 rounded-lg"
-                      title="Historial de abonos"
-                    >
-                      <Wallet className="w-4 h-4 text-violet-700" />
-                    </button>
-                    <button
-                      onClick={() => handleOpenHistory(customer)}
-                      className="bg-slate-100 p-2 rounded-lg"
-                      title="Notas de crédito"
-                    >
-                      <Eye className="w-4 h-4 text-slate-600" />
-                    </button>
-                    <button
-                      onClick={() => handleOpenCashSalesHistory(customer)}
-                      className="bg-violet-100 p-2 rounded-lg"
-                      title="Ventas en efectivo"
-                    >
-                      <FileImage className="w-4 h-4 text-violet-700" />
-                    </button>
-                    <button
-                      onClick={() => handleOpenPayment(customer)}
-                      className="bg-green-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase inline-flex items-center gap-1"
-                    >
-                      <Wallet className="w-3.5 h-3.5" />
-                      Abonar
-                    </button>
+                  <td className="p-4 text-right">
+                    <div className="space-y-1">
+                      <p className="font-black text-violet-600">{formatCurrency(wallet?.current_balance ?? 0)}</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{wallet?.status ?? 'SIN SALDO'}</p>
+                    </div>
+                  </td>
+                  <td className="p-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => handleOpenEditCustomer(customer)}
+                        className="bg-sky-100 p-2 rounded-lg"
+                        title="Editar cliente"
+                      >
+                        <Pencil className="w-4 h-4 text-sky-700" />
+                      </button>
+                      <button
+                        onClick={() => void handleOpenAddresses(customer)}
+                        className="bg-orange-100 p-2 rounded-lg"
+                        title="Direcciones"
+                      >
+                        <MapPin className="w-4 h-4 text-orange-700" />
+                      </button>
+                      <button
+                        onClick={() => handleDownloadCustomerPdf(customer)}
+                        className="bg-slate-100 p-2 rounded-lg"
+                        title="Exportar PDF"
+                      >
+                        <FileDown className="w-4 h-4 text-slate-600" />
+                      </button>
+                    </div>
+                  </td>
+                  <td className="p-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => handleOpenPaymentHistory(customer)}
+                        className="bg-violet-100 p-2 rounded-lg"
+                        title="Historial de abonos"
+                      >
+                        <Wallet className="w-4 h-4 text-violet-700" />
+                      </button>
+                      <button
+                        onClick={() => handleOpenHistory(customer)}
+                        className="bg-slate-100 p-2 rounded-lg"
+                        title="Notas de credito"
+                      >
+                        <Eye className="w-4 h-4 text-slate-600" />
+                      </button>
+                      <button
+                        onClick={() => handleOpenCashSalesHistory(customer)}
+                        className="bg-violet-100 p-2 rounded-lg"
+                        title="Ventas en efectivo"
+                      >
+                        <FileImage className="w-4 h-4 text-violet-700" />
+                      </button>
+                      <button
+                        onClick={() => handleOpenPayment(customer)}
+                        className="bg-green-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase inline-flex items-center gap-1"
+                      >
+                        <Wallet className="w-3.5 h-3.5" />
+                        Abonar
+                      </button>
+                    </div>
+                  </td>
+                  <td className="p-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      {wallet ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openWalletRechargeModal(wallet)}
+                            className="bg-emerald-100 p-2 rounded-lg"
+                            title="Recargar saldo a favor"
+                          >
+                            <CreditCard className="w-4 h-4 text-emerald-700" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void openWalletHistoryModal(wallet)}
+                            className="bg-slate-100 p-2 rounded-lg"
+                            title="Historial de saldo a favor"
+                          >
+                            <History className="w-4 h-4 text-slate-700" />
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openWalletCreateModal(customer)}
+                          className="bg-violet-100 p-2 rounded-lg"
+                          title="Habilitar saldo a favor"
+                        >
+                          <CreditCard className="w-4 h-4 text-violet-700" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
             })}
             {!isLoading && customers.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-slate-400 text-sm">
+                <td colSpan={9} className="p-6 text-center text-slate-400 text-sm">
                   No hay clientes registrados en esta sucursal.
                 </td>
               </tr>
@@ -2679,7 +2983,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                           {historyView === 'CREDIT' && <td className={`p-4 text-right text-xs font-black ${row.balance > 0 ? 'text-red-600' : 'text-slate-400'}`}>{formatCurrency(row.balance)}</td>}
                           <td className="p-4 text-center">
                             <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${statusClass}`}>
-                              {row.status}
+                              {row.status === 'BILLETERA' ? 'SALDO A FAVOR' : row.status}
                             </span>
                           </td>
                           <td className="p-4 text-center" onClick={(event) => event.stopPropagation()}>

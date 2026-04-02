@@ -16,7 +16,6 @@ import ConcreteInventoryScreen from './components/Concrete/ConcreteInventoryScre
 import ConcreteCustomersScreen from './components/Concrete/ConcreteCustomersScreen';
 import ConcreteReportsScreen from './components/Concrete/ConcreteReportsScreen';
 import CreditAlertsScreen from './components/CreditAlerts/CreditAlertsScreen';
-import WalletScreen from './components/Wallet/WalletScreen';
 import {
   dieselTanksService,
   vehiclesService,
@@ -274,8 +273,6 @@ const App: React.FC = () => {
             module="materiales"
           />
         );
-      case 'wallet':
-        return <WalletScreen selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'inventory':
         return <InventoryScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
       case 'audit':
