@@ -45,6 +45,7 @@ const Layout: React.FC<LayoutProps> = ({
         { id: 'purchases', label: 'Compras / Entradas', icon: '📥', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'inventory', label: 'Inventario', icon: '📦', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'customers', label: 'Clientes / Crédito', icon: '👥', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
+        { id: 'wallet', label: 'Billetera Virtual', icon: '💳', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
         { id: 'customer-alerts', label: 'Alertas clientes', icon: '🚨', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
         { id: 'audit', label: 'Auditoría', icon: '📋', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'reports', label: 'Reportes', icon: '📊', roles: [Role.ADMIN, Role.ALMACEN] },

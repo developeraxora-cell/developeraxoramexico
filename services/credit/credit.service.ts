@@ -75,6 +75,7 @@ export interface CashSaleHistory {
   id: string;
   branch_id: string;
   type: string;
+  payment_type: string | null;
   reference: string | null;
   notes: string | null;
   nombre_cliente: string | null;
@@ -524,7 +525,7 @@ export const creditService = {
   async listCashSalesByCustomer(_customerId: string, branchId: string, customerName?: string | null) {
     const { data, error } = await supabase
       .from('inventory_transactions')
-      .select('id, branch_id, type, reference, notes, nombre_cliente, direccion_cliente, created_by, created_at')
+      .select('id, branch_id, type, payment_type, reference, notes, nombre_cliente, direccion_cliente, created_by, created_at')
       .eq('branch_id', branchId)
       .eq('type', 'SALE')
       .eq('is_deleted', false)

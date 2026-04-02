@@ -170,7 +170,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     due_date: string | null;
     total: number;
     balance: number;
-    status: 'PAGADA' | 'VENCIDA' | 'ABIERTA' | 'EFECTIVO';
+    status: 'PAGADA' | 'VENCIDA' | 'ABIERTA' | 'EFECTIVO' | 'BILLETERA' | 'HIBRIDA' | 'SIN COSTO';
     reference: string | null;
     note: CreditNoteWithStatus | null;
     sale: CashSaleHistory | null;
@@ -307,20 +307,27 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       note,
       sale: null,
     }));
-    const cashRows = cashSaleHistory.map((sale) => ({
-      rowKey: `cash:${sale.id}`,
-      kind: 'cash' as const,
-      saleId: String(sale.id),
-      displayCode: String(sale.id),
-      issue_date: String(sale.created_at ?? '').slice(0, 10),
-      due_date: null,
-      total: Number(cashSaleTotalsById[String(sale.id)] ?? noteSaleSummaries[`cash:${sale.id}`]?.total_amount ?? 0),
-      balance: 0,
-      status: 'EFECTIVO' as const,
-      reference: sale.reference ?? null,
-      note: null,
-      sale,
-    }));
+    const cashRows = cashSaleHistory.map((sale) => {
+      const rawPaymentType = String(sale.payment_type ?? '').trim().toUpperCase();
+      const normalizedPaymentType = rawPaymentType === 'SIN_COSTO' ? 'SIN COSTO' : rawPaymentType;
+      const cashStatus = (['EFECTIVO', 'BILLETERA', 'HIBRIDA', 'SIN COSTO'].includes(normalizedPaymentType)
+        ? normalizedPaymentType
+        : 'EFECTIVO') as 'EFECTIVO' | 'BILLETERA' | 'HIBRIDA' | 'SIN COSTO';
+      return ({
+        rowKey: `cash:${sale.id}`,
+        kind: 'cash' as const,
+        saleId: String(sale.id),
+        displayCode: String(sale.id),
+        issue_date: String(sale.created_at ?? '').slice(0, 10),
+        due_date: null,
+        total: Number(cashSaleTotalsById[String(sale.id)] ?? noteSaleSummaries[`cash:${sale.id}`]?.total_amount ?? 0),
+        balance: 0,
+        status: cashStatus,
+        reference: sale.reference ?? null,
+        note: null,
+        sale,
+      });
+    });
     return [...creditRows, ...cashRows].sort((a, b) => {
       const aTime = new Date(`${a.issue_date}T00:00:00Z`).getTime();
       const bTime = new Date(`${b.issue_date}T00:00:00Z`).getTime();
@@ -2635,7 +2642,13 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                         ? 'bg-green-100 text-green-600'
                         : row.status === 'EFECTIVO'
                           ? 'bg-sky-100 text-sky-600'
-                          : 'bg-amber-100 text-amber-600';
+                          : row.status === 'BILLETERA'
+                            ? 'bg-violet-100 text-violet-600'
+                            : row.status === 'HIBRIDA'
+                              ? 'bg-amber-100 text-amber-600'
+                              : row.status === 'SIN COSTO'
+                                ? 'bg-slate-200 text-slate-600'
+                                : 'bg-amber-100 text-amber-600';
 
                     return (
                       <React.Fragment key={row.rowKey}>

@@ -7,6 +7,7 @@ import { convert, getPriceForUnit } from '../../services/conversionEngine';
 import { creditService, type CreditCustomer, type CreditNoteWithStatus, type CreditPaymentMethod, type CustomerAddress } from '../../services/credit/credit.service';
 import { catalogService, type Product as CatalogProduct, type ProductUom, type Uom } from '../../services/inventory/catalog.service';
 import { purchasesService } from '../../services/inventory/purchases.service';
+import { walletService, type CustomerWalletSummary } from '../../services/wallet.service';
 import { supabase } from '../../services/supabaseClient';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { logMaterialsAudit } from '../../services/audit/audit.service';
@@ -31,7 +32,7 @@ interface SpecialPriceModalState {
 
 let watermarkPngBytesPromise: Promise<ArrayBuffer | null> | null = null;
 const SALES_HISTORY_PAGE_SIZE = 5;
-type SalePaymentMethod = 'EFECTIVO' | 'CREDITO' | 'SIN_COSTO';
+type SalePaymentMethod = 'EFECTIVO' | 'CREDITO' | 'SIN_COSTO' | 'BILLETERA' | 'HIBRIDA';
 const ZERO_COST_NOTE_PREFIX = 'SALIDA SIN COSTO:';
 const isZeroCostSale = (notes: string | null | undefined) =>
   String(notes ?? '').trim().toUpperCase().startsWith(ZERO_COST_NOTE_PREFIX);
@@ -66,6 +67,9 @@ const POSScreen: React.FC<POSProps> = ({
   const [saleNotesError, setSaleNotesError] = useState<string | null>(null);
   const [saleCreditDays, setSaleCreditDays] = useState<15 | 30>(30);
   const [customerAddresses, setCustomerAddresses] = useState<CustomerAddress[]>([]);
+  const [customerWallet, setCustomerWallet] = useState<CustomerWalletSummary | null>(null);
+  const [isWalletLoading, setIsWalletLoading] = useState(false);
+  const [useWalletBalance, setUseWalletBalance] = useState(false);
   const [selectedCustomerAddressId, setSelectedCustomerAddressId] = useState('');
   const [isSaleAddressModalOpen, setIsSaleAddressModalOpen] = useState(false);
   const [isNewSaleAddressModalOpen, setIsNewSaleAddressModalOpen] = useState(false);
@@ -307,7 +311,7 @@ const POSScreen: React.FC<POSProps> = ({
 
       let transactionsQuery = supabase
         .from('inventory_transactions')
-        .select('id, reference, notes, direccion_cliente, created_at, nombre_cliente, created_by')
+        .select('id, reference, notes, direccion_cliente, created_at, nombre_cliente, created_by, payment_type, wallet_amount, cash_amount, credit_amount, wallet_id, payment_notes')
         .eq('branch_id', branchId)
         .eq('is_deleted', false)
         .eq('type', 'SALE');
@@ -365,22 +369,28 @@ const POSScreen: React.FC<POSProps> = ({
         }, {});
       }
 
-      const formatted = (transactions ?? []).map((tx) => ({
-        id: tx.id,
-        reference: tx.reference,
-        notes: tx.notes,
-        direccion_cliente: tx.direccion_cliente ?? null,
-        nombre_cliente: tx.nombre_cliente ?? null,
-        created_by: tx.created_by ?? null,
-        created_at: tx.created_at,
-        items_count: itemsSummary[tx.id]?.count ?? 0,
-        total_amount: Number(tx.total_amount ?? itemsSummary[tx.id]?.total ?? 0),
-        payment_method: isZeroCostSale(tx.notes)
-          ? 'SIN_COSTO'
-          : (creditByTransaction[String(tx.id)] ? 'CREDITO' : 'EFECTIVO'),
-        credit_note_id: creditByTransaction[String(tx.id)]?.note_id ?? null,
-        credit_paid_amount: creditByTransaction[String(tx.id)]?.paid_amount ?? 0,
-      }));
+      const formatted = (transactions ?? []).map((tx) => {
+        const storedPaymentType = String(tx.payment_type ?? '').trim().toUpperCase();
+        const normalizedPaymentType = storedPaymentType === 'SIN COSTO' ? 'SIN_COSTO' : storedPaymentType;
+        return {
+          id: tx.id,
+          reference: tx.reference,
+          notes: tx.notes,
+          direccion_cliente: tx.direccion_cliente ?? null,
+          nombre_cliente: tx.nombre_cliente ?? null,
+          created_by: tx.created_by ?? null,
+          created_at: tx.created_at,
+          items_count: itemsSummary[tx.id]?.count ?? 0,
+          total_amount: Number(itemsSummary[tx.id]?.total ?? 0),
+          payment_method: (normalizedPaymentType || (
+            isZeroCostSale(tx.notes)
+              ? 'SIN_COSTO'
+              : (creditByTransaction[String(tx.id)] ? 'CREDITO' : 'EFECTIVO')
+          )) as SalePaymentMethod,
+          credit_note_id: creditByTransaction[String(tx.id)]?.note_id ?? null,
+          credit_paid_amount: creditByTransaction[String(tx.id)]?.paid_amount ?? 0,
+        };
+      });
 
       setSalesHistory(formatted);
       setSalesHistoryTotal(Number(count ?? 0));
@@ -539,6 +549,7 @@ const POSScreen: React.FC<POSProps> = ({
         await creditService.deleteNote(salePaymentEditTarget.credit_note_id);
       }
 
+
       logMaterialsAudit({
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
@@ -686,10 +697,26 @@ const POSScreen: React.FC<POSProps> = ({
   };
 
   const cartTotal = cart.reduce((acc, curr) => acc + curr.subtotal, 0);
+  const walletAvailableBalance = Number(customerWallet?.current_balance ?? 0);
+  const walletEligible = Boolean(selectedCustomer && customerWallet?.status === 'ACTIVA' && walletAvailableBalance > 0);
+  const walletAppliedAmount = paymentMethod !== 'SIN_COSTO' && useWalletBalance && walletEligible
+    ? Math.min(walletAvailableBalance, cartTotal)
+    : 0;
+  const remainingAfterWallet = paymentMethod === 'SIN_COSTO'
+    ? 0
+    : Math.max(0, cartTotal - walletAppliedAmount);
+  const requiresCreditCoverage = paymentMethod === 'CREDITO' && remainingAfterWallet > 0;
+  const paymentTypeForSale: SalePaymentMethod = paymentMethod === 'SIN_COSTO'
+    ? 'SIN_COSTO'
+    : walletAppliedAmount > 0
+      ? (remainingAfterWallet > 0 ? 'HIBRIDA' : 'BILLETERA')
+      : paymentMethod;
+  const cashAmountForSale = paymentMethod === 'EFECTIVO' ? remainingAfterWallet : 0;
+  const creditAmountForSale = paymentMethod === 'CREDITO' ? remainingAfterWallet : 0;
   const canOverrideOverdueCredit = Boolean(
     creditCheck &&
     creditCheck.reason === 'VENCIDAS' &&
-    Number(creditCheck.disponible ?? 0) >= cartTotal
+    Number(creditCheck.disponible ?? 0) >= remainingAfterWallet
   );
   const blockedNotesTotalPages = Math.max(1, Math.ceil((creditCheck?.vencidas.length ?? 0) / 5));
   const blockedNotesCurrentPage = Math.min(blockedNotesPage, blockedNotesTotalPages);
@@ -1002,6 +1029,8 @@ const POSScreen: React.FC<POSProps> = ({
   useEffect(() => {
     if (!selectedCustomer?.id) {
       setCustomerAddresses([]);
+      setCustomerWallet(null);
+      setUseWalletBalance(false);
       setSelectedCustomerAddressId('');
       return;
     }
@@ -1104,9 +1133,40 @@ const POSScreen: React.FC<POSProps> = ({
     setCreditOverrideNote('');
     setCreditOverrideError(null);
     setCustomerAddresses([]);
+    setCustomerWallet(null);
+    setUseWalletBalance(false);
     setSelectedCustomerAddressId('');
     setIsCustomerSearchLoading(false);
   }, [branchId]);
+
+  useEffect(() => {
+    if (!selectedCustomer?.id || !branchId) {
+      setCustomerWallet(null);
+      setUseWalletBalance(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsWalletLoading(true);
+    walletService.getWalletByCustomer(branchId, selectedCustomer.id)
+      .then((wallet) => {
+        if (cancelled) return;
+        setCustomerWallet(wallet);
+        setUseWalletBalance(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCustomerWallet(null);
+        setUseWalletBalance(false);
+      })
+      .finally(() => {
+        if (!cancelled) setIsWalletLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId, selectedCustomer?.id]);
 
   useEffect(() => {
     setCreditOverrideApproved(false);
@@ -1114,7 +1174,19 @@ const POSScreen: React.FC<POSProps> = ({
     setCreditOverrideError(null);
     setSaleCreditDays(30);
     setSaleNotesError(null);
-  }, [selectedCustomer?.id, cartTotal]);
+
+    if (!selectedCustomer) {
+      setCreditCheck(null);
+      return;
+    }
+
+    creditService.canSellOnCredit({
+      customer: selectedCustomer,
+      totalVenta: 0,
+    })
+      .then((result) => setCreditCheck(result))
+      .catch(() => setCreditCheck(null));
+  }, [selectedCustomer?.id, cartTotal, useWalletBalance]);
 
   useEffect(() => {
     if (!isCreditBlockedOpen) {
@@ -1124,15 +1196,16 @@ const POSScreen: React.FC<POSProps> = ({
     setBlockedNotesPage((prev) => Math.min(prev, blockedNotesTotalPages));
   }, [isCreditBlockedOpen, blockedNotesTotalPages]);
 
-  const runCreditCheck = useCallback(async () => {
+  const runCreditCheck = useCallback(async (totalVentaOverride?: number) => {
     if (!selectedCustomer) return null;
+    const totalVenta = typeof totalVentaOverride === 'number' ? totalVentaOverride : remainingAfterWallet;
     const result = await creditService.canSellOnCredit({
       customer: selectedCustomer,
-      totalVenta: cartTotal,
+      totalVenta,
     });
     setCreditCheck(result);
     return result;
-  }, [selectedCustomer, cartTotal]);
+  }, [remainingAfterWallet, selectedCustomer]);
 
   const handleSelectPaymentMethod = async (method: SalePaymentMethod) => {
     if (method !== 'CREDITO') {
@@ -1147,15 +1220,17 @@ const POSScreen: React.FC<POSProps> = ({
         alert('⚠️ Seleccione un cliente para habilitar crédito.');
         return;
       }
-      const result = await runCreditCheck();
-      if (!result) return;
-      if (!result.allowedCredit) {
-        if (result.reason === 'VENCIDAS') {
-          setIsCreditBlockedOpen(true);
-        } else if (result.reason === 'LIMITE') {
-          setIsCreditLimitOpen(true);
+      if (!walletEligible) {
+        const result = await runCreditCheck(cartTotal);
+        if (!result) return;
+        if (!result.allowedCredit) {
+          if (result.reason === 'VENCIDAS') {
+            setIsCreditBlockedOpen(true);
+          } else if (result.reason === 'LIMITE') {
+            setIsCreditLimitOpen(true);
+          }
+          return;
         }
-        return;
       }
     }
     setPaymentMethod(method);
@@ -1174,16 +1249,16 @@ const POSScreen: React.FC<POSProps> = ({
       return;
     }
 
-    if (paymentMethod === 'CREDITO') {
+    if (requiresCreditCoverage) {
       if (!selectedCustomer) {
         alert('⚠️ Debe seleccionar un cliente para vender a crédito.');
         return;
       }
-      const result = await runCreditCheck();
+      const result = await runCreditCheck(remainingAfterWallet);
       const canProceedWithOverride = Boolean(
         creditOverrideApproved &&
         result?.reason === 'VENCIDAS' &&
-        Number(result?.disponible ?? 0) >= cartTotal
+        Number(result?.disponible ?? 0) >= remainingAfterWallet
       );
       if (!result?.allowedCredit && !canProceedWithOverride) {
         if (result?.reason === 'VENCIDAS') setIsCreditBlockedOpen(true);
@@ -1224,6 +1299,11 @@ const POSScreen: React.FC<POSProps> = ({
         .join(' | ');
       const customerSnapshot = selectedCustomer;
       const totalSnapshot = paymentMethodSnapshot === 'SIN_COSTO' ? 0 : cartTotal;
+      const walletSnapshot = paymentMethodSnapshot === 'SIN_COSTO' ? null : customerWallet;
+      const walletAppliedSnapshot = paymentMethodSnapshot === 'SIN_COSTO' ? 0 : walletAppliedAmount;
+      const paymentTypeSnapshot = paymentMethodSnapshot === 'SIN_COSTO' ? 'SIN_COSTO' : paymentTypeForSale;
+      const cashAmountSnapshot = paymentMethodSnapshot === 'SIN_COSTO' ? 0 : cashAmountForSale;
+      const creditAmountSnapshot = paymentMethodSnapshot === 'SIN_COSTO' ? 0 : creditAmountForSale;
       const specialPriceItems = saleCartSnapshot.filter((item) => Number(item.specialUnitPrice ?? 0) > 0);
       const specialPriceJustification = specialPriceItems.length > 0
         ? specialPriceItems
@@ -1240,7 +1320,7 @@ const POSScreen: React.FC<POSProps> = ({
           unitPrice: Number(item.unitPrice ?? 0),
           subtotal: Number(item.subtotal ?? 0),
         })),
-        paymentMethod: paymentMethodSnapshot,
+        paymentMethod: paymentTypeSnapshot,
         customerName: customerSnapshot?.name ?? 'PUBLICO GENERAL',
         customerAddress: effectiveSaleAddress,
         cashierName: currentUser.name,
@@ -1256,6 +1336,12 @@ const POSScreen: React.FC<POSProps> = ({
         created_by: currentUser.id,
         nombre_cliente: customerSnapshot?.name || null,
         direccion_cliente: effectiveSaleAddress === '-' ? null : effectiveSaleAddress,
+        payment_type: paymentTypeSnapshot === 'SIN_COSTO' ? 'SIN COSTO' : paymentTypeSnapshot,
+        wallet_amount: walletAppliedSnapshot,
+        cash_amount: cashAmountSnapshot,
+        credit_amount: creditAmountSnapshot,
+        wallet_id: walletSnapshot?.id ?? null,
+        payment_notes: walletAppliedSnapshot > 0 ? `Billetera aplicada: ${formatCurrency(walletAppliedSnapshot)}` : null,
         cartItems: saleCartSnapshot.map((item) => ({
           product_id: item.productId,
           product_uom_id: item.productUomId ?? '',
@@ -1266,6 +1352,18 @@ const POSScreen: React.FC<POSProps> = ({
           barcode_scanned: item.barcodeScanned ?? null,
         })),
       });
+
+      if (walletSnapshot && walletAppliedSnapshot > 0) {
+        await walletService.applyWalletToSale({
+          wallet_id: walletSnapshot.id,
+          sale_id: String(transaction.id),
+          wallet_amount: walletAppliedSnapshot,
+          cash_amount: cashAmountSnapshot,
+          credit_amount: creditAmountSnapshot,
+          payment_notes: mergedSaleNotes || null,
+          created_by: currentUser.name,
+        });
+      }
 
       logMaterialsAudit({
         branch_id: branchId,
@@ -1280,6 +1378,11 @@ const POSScreen: React.FC<POSProps> = ({
         new_data: {
           branch_id: branchId,
           payment_method: paymentMethodSnapshot,
+          payment_type: paymentTypeSnapshot,
+          wallet_id: walletSnapshot?.id ?? null,
+          wallet_amount: walletAppliedSnapshot,
+          cash_amount: cashAmountSnapshot,
+          credit_amount: creditAmountSnapshot,
           notes: mergedSaleNotes || null,
           customer_id: customerSnapshot?.id ?? null,
           customer_name: customerSnapshot?.name ?? null,
@@ -1306,18 +1409,18 @@ const POSScreen: React.FC<POSProps> = ({
         },
       });
 
-      if (paymentMethodSnapshot === 'CREDITO' && customerSnapshot) {
+      if (creditAmountSnapshot > 0 && customerSnapshot) {
         await creditService.createCreditNote({
           branch_id: branchId,
           customer_id: customerSnapshot.id,
-          total: totalSnapshot,
+          total: creditAmountSnapshot,
           credit_days_applied: saleCreditDays,
           folio: String(transaction.id),
           sale_reference: String(transaction.id),
           inventory_transaction_id: transaction.id,
         });
       }
-      if (paymentMethodSnapshot === 'CREDITO' && creditOverrideSnapshot && customerSnapshot) {
+      if (requiresCreditCoverage && creditOverrideSnapshot && customerSnapshot) {
         logMaterialsAudit({
           branch_id: branchId,
           branch_name: selectedBranch?.name ?? null,
@@ -1332,6 +1435,8 @@ const POSScreen: React.FC<POSProps> = ({
             customer_id: customerSnapshot.id,
             customer_name: customerSnapshot.name,
             total_amount: totalSnapshot,
+            credit_amount: creditAmountSnapshot,
+            wallet_amount: walletAppliedSnapshot,
             disponible_credito: creditCheck?.disponible ?? null,
             notas_vencidas: creditCheck?.vencidas.map((note) => ({
               id: note.id,
@@ -1344,11 +1449,15 @@ const POSScreen: React.FC<POSProps> = ({
         });
       }
       applyLocalSaleStock(saleCartSnapshot);
-      const paymentMethodLabel = paymentMethodSnapshot === 'SIN_COSTO'
+      const paymentMethodLabel = paymentTypeSnapshot === 'SIN_COSTO'
         ? 'SIN COSTO'
-        : paymentMethodSnapshot === 'CREDITO'
-          ? 'CREDITO'
-          : 'EFECTIVO';
+        : paymentTypeSnapshot === 'BILLETERA'
+          ? 'BILLETERA VIRTUAL'
+          : paymentTypeSnapshot === 'HIBRIDA'
+            ? `VENTA HIBRIDA${creditAmountSnapshot > 0 ? ' (BILLETERA + CREDITO)' : ' (BILLETERA + EFECTIVO)'}`
+            : paymentTypeSnapshot === 'CREDITO'
+              ? 'CREDITO'
+              : 'EFECTIVO';
       showFeedback(
         'success',
         paymentMethodSnapshot === 'SIN_COSTO' ? 'Salida registrada' : 'Pago exitoso',
@@ -1366,6 +1475,8 @@ const POSScreen: React.FC<POSProps> = ({
       setCreditOverrideNote('');
       setCreditOverrideError(null);
       setCustomerAddresses([]);
+      setCustomerWallet(null);
+      setUseWalletBalance(false);
       setSelectedCustomerAddressId('');
 
       window.setTimeout(() => {
@@ -1390,7 +1501,7 @@ const POSScreen: React.FC<POSProps> = ({
     setNewSaleAddressLabel('');
     setNewSaleAddressValue('');
     setSaleNotesError(null);
-    if (paymentMethod === 'CREDITO' && selectedCustomer) {
+    if (requiresCreditCoverage && selectedCustomer) {
       try {
         await creditService.listAddressesByCustomer(selectedCustomer.id).then((rows) => {
           setCustomerAddresses(rows);
@@ -1756,10 +1867,12 @@ const POSScreen: React.FC<POSProps> = ({
                 setSelectedCustomer((customer as CreditCustomer | null) ?? null);
                 setCreditCheck(null);
                 setSelectedCustomerAddressId('');
+                setUseWalletBalance(false);
                 if (!customer) {
                   setPaymentMethod('EFECTIVO');
                   setCreditCustomers([]);
                   setCustomerAddresses([]);
+                  setCustomerWallet(null);
                 }
               }}
               onSearch={handleCustomerSearch}
@@ -1775,12 +1888,18 @@ const POSScreen: React.FC<POSProps> = ({
           >
             Ver ventas
           </button>
-          {creditCheck && selectedCustomer && (
+          {selectedCustomer && (
             <div className="px-4 border-l border-slate-100 text-right animate-in fade-in">
-              <p className="text-[9px] font-black text-slate-400 uppercase">Límite Disponible</p>
-              <p className={`text-xl font-black ${creditCheck.disponible >= cartTotal ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(creditCheck.disponible)}
+              <p className="text-[9px] font-black text-slate-400 uppercase">Límite disponible</p>
+              <p className={`text-xl font-black ${(creditCheck?.disponible ?? Number(selectedCustomer.credit_limit ?? 0)) >= remainingAfterWallet ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency(creditCheck?.disponible ?? Number(selectedCustomer.credit_limit ?? 0))}
               </p>
+            </div>
+          )}
+          {walletEligible && (
+            <div className="px-4 border-l border-slate-100 text-right animate-in fade-in">
+              <p className="text-[9px] font-black text-slate-400 uppercase">Billetera</p>
+              <p className="text-xl font-black text-violet-600">{formatCurrency(walletAvailableBalance)}</p>
             </div>
           )}
         </div>
@@ -2723,18 +2842,22 @@ const POSScreen: React.FC<POSProps> = ({
                           <span className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${
                             sale.payment_method === 'CREDITO'
                               ? 'bg-amber-100 text-amber-700'
-                              : sale.payment_method === 'SIN_COSTO'
-                                ? 'bg-slate-200 text-slate-700'
-                                : 'bg-emerald-100 text-emerald-700'
+                              : sale.payment_method === 'BILLETERA'
+                                ? 'bg-violet-100 text-violet-700'
+                                : sale.payment_method === 'HIBRIDA'
+                                  ? 'bg-sky-100 text-sky-700'
+                                  : sale.payment_method === 'SIN_COSTO'
+                                    ? 'bg-slate-200 text-slate-700'
+                                    : 'bg-emerald-100 text-emerald-700'
                           }`}>
-                            {sale.payment_method === 'SIN_COSTO' ? 'SIN COSTO' : sale.payment_method}
+                            {sale.payment_method === 'SIN_COSTO' ? 'SIN COSTO' : sale.payment_method === 'BILLETERA' ? 'BILLETERA VIRTUAL' : sale.payment_method}
                           </span>
                         </td>
                         <td className="p-4 text-center text-xs font-bold text-slate-600">{sale.items_count}</td>
                         <td className="p-4 text-right text-sm font-black text-slate-900">{formatCurrency(sale.total_amount)}</td>
                         <td className="p-4 text-center">
                           <div className="flex items-center justify-center gap-1">
-                            {sale.payment_method !== 'SIN_COSTO' && (
+                            {!['SIN_COSTO', 'BILLETERA', 'HIBRIDA'].includes(sale.payment_method) && (
                               <button
                                 onClick={() => openEditSalePaymentModal(sale)}
                                 className="w-8 h-8 rounded-lg text-amber-600 hover:text-amber-800 hover:bg-amber-50"
@@ -2900,7 +3023,33 @@ const POSScreen: React.FC<POSProps> = ({
               <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-300">{selectedCustomer?.name ?? 'PÚBLICO GENERAL'}</p>
             </div>
             <div className="space-y-4 p-6">
-              {paymentMethod === 'CREDITO' && (
+              {walletEligible && paymentMethod !== 'SIN_COSTO' && (
+                <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-violet-500">Billetera virtual</p>
+                      <p className="mt-2 text-sm font-bold text-slate-700">Saldo disponible: {formatCurrency(walletAvailableBalance)}</p>
+                      {isWalletLoading && (
+                        <p className="mt-1 text-xs font-bold text-slate-400">Consultando saldo...</p>
+                      )}
+                      {useWalletBalance && (
+                        <div className="mt-3 space-y-1 text-xs font-bold text-slate-600">
+                          <p>Aplicado con billetera: {formatCurrency(walletAppliedAmount)}</p>
+                          <p>Restante por cubrir: {formatCurrency(remainingAfterWallet)}</p>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setUseWalletBalance((prev) => !prev)}
+                      className={`rounded-2xl border px-4 py-3 text-[10px] font-black uppercase tracking-widest transition ${useWalletBalance ? 'border-violet-600 bg-violet-600 text-white' : 'border-violet-200 bg-white text-violet-600'}`}
+                    >
+                      {useWalletBalance ? 'Quitar saldo' : 'Usar saldo'}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {requiresCreditCoverage && (
                 <>
                   <div>
                     <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Dirección guardada</label>
