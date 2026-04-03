@@ -19,6 +19,7 @@ interface NavItem {
   label: string;
   icon: string;
   roles: Role[];
+  children?: NavItem[];
 }
 
 interface NavGroup {
@@ -39,6 +40,7 @@ const Layout: React.FC<LayoutProps> = ({
   selectedBranchId, setSelectedBranchId, branches, onReset
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+  const [expandedItems, setExpandedItems] = useState<string[]>(['audit-parent', 'concrete-audit-parent']);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [collapsedFlyout, setCollapsedFlyout] = useState<CollapsedFlyoutState | null>(null);
@@ -54,11 +56,20 @@ const Layout: React.FC<LayoutProps> = ({
       items: [
         { id: 'pos', label: 'Caja / Venta', icon: '🛒', roles: [Role.ADMIN, Role.CAJERO, Role.ALMACEN] },
         { id: 'purchases', label: 'Compras / Entradas', icon: '📥', roles: [Role.ADMIN, Role.ALMACEN] },
-        { id: 'inventory', label: 'Inventario', icon: '📦', roles: [Role.ADMIN, Role.ALMACEN] },
+        { id: 'inventory', label: 'Productos', icon: '📦', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'customers', label: 'Clientes / Crédito', icon: '👥', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
         { id: 'customer-alerts', label: 'Alertas clientes', icon: '🚨', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
-        { id: 'audit', label: 'Auditoría', icon: '📋', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'reports', label: 'Reportes', icon: '📊', roles: [Role.ADMIN, Role.ALMACEN] },
+        {
+          id: 'audit-parent',
+          label: 'Auditorias',
+          icon: '📋',
+          roles: [Role.ADMIN, Role.ALMACEN],
+          children: [
+            { id: 'audit-internal', label: 'Auditoria interna', icon: '📋', roles: [Role.ADMIN, Role.ALMACEN] },
+            { id: 'production', label: 'Produccion', icon: '🏭', roles: [Role.ADMIN, Role.ALMACEN] },
+          ],
+        },
         { id: 'branches', label: 'Sucursales', icon: '🏢', roles: [Role.ADMIN] },
         { id: 'users', label: 'Personal / Usuarios', icon: '🛡️', roles: [Role.ADMIN] },
       ]
@@ -70,11 +81,11 @@ const Layout: React.FC<LayoutProps> = ({
       items: [
         { id: 'concrete-pos', label: 'Caja / Venta', icon: '🛒', roles: [Role.ADMIN, Role.CAJERO, Role.ALMACEN] },
         { id: 'concrete-purchases', label: 'Compras / Entradas', icon: '📥', roles: [Role.ADMIN, Role.ALMACEN] },
-        { id: 'concrete-inventory', label: 'Inventario', icon: '📦', roles: [Role.ADMIN, Role.ALMACEN] },
+        { id: 'concrete-inventory', label: 'Productos', icon: '📦', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'concrete-customers', label: 'Clientes / Crédito', icon: '👥', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
         { id: 'concrete-customer-alerts', label: 'Alertas clientes', icon: '🚨', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
-        { id: 'concrete-audit', label: 'Auditoría', icon: '📋', roles: [Role.ADMIN, Role.ALMACEN] },
         { id: 'concrete-reports', label: 'Reportes', icon: '📊', roles: [Role.ADMIN, Role.ALMACEN] },
+        { id: 'concrete-audit', label: 'Auditorias', icon: '📋', roles: [Role.ADMIN, Role.ALMACEN] },
       ]
     },
     {
@@ -96,8 +107,16 @@ const Layout: React.FC<LayoutProps> = ({
     );
   };
 
-  const currentItem = navigation.flatMap(g => g.items).find(i => i.id === activeTab);
-  const currentGroup = navigation.find(g => g.items.some(i => i.id === activeTab));
+  const toggleItem = (id: string) => {
+    setExpandedItems((prev) => (prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]));
+  };
+
+  const currentItem = navigation
+    .flatMap((g) => g.items.flatMap((item) => (item.children ? [item, ...item.children] : [item])))
+    .find((i) => i.id === activeTab);
+  const currentGroup = navigation.find((g) =>
+    g.items.some((i) => i.id === activeTab || i.children?.some((child) => child.id === activeTab))
+  );
   const collapsedFlyoutGroup = collapsedFlyout
     ? navigation.find(group => group.id === collapsedFlyout.groupId) ?? null
     : null;
@@ -216,23 +235,62 @@ const Layout: React.FC<LayoutProps> = ({
               {!isSidebarCollapsed && expandedGroups.includes(group.id) && (
                 <div className="space-y-1 ml-2 border-l border-slate-800 pl-2 animate-in slide-in-from-top-2 duration-200">
                   {group.items.filter(item => item.roles.includes(currentUser.role)).map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        setActiveTab(item.id);
-                        setIsMobileMenuOpen(false);
-                      }}
-                      title={item.label}
-                      className={`w-full flex items-center rounded-xl text-sm transition-all ${
-                        'gap-3 px-4 py-3'
-                      } ${activeTab === item.id
-                        ? 'bg-orange-600 text-white font-bold shadow-lg shadow-orange-600/20'
-                        : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'
-                        }`}
-                    >
-                      <span className="text-lg">{item.icon}</span>
-                      <span className="tracking-tight">{item.label}</span>
-                    </button>
+                    <div key={item.id} className="space-y-1">
+                      {item.children ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => toggleItem(item.id)}
+                            className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm text-slate-500 transition-all hover:bg-slate-800/50 hover:text-slate-200"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-lg">{item.icon}</span>
+                              <span className="tracking-tight">{item.label}</span>
+                            </div>
+                            <span className={`text-[10px] transition-transform duration-300 ${expandedItems.includes(item.id) ? 'rotate-180' : ''}`}>
+                              ▼
+                            </span>
+                          </button>
+                          {expandedItems.includes(item.id) && (
+                            <div className="ml-6 space-y-1 border-l border-slate-800 pl-2">
+                              {item.children.filter(child => child.roles.includes(currentUser.role)).map((child) => (
+                                <button
+                                  key={child.id}
+                                  onClick={() => {
+                                    setActiveTab(child.id);
+                                    setIsMobileMenuOpen(false);
+                                  }}
+                                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all ${
+                                    activeTab === child.id
+                                      ? 'bg-orange-600 text-white font-bold shadow-lg shadow-orange-600/20'
+                                      : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'
+                                  }`}
+                                >
+                                  <span className="text-lg">{child.icon}</span>
+                                  <span className="tracking-tight">{child.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setActiveTab(item.id);
+                            setIsMobileMenuOpen(false);
+                          }}
+                          title={item.label}
+                          className={`w-full flex items-center rounded-xl text-sm transition-all gap-3 px-4 py-3 ${
+                            activeTab === item.id
+                              ? 'bg-orange-600 text-white font-bold shadow-lg shadow-orange-600/20'
+                              : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'
+                          }`}
+                        >
+                          <span className="text-lg">{item.icon}</span>
+                          <span className="tracking-tight">{item.label}</span>
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
@@ -300,23 +358,56 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
           <div className="space-y-1 p-2">
             {collapsedFlyoutGroup.items.filter(item => item.roles.includes(currentUser.role)).map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setCollapsedFlyout(null);
-                  setPinnedFlyoutGroupId(null);
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-all ${
-                  activeTab === item.id
-                    ? 'bg-orange-600 text-white font-bold shadow-lg shadow-orange-600/20'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <span className="text-lg">{item.icon}</span>
-                <span className="tracking-tight">{item.label}</span>
-              </button>
+              <div key={item.id} className="space-y-1">
+                {item.children ? (
+                  <>
+                    <div className="flex items-center justify-between rounded-xl px-4 py-3 text-left text-sm text-slate-300">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{item.icon}</span>
+                        <span className="tracking-tight">{item.label}</span>
+                      </div>
+                    </div>
+                    <div className="ml-6 space-y-1 border-l border-slate-800 pl-2">
+                      {item.children.filter(child => child.roles.includes(currentUser.role)).map((child) => (
+                        <button
+                          key={child.id}
+                          onClick={() => {
+                            setActiveTab(child.id);
+                            setCollapsedFlyout(null);
+                            setPinnedFlyoutGroupId(null);
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-all ${
+                            activeTab === child.id
+                              ? 'bg-orange-600 text-white font-bold shadow-lg shadow-orange-600/20'
+                              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                          }`}
+                        >
+                          <span className="text-lg">{child.icon}</span>
+                          <span className="tracking-tight">{child.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setCollapsedFlyout(null);
+                      setPinnedFlyoutGroupId(null);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-all ${
+                      activeTab === item.id
+                        ? 'bg-orange-600 text-white font-bold shadow-lg shadow-orange-600/20'
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <span className="text-lg">{item.icon}</span>
+                    <span className="tracking-tight">{item.label}</span>
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         </div>

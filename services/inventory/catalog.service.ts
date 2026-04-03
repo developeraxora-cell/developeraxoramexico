@@ -186,6 +186,7 @@ export const catalogService = {
       .from('products')
       .select('id, branch_id, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, is_active, created_at, updated_at')
       .eq('branch_id', branchId)
+      .eq('is_active', true)
       .order('name');
 
     if (error) throw error;

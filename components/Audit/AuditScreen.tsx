@@ -18,7 +18,7 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
   selectedBranchId,
   branches,
   module = 'materiales',
-  title = 'Auditoría',
+  title = 'Auditorias',
   subtitle = 'Trazabilidad de cambios en Materiales por sucursal.',
 }) => {
   const [rows, setRows] = useState<AuditLogRow[]>([]);
@@ -197,15 +197,17 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in duration-500 ">
       <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
-            <ClipboardList className="w-7 h-7 text-orange-500" />
-            {title}
-          </h2>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-            {subtitle}
-          </p>
-        </div>
+        {(title || subtitle) && (
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
+              <ClipboardList className="w-7 h-7 text-orange-500" />
+              {title}
+            </h2>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+              {subtitle}
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
           <div className="relative xl:col-span-2">
               <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />

@@ -513,7 +513,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
-            📦 Inventario por Sucursal
+            📦 Productos por Sucursal
           </h2>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
             Listado de productos activos e inactivos por sucursal.

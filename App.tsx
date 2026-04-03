@@ -31,6 +31,18 @@ import {
 import { INITIAL_CUSTOMERS, INITIAL_PRODUCTS, INITIAL_CONVERSIONS, INITIAL_USERS } from './constants';
 import { Customer, Product, ProductConversion, User, Role, Branch, CustomerPayment, DieselTank, Vehicle, Driver, DieselLog, Sale } from './types';
 
+const PlaceholderModule: React.FC<{ title: string; subtitle: string }> = ({ title, subtitle }) => (
+  <div className="space-y-6">
+    <div className="rounded-[32px] border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
+      <p className="text-sm font-black uppercase tracking-[0.26em] text-slate-400">Modulo visible</p>
+      <p className="mt-4 text-2xl font-black tracking-tighter text-slate-900">Produccion disponible</p>
+      <p className="mt-2 text-sm font-semibold text-slate-500">
+        Este submodulo queda visible por ahora, sin funcionalidades cargadas todavia.
+      </p>
+    </div>
+  </div>
+);
+
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('pos');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -276,8 +288,21 @@ const App: React.FC = () => {
       case 'inventory':
         return <InventoryScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
       case 'audit':
-        return <AuditScreen key="audit-materiales" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'audit-internal':
+        return (
+          <AuditScreen
+            key="audit-materiales"
+            selectedBranchId={selectedBranchId}
+            branches={activeBranches}
+            currentUser={currentUser}
+            title=""
+            subtitle=""
+          />
+        );
+      case 'production':
+        return <PlaceholderModule title="Produccion" subtitle="Materiales" />;
       case 'concrete-audit':
+      case 'concrete-audit-internal':
         return (
           <AuditScreen
             key="audit-concretera"
@@ -285,10 +310,12 @@ const App: React.FC = () => {
             branches={activeBranches}
             currentUser={currentUser}
             module="concretera"
-            title="Auditoría"
-            subtitle="Trazabilidad de cambios en Concretera por sucursal."
+            title=""
+            subtitle=""
           />
         );
+      case 'concrete-production':
+        return <PlaceholderModule title="Produccion" subtitle="Concretera" />;
       case 'branches':
         return <BranchesScreen branches={branches} setBranches={setBranches} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} currentUser={currentUser} />;
       case 'users':
