@@ -189,6 +189,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCustomerActionsModalOpen, setIsCustomerActionsModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<CreditCustomer | null>(null);
@@ -1970,6 +1971,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
   const handleOpenEditCustomer = (customer: CreditCustomer) => {
     setSelectedCustomer(customer);
+    setIsCustomerActionsModalOpen(true);
+  };
+
+  const openCustomerEditForm = (customer: CreditCustomer) => {
+    setSelectedCustomer(customer);
     setFormData({
       name: customer.name,
       phone: customer.phone ?? '',
@@ -2112,7 +2118,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       });
 
       setIsEditModalOpen(false);
-      setSelectedCustomer(null);
       setFormData(defaultCustomerForm);
       await loadCustomers();
       showFeedback('success', 'Cliente actualizado');
@@ -2241,9 +2246,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               <th className="p-4 text-right">Deuda actual</th>
               <th className="p-4 text-right">Disponible</th>
               <th className="p-4 text-right">Saldo a favor</th>
-              <th className="p-4 text-center">Cliente</th>
-              <th className="p-4 text-center">Credito</th>
-              <th className="p-4 text-center">Saldo</th>
+              <th className="p-4 text-center">Accion</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -2281,101 +2284,20 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     </div>
                   </td>
                   <td className="p-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => handleOpenEditCustomer(customer)}
-                        className="bg-sky-100 p-2 rounded-lg"
-                        title="Editar cliente"
-                      >
-                        <Pencil className="w-4 h-4 text-sky-700" />
-                      </button>
-                      <button
-                        onClick={() => void handleOpenAddresses(customer)}
-                        className="bg-orange-100 p-2 rounded-lg"
-                        title="Direcciones"
-                      >
-                        <MapPin className="w-4 h-4 text-orange-700" />
-                      </button>
-                      <button
-                        onClick={() => handleDownloadCustomerPdf(customer)}
-                        className="bg-slate-100 p-2 rounded-lg"
-                        title="Exportar PDF"
-                      >
-                        <FileDown className="w-4 h-4 text-slate-600" />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="p-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => handleOpenPaymentHistory(customer)}
-                        className="bg-violet-100 p-2 rounded-lg"
-                        title="Historial de abonos"
-                      >
-                        <Wallet className="w-4 h-4 text-violet-700" />
-                      </button>
-                      <button
-                        onClick={() => handleOpenHistory(customer)}
-                        className="bg-slate-100 p-2 rounded-lg"
-                        title="Notas de credito"
-                      >
-                        <Eye className="w-4 h-4 text-slate-600" />
-                      </button>
-                      <button
-                        onClick={() => handleOpenCashSalesHistory(customer)}
-                        className="bg-violet-100 p-2 rounded-lg"
-                        title="Ventas en efectivo"
-                      >
-                        <FileImage className="w-4 h-4 text-violet-700" />
-                      </button>
-                      <button
-                        onClick={() => handleOpenPayment(customer)}
-                        className="bg-green-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase inline-flex items-center gap-1"
-                      >
-                        <Wallet className="w-3.5 h-3.5" />
-                        Abonar
-                      </button>
-                    </div>
-                  </td>
-                  <td className="p-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      {wallet ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => openWalletRechargeModal(wallet)}
-                            className="bg-emerald-100 p-2 rounded-lg"
-                            title="Recargar saldo a favor"
-                          >
-                            <CreditCard className="w-4 h-4 text-emerald-700" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void openWalletHistoryModal(wallet)}
-                            className="bg-slate-100 p-2 rounded-lg"
-                            title="Historial de saldo a favor"
-                          >
-                            <History className="w-4 h-4 text-slate-700" />
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => openWalletCreateModal(customer)}
-                          className="bg-violet-100 p-2 rounded-lg"
-                          title="Habilitar saldo a favor"
-                        >
-                          <CreditCard className="w-4 h-4 text-violet-700" />
-                        </button>
-                      )}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditCustomer(customer)}
+                      className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white"
+                    >
+                      Editar
+                    </button>
                   </td>
                 </tr>
               );
             })}
             {!isLoading && customers.length === 0 && (
               <tr>
-                <td colSpan={9} className="p-6 text-center text-slate-400 text-sm">
+                <td colSpan={7} className="p-6 text-center text-slate-400 text-sm">
                   No hay clientes registrados en esta sucursal.
                 </td>
               </tr>
@@ -2487,6 +2409,145 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         </div>
       )}
 
+      {isCustomerActionsModalOpen && selectedCustomer && (() => {
+        const selectedSummary = summaries[selectedCustomer.id];
+        const selectedWallet = walletsByCustomerId[selectedCustomer.id];
+        return (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[45] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-5xl overflow-hidden">
+            <div className="bg-slate-900 p-6 text-white flex items-start justify-between">
+              <div>
+                <h3 className="text-2xl font-black tracking-tighter">Gestionar cliente</h3>
+                <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-300">{selectedCustomer.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCustomerActionsModalOpen(false)}
+                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-2xl transition hover:bg-red-500"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="space-y-6 bg-slate-50 p-6">
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Limite</p>
+                  <p className="mt-3 text-2xl font-black text-slate-900">{formatCurrency(Number(selectedCustomer.credit_limit ?? 0))}</p>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Deuda actual</p>
+                  <p className="mt-3 text-2xl font-black text-red-600">{formatCurrency(selectedSummary?.saldo_total_pendiente ?? 0)}</p>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Disponible</p>
+                  <p className="mt-3 text-2xl font-black text-green-600">{formatCurrency(selectedSummary?.disponible_credito ?? 0)}</p>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo a favor</p>
+                  <p className="mt-3 text-2xl font-black text-violet-600">{formatCurrency(selectedWallet?.current_balance ?? 0)}</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 xl:grid-cols-3">
+                <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</p>
+                  <div className="mt-4 space-y-3">
+                    <button type="button" onClick={() => openCustomerEditForm(selectedCustomer)} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-sky-200 hover:bg-sky-50">
+                      <div>
+                        <p className="text-sm font-black text-slate-900">Editar datos</p>
+                        <p className="text-xs font-semibold text-slate-500">Modifica nombre, telefono, direccion y limite.</p>
+                      </div>
+                      <Pencil className="h-5 w-5 shrink-0 text-sky-700" />
+                    </button>
+                    <button type="button" onClick={() => { void handleOpenAddresses(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-orange-200 hover:bg-orange-50">
+                      <div>
+                        <p className="text-sm font-black text-slate-900">Direcciones</p>
+                        <p className="text-xs font-semibold text-slate-500">Administra las direcciones disponibles para venta.</p>
+                      </div>
+                      <MapPin className="h-5 w-5 shrink-0 text-orange-700" />
+                    </button>
+                    <button type="button" onClick={() => { void handleDownloadCustomerPdf(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-slate-300 hover:bg-slate-100">
+                      <div>
+                        <p className="text-sm font-black text-slate-900">Exportar PDF</p>
+                        <p className="text-xs font-semibold text-slate-500">Genera el estado de cuenta completo del cliente.</p>
+                      </div>
+                      <FileDown className="h-5 w-5 shrink-0 text-slate-700" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Credito</p>
+                  <div className="mt-4 space-y-3">
+                    <button type="button" onClick={() => { void handleOpenPaymentHistory(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-violet-200 hover:bg-violet-50">
+                      <div>
+                        <p className="text-sm font-black text-slate-900">Historial de abonos</p>
+                        <p className="text-xs font-semibold text-slate-500">Consulta abonos y sus evidencias registradas.</p>
+                      </div>
+                      <Wallet className="h-5 w-5 shrink-0 text-violet-700" />
+                    </button>
+                    <button type="button" onClick={() => { void handleOpenHistory(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-slate-300 hover:bg-slate-100">
+                      <div>
+                        <p className="text-sm font-black text-slate-900">Notas de credito</p>
+                        <p className="text-xs font-semibold text-slate-500">Revisa creditos, detalle de venta y documentos.</p>
+                      </div>
+                      <Eye className="h-5 w-5 shrink-0 text-slate-700" />
+                    </button>
+                    <button type="button" onClick={() => { void handleOpenCashSalesHistory(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-violet-200 hover:bg-violet-50">
+                      <div>
+                        <p className="text-sm font-black text-slate-900">Ventas en efectivo</p>
+                        <p className="text-xs font-semibold text-slate-500">Consulta ventas al contado y sus comprobantes.</p>
+                      </div>
+                      <FileImage className="h-5 w-5 shrink-0 text-violet-700" />
+                    </button>
+                    <button type="button" onClick={() => { handleOpenPayment(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-green-200 hover:bg-green-50">
+                      <div>
+                        <p className="text-sm font-black text-slate-900">Registrar abono</p>
+                        <p className="text-xs font-semibold text-slate-500">Captura un nuevo abono para sus deudas activas.</p>
+                      </div>
+                      <Wallet className="h-5 w-5 shrink-0 text-green-700" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo a favor</p>
+                  <div className="mt-4 space-y-3">
+                    {selectedWallet ? (
+                      <>
+                        <button type="button" onClick={() => { openWalletRechargeModal(selectedWallet); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-emerald-200 hover:bg-emerald-50">
+                          <div>
+                            <p className="text-sm font-black text-slate-900">Recargar saldo</p>
+                            <p className="text-xs font-semibold text-slate-500">Aumenta el saldo disponible del cliente.</p>
+                          </div>
+                          <CreditCard className="h-5 w-5 shrink-0 text-emerald-700" />
+                        </button>
+                        <button type="button" onClick={() => { void openWalletHistoryModal(selectedWallet); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-slate-300 hover:bg-slate-100">
+                          <div>
+                            <p className="text-sm font-black text-slate-900">Historial de saldo</p>
+                            <p className="text-xs font-semibold text-slate-500">Consulta aperturas, recargas y consumos.</p>
+                          </div>
+                          <History className="h-5 w-5 shrink-0 text-slate-700" />
+                        </button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => { openWalletCreateModal(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-violet-200 hover:bg-violet-50">
+                        <div>
+                          <p className="text-sm font-black text-slate-900">Habilitar saldo a favor</p>
+                          <p className="text-xs font-semibold text-slate-500">Crea el saldo inicial y habilita su uso en ventas.</p>
+                        </div>
+                        <CreditCard className="h-5 w-5 shrink-0 text-violet-700" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
+
       {isEditModalOpen && selectedCustomer && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in">
@@ -2563,7 +2624,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   type="button"
                   onClick={() => {
                     setIsEditModalOpen(false);
-                    setSelectedCustomer(null);
                     setFormData(defaultCustomerForm);
                   }}
                   disabled={feedbackLoading || isLoading}
@@ -3470,7 +3530,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       )}
 
       {isPaymentEvidenceModalOpen && selectedPaymentForEvidence && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[75] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[45] flex items-center justify-center p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-start">
               <div>
@@ -3569,7 +3629,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       )}
 
       {isSaleEvidenceModalOpen && selectedSaleForEvidence && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[75] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[45] flex items-center justify-center p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-start">
               <div>
