@@ -2237,73 +2237,75 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         <div className="border-b border-slate-200 px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-500">
           Seleccionados {selectedCustomerIds.length}
         </div>
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            <tr>
-              <th className="p-4 text-center">Sel.</th>
-              <th className="p-4">Cliente</th>
-              <th className="p-4 text-right">Límite</th>
-              <th className="p-4 text-right">Deuda actual</th>
-              <th className="p-4 text-right">Disponible</th>
-              <th className="p-4 text-right">Saldo a favor</th>
-              <th className="p-4 text-center">Accion</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {customers.map((customer) => {
-              const summary = summaries[customer.id];
-              const debt = summary?.saldo_total_pendiente ?? 0;
-              const available = summary?.disponible_credito ?? 0;
-              const wallet = walletsByCustomerId[customer.id];
-              return (
-                <tr key={customer.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="p-4 text-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedCustomerIds.includes(customer.id)}
-                      onChange={() => toggleCustomerSelection(customer.id)}
-                      className="h-4 w-4 rounded border-slate-300"
-                    />
-                  </td>
-                  <td className="p-4">
-                    <p className="font-bold text-slate-800">{customer.name}</p>
-                    <p className="text-[10px] text-slate-400">{customer.phone || '—'}</p>
-                    <p className="text-[10px] text-slate-400">{customer.address || 'Sin dirección'}</p>
-                  </td>
-                  <td className="p-4 text-right font-mono text-sm">{formatCurrency(Number(customer.credit_limit))}</td>
-                  <td className="p-4 text-right">
-                    <span className={`font-black ${debt > 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                      {formatCurrency(debt)}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right font-black text-green-600">{formatCurrency(available)}</td>
-                  <td className="p-4 text-right">
-                    <div className="space-y-1">
-                      <p className="font-black text-violet-600">{formatCurrency(wallet?.current_balance ?? 0)}</p>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{wallet?.status ?? 'SIN SALDO'}</p>
-                    </div>
-                  </td>
-                  <td className="p-4 text-center">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditCustomer(customer)}
-                      className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white"
-                    >
-                      Editar
-                    </button>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[960px] text-left">
+            <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              <tr>
+                <th className="p-4 text-center">Sel.</th>
+                <th className="p-4">Cliente</th>
+                <th className="p-4 text-right">Límite</th>
+                <th className="p-4 text-right">Deuda actual</th>
+                <th className="p-4 text-right">Disponible</th>
+                <th className="p-4 text-right">Saldo a favor</th>
+                <th className="p-4 text-center">Accion</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {customers.map((customer) => {
+                const summary = summaries[customer.id];
+                const debt = summary?.saldo_total_pendiente ?? 0;
+                const available = summary?.disponible_credito ?? 0;
+                const wallet = walletsByCustomerId[customer.id];
+                return (
+                  <tr key={customer.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="p-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedCustomerIds.includes(customer.id)}
+                        onChange={() => toggleCustomerSelection(customer.id)}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                    </td>
+                    <td className="p-4">
+                      <p className="font-bold text-slate-800">{customer.name}</p>
+                      <p className="text-[10px] text-slate-400">{customer.phone || '—'}</p>
+                      <p className="text-[10px] text-slate-400">{customer.address || 'Sin dirección'}</p>
+                    </td>
+                    <td className="p-4 text-right font-mono text-sm">{formatCurrency(Number(customer.credit_limit))}</td>
+                    <td className="p-4 text-right">
+                      <span className={`font-black ${debt > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                        {formatCurrency(debt)}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right font-black text-green-600">{formatCurrency(available)}</td>
+                    <td className="p-4 text-right">
+                      <div className="space-y-1">
+                        <p className="font-black text-violet-600">{formatCurrency(wallet?.current_balance ?? 0)}</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{wallet?.status ?? 'SIN SALDO'}</p>
+                      </div>
+                    </td>
+                    <td className="p-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditCustomer(customer)}
+                        className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white"
+                      >
+                        Editar
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {!isLoading && customers.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-6 text-center text-slate-400 text-sm">
+                    No hay clientes registrados en esta sucursal.
                   </td>
                 </tr>
-              );
-            })}
-            {!isLoading && customers.length === 0 && (
-              <tr>
-                <td colSpan={7} className="p-6 text-center text-slate-400 text-sm">
-                  No hay clientes registrados en esta sucursal.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
         <div className="p-4 border-t border-slate-200 flex flex-col md:flex-row items-center justify-between gap-3">
           <p className="text-xs text-slate-500">
             Mostrando {customers.length} de {totalCustomers} clientes
@@ -2413,8 +2415,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         const selectedSummary = summaries[selectedCustomer.id];
         const selectedWallet = walletsByCustomerId[selectedCustomer.id];
         return (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[45] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-5xl overflow-hidden">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[55] flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col">
             <div className="bg-slate-900 p-6 text-white flex items-start justify-between">
               <div>
                 <h3 className="text-2xl font-black tracking-tighter">Gestionar cliente</h3>
@@ -2428,8 +2430,9 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 &times;
               </button>
             </div>
-            <div className="space-y-6 bg-slate-50 p-6">
-              <div className="grid gap-4 md:grid-cols-4">
+            <div className="flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6">
+              <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-3xl border border-slate-200 bg-white p-5">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Limite</p>
                   <p className="mt-3 text-2xl font-black text-slate-900">{formatCurrency(Number(selectedCustomer.credit_limit ?? 0))}</p>
@@ -2448,7 +2451,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 </div>
               </div>
 
-              <div className="grid gap-4 xl:grid-cols-3">
+              <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
                 <div className="rounded-3xl border border-slate-200 bg-white p-5">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</p>
                   <div className="mt-4 space-y-3">
@@ -2542,6 +2545,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   </div>
                 </div>
               </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2549,7 +2553,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       })()}
 
       {isEditModalOpen && selectedCustomer && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in">
             <div className="bg-sky-700 p-6 text-white">
               <h3 className="text-xl font-black uppercase tracking-tighter">Editar Cliente</h3>
@@ -2909,7 +2913,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       )}
 
       {isHistoryModalOpen && selectedCustomer && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-4xl h-[80vh] overflow-hidden flex flex-col">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-start">
               <div>
@@ -3205,7 +3209,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       )}
 
       {isPaymentModalOpen && selectedCustomer && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden">
             <div className="bg-green-600 p-6 text-white">
               <h3 className="text-xl font-black uppercase tracking-tighter">Registrar Abono</h3>

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { User, Role, Branch } from '../types';
 
 interface LayoutProps {
@@ -28,12 +28,23 @@ interface NavGroup {
   items: NavItem[];
 }
 
+interface CollapsedFlyoutState {
+  groupId: string;
+  top: number;
+  left: number;
+}
+
 const Layout: React.FC<LayoutProps> = ({
   children, activeTab, setActiveTab, currentUser, onLogout,
   selectedBranchId, setSelectedBranchId, branches, onReset
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [collapsedFlyout, setCollapsedFlyout] = useState<CollapsedFlyoutState | null>(null);
+  const [pinnedFlyoutGroupId, setPinnedFlyoutGroupId] = useState<string | null>(null);
+  const asideRef = useRef<HTMLElement | null>(null);
+  const flyoutRef = useRef<HTMLDivElement | null>(null);
 
   const navigation: NavGroup[] = [
     {
@@ -77,6 +88,9 @@ const Layout: React.FC<LayoutProps> = ({
   ];
 
   const toggleGroup = (id: string) => {
+    if (isSidebarCollapsed) {
+      return;
+    }
     setExpandedGroups(prev =>
       prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]
     );
@@ -84,10 +98,28 @@ const Layout: React.FC<LayoutProps> = ({
 
   const currentItem = navigation.flatMap(g => g.items).find(i => i.id === activeTab);
   const currentGroup = navigation.find(g => g.items.some(i => i.id === activeTab));
+  const collapsedFlyoutGroup = collapsedFlyout
+    ? navigation.find(group => group.id === collapsedFlyout.groupId) ?? null
+    : null;
 
   const isBranchLocked = !!currentUser.branchId && currentUser.role !== Role.ADMIN;
   const activeBranch = branches.find(b => b.id === selectedBranchId);
   const selectableBranches = branches.filter(b => b.isActive !== false);
+
+  useEffect(() => {
+    if (!pinnedFlyoutGroupId) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (asideRef.current?.contains(target)) return;
+      if (flyoutRef.current?.contains(target)) return;
+      setPinnedFlyoutGroupId(null);
+      setCollapsedFlyout(null);
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [pinnedFlyoutGroupId]);
 
   return (
     <div className="h-screen w-full flex flex-col md:flex-row bg-slate-50 text-slate-900 overflow-hidden relative">
@@ -99,40 +131,89 @@ const Layout: React.FC<LayoutProps> = ({
         />
       )}
 
-      <aside className={`
-        fixed md:static inset-y-0 left-0 w-72 bg-slate-900 text-white flex flex-col shadow-2xl z-50 
+      <aside ref={asideRef} className={`
+        fixed md:static inset-y-0 left-0 w-72 bg-slate-900 text-white flex flex-col shadow-2xl z-50 overflow-visible
         transition-transform duration-300 ease-in-out
+        md:transition-[width] md:duration-300
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        ${isSidebarCollapsed ? 'md:w-24' : 'md:w-72'}
       `}>
-        <div className="p-8 border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="bg-orange-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-orange-600/20">
+        <div className={`border-b border-slate-800 ${isSidebarCollapsed ? 'p-4' : 'p-8'}`}>
+          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+            <div className="bg-orange-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-orange-600/20 shrink-0">
               <span className="text-2xl">⚒️</span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-black leading-none tracking-tighter">GRUPO LOPAR</span>
-              <span className="text-[9px] text-orange-500 font-bold uppercase tracking-widest mt-1 italic">Industrial OS</span>
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="flex flex-col min-w-0">
+                <span className="text-xl font-black leading-none tracking-tighter">GRUPO LOPAR</span>
+                <span className="text-[9px] text-orange-500 font-bold uppercase tracking-widest mt-1 italic">Industrial OS</span>
+              </div>
+            )}
           </div>
         </div>
 
-        <nav className="flex-1 mt-4 overflow-y-auto no-scrollbar p-3 space-y-4">
+        <nav className={`flex-1 mt-4 overflow-y-auto overflow-x-visible no-scrollbar ${isSidebarCollapsed ? 'p-2 space-y-2' : 'p-3 space-y-4'}`}>
           {navigation.map((group) => (
-            <div key={group.id} className="space-y-1">
+            <div
+              key={group.id}
+              className="relative space-y-1"
+              onMouseEnter={(event) => {
+                if (!isSidebarCollapsed) return;
+                if (pinnedFlyoutGroupId && pinnedFlyoutGroupId !== group.id) return;
+                const rect = event.currentTarget.getBoundingClientRect();
+                setCollapsedFlyout({
+                  groupId: group.id,
+                  top: Math.max(12, rect.top),
+                  left: rect.right + 12,
+                });
+              }}
+              onMouseLeave={() => {
+                if (!isSidebarCollapsed) return;
+                if (pinnedFlyoutGroupId === group.id) return;
+                window.setTimeout(() => {
+                  setCollapsedFlyout((prev) => (prev?.groupId === group.id ? null : prev));
+                }, 80);
+              }}
+            >
               <button
-                onClick={() => toggleGroup(group.id)}
-                className="w-full flex items-center justify-between px-4 py-3 text-slate-400 hover:text-white transition-colors group"
+                onClick={(event) => {
+                  if (!isSidebarCollapsed) {
+                    toggleGroup(group.id);
+                    return;
+                  }
+
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  if (pinnedFlyoutGroupId === group.id) {
+                    setPinnedFlyoutGroupId(null);
+                    setCollapsedFlyout(null);
+                    return;
+                  }
+
+                  setCollapsedFlyout({
+                    groupId: group.id,
+                    top: Math.max(12, rect.top),
+                    left: rect.right + 12,
+                  });
+                  setPinnedFlyoutGroupId(group.id);
+                }}
+                className={`w-full flex items-center text-slate-400 hover:text-white transition-colors ${
+                  isSidebarCollapsed
+                    ? 'justify-center rounded-2xl px-2 py-3 hover:bg-slate-800'
+                    : 'justify-between px-4 py-3'
+                }`}
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl group-hover:scale-110 transition-transform">{group.icon}</span>
-                  <span className="text-xs font-black uppercase tracking-widest">{group.label}</span>
+                <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+                  <span className="text-xl transition-transform group-hover:scale-110">{group.icon}</span>
+                  {!isSidebarCollapsed && <span className="text-xs font-black uppercase tracking-widest">{group.label}</span>}
                 </div>
-                <span className={`text-[10px] transition-transform duration-300 ${expandedGroups.includes(group.id) ? 'rotate-180' : ''}`}>
-                  ▼
-                </span>
+                {!isSidebarCollapsed && (
+                  <span className={`text-[10px] transition-transform duration-300 ${expandedGroups.includes(group.id) ? 'rotate-180' : ''}`}>
+                    ▼
+                  </span>
+                )}
               </button>
 
-              {expandedGroups.includes(group.id) && (
+              {!isSidebarCollapsed && expandedGroups.includes(group.id) && (
                 <div className="space-y-1 ml-2 border-l border-slate-800 pl-2 animate-in slide-in-from-top-2 duration-200">
                   {group.items.filter(item => item.roles.includes(currentUser.role)).map((item) => (
                     <button
@@ -141,7 +222,10 @@ const Layout: React.FC<LayoutProps> = ({
                         setActiveTab(item.id);
                         setIsMobileMenuOpen(false);
                       }}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${activeTab === item.id
+                      title={item.label}
+                      className={`w-full flex items-center rounded-xl text-sm transition-all ${
+                        'gap-3 px-4 py-3'
+                      } ${activeTab === item.id
                         ? 'bg-orange-600 text-white font-bold shadow-lg shadow-orange-600/20'
                         : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'
                         }`}
@@ -156,31 +240,91 @@ const Layout: React.FC<LayoutProps> = ({
           ))}
         </nav>
 
-        <div className="p-6 bg-slate-950 border-t border-slate-800">
-          <div className="flex items-center gap-4 mb-6 p-3 bg-slate-900/50 rounded-2xl border border-slate-800">
+        <div className={`${isSidebarCollapsed ? 'p-3' : 'p-6'} bg-slate-950 border-t border-slate-800`}>
+          <div className={`mb-6 rounded-2xl border border-slate-800 bg-slate-900/50 ${isSidebarCollapsed ? 'p-2' : 'p-3'} flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-4'}`}>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center font-black text-white">
               {currentUser.name.charAt(0)}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-black text-white truncate uppercase tracking-tighter">{currentUser.name}</p>
-              <p className="text-[9px] text-orange-400 font-black uppercase tracking-widest truncate">
-                {currentUser.role}
-              </p>
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black text-white truncate uppercase tracking-tighter">{currentUser.name}</p>
+                <p className="text-[9px] text-orange-400 font-black uppercase tracking-widest truncate">
+                  {currentUser.role}
+                </p>
+              </div>
+            )}
           </div>
 
           <button
             onClick={onLogout}
-            className="w-full py-4 bg-slate-800 hover:bg-red-500/10 hover:text-red-500 transition-all rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 border border-transparent hover:border-red-500/20"
+            title="Cerrar sesion"
+            className={`w-full bg-slate-800 hover:bg-red-500/10 hover:text-red-500 transition-all rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 border border-transparent hover:border-red-500/20 ${
+              isSidebarCollapsed ? 'px-0 py-4' : 'py-4'
+            }`}
           >
-            Cerrar Sesión
+            {isSidebarCollapsed ? '⎋' : 'Cerrar Sesión'}
+          </button>
+        </div>
+
+        <div className="hidden border-t border-slate-800 bg-[#0d2742] md:block">
+          <button
+            type="button"
+            onClick={() => {
+              setIsSidebarCollapsed((prev) => !prev);
+              setCollapsedFlyout(null);
+              setPinnedFlyoutGroupId(null);
+            }}
+            className="flex w-full items-center justify-center py-3 text-xl text-slate-200 transition hover:bg-[#13385c] hover:text-white"
+            title={isSidebarCollapsed ? 'Expandir menu' : 'Reducir menu'}
+          >
+            {isSidebarCollapsed ? '›' : '‹'}
           </button>
         </div>
       </aside>
 
+      {isSidebarCollapsed && collapsedFlyout && collapsedFlyoutGroup && (
+        <div
+          ref={flyoutRef}
+          className="fixed z-[80] hidden w-72 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl md:block"
+          style={{ top: collapsedFlyout.top, left: collapsedFlyout.left }}
+          onMouseEnter={() => setCollapsedFlyout(collapsedFlyout)}
+          onMouseLeave={() => {
+            if (pinnedFlyoutGroupId === collapsedFlyout.groupId) return;
+            setCollapsedFlyout(null);
+          }}
+        >
+          <div className="border-b border-slate-800 px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
+              {collapsedFlyoutGroup.label}
+            </p>
+          </div>
+          <div className="space-y-1 p-2">
+            {collapsedFlyoutGroup.items.filter(item => item.roles.includes(currentUser.role)).map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setCollapsedFlyout(null);
+                  setPinnedFlyoutGroupId(null);
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-all ${
+                  activeTab === item.id
+                    ? 'bg-orange-600 text-white font-bold shadow-lg shadow-orange-600/20'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <span className="text-lg">{item.icon}</span>
+                <span className="tracking-tight">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <main className="flex-1 flex flex-col min-w-0 bg-slate-50 h-full overflow-hidden">
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-4 md:px-8 py-3 md:py-5 border-b border-slate-200 flex flex-row justify-between items-center gap-4 shadow-sm shadow-slate-200/50">
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex min-w-0 items-center gap-2 md:gap-4">
             {/* Hamburger Menu Toggle */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -192,27 +336,27 @@ const Layout: React.FC<LayoutProps> = ({
             <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-900 rounded-lg md:rounded-xl flex items-center justify-center text-lg md:text-xl shadow-lg">
               {currentItem?.icon || '🏢'}
             </div>
-            <div>
-              <h1 className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-none">
+            <div className="min-w-0">
+              <h1 className="truncate text-base font-black text-slate-900 uppercase tracking-tighter leading-none sm:text-lg md:text-xl">
                 {currentItem?.label || 'Escritorio'}
               </h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+              <p className="mt-1 truncate text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                 {currentGroup?.label || 'General'}
               </p>
             </div>
           </div>
 
-          <div className={`flex items-center gap-4 ${isBranchLocked ? 'cursor-not-allowed' : ''}`}>
-            <div className={`bg-white border-2 rounded-2xl px-5 py-2.5 flex items-center gap-3 shadow-sm transition-all ${isBranchLocked ? 'border-slate-100' : 'border-orange-500 shadow-orange-500/10'}`}>
-              <div className="flex flex-col">
+          <div className={`flex items-center gap-2 md:gap-4 ${isBranchLocked ? 'cursor-not-allowed' : ''}`}>
+            <div className={`bg-white border-2 rounded-2xl px-3 py-2 md:px-5 md:py-2.5 flex items-center gap-2 md:gap-3 shadow-sm transition-all ${isBranchLocked ? 'border-slate-100' : 'border-orange-500 shadow-orange-500/10'}`}>
+              <div className="flex min-w-0 flex-col">
                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Ubicación Activa</span>
-                <div className="flex items-center gap-1 md:gap-2">
+                <div className="flex min-w-0 items-center gap-1 md:gap-2">
                   <span className="text-sm md:text-lg">🏢</span>
                   <select
                     disabled={isBranchLocked}
                     value={selectedBranchId}
                     onChange={(e) => setSelectedBranchId(e.target.value)}
-                    className="bg-transparent font-black text-slate-900 outline-none text-[10px] md:text-xs uppercase tracking-tight cursor-pointer max-w-[100px] md:max-w-none"
+                    className="max-w-[92px] bg-transparent font-black text-slate-900 outline-none text-[10px] md:max-w-[180px] md:text-xs uppercase tracking-tight cursor-pointer"
                   >
                     {selectableBranches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
