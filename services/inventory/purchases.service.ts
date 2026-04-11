@@ -565,6 +565,16 @@ export const purchasesService = {
     try {
       const uomsPayload = buildUomsPayload(productId, purchaseUom, saleUoms);
 
+      const { error: clearDefaultsError } = await supabase
+        .from('product_uoms')
+        .update({
+          is_default_purchase: false,
+          is_default_sale: false,
+        })
+        .eq('product_id', productId);
+
+      if (clearDefaultsError) throw clearDefaultsError;
+
       const { data, error: uomError } = await supabase
         .from('product_uoms')
         .upsert(uomsPayload, { onConflict: 'product_id,uom_id' })
