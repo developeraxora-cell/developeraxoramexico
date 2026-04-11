@@ -258,17 +258,40 @@ const POSScreen: React.FC<POSProps> = ({
     );
   }, []);
 
+  const resolveConfiguredUomPrice = useCallback((
+    productId: string,
+    productUomId: string | undefined,
+    saleType: 'MAYOR' | 'MENOR' | undefined
+  ) => {
+    if (!productUomId) return null;
+    const saleUom =
+      (saleUomsByProduct[productId] ?? []).find((uom) => String(uom.id) === String(productUomId))
+      ?? (defaultSaleUomByProduct[productId] && String(defaultSaleUomByProduct[productId].id) === String(productUomId)
+        ? defaultSaleUomByProduct[productId]
+        : null);
+    if (!saleUom) return null;
+    const configuredPrice = Number(
+      saleType === 'MAYOR'
+        ? saleUom.wholesale_price ?? 0
+        : saleUom.retail_price ?? 0
+    );
+    return configuredPrice > 0 ? configuredPrice : null;
+  }, [defaultSaleUomByProduct, saleUomsByProduct]);
+
   const resolveStandardUnitPrice = useCallback((
     productId: string,
+    productUomId: string | undefined,
     saleType: 'MAYOR' | 'MENOR' | undefined,
     factor: number,
     fallbackUnitPrice: number
   ) => {
     const product = resolveProductForCart(productId);
     if (!product) return Number(fallbackUnitPrice ?? 0);
+    const configuredUomPrice = resolveConfiguredUomPrice(productId, productUomId, saleType);
+    if (configuredUomPrice !== null) return configuredUomPrice;
     const safeFactor = Number(factor || 1);
     return resolveBasePriceForSaleType(product, saleType ?? 'MENOR') * safeFactor;
-  }, [resolveBasePriceForSaleType, resolveProductForCart]);
+  }, [resolveBasePriceForSaleType, resolveConfiguredUomPrice, resolveProductForCart]);
 
   const branchId = useMemo(() => {
     const match = branches.find((b) => b.id === selectedBranchId);
@@ -732,6 +755,7 @@ const POSScreen: React.FC<POSProps> = ({
       if (item.id !== itemId) return item;
       const standardUnitPrice = resolveStandardUnitPrice(
         item.productId,
+        item.productUomId,
         item.saleType,
         Number(item.factorUsed ?? 1),
         Number(item.unitPrice ?? 0)
@@ -1582,6 +1606,32 @@ const POSScreen: React.FC<POSProps> = ({
     }
   };
 
+  const getCartItemQtyBase = (item: CartItem) =>
+    Number(item.qtyBase ?? (Number(item.qty ?? 0) * Number(item.factorUsed ?? item.customFactor ?? 1)));
+
+  const getProductQtyBaseInCart = (items: CartItem[], productId: string, excludeItemId?: string) =>
+    items.reduce((sum, item) => {
+      if (item.productId !== productId || item.id === excludeItemId) return sum;
+      return sum + getCartItemQtyBase(item);
+    }, 0);
+
+  const isSameCartPresentation = (
+    item: CartItem,
+    productId: string,
+    productUomId: string | undefined,
+    saleType: 'MAYOR' | 'MENOR',
+    customLabel?: string,
+    factorUsed?: number
+  ) => {
+    if (item.productId !== productId) return false;
+    if ((item.saleType ?? 'MENOR') !== saleType) return false;
+    if (customLabel || item.customLabel) {
+      return item.customLabel === customLabel
+        && Number(item.factorUsed ?? item.customFactor ?? 1) === Number(factorUsed ?? 1);
+    }
+    return String(item.productUomId ?? '') === String(productUomId ?? '');
+  };
+
   const addToCart = (
     product: PosProduct,
     customFactor?: number,
@@ -1592,7 +1642,6 @@ const POSScreen: React.FC<POSProps> = ({
     saleType?: 'MAYOR' | 'MENOR'
   ) => {
     const productId = String(product.id);
-    if (cart.find((i) => i.productId === productId)) return;
     const stockFromProduct = product.stocks.find((s) => s.branchId === branchId)?.qty;
     const branchStock = stockOverride ?? stockFromProduct;
     if (branchStock !== undefined && branchStock <= 0) {
@@ -1604,7 +1653,43 @@ const POSScreen: React.FC<POSProps> = ({
     const basePrice = saleTypeResolved === 'MAYOR'
       ? Number((product as any).wholesale_price ?? product.pricePerBaseUnit ?? 0)
       : Number((product as any).retail_price ?? (product as any).precio ?? product.pricePerBaseUnit ?? 0);
-    const unitPrice = basePrice * factorToBase;
+    const unitPrice = resolveStandardUnitPrice(productId, productUomId ?? product.productUomId, saleTypeResolved, factorToBase, basePrice * factorToBase);
+    if (unitPrice <= 0) {
+      alert('⚠️ No hay precio configurado para esa equivalencia.');
+      return;
+    }
+    const existingLine = cart.find((item) =>
+      isSameCartPresentation(item, productId, productUomId ?? product.productUomId, saleTypeResolved, customLabel, factorToBase)
+    );
+    const totalQtyBaseAfterAdd = getProductQtyBaseInCart(cart, productId, existingLine?.id)
+      + (existingLine ? getCartItemQtyBase(existingLine) : 0)
+      + factorToBase;
+    if (branchStock !== undefined && totalQtyBaseAfterAdd > branchStock) {
+      alert('⚠️ Stock insuficiente.');
+      return;
+    }
+
+    if (existingLine) {
+      const nextQty = Number(existingLine.qty ?? 0) + 1;
+      setCart((prev) =>
+        prev.map((item) =>
+          item.id === existingLine.id
+            ? {
+                ...item,
+                qty: nextQty,
+                qtyBase: nextQty * factorToBase,
+                unitPrice,
+                subtotal: nextQty * unitPrice,
+                factorUsed: factorToBase,
+                productUomId: productUomId ?? product.productUomId,
+                saleType: saleTypeResolved,
+              }
+            : item
+        )
+      );
+      return;
+    }
+
     const newItem: CartItem = {
       id: Math.random().toString(36).substr(2, 9),
       productId,
@@ -1656,7 +1741,8 @@ const POSScreen: React.FC<POSProps> = ({
         const availableStock =
           product?.stocks?.find((s) => s.branchId === branchId)?.qty ?? (hasStock ? branchStock[item.productId] : undefined);
 
-        if (availableStock !== undefined && qtyBase > availableStock) {
+        const totalQtyBase = getProductQtyBaseInCart(prev, item.productId, item.id) + qtyBase;
+        if (availableStock !== undefined && totalQtyBase > availableStock) {
           alert('⚠️ Stock insuficiente.');
           return item;
         }
@@ -1664,6 +1750,7 @@ const POSScreen: React.FC<POSProps> = ({
         const saleTypeResolved = item.saleType ?? 'MENOR';
         const standardUnitPrice = resolveStandardUnitPrice(
           item.productId,
+          nextProductUomId,
           saleTypeResolved,
           effectiveFactor,
           Number(item.unitPrice ?? 0)
@@ -1725,44 +1812,81 @@ const POSScreen: React.FC<POSProps> = ({
   };
 
   const handleSaleUomChange = (itemId: string, nextUomId: string) => {
-    console.log('Changing UOM for item', itemId, 'to', nextUomId);
-    setCart((prev) =>
-      prev.map((item) => {
-        if (item.id !== itemId) return item;
-        const saleUoms = saleUomsByProduct[item.productId] ?? [];
-        const match = saleUoms.find((uom) => String(uom.id) === String(nextUomId));
-        const factor = match ? Number(match.factor_to_base) : 1;
-        const saleTypeResolved = item.saleType ?? 'MENOR';
-        const unitPrice = resolveStandardUnitPrice(
-          item.productId,
-          saleTypeResolved,
-          factor,
-          Number(item.unitPrice ?? 0)
-        );
-        const qtyBase = item.qty * factor;
-        const product = branchProducts.find((p) => String(p.id) === item.productId);
-        const hasStock = Object.prototype.hasOwnProperty.call(branchStock, item.productId);
-        const availableStock =
-          product?.stocks?.find((s) => s.branchId === branchId)?.qty ?? (hasStock ? branchStock[item.productId] : undefined);
-        if (availableStock !== undefined && qtyBase > availableStock) {
+    setCart((prev) => {
+      const item = prev.find((candidate) => candidate.id === itemId);
+      if (!item) return prev;
+      const saleUoms = saleUomsByProduct[item.productId] ?? [];
+      const match = saleUoms.find((uom) => String(uom.id) === String(nextUomId));
+      const factor = match ? Number(match.factor_to_base) : 1;
+      const saleTypeResolved = item.saleType ?? 'MENOR';
+      const unitPrice = resolveStandardUnitPrice(
+        item.productId,
+        nextUomId,
+        saleTypeResolved,
+        factor,
+        Number(item.unitPrice ?? 0)
+      );
+      const qtyBase = item.qty * factor;
+      const product = branchProducts.find((p) => String(p.id) === item.productId);
+      const hasStock = Object.prototype.hasOwnProperty.call(branchStock, item.productId);
+      const availableStock =
+        product?.stocks?.find((s) => s.branchId === branchId)?.qty ?? (hasStock ? branchStock[item.productId] : undefined);
+      const totalQtyBase = getProductQtyBaseInCart(prev, item.productId, item.id) + qtyBase;
+      if (availableStock !== undefined && totalQtyBase > availableStock) {
+        alert('⚠️ Stock insuficiente.');
+        return prev;
+      }
+      const duplicateLine = prev.find((candidate) =>
+        candidate.id !== item.id
+        && isSameCartPresentation(candidate, item.productId, nextUomId, saleTypeResolved)
+      );
+      if (duplicateLine) {
+        const mergedQty = Number(duplicateLine.qty ?? 0) + Number(item.qty ?? 0);
+        const mergedQtyBase = mergedQty * factor;
+        const mergedTotalQtyBase = getProductQtyBaseInCart(prev, item.productId, item.id) - getCartItemQtyBase(duplicateLine) + mergedQtyBase;
+        if (availableStock !== undefined && mergedTotalQtyBase > availableStock) {
           alert('⚠️ Stock insuficiente.');
-          return item;
+          return prev;
         }
-        return {
-          ...item,
-          productUomId: nextUomId,
-          factorUsed: factor,
-          qtyBase,
-          unitPrice,
-          subtotal: item.qty * unitPrice,
-          saleType: 'MENOR',
-          customLabel: undefined,
-          customFactor: undefined,
-          specialUnitPrice: null,
-          specialPriceNote: null,
-        };
-      })
-    );
+        return prev
+          .filter((candidate) => candidate.id !== item.id)
+          .map((candidate) =>
+            candidate.id === duplicateLine.id
+              ? {
+                  ...candidate,
+                  qty: mergedQty,
+                  productUomId: nextUomId,
+                  factorUsed: factor,
+                  qtyBase: mergedQtyBase,
+                  unitPrice,
+                  subtotal: mergedQty * unitPrice,
+                  saleType: saleTypeResolved,
+                  customLabel: undefined,
+                  customFactor: undefined,
+                  specialUnitPrice: null,
+                  specialPriceNote: null,
+                }
+              : candidate
+          );
+      }
+      return prev.map((candidate) =>
+        candidate.id === item.id
+          ? {
+              ...candidate,
+              productUomId: nextUomId,
+              factorUsed: factor,
+              qtyBase,
+              unitPrice,
+              subtotal: item.qty * unitPrice,
+              saleType: saleTypeResolved,
+              customLabel: undefined,
+              customFactor: undefined,
+              specialUnitPrice: null,
+              specialPriceNote: null,
+            }
+          : candidate
+      );
+    });
   };
 
   const openPaymentForVencidas = () => {
@@ -1841,10 +1965,6 @@ const POSScreen: React.FC<POSProps> = ({
 
   const handleAddFromCatalog = (product: CatalogProduct) => {
     const pricePerBaseUnit = Number((product as any).retail_price ?? (product as any).precio ?? 0);
-    if (pricePerBaseUnit <= 0) {
-      alert('⚠️ No hay precio configurado para este producto.');
-      return;
-    }
     const defaultSaleUom = defaultSaleUomByProduct[String(product.id)];
     if (!defaultSaleUom) {
       setSaleUomObservation('');
@@ -2029,7 +2149,19 @@ const POSScreen: React.FC<POSProps> = ({
               >
                 ×
               </button>
-              <p className="font-bold text-sm text-slate-800 mb-2">{item.name}</p>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <p className="font-bold text-sm text-slate-800">{item.name}</p>
+                <span className={`inline-flex items-center rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-widest ${
+                  (item.saleType ?? 'MENOR') === 'MAYOR'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-sky-100 text-sky-700'
+                }`}>
+                  {(item.saleType ?? 'MENOR') === 'MAYOR' ? 'Mayoreo' : 'Menudeo'}
+                </span>
+                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-[9px] font-black tracking-widest text-slate-700">
+                  Unitario {formatCurrency(Number(item.unitPrice ?? 0))}
+                </span>
+              </div>
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 {item.customLabel && (
                   <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">
@@ -2645,6 +2777,21 @@ const POSScreen: React.FC<POSProps> = ({
                     >
                       <p className="text-sm font-black text-slate-900">{formatSaleUomLabel(productId, uom)}</p>
                       <p className="text-[10px] text-slate-500">Factor a base: {uom.factor_to_base}</p>
+                      <p className="text-[10px] font-black text-emerald-600">
+                        {formatCurrency(
+                          resolveStandardUnitPrice(
+                            productId,
+                            uom.id,
+                            unitSelectionSaleType,
+                            Number(uom.factor_to_base ?? 1),
+                            Number(
+                              unitSelectionSaleType === 'MAYOR'
+                                ? ((pendingCatalogProduct as any).wholesale_price ?? pendingPrice)
+                                : ((pendingCatalogProduct as any).retail_price ?? (pendingCatalogProduct as any).precio ?? pendingPrice)
+                            ) * Number(uom.factor_to_base ?? 1)
+                          )
+                        )}
+                      </p>
                     </button>
                   );
                 });

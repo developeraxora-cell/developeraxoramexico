@@ -517,8 +517,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
   const inferConcreteSaleType = (row: any): 'Mayoreo' | 'Menudeo' | '—' => {
     const unitPrice = Number(row.unit_price ?? 0);
-    const wholesale = Number(row.concrete_products?.wholesale_price ?? 0);
-    const retail = Number(row.concrete_products?.retail_price ?? row.concrete_products?.precio ?? 0);
+    const wholesale = Number(row.concrete_product_uoms?.wholesale_price ?? row.concrete_products?.wholesale_price ?? 0);
+    const retail = Number(row.concrete_product_uoms?.retail_price ?? row.concrete_products?.retail_price ?? row.concrete_products?.precio ?? 0);
     const hasWholesale = Number.isFinite(wholesale) && wholesale > 0;
     const hasRetail = Number.isFinite(retail) && retail > 0;
 
@@ -580,7 +580,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         unit_price,
         factor_used,
         concrete_products ( name, wholesale_price, retail_price, precio, attrs ),
-        concrete_product_uoms ( concrete_uoms ( name, code ) )
+        concrete_product_uoms ( wholesale_price, retail_price, concrete_uoms ( name, code ) )
       `)
       .eq('transaction_id', transactionId);
     if (itemsError) throw itemsError;

@@ -5,13 +5,18 @@ import type { Category, Product, ProductUom, Uom } from '../../services/inventor
 import { purchasesService } from '../../services/inventory/purchases.service';
 import { catalogService } from '../../services/inventory/catalog.service';
 import { logMaterialsAudit } from '../../services/audit/audit.service';
+import { formatNumber } from '../../services/currency';
 import ConfirmModal from '../common/ConfirmModal';
 
 interface SaleUomDraft {
   uom_id: string;
   factor_to_base: number;
   purpose: 'SALE' | 'BOTH';
+  wholesale_price: number;
+  retail_price: number;
   is_default_sale: boolean;
+  wholesale_price_touched?: boolean;
+  retail_price_touched?: boolean;
 }
 
 interface AttrPair {
@@ -38,6 +43,10 @@ interface NewProductModalProps {
   onReactivated?: (payload: { product: Product; purchaseUom: ProductUom }) => void;
   onUpdated?: (payload: { product: Product; purchaseUom: ProductUom }) => void;
 }
+
+const roundPrice = (value: number) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+const derivePriceByFactor = (basePrice: number, factorToBase: number) =>
+  roundPrice(Number(basePrice || 0) * Number(factorToBase || 0));
 
 const NewProductModal: React.FC<NewProductModalProps> = ({
   isOpen,
@@ -150,9 +159,8 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       );
       setAttrPairs(pairs.length > 0 ? pairs : []);
 
-      const purchase = existingUoms.find((uom) => uom.purpose === 'PURCHASE' || uom.is_default_purchase);
-      setPurchaseUomId(purchase?.uom_id ?? existingProduct.base_uom_id ?? '');
-      setPurchaseFactor(String(Number(purchase?.factor_to_base ?? 1)));
+      setPurchaseUomId(existingProduct.base_uom_id ?? '');
+      setPurchaseFactor('1');
 
       const sales = existingUoms.filter((uom) => uom.purpose === 'SALE' || uom.purpose === 'BOTH');
       setSaleUoms(
@@ -160,7 +168,17 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
           uom_id: uom.uom_id,
           factor_to_base: Number(uom.factor_to_base),
           purpose: uom.purpose === 'BOTH' ? 'BOTH' : 'SALE',
+          wholesale_price: Number(
+            uom.wholesale_price
+            ?? derivePriceByFactor(Number((existingProduct as any).wholesale_price ?? 0), Number(uom.factor_to_base ?? 1))
+          ),
+          retail_price: Number(
+            uom.retail_price
+            ?? derivePriceByFactor(Number((existingProduct as any).retail_price ?? (existingProduct as any).precio ?? 0), Number(uom.factor_to_base ?? 1))
+          ),
           is_default_sale: Boolean(uom.is_default_sale) || index === 0,
+          wholesale_price_touched: true,
+          retail_price_touched: true,
         }))
       );
       return;
@@ -189,17 +207,61 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   useEffect(() => {
     if (!baseUomId) return;
     if (!purchaseUomId) setPurchaseUomId(baseUomId);
-    if (saleUoms.length === 0) {
-      setSaleUoms([
+    setSaleUoms((prev) => {
+      const baseIndex = prev.findIndex((row) => String(row.uom_id) === String(baseUomId));
+      if (baseIndex >= 0) {
+        return prev.map((row, index) => index === baseIndex
+          ? {
+              ...row,
+              factor_to_base: 1,
+              is_default_sale: row.is_default_sale || prev.every((candidate) => !candidate.is_default_sale),
+            }
+          : row);
+      }
+      return [
         {
           uom_id: baseUomId,
           factor_to_base: 1,
           purpose: 'SALE',
-          is_default_sale: true,
+          wholesale_price: Number(wholesalePrice || 0),
+          retail_price: Number(retailPrice || 0),
+          is_default_sale: prev.length === 0 || prev.every((candidate) => !candidate.is_default_sale),
         },
-      ]);
-    }
-  }, [baseUomId, purchaseUomId, saleUoms.length]);
+        ...prev,
+      ];
+    });
+  }, [baseUomId, purchaseUomId, retailPrice, saleUoms.length, wholesalePrice]);
+
+  useEffect(() => {
+    const baseSaleUom = saleUoms.find((row) => String(row.uom_id) === String(baseUomId)) ?? saleUoms.find((row) => Number(row.factor_to_base) === 1);
+    if (!baseSaleUom) return;
+    const nextWholesale = String(Number(baseSaleUom.wholesale_price ?? 0));
+    const nextRetail = String(Number(baseSaleUom.retail_price ?? 0));
+    if (wholesalePrice !== nextWholesale) setWholesalePrice(nextWholesale);
+    if (retailPrice !== nextRetail) setRetailPrice(nextRetail);
+  }, [baseUomId, retailPrice, saleUoms, wholesalePrice]);
+
+  useEffect(() => {
+    setSaleUoms((prev) => {
+      let changed = false;
+      const next = prev.map((row) => {
+        const factor = Number(row.factor_to_base ?? 0);
+        const derivedWholesale = derivePriceByFactor(Number(wholesalePrice || 0), factor);
+        const derivedRetail = derivePriceByFactor(Number(retailPrice || 0), factor);
+        const updatedRow = { ...row };
+        if (!row.wholesale_price_touched && Number(row.wholesale_price ?? 0) !== derivedWholesale) {
+          updatedRow.wholesale_price = derivedWholesale;
+          changed = true;
+        }
+        if (!row.retail_price_touched && Number(row.retail_price ?? 0) !== derivedRetail) {
+          updatedRow.retail_price = derivedRetail;
+          changed = true;
+        }
+        return updatedRow;
+      });
+      return changed ? next : prev;
+    });
+  }, [retailPrice, wholesalePrice]);
 
   const parsedAttrs = useMemo(() => {
     if (attrPairs.some((pair) => pair.key.trim() || pair.value.trim())) {
@@ -223,17 +285,40 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   const handleAddSaleUom = () => {
     setSaleUoms((prev) => [
       ...prev,
-      {
-        uom_id: baseUomId || '',
-        factor_to_base: 1,
-        purpose: 'SALE',
-        is_default_sale: prev.length === 0,
+        {
+          uom_id: baseUomId || '',
+          factor_to_base: 1,
+          purpose: 'BOTH',
+          wholesale_price: Number(wholesalePrice || 0),
+          retail_price: Number(retailPrice || 0),
+          is_default_sale: prev.length === 0,
+        wholesale_price_touched: false,
+        retail_price_touched: false,
       },
     ]);
   };
 
   const updateSaleUom = (index: number, next: Partial<SaleUomDraft>) => {
-    setSaleUoms((prev) => prev.map((row, i) => (i === index ? { ...row, ...next } : row)));
+    setSaleUoms((prev) =>
+      prev.map((row, i) => {
+        if (i !== index) return row;
+        const merged: SaleUomDraft = { ...row, ...next };
+        const nextFactor = Number(merged.factor_to_base ?? 0);
+        if (!merged.wholesale_price_touched && next.wholesale_price === undefined) {
+          merged.wholesale_price = derivePriceByFactor(Number(wholesalePrice || 0), nextFactor);
+        }
+        if (!merged.retail_price_touched && next.retail_price === undefined) {
+          merged.retail_price = derivePriceByFactor(Number(retailPrice || 0), nextFactor);
+        }
+        if (next.wholesale_price !== undefined) {
+          merged.wholesale_price_touched = true;
+        }
+        if (next.retail_price !== undefined) {
+          merged.retail_price_touched = true;
+        }
+        return merged;
+      })
+    );
   };
 
   const removeSaleUom = (index: number) => {
@@ -253,25 +338,8 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       return null;
     }
 
-    const retailPriceNumber = Number(retailPrice || 0);
-    if (retailPriceNumber <= 0) {
-      showErrorModal('El precio de venta menor debe ser mayor a 0.');
-      return null;
-    }
-
     if (!baseUomId) {
       showErrorModal('Seleccione la unidad base.');
-      return null;
-    }
-
-    if (!purchaseUomId) {
-      showErrorModal('Seleccione la unidad de compra.');
-      return null;
-    }
-
-    const purchaseFactorNumber = Number(purchaseFactor || 0);
-    if (purchaseFactorNumber <= 0) {
-      showErrorModal('El factor de la unidad de compra debe ser mayor a 0.');
       return null;
     }
 
@@ -288,6 +356,19 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
         return acc;
       }, []);
 
+    const invalidSalePrice = normalizedSaleUoms.find((uom) => Number(uom.retail_price ?? 0) <= 0 || Number(uom.wholesale_price ?? 0) < 0);
+    if (invalidSalePrice) {
+      showErrorModal('Cada equivalencia de venta debe tener precio de menudeo mayor a 0 y mayoreo mayor o igual a 0.');
+      return null;
+    }
+
+    const baseSaleUom = normalizedSaleUoms.find((uom) => String(uom.uom_id) === String(baseUomId))
+      ?? normalizedSaleUoms.find((uom) => Number(uom.factor_to_base) === 1);
+    if (!baseSaleUom) {
+      showErrorModal('La unidad base debe existir dentro de las equivalencias de venta.');
+      return null;
+    }
+
     const saleDefaults = normalizedSaleUoms.filter((uom) => uom.is_default_sale);
     if (saleDefaults.length > 1) {
       normalizedSaleUoms.forEach((uom, index) => {
@@ -296,8 +377,8 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     }
 
     return {
-      retailPriceNumber,
-      purchaseFactorNumber,
+      retailPriceNumber: Number(baseSaleUom.retail_price ?? 0),
+      wholesalePriceNumber: Number(baseSaleUom.wholesale_price ?? 0),
       normalizedSaleUoms,
       resolvedSku: sku.trim() || `${branchId}-${Date.now()}`,
     };
@@ -331,7 +412,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
         barcode: resolvedBarcode,
         name: name.trim(),
         purchase_price: Number(purchasePrice || 0),
-        wholesale_price: Number(wholesalePrice || 0),
+        wholesale_price: context.wholesalePriceNumber,
         retail_price: context.retailPriceNumber,
         min_stock: Number(minStock || 0),
         description: description.trim() || null,
@@ -347,9 +428,11 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
           productId: existingProduct.id,
           product: payload,
           purchaseUom: {
-            uom_id: purchaseUomId,
+            uom_id: baseUomId,
             purpose: 'PURCHASE',
-            factor_to_base: context.purchaseFactorNumber,
+            factor_to_base: 1,
+            wholesale_price: context.wholesalePriceNumber,
+            retail_price: context.retailPriceNumber,
             is_default_purchase: true,
           },
           saleUoms: context.normalizedSaleUoms,
@@ -377,9 +460,11 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
         const result = await purchasesService.createProductWithUoms({
           product: payload,
           purchaseUom: {
-            uom_id: purchaseUomId,
+            uom_id: baseUomId,
             purpose: 'PURCHASE',
-            factor_to_base: context.purchaseFactorNumber,
+            factor_to_base: 1,
+            wholesale_price: context.wholesalePriceNumber,
+            retail_price: context.retailPriceNumber,
             is_default_purchase: true,
           },
           saleUoms: context.normalizedSaleUoms,
@@ -561,29 +646,6 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Precio Mayoreo</label>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-black text-sm"
-                value={wholesalePrice}
-                onChange={(e) => setWholesalePrice(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Precio Menudeo</label>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-black text-sm"
-                value={retailPrice}
-                onChange={(e) => setRetailPrice(e.target.value)}
-              />
-              <p className="text-[10px] text-slate-400">Precio aplicado a la unidad base.</p>
-            </div>
-            <div className="space-y-1">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Unidad Base</label>
               <select
                 className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
@@ -623,50 +685,9 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
             </div>
           </div>
 
-          <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-black uppercase tracking-widest text-slate-600">Medida de Compra</h4>
-            </div>
-            <p className="text-[10px] text-slate-400">Así lo compras al proveedor (ej: costal = 50 KG).</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">UOM</label>
-                <select
-                  className="w-full p-3 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
-                  value={purchaseUomId}
-                  onChange={(e) => setPurchaseUomId(e.target.value)}
-                >
-                  <option value="">Seleccionar</option>
-                  {modalUoms.map((uom) => (
-                    <option key={uom.id} value={uom.id}>
-                      {uom.name} ({uom.code})
-                    </option>
-                  ))}
-                </select>
-                {modalUoms.length === 0 && (
-                  <p className="text-[10px] text-slate-400">Cargue UOMs antes de continuar.</p>
-                )}
-              </div>
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Factor a Base</label>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.0001"
-                  className="w-full p-3 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
-                  value={purchaseFactor}
-                  onChange={(e) => setPurchaseFactor(e.target.value)}
-                />
-              </div>
-              <div className="flex items-center text-[10px] font-bold text-slate-500">
-                1 unidad de compra = {Number(purchaseFactor || 0)} unidades base
-              </div>
-            </div>
-          </div>
-
           <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-black uppercase tracking-widest text-slate-600">Venta por menor (equivalencias)</h4>
+              <h4 className="text-xs font-black uppercase tracking-widest text-slate-600">Equivalencias en las unidades de medida</h4>
               <button
                 type="button"
                 onClick={handleAddSaleUom}
@@ -675,59 +696,69 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 + Agregar
               </button>
             </div>
-            <p className="text-[10px] text-slate-400">Define equivalencias para venta menor (ej: 1 costal = 50 KG).</p>
+            <p className="text-[10px] text-slate-400">Define equivalencias de venta y sus precios específicos. La fila de la unidad base reemplaza el precio general del producto.</p>
             {saleUoms.length === 0 ? (
               <p className="text-xs text-slate-400">No hay unidades de venta configuradas.</p>
             ) : (
               <div className="space-y-3">
                 {saleUoms.map((row, index) => (
-                  <div key={`${row.uom_id}-${index}`} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center bg-slate-50 p-4 rounded-2xl">
-                    <select
-                      className="md:col-span-2 w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
-                      value={row.uom_id}
-                      onChange={(e) => updateSaleUom(index, { uom_id: e.target.value })}
-                    >
-                      <option value="">Seleccionar</option>
-                      {modalUoms.map((uom) => (
-                        <option key={uom.id} value={uom.id}>
-                          {uom.name} ({uom.code})
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.0001"
-                      className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
-                      value={row.factor_to_base}
-                      onChange={(e) => updateSaleUom(index, { factor_to_base: Number(e.target.value) })}
-                    />
-                    <select
-                      className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
-                      value={row.purpose}
-                      onChange={(e) => updateSaleUom(index, { purpose: e.target.value as 'SALE' | 'BOTH' })}
-                    >
-                      <option value="SALE">Solo venta</option>
-                      <option value="BOTH">Compra/Venta</option>
-                    </select>
-                    <label className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
+                  <div key={`${row.uom_id}-${index}`} className="bg-slate-50 p-4 rounded-2xl space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
+                      <select
+                        className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
+                        value={row.uom_id}
+                        onChange={(e) => updateSaleUom(index, { uom_id: e.target.value })}
+                      >
+                        <option value="">Seleccionar</option>
+                        {modalUoms.map((uom) => (
+                          <option key={uom.id} value={uom.id}>
+                            {uom.name} ({uom.code})
+                          </option>
+                        ))}
+                      </select>
                       <input
-                        type="radio"
-                        name="default_sale"
-                        checked={row.is_default_sale}
-                        onChange={() =>
-                          setSaleUoms((prev) => prev.map((u, i) => ({ ...u, is_default_sale: i === index })))
-                        }
+                        type="number"
+                        min={0}
+                        step="0.0001"
+                        className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
+                        value={row.factor_to_base}
+                        onChange={(e) => updateSaleUom(index, { factor_to_base: Number(e.target.value) })}
                       />
-                      Default
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => removeSaleUom(index)}
-                      className="text-[10px] font-black text-red-500"
-                    >
-                      Quitar
-                    </button>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs font-black"
+                        value={row.wholesale_price}
+                        onChange={(e) => updateSaleUom(index, { wholesale_price: Number(e.target.value || 0) })}
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs font-black"
+                        value={row.retail_price}
+                        onChange={(e) => updateSaleUom(index, { retail_price: Number(e.target.value || 0) })}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Unidad de venta</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Factor a base</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Precio mayoreo</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Precio menudeo</p>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 pt-1">
+                      <span className="text-[10px] text-slate-400">
+                        1 unidad equivale a {formatNumber(Number(row.factor_to_base || 0))} base
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeSaleUom(index)}
+                        className="text-[10px] font-black text-red-500"
+                      >
+                        Quitar
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

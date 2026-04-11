@@ -55,6 +55,8 @@ export interface ProductUom {
   uom_id: string;
   purpose: 'PURCHASE' | 'SALE' | 'BOTH';
   factor_to_base: number;
+  wholesale_price?: number | null;
+  retail_price?: number | null;
   is_default_purchase: boolean | null;
   is_default_sale: boolean | null;
   uom?: Uom;
@@ -319,7 +321,7 @@ export const catalogService = {
   async getPurchaseUoms(productId: string) {
     const { data, error } = await supabase
       .from('product_uoms')
-      .select('id, product_id, uom_id, purpose, factor_to_base, is_default_purchase, is_default_sale, uoms (id, code, name)')
+      .select('id, product_id, uom_id, purpose, factor_to_base, wholesale_price, retail_price, is_default_purchase, is_default_sale, uoms (id, code, name)')
       .eq('product_id', productId)
       .in('purpose', ['PURCHASE', 'BOTH']);
 
@@ -334,7 +336,7 @@ export const catalogService = {
   async getDefaultPurchaseUom(productId: string) {
     const { data, error } = await supabase
       .from('product_uoms')
-      .select('id, product_id, uom_id, purpose, factor_to_base, is_default_purchase, is_default_sale, uoms (id, code, name)')
+      .select('id, product_id, uom_id, purpose, factor_to_base, wholesale_price, retail_price, is_default_purchase, is_default_sale, uoms (id, code, name)')
       .eq('product_id', productId)
       .eq('is_default_purchase', true)
       .maybeSingle();
@@ -352,7 +354,7 @@ export const catalogService = {
   async listProductUoms(productId: string) {
     const { data, error } = await supabase
       .from('product_uoms')
-      .select('id, product_id, uom_id, purpose, factor_to_base, is_default_purchase, is_default_sale, uoms (id, code, name)')
+      .select('id, product_id, uom_id, purpose, factor_to_base, wholesale_price, retail_price, is_default_purchase, is_default_sale, uoms (id, code, name)')
       .eq('product_id', productId);
 
     if (error) throw error;
@@ -376,7 +378,7 @@ export const catalogService = {
       .from('product_uoms')
       .update({ is_default_sale: true })
       .eq('id', productUomId)
-      .select('id, product_id, uom_id, purpose, factor_to_base, is_default_purchase, is_default_sale, uoms (id, code, name)')
+      .select('id, product_id, uom_id, purpose, factor_to_base, wholesale_price, retail_price, is_default_purchase, is_default_sale, uoms (id, code, name)')
       .single();
 
     if (error) throw error;
@@ -391,7 +393,7 @@ export const catalogService = {
     if (productIds.length === 0) return [] as ProductUom[];
     const { data, error } = await supabase
       .from('product_uoms')
-      .select('id, product_id, uom_id, purpose, factor_to_base, is_default_purchase, is_default_sale, uoms (id, code, name)')
+      .select('id, product_id, uom_id, purpose, factor_to_base, wholesale_price, retail_price, is_default_purchase, is_default_sale, uoms (id, code, name)')
       .in('product_id', productIds)
       .eq('is_default_sale', true);
 

@@ -79,6 +79,8 @@ export interface CreateProductUomInput {
   uom_id: string;
   purpose: 'PURCHASE' | 'SALE' | 'BOTH';
   factor_to_base: number;
+  wholesale_price?: number;
+  retail_price?: number;
   is_default_purchase?: boolean;
   is_default_sale?: boolean;
 }
@@ -123,6 +125,8 @@ const buildUomsPayload = (
       uom_id: purchaseUom.uom_id,
       purpose: purchaseSaleMatch ? 'BOTH' : 'PURCHASE',
       factor_to_base: purchaseUom.factor_to_base,
+      wholesale_price: purchaseSaleMatch?.wholesale_price ?? purchaseUom.wholesale_price ?? 0,
+      retail_price: purchaseSaleMatch?.retail_price ?? purchaseUom.retail_price ?? 0,
       is_default_purchase: true,
       is_default_sale: purchaseSaleMatch?.is_default_sale ?? false,
     },
@@ -131,6 +135,8 @@ const buildUomsPayload = (
       uom_id: uom.uom_id,
       purpose: uom.purpose,
       factor_to_base: uom.factor_to_base,
+      wholesale_price: uom.wholesale_price ?? 0,
+      retail_price: uom.retail_price ?? 0,
       is_default_purchase: false,
       is_default_sale: uom.is_default_sale ?? false,
     })),
