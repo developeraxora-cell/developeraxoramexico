@@ -134,6 +134,7 @@ type ConcreteSaleSummaryItem = {
   id: string;
   qty: number;
   unit_price: number;
+  line_total: number;
   product_name: string | null;
   presentation: string;
   sale_type: 'Mayoreo' | 'Menudeo' | '—';
@@ -578,6 +579,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         id,
         qty,
         unit_price,
+        line_total,
         factor_used,
         concrete_products ( name, wholesale_price, retail_price, precio, attrs ),
         concrete_product_uoms ( wholesale_price, retail_price, concrete_uoms ( name, code ) )
@@ -589,6 +591,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       id: String(row.id),
       qty: Number(row.qty ?? 0),
       unit_price: Number(row.unit_price ?? 0),
+      line_total: Number(row.line_total ?? (Number(row.qty ?? 0) * Number(row.unit_price ?? 0))),
       product_name: row.concrete_products?.name ?? null,
       presentation: getConcretePresentation(row),
       sale_type: inferConcreteSaleType(row),
@@ -796,7 +799,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           presentation: item.presentation,
           qty: item.qty,
           unitPrice: item.unit_price,
-          subtotal: Number(item.qty) * Number(item.unit_price),
+          subtotal: Number(item.line_total ?? (Number(item.qty) * Number(item.unit_price))),
         })),
         paymentMethod: 'CREDITO',
         customerName: summary.nombre_cliente ?? selectedCustomer?.name ?? 'PUBLICO GENERAL',
@@ -841,7 +844,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   presentation: item.presentation,
                   sale_type: item.sale_type,
                   qty: Number(item.qty ?? 0),
-                  subtotal: Number(item.qty ?? 0) * Number(item.unit_price ?? 0),
+                  subtotal: Number(item.line_total ?? (Number(item.qty ?? 0) * Number(item.unit_price ?? 0))),
                 })),
               };
             } catch {
@@ -2269,7 +2272,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     const isLoadingSummary = loadingNoteSaleId === note.id;
                     const summaryTotal = Number(
                       summary?.total_amount
-                      ?? summary?.items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.unit_price)), 0)
+                      ?? summary?.items.reduce((acc, item) => acc + Number(item.line_total ?? (Number(item.qty) * Number(item.unit_price))), 0)
                       ?? 0
                     );
 
@@ -2383,7 +2386,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                                               <td className="p-3 text-xs text-slate-600">{item.presentation}</td>
                                               <td className="p-3 text-xs text-slate-600">{item.sale_type}</td>
                                               <td className="p-3 text-right text-xs font-bold text-slate-600">{formatNumber(Number(item.qty))}</td>
-                                              <td className="p-3 text-right text-xs font-black text-slate-900">{formatCurrency(Number(item.qty) * Number(item.unit_price))}</td>
+                                              <td className="p-3 text-right text-xs font-black text-slate-900">{formatCurrency(Number(item.line_total ?? (Number(item.qty) * Number(item.unit_price))))}</td>
                                             </tr>
                                           ))}
                                         </tbody>

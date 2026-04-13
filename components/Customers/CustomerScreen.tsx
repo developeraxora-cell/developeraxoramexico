@@ -144,6 +144,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     id: string;
     qty: number;
     unit_price: number;
+    line_total: number;
     factor_used: number;
     product_name: string | null;
     product_sku: string | null;
@@ -806,12 +807,12 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     if (cashSales.length > 0) {
       const { data: saleItems, error: saleItemsError } = await supabase
         .from('inventory_transaction_items')
-        .select('transaction_id, qty, unit_price')
+        .select('transaction_id, qty, unit_price, line_total')
         .in('transaction_id', cashSales.map((sale) => String(sale.id)));
       if (saleItemsError) throw saleItemsError;
       const totals = (saleItems ?? []).reduce<Record<string, number>>((acc, item: any) => {
         const key = String(item.transaction_id);
-        acc[key] = (acc[key] ?? 0) + (Number(item.qty ?? 0) * Number(item.unit_price ?? 0));
+        acc[key] = (acc[key] ?? 0) + Number(item.line_total ?? (Number(item.qty ?? 0) * Number(item.unit_price ?? 0)));
         return acc;
       }, {});
       setCashSaleTotalsById(totals);
@@ -885,7 +886,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   presentation: item.presentation,
                   sale_type: item.sale_type,
                   qty: Number(item.qty ?? 0),
-                  subtotal: Number(item.qty ?? 0) * Number(item.unit_price ?? 0),
+                  subtotal: Number(item.line_total ?? (Number(item.qty ?? 0) * Number(item.unit_price ?? 0))),
                 })),
               };
             } catch {
@@ -1009,6 +1010,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         id,
         qty,
         unit_price,
+        line_total,
         factor_used,
         products ( name, sku, attrs, wholesale_price, retail_price, precio ),
         product_uoms ( uom_id, wholesale_price, retail_price, uoms ( name, code ) )
@@ -1034,6 +1036,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         id: String(row.id),
         qty: Number(row.qty ?? 0),
         unit_price: Number(row.unit_price ?? 0),
+        line_total: Number(row.line_total ?? (Number(row.qty ?? 0) * Number(row.unit_price ?? 0))),
         factor_used: factorUsed,
         product_name: row.products?.name ?? null,
         product_sku: row.products?.sku ?? null,
@@ -1048,7 +1051,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       return item;
     });
 
-    const computedTotal = items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.unit_price)), 0);
+    const computedTotal = items.reduce((acc, item) => acc + Number(item.line_total ?? (Number(item.qty) * Number(item.unit_price))), 0);
 
     return {
       saleId: String(saleRow.id),
@@ -1278,7 +1281,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           presentation: item.presentation,
           qty: item.qty,
           unitPrice: item.unit_price,
-          subtotal: Number(item.qty) * Number(item.unit_price),
+          subtotal: Number(item.line_total ?? (Number(item.qty) * Number(item.unit_price))),
         })),
         paymentMethod: row.kind === 'credit' ? 'CREDITO' : 'EFECTIVO',
         customerName: summary.nombre_cliente ?? selectedCustomer?.name ?? 'PUBLICO GENERAL',
@@ -3000,7 +3003,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     const isLoadingSummary = loadingNoteSaleId === row.rowKey;
                     const summaryTotal = Number(
                       summary?.total_amount
-                      ?? summary?.items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.unit_price)), 0)
+                      ?? summary?.items.reduce((acc, item) => acc + Number(item.line_total ?? (Number(item.qty) * Number(item.unit_price))), 0)
                       ?? row.total
                       ?? 0
                     );
@@ -3153,7 +3156,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                                               <td className="p-3 text-xs text-slate-600">{item.presentation}</td>
                                               <td className="p-3 text-xs text-slate-600">{item.sale_type}</td>
                                               <td className="p-3 text-right text-xs font-bold text-slate-600">{formatNumber(Number(item.qty))}</td>
-                                              <td className="p-3 text-right text-xs font-black text-slate-900">{formatCurrency(Number(item.qty) * Number(item.unit_price))}</td>
+                                              <td className="p-3 text-right text-xs font-black text-slate-900">{formatCurrency(Number(item.line_total ?? (Number(item.qty) * Number(item.unit_price))))}</td>
                                             </tr>
                                           ))}
                                         </tbody>

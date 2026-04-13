@@ -30,6 +30,7 @@ export interface SaleCartItemInput {
   factor_used: number;
   qty_base: number;
   unit_price: number;
+  line_total?: number;
   barcode_scanned?: string | null;
 }
 
@@ -393,6 +394,7 @@ export const purchasesService = {
       factor_used: item.factor_used,
       qty_base: item.qty_base,
       unit_price: item.unit_price,
+      line_total: Number(item.line_total ?? (Number(item.qty ?? 0) * Number(item.unit_price ?? 0))),
       barcode_scanned: item.barcode_scanned ?? null,
     }));
 

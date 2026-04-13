@@ -169,6 +169,7 @@ const POSScreen: React.FC<POSProps> = ({
     id: string;
     qty: number;
     unit_price: number;
+    line_total: number;
     qty_base: number;
     factor_used: number;
     product_name: string | null;
@@ -416,7 +417,7 @@ const POSScreen: React.FC<POSProps> = ({
       if (transactionIds.length > 0) {
         const { data: items, error: itemsError } = await supabase
           .from('concrete_inventory_transaction_items')
-          .select('transaction_id, qty, unit_price')
+          .select('transaction_id, qty, unit_price, line_total')
           .in('transaction_id', transactionIds);
 
         if (itemsError) throw itemsError;
@@ -424,7 +425,7 @@ const POSScreen: React.FC<POSProps> = ({
         itemsSummary = (items ?? []).reduce<Record<string, { count: number; total: number }>>((acc, item) => {
           const current = acc[item.transaction_id] ?? { count: 0, total: 0 };
           current.count += 1;
-          current.total += Number(item.qty) * Number(item.unit_price || 0);
+          current.total += Number(item.line_total ?? (Number(item.qty) * Number(item.unit_price || 0)));
           acc[item.transaction_id] = current;
           return acc;
         }, {});
@@ -487,6 +488,7 @@ const POSScreen: React.FC<POSProps> = ({
           id,
           qty,
           unit_price,
+          line_total,
           qty_base,
           factor_used,
           concrete_products ( name, sku, attrs ),
@@ -515,6 +517,7 @@ const POSScreen: React.FC<POSProps> = ({
           id: row.id,
           qty: Number(row.qty ?? 0),
           unit_price: Number(row.unit_price ?? 0),
+          line_total: Number(row.line_total ?? (Number(row.qty ?? 0) * Number(row.unit_price ?? 0))),
           qty_base: Number(row.qty_base ?? 0),
           factor_used: factorUsed,
           product_name: row.concrete_products?.name ?? null,
@@ -1082,6 +1085,7 @@ const POSScreen: React.FC<POSProps> = ({
         .select(`
           qty,
           unit_price,
+          line_total,
           factor_used,
           concrete_products ( name ),
           concrete_product_uoms ( concrete_uoms ( name, code ) )
@@ -1100,7 +1104,7 @@ const POSScreen: React.FC<POSProps> = ({
           presentation,
           qty,
           unitPrice,
-          subtotal: qty * unitPrice,
+          subtotal: Number(row.line_total ?? (qty * unitPrice)),
         };
       });
 
@@ -1416,6 +1420,7 @@ const POSScreen: React.FC<POSProps> = ({
           factor_used: item.factorUsed ?? 1,
           qty_base: item.qtyBase,
           unit_price: item.unitPrice,
+          line_total: item.subtotal,
           barcode_scanned: item.barcodeScanned ?? null,
         })),
       });
@@ -2916,7 +2921,7 @@ const POSScreen: React.FC<POSProps> = ({
                       </tr>
                     )}
                     {!isSaleDetailLoading && saleDetailItems.map((item) => {
-                      const subtotal = Number(item.qty) * Number(item.unit_price);
+                      const subtotal = Number(item.line_total ?? (Number(item.qty) * Number(item.unit_price)));
                       const uomCode = item.uom_code ? item.uom_code : 'BASE';
                       const uomLabel = item.custom_label
                         ? `${item.custom_label} (${item.factor_used} ${uomCode})`
