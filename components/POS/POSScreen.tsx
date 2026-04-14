@@ -126,6 +126,10 @@ const POSScreen: React.FC<POSProps> = ({
     payment_method: SalePaymentMethod;
     credit_note_id: string | null;
     credit_paid_amount: number;
+    wallet_amount: number;
+    cash_amount: number;
+    credit_amount: number;
+    wallet_id: string | null;
   }>>([]);
   const [isSalesHistoryLoading, setIsSalesHistoryLoading] = useState(false);
   const [salesHistoryPage, setSalesHistoryPage] = useState(1);
@@ -171,11 +175,19 @@ const POSScreen: React.FC<POSProps> = ({
     payment_method: SalePaymentMethod;
     credit_note_id: string | null;
     credit_paid_amount: number;
+    wallet_amount: number;
+    cash_amount: number;
+    credit_amount: number;
+    wallet_id: string | null;
   }>(null);
   const [salePaymentMethodDraft, setSalePaymentMethodDraft] = useState<'EFECTIVO' | 'CREDITO'>('EFECTIVO');
+  const [salePaymentUseWalletDraft, setSalePaymentUseWalletDraft] = useState(false);
   const [salePaymentJustification, setSalePaymentJustification] = useState('');
   const [salePaymentError, setSalePaymentError] = useState<string | null>(null);
   const [isSavingSalePayment, setIsSavingSalePayment] = useState(false);
+  const [salePaymentResolvedCustomer, setSalePaymentResolvedCustomer] = useState<CreditCustomer | null>(null);
+  const [salePaymentWalletCandidate, setSalePaymentWalletCandidate] = useState<CustomerWalletSummary | null>(null);
+  const [isSalePaymentWalletLoading, setIsSalePaymentWalletLoading] = useState(false);
   const [specialPriceModal, setSpecialPriceModal] = useState<SpecialPriceModalState | null>(null);
   const [specialPriceValue, setSpecialPriceValue] = useState('');
   const [specialPriceNote, setSpecialPriceNote] = useState('');
@@ -298,6 +310,55 @@ const POSScreen: React.FC<POSProps> = ({
   }, [selectedAddressRecord, selectedCustomer]);
   const salesHistoryTotalPages = Math.max(1, Math.ceil(salesHistoryTotal / SALES_HISTORY_PAGE_SIZE));
 
+  const resolveSaleCustomerContext = useCallback(async (customerName: string | null) => {
+    const normalizedCustomerName = customerName?.trim();
+    if (!normalizedCustomerName || /^publico general$/i.test(normalizedCustomerName)) {
+      return {
+        customer: null as CreditCustomer | null,
+        wallet: null as CustomerWalletSummary | null,
+      };
+    }
+
+    const customers = await creditService.listCustomersByBranch(branchId);
+    const matches = customers.filter((customer) => (
+      customer.is_active !== false
+      && customer.name.trim().toLowerCase() === normalizedCustomerName.toLowerCase()
+    ));
+
+    if (matches.length !== 1) {
+      throw new Error('No se encontró un cliente único para esta venta.');
+    }
+
+    const customer = matches[0];
+    const wallet = await walletService.getWalletByCustomer(branchId, customer.id);
+
+    return { customer, wallet };
+  }, [branchId]);
+
+  const updateSalePaymentBreakdown = useCallback(async (input: {
+    sale_id: string;
+    payment_type: 'EFECTIVO' | 'CREDITO' | 'BILLETERA' | 'HIBRIDA';
+    wallet_amount: number;
+    cash_amount: number;
+    credit_amount: number;
+    wallet_id?: string | null;
+    payment_notes?: string | null;
+  }) => {
+    const { error } = await supabase
+      .from('inventory_transactions')
+      .update({
+        payment_type: input.payment_type,
+        wallet_amount: Number(input.wallet_amount ?? 0),
+        cash_amount: Number(input.cash_amount ?? 0),
+        credit_amount: Number(input.credit_amount ?? 0),
+        wallet_id: input.wallet_id ?? null,
+        payment_notes: input.payment_notes ?? null,
+      })
+      .eq('id', input.sale_id);
+
+    if (error) throw error;
+  }, []);
+
   const loadSalesHistory = useCallback(async () => {
     if (!branchId) return;
     setIsSalesHistoryLoading(true);
@@ -413,6 +474,10 @@ const POSScreen: React.FC<POSProps> = ({
           )) as SalePaymentMethod,
           credit_note_id: creditByTransaction[String(tx.id)]?.note_id ?? null,
           credit_paid_amount: creditByTransaction[String(tx.id)]?.paid_amount ?? 0,
+          wallet_amount: Number(tx.wallet_amount ?? 0),
+          cash_amount: Number(tx.cash_amount ?? 0),
+          credit_amount: Number(tx.credit_amount ?? 0),
+          wallet_id: tx.wallet_id == null ? null : String(tx.wallet_id),
         };
       });
 
@@ -510,20 +575,44 @@ const POSScreen: React.FC<POSProps> = ({
     payment_method: SalePaymentMethod;
     credit_note_id: string | null;
     credit_paid_amount: number;
+    wallet_amount: number;
+    cash_amount: number;
+    credit_amount: number;
+    wallet_id: string | null;
   }) => {
     if (sale.payment_method === 'SIN_COSTO') return;
     setSalePaymentEditTarget(sale);
-    setSalePaymentMethodDraft(sale.payment_method);
+    setSalePaymentMethodDraft(sale.payment_method === 'CREDITO' ? 'CREDITO' : 'EFECTIVO');
+    setSalePaymentUseWalletDraft(Number(sale.wallet_amount ?? 0) > 0);
     setSalePaymentJustification('');
     setSalePaymentError(null);
+    setSalePaymentResolvedCustomer(null);
+    setSalePaymentWalletCandidate(null);
+    setIsSalePaymentWalletLoading(true);
+    void resolveSaleCustomerContext(sale.nombre_cliente)
+      .then(({ customer, wallet }) => {
+        setSalePaymentResolvedCustomer(customer);
+        setSalePaymentWalletCandidate(wallet);
+      })
+      .catch(() => {
+        setSalePaymentResolvedCustomer(null);
+        setSalePaymentWalletCandidate(null);
+      })
+      .finally(() => {
+        setIsSalePaymentWalletLoading(false);
+      });
   };
 
   const closeEditSalePaymentModal = () => {
     if (isSavingSalePayment) return;
     setSalePaymentEditTarget(null);
     setSalePaymentMethodDraft('EFECTIVO');
+    setSalePaymentUseWalletDraft(false);
     setSalePaymentJustification('');
     setSalePaymentError(null);
+    setSalePaymentResolvedCustomer(null);
+    setSalePaymentWalletCandidate(null);
+    setIsSalePaymentWalletLoading(false);
   };
 
   const handleSaveSalePaymentMethod = async () => {
@@ -535,7 +624,7 @@ const POSScreen: React.FC<POSProps> = ({
       return;
     }
 
-    if (salePaymentMethodDraft === salePaymentEditTarget.payment_method) {
+    if (salePaymentMethodDraft === salePaymentEditTarget.payment_method && !salePaymentUseWalletDraft) {
       setSalePaymentError('No hay cambios en el tipo de venta.');
       return;
     }
@@ -544,37 +633,113 @@ const POSScreen: React.FC<POSProps> = ({
     setSalePaymentError(null);
 
     try {
-      if (salePaymentMethodDraft === 'CREDITO') {
-        const customerName = salePaymentEditTarget.nombre_cliente?.trim();
-        if (!customerName || /^publico general$/i.test(customerName)) {
+      let finalPaymentMethod: SalePaymentMethod = salePaymentMethodDraft;
+      let newWalletAmount = 0;
+      let newCashAmount = 0;
+      let newCreditAmount = 0;
+      let newWalletId: string | null = null;
+      const needsCustomer = salePaymentMethodDraft === 'CREDITO' || salePaymentUseWalletDraft;
+      const resolvedContext = needsCustomer
+        ? await resolveSaleCustomerContext(salePaymentEditTarget.nombre_cliente)
+        : { customer: null as CreditCustomer | null, wallet: null as CustomerWalletSummary | null };
+      const customer = salePaymentResolvedCustomer ?? resolvedContext.customer;
+      const wallet = salePaymentWalletCandidate ?? resolvedContext.wallet;
+
+      if (salePaymentEditTarget.payment_method === 'CREDITO' && Number(salePaymentEditTarget.credit_paid_amount ?? 0) > 0) {
+        throw new Error('No se puede modificar esta venta porque la nota de crédito ya tiene abonos registrados.');
+      }
+
+      if (salePaymentEditTarget.credit_note_id) {
+        await creditService.deleteNote(salePaymentEditTarget.credit_note_id);
+      }
+
+      if (salePaymentUseWalletDraft) {
+        if (!customer) {
+          throw new Error('La venta debe tener un cliente identificado para usar saldo a favor.');
+        }
+        if (!wallet || wallet.status !== 'ACTIVA') {
+          throw new Error('El cliente no tiene un saldo a favor activo.');
+        }
+
+        newWalletAmount = Math.min(Number(wallet.current_balance ?? 0), Number(salePaymentEditTarget.total_amount ?? 0));
+        if (newWalletAmount <= 0) {
+          throw new Error('El cliente no tiene saldo a favor disponible.');
+        }
+
+        newWalletId = wallet.id;
+
+        if (salePaymentMethodDraft === 'CREDITO') {
+          newCreditAmount = Math.max(0, Number(salePaymentEditTarget.total_amount ?? 0) - newWalletAmount);
+          newCashAmount = 0;
+          finalPaymentMethod = newCreditAmount > 0 ? 'HIBRIDA' : 'BILLETERA';
+        } else {
+          newCashAmount = Math.max(0, Number(salePaymentEditTarget.total_amount ?? 0) - newWalletAmount);
+          newCreditAmount = 0;
+          finalPaymentMethod = newCashAmount > 0 ? 'HIBRIDA' : 'BILLETERA';
+        }
+
+        await walletService.applyWalletToSale({
+          wallet_id: wallet.id,
+          sale_id: salePaymentEditTarget.id,
+          wallet_amount: newWalletAmount,
+          cash_amount: newCashAmount,
+          credit_amount: newCreditAmount,
+          payment_notes: `Saldo a favor aplicada desde historial. ${justification}`,
+          created_by: currentUser.name,
+        });
+      } else if (salePaymentMethodDraft === 'CREDITO') {
+        if (!customer) {
           throw new Error('La venta debe tener un cliente identificado para cambiarla a crédito.');
         }
 
-        const customers = await creditService.listCustomersByBranch(branchId);
-        const matches = customers.filter((customer) => customer.is_active !== false && customer.name.trim().toLowerCase() === customerName.toLowerCase());
-        if (matches.length !== 1) {
-          throw new Error('No se encontró un cliente único para convertir esta venta a crédito.');
+        newCreditAmount = salePaymentEditTarget.total_amount;
+        await updateSalePaymentBreakdown({
+          sale_id: salePaymentEditTarget.id,
+          payment_type: 'CREDITO',
+          wallet_amount: 0,
+          cash_amount: 0,
+          credit_amount: newCreditAmount,
+          wallet_id: null,
+          payment_notes: `Venta convertida a crédito desde historial. ${justification}`,
+        });
+      } else {
+        newCashAmount = salePaymentEditTarget.total_amount;
+        await updateSalePaymentBreakdown({
+          sale_id: salePaymentEditTarget.id,
+          payment_type: 'EFECTIVO',
+          wallet_amount: 0,
+          cash_amount: newCashAmount,
+          credit_amount: 0,
+          wallet_id: null,
+          payment_notes: `Venta convertida a efectivo desde historial. ${justification}`,
+        });
+      }
+
+      if (salePaymentMethodDraft === 'CREDITO' && newCreditAmount > 0) {
+        if (!customer) {
+          throw new Error('La venta debe tener un cliente identificado para cambiarla a crédito.');
         }
 
         await creditService.createCreditNote({
           branch_id: branchId,
-          customer_id: matches[0].id,
-          total: salePaymentEditTarget.total_amount,
-          credit_days_applied: matches[0].default_credit_days,
+          customer_id: customer.id,
+          total: newCreditAmount,
+          credit_days_applied: customer.default_credit_days,
           inventory_transaction_id: salePaymentEditTarget.id,
           issue_date: salePaymentEditTarget.created_at.slice(0, 10),
-          notes: `Venta convertida a crédito desde historial. ${justification}`,
+          notes: salePaymentUseWalletDraft
+            ? `Venta convertida a crédito con saldo a favor desde historial. ${justification}`
+            : `Venta convertida a crédito desde historial. ${justification}`,
         });
-      } else {
-        if (!salePaymentEditTarget.credit_note_id) {
-          throw new Error('La venta no tiene una nota de crédito asociada.');
-        }
-        if (Number(salePaymentEditTarget.credit_paid_amount ?? 0) > 0) {
-          throw new Error('No se puede cambiar a efectivo porque la nota ya tiene abonos registrados.');
-        }
-        await creditService.deleteNote(salePaymentEditTarget.credit_note_id);
-      }
 
+        if (selectedCustomer?.id === customer.id) {
+          const refreshedWallet = await walletService.getWalletByCustomer(branchId, customer.id);
+          setCustomerWallet(refreshedWallet);
+        }
+      } else if (salePaymentUseWalletDraft && customer && selectedCustomer?.id === customer.id) {
+        const refreshedWallet = await walletService.getWalletByCustomer(branchId, customer.id);
+        setCustomerWallet(refreshedWallet);
+      }
 
       logMaterialsAudit({
         branch_id: branchId,
@@ -589,15 +754,29 @@ const POSScreen: React.FC<POSProps> = ({
         previous_data: {
           payment_method: salePaymentEditTarget.payment_method,
           credit_note_id: salePaymentEditTarget.credit_note_id,
+          wallet_id: salePaymentEditTarget.wallet_id,
+          wallet_amount: salePaymentEditTarget.wallet_amount,
+          cash_amount: salePaymentEditTarget.cash_amount,
+          credit_amount: salePaymentEditTarget.credit_amount,
         },
         new_data: {
-          payment_method: salePaymentMethodDraft,
+          payment_method: finalPaymentMethod,
+          wallet_id: newWalletId,
+          wallet_amount: newWalletAmount,
+          cash_amount: newCashAmount,
+          credit_amount: newCreditAmount,
+          uses_wallet: salePaymentUseWalletDraft,
         },
       });
 
       closeEditSalePaymentModal();
       await loadSalesHistory();
-      showFeedback('success', 'Tipo de venta actualizado', `La venta #${salePaymentEditTarget.id} ahora está en ${salePaymentMethodDraft}.`);
+      const paymentMethodLabel = finalPaymentMethod === 'BILLETERA'
+        ? 'SALDO A FAVOR'
+        : finalPaymentMethod === 'HIBRIDA'
+          ? (newCreditAmount > 0 ? 'VENTA HIBRIDA (SALDO A FAVOR + CREDITO)' : 'VENTA HIBRIDA (SALDO A FAVOR + EFECTIVO)')
+          : finalPaymentMethod;
+      showFeedback('success', 'Tipo de venta actualizado', `La venta #${salePaymentEditTarget.id} ahora está en ${paymentMethodLabel}.`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo actualizar el tipo de venta.';
       setSalePaymentError(message);
@@ -3112,7 +3291,9 @@ const POSScreen: React.FC<POSProps> = ({
             <div className="space-y-4 p-6">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tipo actual</p>
-                <p className="mt-1 text-lg font-black text-slate-900">{salePaymentEditTarget.payment_method}</p>
+                <p className="mt-1 text-lg font-black text-slate-900">
+                  {salePaymentEditTarget.payment_method === 'BILLETERA' ? 'SALDO A FAVOR' : salePaymentEditTarget.payment_method}
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {(['EFECTIVO', 'CREDITO'] as const).map((method) => (
@@ -3129,6 +3310,51 @@ const POSScreen: React.FC<POSProps> = ({
                     {method}
                   </button>
                 ))}
+              </div>
+              <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-violet-500">Saldo a favor</p>
+                    {isSalePaymentWalletLoading ? (
+                      <p className="mt-2 text-sm font-bold text-slate-500">Consultando saldo del cliente...</p>
+                    ) : salePaymentWalletCandidate?.status === 'ACTIVA' ? (
+                      <>
+                        <p className="mt-2 text-lg font-black text-violet-700">{formatCurrency(salePaymentWalletCandidate.current_balance)}</p>
+                        <p className="mt-1 text-xs font-bold text-slate-500">Activa el uso de saldo para combinarlo con efectivo o crédito.</p>
+                      </>
+                    ) : (
+                      <p className="mt-2 text-sm font-bold text-slate-500">
+                        Este cliente no tiene saldo a favor activo. Solo puedes ajustar entre efectivo y crédito.
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isSalePaymentWalletLoading || salePaymentWalletCandidate?.status !== 'ACTIVA') return;
+                      setSalePaymentUseWalletDraft((prev) => !prev);
+                    }}
+                    disabled={isSalePaymentWalletLoading || salePaymentWalletCandidate?.status !== 'ACTIVA'}
+                    className={`rounded-2xl border px-4 py-3 text-[10px] font-black uppercase tracking-widest transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                      salePaymentUseWalletDraft
+                        ? 'border-violet-600 bg-violet-600 text-white'
+                        : 'border-violet-200 bg-white text-violet-600'
+                    }`}
+                  >
+                    {salePaymentUseWalletDraft ? 'Quitar saldo' : 'Usar saldo'}
+                  </button>
+                </div>
+                {salePaymentUseWalletDraft && salePaymentWalletCandidate?.status === 'ACTIVA' && (
+                  <div className="mt-3 space-y-1 text-xs font-bold text-slate-600">
+                    <p>Aplicado con saldo a favor: {formatCurrency(Math.min(salePaymentWalletCandidate.current_balance, salePaymentEditTarget.total_amount))}</p>
+                    <p>
+                      Restante por cubrir:{' '}
+                      {salePaymentMethodDraft === 'CREDITO'
+                        ? formatCurrency(Math.max(0, salePaymentEditTarget.total_amount - salePaymentWalletCandidate.current_balance)) + ' a crédito'
+                        : formatCurrency(Math.max(0, salePaymentEditTarget.total_amount - salePaymentWalletCandidate.current_balance)) + ' en efectivo'}
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observación obligatoria</label>
@@ -3156,7 +3382,7 @@ const POSScreen: React.FC<POSProps> = ({
                 <button
                   type="button"
                   onClick={() => void handleSaveSalePaymentMethod()}
-                  disabled={isSavingSalePayment}
+                  disabled={isSavingSalePayment || (salePaymentUseWalletDraft && isSalePaymentWalletLoading)}
                   className="flex-1 rounded-2xl bg-slate-900 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50"
                 >
                   {isSavingSalePayment ? 'Guardando...' : 'Guardar cambio'}
