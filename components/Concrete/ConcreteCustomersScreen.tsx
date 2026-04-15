@@ -714,7 +714,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     });
 
     let rowY = tableTop - 32;
-    const maxRows = Math.min(14, input.items.length);
+    const maxRows = Math.min(24, input.items.length);
     let total = 0;
     for (let i = 0; i < maxRows; i += 1) {
       const item = input.items[i];

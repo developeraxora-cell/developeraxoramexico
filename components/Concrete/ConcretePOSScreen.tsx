@@ -966,7 +966,7 @@ const POSScreen: React.FC<POSProps> = ({
     });
 
     let rowY = tableTop - 32;
-    const maxRows = Math.min(8, input.items.length);
+    const maxRows = Math.min(16, input.items.length);
     let total = 0;
     for (let i = 0; i < maxRows; i += 1) {
       const item = input.items[i];
