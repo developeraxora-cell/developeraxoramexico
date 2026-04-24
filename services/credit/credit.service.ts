@@ -548,9 +548,9 @@ export const creditService = {
 
     return (data ?? []).filter((sale) => {
       const candidate = normalizeCustomerName(sale.nombre_cliente);
-      return candidate === normalizedName
-        || candidate.includes(normalizedName)
-        || normalizedName.includes(candidate);
+      if (!candidate) return false;
+      if (candidate === 'publico general') return false;
+      return candidate === normalizedName;
     }) as CashSaleHistory[];
   },
 

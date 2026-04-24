@@ -17,6 +17,7 @@ import {
 import { purchasesService } from '../../services/inventory/purchases.service';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { logMaterialsAudit } from '../../services/audit/audit.service';
+import { getBranchFooterText } from '../../services/pdf/branchFooter';
 import { resolveFactorToBase } from '../../services/uomEquivalence';
 
 interface PurchasesScreenProps {
@@ -714,10 +715,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       page.drawText(`TOTAL: ${formatCurrency(total)}`, { x: width - marginX - 170, y: 74, size: 14, color: rgb(1, 1, 1), font: fontBold });
 
       // Footer line
-      page.drawText(
-        'KILOMETRO, 3 LAS CANOAS, JESUS MARIA JALISCO   (348) 148 8326',
-        { x: marginX + 40, y: 52, size: 7 }
-      );
+      page.drawText(getBranchFooterText(selectedBranch?.name ?? null), { x: marginX + 40, y: 52, size: 7 });
       page.drawText('Página 1', { x: width - marginX - 30, y: 52, size: 7 });
 
       const pdfBytes = await pdfDoc.save();

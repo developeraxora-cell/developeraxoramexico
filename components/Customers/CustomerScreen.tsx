@@ -6,6 +6,7 @@ import { walletService, type CustomerWalletMovement, type CustomerWalletSummary 
 import { CreditCard, Eye, FileDown, FileImage, History, MapPin, Paperclip, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
+import { getBranchFooterText } from '../../services/pdf/branchFooter';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 import ConfirmModal from '../common/ConfirmModal';
 import WalletCreateModal from '../Wallet/WalletCreateModal';
@@ -130,10 +131,17 @@ const createDefaultPaymentEditForm = () => ({
   justification: '',
 });
 const ALPHABET_FILTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-const getDisplayNoteCode = (note: Pick<CreditNote, 'folio' | 'sale_reference' | 'inventory_transaction_id'>) =>
-  String(note.sale_reference ?? '').trim()
-  || (note.inventory_transaction_id ? String(note.inventory_transaction_id) : '')
-  || note.folio;
+const getDisplayNoteCode = (note: Pick<CreditNote, 'folio' | 'sale_reference' | 'inventory_transaction_id'>) => {
+  const saleReference = String(note.sale_reference ?? '').trim();
+  if (saleReference.toUpperCase().startsWith('LEG-') && note.inventory_transaction_id) {
+    return String(note.inventory_transaction_id);
+  }
+
+  return String(note.folio ?? '').trim()
+    || saleReference
+    || (note.inventory_transaction_id ? String(note.inventory_transaction_id) : '')
+    || '—';
+};
 
 const isZeroCostSaleNote = (value: string | null | undefined) =>
   String(value ?? '').toUpperCase().includes('SALIDA SIN COSTO');
@@ -1226,7 +1234,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       if (pageIndex === pages.length - 1) {
         page.drawText(`TOTAL:  ${formatCurrency(total)}`, { x: width - marginX - 210, y: 108, size: 20, font: fontBold });
       }
-      page.drawText('KILOMETRO, 3 LAS CANOAS, JESUS MARIA JALISCO   (348) 148 8326', {
+      page.drawText(getBranchFooterText(input.branchName), {
         x: marginX + 80,
         y: 64,
         size: 9,

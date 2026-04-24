@@ -11,6 +11,7 @@ import { walletService, type CustomerWalletSummary } from '../../services/wallet
 import { supabase } from '../../services/supabaseClient';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { logMaterialsAudit } from '../../services/audit/audit.service';
+import { getBranchFooterText } from '../../services/pdf/branchFooter';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 import ConfirmModal from '../common/ConfirmModal';
 import CustomerSearchSelect from '../common/CustomerSearchSelect';
@@ -1154,7 +1155,7 @@ const POSScreen: React.FC<POSProps> = ({
       if (pageIndex === pages.length - 1) {
         page.drawText(`TOTAL:  ${formatCurrency(total)}`, { x: width - marginX - 210, y: 108, size: 20, font: fontBold });
       }
-      page.drawText('KILOMETRO, 3 LAS CANOAS, JESUS MARIA JALISCO   (348) 148 8326', {
+      page.drawText(getBranchFooterText(input.branchName), {
         x: marginX + 80,
         y: 64,
         size: 9,

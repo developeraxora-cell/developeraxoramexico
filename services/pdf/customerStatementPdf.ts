@@ -1,5 +1,6 @@
 import { PDFDocument, rgb } from 'pdf-lib';
 import { formatCurrency } from '../currency';
+import { getBranchFooterText } from './branchFooter';
 
 interface CustomerInfo {
   id: string;
@@ -223,7 +224,7 @@ const drawSalesDetailPages = async (
       font: fontBold,
     });
 
-    page.drawText('KILOMETRO, 3 LAS CANOAS, JESUS MARIA JALISCO   (348) 148 8326', {
+    page.drawText(getBranchFooterText(input.branchName), {
       x: marginX + 80,
       y: 64,
       size: 9,
@@ -392,7 +393,7 @@ export const generateCustomerStatementPdf = async (input: CustomerStatementPdfIn
     page.drawText(`DEUDA ACTUAL: ${formatCurrency(Number(input.debt ?? 0))}`, { x: rightInfoX, y: infoTop - 20, size: 10, font: fontBold });
     page.drawText(`DISPONIBLE: ${formatCurrency(Number(input.available ?? 0))}`, { x: rightInfoX, y: infoTop - 40, size: 10, font: fontBold });
 
-    page.drawText('KILOMETRO, 3 LAS CANOAS, JESUS MARIA JALISCO   (348) 148 8326', {
+    page.drawText(getBranchFooterText(input.branchName), {
       x: marginX + 80,
       y: 64,
       size: 9,
