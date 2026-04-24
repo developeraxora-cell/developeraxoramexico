@@ -2,7 +2,7 @@ import { supabase } from '../supabaseClient';
 const concreteDb = supabase;
 
 export type CreditPolicy = 'CERO_TOLERANCIA' | 'BLOQUEO_PARCIAL';
-export type CreditPaymentMethod = 'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA' | 'YAPE' | 'PLIN' | 'OTRO';
+export type CreditPaymentMethod = 'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA' | 'CHEQUE' | 'YAPE' | 'PLIN' | 'OTRO';
 
 export interface CreditCustomer {
   id: string;

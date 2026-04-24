@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient';
 
 export type CreditPolicy = 'CERO_TOLERANCIA' | 'BLOQUEO_PARCIAL';
-export type CreditPaymentMethod = 'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA' | 'YAPE' | 'PLIN' | 'OTRO';
+export type CreditPaymentMethod = 'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA' | 'CHEQUE' | 'YAPE' | 'PLIN' | 'OTRO';
 
 export interface CreditCustomer {
   id: string;

@@ -2636,6 +2636,7 @@ const POSScreen: React.FC<POSProps> = ({
                 >
                   <option value="EFECTIVO">Efectivo</option>
                   <option value="TRANSFERENCIA">Transferencia</option>
+                  <option value="CHEQUE">Cheque</option>
                   <option value="YAPE">Yape</option>
                   <option value="PLIN">Plin</option>
                   <option value="OTRO">Otro</option>

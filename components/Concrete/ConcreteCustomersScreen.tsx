@@ -3358,6 +3358,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   <option value="EFECTIVO">Efectivo</option>
                   <option value="TRANSFERENCIA">Transferencia</option>
                   <option value="TARJETA">Tarjeta</option>
+                  <option value="CHEQUE">Cheque</option>
                 </select>
                 <input
                   type="number"
@@ -3860,6 +3861,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     <option value="EFECTIVO">Efectivo</option>
                     <option value="TRANSFERENCIA">Transferencia</option>
                     <option value="TARJETA">Tarjeta</option>
+                    <option value="CHEQUE">Cheque</option>
                   </select>
                 </div>
                 <div className="space-y-2">
