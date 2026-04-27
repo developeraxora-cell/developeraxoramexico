@@ -389,7 +389,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const filteredOpenNotes = useMemo(() => {
     const term = paymentSearchTerm.trim().toLowerCase();
     if (!term) return openNotes;
-    return openNotes.filter((note) => getDisplayNoteCode(note).toLowerCase().includes(term));
+    return openNotes.filter((note) => {
+      const noteCode = getDisplayNoteCode(note).toLowerCase();
+      const saleReference = String(note.sale_reference ?? '').toLowerCase();
+      return noteCode.includes(term) || saleReference.includes(term);
+    });
   }, [openNotes, paymentSearchTerm]);
   const paymentTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredOpenNotes.length / MODAL_PAGE_SIZE)), [filteredOpenNotes.length]);
   const paymentHistoryTotalPages = useMemo(() => Math.max(1, Math.ceil(paymentHistory.length / MODAL_PAGE_SIZE)), [paymentHistory.length]);
@@ -2832,7 +2836,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       )}
 
       {isNoteModalOpen && selectedCustomer && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[75] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden">
             <div className="bg-slate-900 p-6 text-white">
               <h3 className="text-xl font-black uppercase tracking-tighter">
@@ -3246,7 +3250,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 gap-3">
                 <input
-                  placeholder="Buscar por folio..."
+                  placeholder="Buscar por folio o referencia..."
                   className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
                   value={paymentSearchTerm}
                   onChange={(e) => {
