@@ -750,7 +750,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       page.drawText(`TOTAL: ${formatCurrency(total)}`, { x: width - marginX - 170, y: 74, size: 14, color: rgb(1, 1, 1), font: fontBold });
 
       // Footer line
-      page.drawText(getBranchFooterText(selectedBranch?.name ?? null), { x: marginX + 40, y: 52, size: 7 });
+      page.drawText(getBranchFooterText(selectedBranch?.name ?? null, { moduleLabel: 'CONCRETERA', branchId: branchId ?? selectedBranchId ?? null }), { x: marginX + 40, y: 52, size: 7 });
       page.drawText('Página 1', { x: width - marginX - 30, y: 52, size: 7 });
 
       const pdfBytes = await pdfDoc.save();

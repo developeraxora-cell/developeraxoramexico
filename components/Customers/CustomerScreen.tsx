@@ -990,16 +990,20 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const resolveSaleTransactionId = async (note: CreditNoteWithStatus) => {
     if (note.inventory_transaction_id) return String(note.inventory_transaction_id);
 
-    const { data: byReference, error: byReferenceError } = await supabase
-      .from('inventory_transactions')
-      .select('id')
-      .eq('branch_id', branchId)
-      .eq('type', 'SALE')
-      .eq('reference', note.folio)
-      .maybeSingle();
+    const references = [String(note.sale_reference ?? '').trim(), String(note.folio ?? '').trim()].filter(Boolean);
 
-    if (byReferenceError) throw byReferenceError;
-    if (byReference?.id) return String(byReference.id);
+    for (const reference of references) {
+      const { data: byReference, error: byReferenceError } = await supabase
+        .from('inventory_transactions')
+        .select('id')
+        .eq('branch_id', branchId)
+        .eq('type', 'SALE')
+        .eq('reference', reference)
+        .maybeSingle();
+
+      if (byReferenceError) throw byReferenceError;
+      if (byReference?.id) return String(byReference.id);
+    }
 
     throw new Error('Esta nota no tiene una venta asociada.');
   };

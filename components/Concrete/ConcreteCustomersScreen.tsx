@@ -922,6 +922,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       await generateCustomerStatementPdf({
         moduleLabel: 'CONCRETERA',
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+        branchId: branchId ?? selectedBranchId ?? null,
         customer: {
           id: customer.id,
           name: customer.name,
@@ -1119,6 +1120,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     customerAddress: string;
     cashierName: string;
     branchName: string;
+    branchId?: string | null;
   }) => {
     const pdfDoc = await PDFDocument.create();
     const fontBold = await pdfDoc.embedFont('Helvetica-Bold');
@@ -1247,7 +1249,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       if (pageIndex === pages.length - 1) {
         page.drawText(`TOTAL:  ${formatCurrency(total)}`, { x: width - marginX - 210, y: 108, size: 20, font: fontBold });
       }
-      page.drawText(getBranchFooterText(input.branchName), {
+      page.drawText(getBranchFooterText(input.branchName, { moduleLabel: 'CONCRETERA', branchId: input.branchId }), {
         x: marginX + 80,
         y: 64,
         size: 9,
@@ -1317,6 +1319,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         customerAddress: summary.direccion_cliente ?? selectedCustomer?.address ?? '-',
         cashierName: summary.created_by ?? currentUser.name,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+        branchId: branchId ?? selectedBranchId ?? null,
       });
       setFeedbackOpen(false);
     } catch (err) {

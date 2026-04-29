@@ -1079,6 +1079,7 @@ const POSScreen: React.FC<POSProps> = ({
     customerAddress: string;
     cashierName: string;
     branchName: string;
+    branchId?: string | null;
     edad: string | null;
     rev: string | null;
     descarga: string | null;
@@ -1265,7 +1266,7 @@ const POSScreen: React.FC<POSProps> = ({
 
     const totalText = `TOTAL:  ${formatCurrency(total)}`;
     page.drawText(totalText, { x: width - marginX - 202, y: 108, size: 40 / 2, font: fontBold });
-    page.drawText(getBranchFooterText(input.branchName), {
+    page.drawText(getBranchFooterText(input.branchName, { moduleLabel: 'CONCRETERA', branchId: input.branchId }), {
       x: marginX + 80,
       y: 64,
       size: 9,
@@ -1333,6 +1334,7 @@ const POSScreen: React.FC<POSProps> = ({
         customerAddress: sale.direccion_cliente ?? '-',
         cashierName: sale.created_by || currentUser.name,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+        branchId: branchId ?? selectedBranchId ?? null,
         edad: parsedMeta.edad,
         rev: parsedMeta.rev,
         descarga: parsedMeta.descarga,
@@ -1648,6 +1650,7 @@ const POSScreen: React.FC<POSProps> = ({
         customerAddress: effectiveSaleAddress,
         cashierName: currentUser.name,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+        branchId: branchId ?? selectedBranchId ?? null,
         edad: concreteMetaSnapshot.edad,
         rev: concreteMetaSnapshot.rev,
         descarga: concreteMetaSnapshot.descarga,

@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Download } from 'lucide-react';
+import { AlertTriangle, Download, Filter, ShoppingCart, TrendingUp, Truck } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import { catalogService } from '../../services/inventory/catalog.service';
 import { formatCurrency, formatNumber } from '../../services/currency';
@@ -124,13 +124,14 @@ const downloadCsv = (filename: string, headers: string[], rows: (string | number
   URL.revokeObjectURL(link.href);
 };
 
+const cardBaseClass = 'rounded-3xl border border-slate-200 bg-white shadow-sm';
+
 const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branches }) => {
   const branchId = useMemo(() => {
     const match = branches.find((b) => b.id === selectedBranchId);
     if (match?.dbId !== undefined) return String(match.dbId);
     return selectedBranchId || '';
   }, [branches, selectedBranchId]);
-
   const [datePreset, setDatePreset] = useState<'today' | '7d' | '30d' | 'month' | 'custom'>('30d');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -161,6 +162,9 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
   const [stockTable, setStockTable] = useState<Array<{ name: string; stock: number; min: number; status: string }>>([]);
   const [salesTable, setSalesTable] = useState<Array<{ id: number; date: string; customer: string; items: number; total: number }>>([]);
   const [purchasesTable, setPurchasesTable] = useState<Array<{ id: number; date: string; supplier: string; items: number; total: number; credit: boolean }>>([]);
+  const [stockVisibleCount, setStockVisibleCount] = useState(4);
+  const [salesVisibleCount, setSalesVisibleCount] = useState(4);
+  const [purchasesVisibleCount, setPurchasesVisibleCount] = useState(4);
 
   useEffect(() => {
     const today = new Date();
@@ -322,10 +326,21 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
           qty: data.qty,
           total: data.total,
         }))
-        .sort((a, b) => b.qty - a.qty);
+        .filter((item) => item.qty > 0);
 
-      const topList = soldItems.slice(0, 5);
-      const lowList = [...soldItems].reverse().filter((item) => item.qty > 0).slice(0, 5);
+      const topList = [...soldItems]
+        .sort((a, b) => b.total - a.total || b.qty - a.qty)
+        .slice(0, 5);
+      const lowCandidates = [...soldItems].sort((a, b) => a.qty - b.qty || a.total - b.total);
+      const distinctLowList = lowCandidates.reduce<Array<(typeof lowCandidates)[number]>>((acc, item) => {
+          if (acc.length >= 5) return acc;
+          if (acc.some((current) => current.qty === item.qty)) return acc;
+          acc.push(item);
+          return acc;
+        }, []);
+      const lowList = distinctLowList
+        .concat(lowCandidates.filter((item) => !distinctLowList.includes(item)))
+        .slice(0, 5);
 
       const rangeDays = Math.max(1, Math.ceil((rangeEnd.getTime() - rangeStart.getTime()) / 86400000));
       const granularity: 'day' | 'week' | 'month' = rangeDays <= 14 ? 'day' : rangeDays <= 90 ? 'week' : 'month';
@@ -348,7 +363,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
       const salesSeriesData = buildSeries(salesTx);
       const purchaseSeriesData = buildSeries(purchaseTx);
 
-      const stockRows = products
+      const stockCandidates = products
         .filter((product) => matchesFilters(product.id))
         .map((product) => {
           const stockValue = Number(product.stock ?? stockByProduct[String(product.id)] ?? 0);
@@ -365,8 +380,61 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
             status,
             unitLabel,
           };
-        })
-        .sort((a, b) => a.stock - b.stock)
+        });
+
+      const stockCandidatesByName = stockCandidates.reduce<Record<string, (typeof stockCandidates)[number]>>((acc, row) => {
+        acc[row.name] = row;
+        return acc;
+      }, {});
+      const soldStockRows = topList
+        .map((item) => stockCandidatesByName[item.name])
+        .filter((row): row is (typeof stockCandidates)[number] => Boolean(row))
+        .filter((row) => row.stock > 0 || row.min > 0);
+      const filterComparableRows = (rows: (typeof stockCandidates)[number][]) =>
+        rows.filter((row) => {
+          if (row.stock <= 0 || row.min <= 0) return false;
+          const higher = Math.max(row.stock, row.min);
+          const lower = Math.min(row.stock, row.min);
+          return higher / Math.max(lower, 1) <= 4;
+        });
+      const pickSimilarScaleRows = (rows: (typeof stockCandidates)[number][]) => {
+        if (rows.length <= 1) return rows;
+        const sorted = [...rows].sort((a, b) => Math.max(a.stock, a.min) - Math.max(b.stock, b.min));
+        const targetSize = Math.min(10, sorted.length);
+        let bestWindow = sorted.slice(0, targetSize);
+        let bestRatio = Infinity;
+
+        for (let index = 0; index <= sorted.length - targetSize; index += 1) {
+          const window = sorted.slice(index, index + targetSize);
+          const low = Math.max(1, Math.max(window[0].stock, window[0].min));
+          const high = Math.max(window[window.length - 1].stock, window[window.length - 1].min);
+          const ratio = high / low;
+          if (ratio < bestRatio) {
+            bestRatio = ratio;
+            bestWindow = window;
+          }
+        }
+
+        return bestWindow;
+      };
+      const sortBySimilarity = (rows: (typeof stockCandidates)[number][]) =>
+        [...rows].sort((a, b) => {
+          const aHasMin = a.min > 0 ? 0 : 1;
+          const bHasMin = b.min > 0 ? 0 : 1;
+          if (aHasMin !== bHasMin) return aHasMin - bHasMin;
+          const aSimilarity = Math.abs(a.stock - a.min) / Math.max(a.stock, a.min, 1);
+          const bSimilarity = Math.abs(b.stock - b.min) / Math.max(b.stock, b.min, 1);
+          if (aSimilarity !== bSimilarity) return aSimilarity - bSimilarity;
+          return Math.abs(a.stock - a.min) - Math.abs(b.stock - b.min);
+        });
+      const comparableSoldRows = sortBySimilarity(filterComparableRows(soldStockRows));
+      const comparableFallbackRows = sortBySimilarity(filterComparableRows(stockCandidates));
+      const fallbackStockRows = sortBySimilarity(stockCandidates.filter((row) => row.stock > 0 || row.min > 0));
+      const stockRows = pickSimilarScaleRows(comparableSoldRows.length > 0
+        ? comparableSoldRows
+        : comparableFallbackRows.length > 0
+        ? comparableFallbackRows
+        : sortBySimilarity(soldStockRows.length > 0 ? soldStockRows : fallbackStockRows))
         .slice(0, 10);
 
       const criticalCount = stockRows.filter((row) => row.status === 'critical').length;
@@ -422,6 +490,24 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
     if (!categoryId) return products;
     return products.filter((product) => String(product.category_id ?? '') === categoryId);
   }, [products, categoryId]);
+  const visibleStockRows = useMemo(() => stockTable.slice(0, stockVisibleCount), [stockTable, stockVisibleCount]);
+  const canShowMoreStock = stockVisibleCount < stockTable.length;
+  const visibleSalesRows = useMemo(() => salesTable.slice(0, salesVisibleCount), [salesTable, salesVisibleCount]);
+  const visiblePurchasesRows = useMemo(() => purchasesTable.slice(0, purchasesVisibleCount), [purchasesTable, purchasesVisibleCount]);
+  const canShowMoreSales = salesVisibleCount < salesTable.length;
+  const canShowMorePurchases = purchasesVisibleCount < purchasesTable.length;
+
+  useEffect(() => {
+    setStockVisibleCount(4);
+  }, [stockTable]);
+
+  useEffect(() => {
+    setSalesVisibleCount(4);
+  }, [salesTable]);
+
+  useEffect(() => {
+    setPurchasesVisibleCount(4);
+  }, [purchasesTable]);
 
   const downloadSalesCsv = () => {
     downloadCsv(
@@ -440,336 +526,490 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
   };
 
   return (
-    <div className="h-full w-full overflow-y-auto px-4 md:px-8 py-6 space-y-6">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Reportes</h1>
-          <p className="text-sm text-slate-500">Panel BI para ventas, compras y stock crítico.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={downloadSalesCsv}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-50"
-          >
-            <Download size={14} /> Exportar ventas CSV
-          </button>
-          <button
-            onClick={downloadPurchasesCsv}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-50"
-          >
-            <Download size={14} /> Exportar compras CSV
-          </button>
-        </div>
-      </div>
-
-      <section className="bg-white rounded-3xl border border-slate-200 p-4 md:p-6 shadow-sm">
-        <div className="flex flex-col xl:flex-row xl:items-end gap-4">
-          <div className="flex flex-wrap gap-2">
-            {[
-              { id: 'today', label: 'Hoy' },
-              { id: '7d', label: '7 días' },
-              { id: '30d', label: '30 días' },
-              { id: 'month', label: 'Mes actual' },
-              { id: 'custom', label: 'Personalizado' },
-            ].map((preset) => (
-              <button
-                key={preset.id}
-                onClick={() => setDatePreset(preset.id as typeof datePreset)}
-                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                  datePreset === preset.id
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
-                }`}
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] uppercase tracking-widest font-bold text-slate-500">Desde</span>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setDatePreset('custom');
-                  setStartDate(e.target.value);
-                }}
-                className="px-3 py-2 border border-slate-200 rounded-xl text-sm"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] uppercase tracking-widest font-bold text-slate-500">Hasta</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setDatePreset('custom');
-                  setEndDate(e.target.value);
-                }}
-                className="px-3 py-2 border border-slate-200 rounded-xl text-sm"
-              />
-            </div>
-            <div className="flex flex-col gap-1 min-w-[180px]">
-              <span className="text-[10px] uppercase tracking-widest font-bold text-slate-500">Categoría</span>
-              <select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-xl text-sm"
-              >
-                <option value="">Todas</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={String(cat.id)}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1 min-w-[220px]">
-              <span className="text-[10px] uppercase tracking-widest font-bold text-slate-500">Producto</span>
-              <select
-                value={productId}
-                onChange={(e) => setProductId(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-xl text-sm"
-              >
-                <option value="">Todos</option>
-                {productOptions.map((product) => (
-                  <option key={product.id} value={String(product.id)}>
-                    {product.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      )}
-
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 xl:grid-rows-2 gap-4">
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-3xl p-6 shadow-lg shadow-orange-500/20 border border-orange-500 xl:row-span-2">
-          <p className="text-xs md:text-sm uppercase tracking-[0.25em] font-black text-orange-100">Ventas totales</p>
-          <p className="text-4xl md:text-5xl font-black mt-4">{formatCurrency(kpis.salesTotal)}</p>
-        </div>
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 shadow-lg shadow-slate-900/20 border border-slate-800 xl:row-span-2">
-          <p className="text-xs md:text-sm uppercase tracking-[0.25em] font-black text-slate-300">Compras totales</p>
-          <p className="text-4xl md:text-5xl font-black mt-4">{formatCurrency(kpis.purchasesTotal)}</p>
-        </div>
-        {[
-          { label: 'Número de ventas', value: kpis.salesCount },
-          { label: 'Ticket promedio', value: formatCurrency(kpis.avgTicket) },
-          { label: 'Stock crítico', value: kpis.stockCritical },
-          { label: 'Top producto', value: kpis.topProduct ? `${kpis.topProduct.name} (${formatQty(kpis.topProduct.qty)})` : '—' },
-        ].map((card, idx) => (
-          <div key={idx} className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400">{card.label}</p>
-            <p className="text-2xl font-black text-slate-900 mt-2">{card.value}</p>
-          </div>
-        ))}
-      </section>
-
-      <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm">
-          <h3 className="text-sm font-black uppercase tracking-widest text-slate-600">Ventas en el tiempo</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={salesSeries} margin={{ top: 16, right: 20, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.5} />
-                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="date" fontSize={11} />
-                <YAxis fontSize={11} />
-                <Tooltip formatter={(value: number) => formatCurrency(Number(value))} />
-                <Area type="monotone" dataKey="total" stroke="#f97316" fill="url(#salesFill)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm">
-          <h3 className="text-sm font-black uppercase tracking-widest text-slate-600">Compras en el tiempo</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={purchaseSeries} margin={{ top: 16, right: 20, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="purchaseFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1d4ed8" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#1d4ed8" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="date" fontSize={11} />
-                <YAxis fontSize={11} />
-                <Tooltip formatter={(value: number) => formatCurrency(Number(value))} />
-                <Area type="monotone" dataKey="total" stroke="#1d4ed8" fill="url(#purchaseFill)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm">
-          <h3 className="text-sm font-black uppercase tracking-widest text-slate-600">Top productos</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={topProducts} layout="vertical" margin={{ top: 16, right: 20, left: 40, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis type="number" fontSize={11} />
-                <YAxis dataKey="name" type="category" width={100} fontSize={11} />
-                <Tooltip formatter={(value: number) => formatCurrency(Number(value))} />
-                <Bar dataKey="total" fill="#10b981" radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm">
-          <h3 className="text-sm font-black uppercase tracking-widest text-slate-600">Menos vendidos</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={lowProducts} layout="vertical" margin={{ top: 16, right: 20, left: 40, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis type="number" fontSize={11} />
-                <YAxis dataKey="name" type="category" width={100} fontSize={11} />
-                <Tooltip formatter={(value: number) => formatCurrency(Number(value))} />
-                <Bar dataKey="total" fill="#f97316" radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-black uppercase tracking-widest text-slate-600">Stock actual vs mínimo</h3>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stockTable} margin={{ top: 16, right: 20, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" fontSize={10} tick={false} />
-                <YAxis fontSize={11} />
-                <Tooltip
-                  formatter={(value: number, name: string, props: any) => {
-                    const unit = props?.payload?.unitLabel ? ` ${props.payload.unitLabel}` : '';
-                    const label = name === 'stock' || name === 'Stock' ? 'Stock' : 'Mínimo';
-                    return [`${formatQty(Number(value))}${unit}`, label];
-                  }}
-                  labelFormatter={(label) => String(label)}
-                />
-                <Legend />
-                <Bar dataKey="stock" name="Stock" radius={[6, 6, 0, 0]}>
-                  {stockTable.map((row, index) => (
-                    <Cell
-                      key={`stock-cell-${row.name}-${index}`}
-                      fill={row.status === 'critical' ? '#ef4444' : row.status === 'warning' ? '#f59e0b' : '#10b981'}
-                    />
-                  ))}
-                </Bar>
-                <Bar dataKey="min" name="Mínimo" fill="#94a3b8" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="space-y-2">
-            {stockTable.map((row) => (
-              <div key={row.name} className="flex items-center justify-between px-3 py-2 rounded-xl border border-slate-200">
-                <div>
-                  <p className="font-bold text-sm text-slate-700">{row.name}</p>
-                  <p className="text-xs text-slate-400">Mín: {formatQty(row.min)} {row.unitLabel}</p>
-                </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
-                    row.status === 'critical'
-                      ? 'bg-red-100 text-red-600'
-                      : row.status === 'warning'
-                      ? 'bg-amber-100 text-amber-700'
-                      : 'bg-emerald-100 text-emerald-700'
+    <div className="h-full w-full overflow-y-auto px-3 py-4 sm:px-4 md:px-6 xl:px-8">
+      <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 lg:gap-6">
+        <section className={`${cardBaseClass} p-4 md:p-5 xl:p-6`}>
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'today', label: 'Hoy' },
+                { id: '7d', label: '7 días' },
+                { id: '30d', label: '30 días' },
+                { id: 'month', label: 'Mes actual' },
+                { id: 'custom', label: 'Personalizado' },
+              ].map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => setDatePreset(preset.id as typeof datePreset)}
+                  className={`rounded-2xl border px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${
+                    datePreset === preset.id
+                      ? 'border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/15'
+                      : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'
                   }`}
                 >
-                  {formatQty(row.stock)} {row.unitLabel}
-                </span>
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Desde</span>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setDatePreset('custom');
+                    setStartDate(e.target.value);
+                  }}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
+                />
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Hasta</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setDatePreset('custom');
+                    setEndDate(e.target.value);
+                  }}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Categoría</span>
+                <select
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
+                >
+                  <option value="">Todas</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={String(cat.id)}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Producto</span>
+                <select
+                  value={productId}
+                  onChange={(e) => setProductId(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
+                >
+                  <option value="">Todos</option>
+                  {productOptions.map((product) => (
+                    <option key={product.id} value={String(product.id)}>
+                      {product.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-      <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-black uppercase tracking-widest text-slate-600">Ventas recientes</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={downloadSalesCsv}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                <Download size={14} /> Exportar ventas CSV
+              </button>
+              <button
+                onClick={downloadPurchasesCsv}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                <Download size={14} /> Exportar compras CSV
+              </button>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-[10px] uppercase tracking-widest text-slate-400">
-                <tr>
-                  <th className="text-left py-2">Fecha</th>
-                  <th className="text-left">Cliente</th>
-                  <th className="text-right">Items</th>
-                  <th className="text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody className="text-slate-700">
-                {salesTable.map((row) => (
-                  <tr key={row.id} className="border-t border-slate-100">
-                    <td className="py-2 text-xs text-slate-500">{row.date}</td>
-                    <td className="font-medium">{row.customer}</td>
-                    <td className="text-right">{row.items}</td>
-                    <td className="text-right font-semibold">{formatCurrency(row.total)}</td>
+        </section>
+
+        {error && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>
+        )}
+
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
+          {[
+            {
+              label: 'Ventas totales',
+              value: formatCurrency(kpis.salesTotal),
+              help: `${kpis.salesCount} ventas en el periodo`,
+              icon: ShoppingCart,
+              tone: 'from-orange-500 to-orange-600 text-white border-orange-500 shadow-orange-500/20',
+              iconTone: 'bg-white/15 text-white',
+            },
+            {
+              label: 'Compras totales',
+              value: formatCurrency(kpis.purchasesTotal),
+              help: `${purchasesTable.length} compras recientes visibles`,
+              icon: Truck,
+              tone: 'from-slate-900 to-slate-800 text-white border-slate-800 shadow-slate-900/20',
+              iconTone: 'bg-white/10 text-white',
+            },
+            {
+              label: 'Ticket promedio',
+              value: formatCurrency(kpis.avgTicket),
+              help: kpis.topProduct ? `Top actual: ${kpis.topProduct.name}` : 'Sin top producto',
+              icon: TrendingUp,
+              tone: 'from-emerald-50 to-white text-slate-900 border-emerald-100',
+              iconTone: 'bg-emerald-100 text-emerald-700',
+            },
+            {
+              label: 'Stock crítico',
+              value: String(kpis.stockCritical),
+              help: 'Productos igual o debajo del mínimo',
+              icon: AlertTriangle,
+              tone: 'from-red-50 to-white text-slate-900 border-red-100',
+              iconTone: 'bg-red-100 text-red-700',
+            },
+          ].map((card) => {
+            const Icon = card.icon;
+            return (
+              <article key={card.label} className={`min-h-[170px] rounded-[28px] border bg-gradient-to-br p-5 shadow-lg ${card.tone}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.24em] opacity-80">{card.label}</p>
+                    <p className="mt-4 break-words text-3xl font-black tracking-tight md:text-4xl">{card.value}</p>
+                  </div>
+                  <div className={`rounded-2xl p-3 ${card.iconTone}`}>
+                    <Icon size={18} />
+                  </div>
+                </div>
+                <p className="mt-5 text-xs font-semibold opacity-80">{card.help}</p>
+              </article>
+            );
+          })}
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
+          <article className={`${cardBaseClass} p-4 md:p-5`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Ventas en el tiempo</h3>
+                <p className="mt-1 text-xs text-slate-500">Evolución acumulada por periodo seleccionado.</p>
+              </div>
+              <div className="rounded-2xl bg-orange-50 px-3 py-2 text-xs font-black text-orange-600">{salesSeries.length} puntos</div>
+            </div>
+            <div className="h-72 rounded-2xl bg-slate-50/80 p-0 md:h-80 md:p-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={salesSeries} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f97316" stopOpacity={0.45} />
+                      <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="date" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={11} tickLine={false} axisLine={false} width={72} />
+                  <Tooltip formatter={(value: number) => formatCurrency(Number(value))} />
+                  <Area type="monotone" dataKey="total" stroke="#f97316" fill="url(#salesFill)" strokeWidth={2.5} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+
+          <article className={`${cardBaseClass} p-4 md:p-5`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Compras en el tiempo</h3>
+                <p className="mt-1 text-xs text-slate-500">Comportamiento de entradas y abastecimiento.</p>
+              </div>
+              <div className="rounded-2xl bg-blue-50 px-3 py-2 text-xs font-black text-blue-600">{purchaseSeries.length} puntos</div>
+            </div>
+            <div className="h-72 rounded-2xl bg-slate-50/80 p-0 md:h-80 md:p-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={purchaseSeries} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="purchaseFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#1d4ed8" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#1d4ed8" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="date" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={11} tickLine={false} axisLine={false} width={72} />
+                  <Tooltip formatter={(value: number) => formatCurrency(Number(value))} />
+                  <Area type="monotone" dataKey="total" stroke="#1d4ed8" fill="url(#purchaseFill)" strokeWidth={2.5} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
+          <article className={`${cardBaseClass} p-4 md:p-5`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Top productos</h3>
+                <p className="mt-1 text-xs text-slate-500">Mayor facturación dentro del periodo filtrado.</p>
+              </div>
+              <div className="rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-600">{topProducts.length} productos</div>
+            </div>
+            <div className="h-72 rounded-2xl bg-slate-50/80 p-0 md:h-80 md:p-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topProducts} layout="vertical" margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis dataKey="name" type="category" width={78} fontSize={9} tickLine={false} axisLine={false} />
+                  <Tooltip formatter={(value: number) => formatCurrency(Number(value))} />
+                  <Bar dataKey="total" fill="#10b981" radius={[0, 8, 8, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+
+          <article className={`${cardBaseClass} p-4 md:p-5`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Menos vendidos</h3>
+                <p className="mt-1 text-xs text-slate-500">Referencias con menor movimiento dentro del periodo.</p>
+              </div>
+              <div className="rounded-2xl bg-amber-50 px-3 py-2 text-xs font-black text-amber-600">{lowProducts.length} productos</div>
+            </div>
+            <div className="h-72 rounded-2xl bg-slate-50/80 p-0 md:h-80 md:p-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={lowProducts} layout="vertical" margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis dataKey="name" type="category" width={78} fontSize={9} tickLine={false} axisLine={false} />
+                  <Tooltip formatter={(value: number) => formatQty(Number(value))} labelFormatter={() => 'Cantidad vendida'} />
+                  <Bar dataKey="qty" fill="#f97316" radius={[0, 8, 8, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+        </section>
+
+        <section className={`${cardBaseClass} p-4 md:p-5`}>
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Stock actual vs mínimo</h3>
+              <p className="mt-1 text-xs text-slate-500">Señales rápidas para reordenar antes de quedarte sin inventario.</p>
+            </div>
+            <div className="rounded-2xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">{stockTable.length} productos monitoreados</div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.9fr)]">
+            <div className="h-80 rounded-2xl bg-slate-50/80 p-0 md:p-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={visibleStockRows} margin={{ top: 8, right: 4, left: -18, bottom: 0 }} barCategoryGap={18}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" fontSize={10} tick={false} axisLine={false} tickLine={false} />
+                  <YAxis fontSize={11} tickLine={false} axisLine={false} width={70} />
+                  <Tooltip
+                    formatter={(value: number, name: string, props: any) => {
+                      const unit = props?.payload?.unitLabel ? ` ${props.payload.unitLabel}` : '';
+                      const label = name === 'stock' || name === 'Stock' ? 'Stock' : 'Mínimo';
+                      return [`${formatQty(Number(value))}${unit}`, label];
+                    }}
+                    labelFormatter={(label) => String(label)}
+                  />
+                  <Legend />
+                  <Bar dataKey="stock" name="Stock" radius={[8, 8, 0, 0]}>
+                    {visibleStockRows.map((row, index) => (
+                      <Cell
+                        key={`stock-cell-${row.name}-${index}`}
+                        fill={row.status === 'critical' ? '#ef4444' : row.status === 'warning' ? '#f59e0b' : '#10b981'}
+                      />
+                    ))}
+                  </Bar>
+                  <Bar dataKey="min" name="Mínimo" fill="#94a3b8" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-2">
+              {visibleStockRows.map((row) => (
+                <div key={row.name} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-slate-700">{row.name}</p>
+                    <p className="text-xs text-slate-400">Mínimo esperado: {formatQty(row.min)} {row.unitLabel}</p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-black uppercase tracking-widest ${
+                      row.status === 'critical'
+                        ? 'bg-red-100 text-red-600'
+                        : row.status === 'warning'
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-emerald-100 text-emerald-700'
+                    }`}
+                  >
+                    {formatQty(row.stock)} {row.unitLabel}
+                  </span>
+                </div>
+              ))}
+              {canShowMoreStock && (
+                <button
+                  type="button"
+                  onClick={() => setStockVisibleCount((prev) => prev + 4)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 transition hover:border-slate-300 hover:bg-white"
+                >
+                  Mostrar 4 más
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
+          <article className={`${cardBaseClass} p-4 md:p-5`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Ventas recientes</h3>
+                <p className="mt-1 text-xs text-slate-500">Últimas operaciones visibles dentro del filtro aplicado.</p>
+              </div>
+              <div className="rounded-2xl bg-sky-50 px-3 py-2 text-xs font-black text-sky-600">{salesTable.length} filas</div>
+            </div>
+
+            <div className="space-y-3 md:hidden">
+              {visibleSalesRows.map((row) => (
+                <div key={row.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-slate-800">{row.customer}</p>
+                      <p className="mt-1 text-xs text-slate-500">{row.date}</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-1 text-[11px] font-black text-slate-600 shadow-sm">#{row.id}</div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-xl bg-white px-3 py-2">
+                      <p className="font-black uppercase tracking-widest text-slate-400">Items</p>
+                      <p className="mt-1 font-bold text-slate-700">{row.items}</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-2 text-right">
+                      <p className="font-black uppercase tracking-widest text-slate-400">Total</p>
+                      <p className="mt-1 font-bold text-slate-700">{formatCurrency(row.total)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {salesTable.length === 0 && !isLoading && <p className="py-4 text-sm text-slate-400">Sin ventas en este periodo.</p>}
+              {canShowMoreSales && (
+                <button
+                  type="button"
+                  onClick={() => setSalesVisibleCount((prev) => prev + 4)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  Mostrar 4 más
+                </button>
+              )}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
+              <table className="min-w-[640px] w-full text-sm">
+                <thead className="text-[10px] uppercase tracking-widest text-slate-400">
+                  <tr>
+                    <th className="py-2 text-left">Fecha</th>
+                    <th className="text-left">Cliente</th>
+                    <th className="text-right">Items</th>
+                    <th className="text-right">Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {salesTable.length === 0 && !isLoading && (
-              <p className="text-sm text-slate-400 py-4">Sin ventas en este periodo.</p>
-            )}
-          </div>
-        </div>
+                </thead>
+                <tbody className="text-slate-700">
+                  {visibleSalesRows.map((row) => (
+                    <tr key={row.id} className="border-t border-slate-100">
+                      <td className="py-3 text-xs text-slate-500">{row.date}</td>
+                      <td className="font-medium">{row.customer}</td>
+                      <td className="text-right">{row.items}</td>
+                      <td className="text-right font-semibold">{formatCurrency(row.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {salesTable.length === 0 && !isLoading && <p className="py-4 text-sm text-slate-400">Sin ventas en este periodo.</p>}
+              {canShowMoreSales && (
+                <button
+                  type="button"
+                  onClick={() => setSalesVisibleCount((prev) => prev + 4)}
+                  className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  Mostrar 4 más
+                </button>
+              )}
+            </div>
+          </article>
 
-        <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-black uppercase tracking-widest text-slate-600">Compras recientes</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-[10px] uppercase tracking-widest text-slate-400">
-                <tr>
-                  <th className="text-left py-2">Fecha</th>
-                  <th className="text-left">Proveedor</th>
-                  <th className="text-right">Items</th>
-                  <th className="text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody className="text-slate-700">
-                {purchasesTable.map((row) => (
-                  <tr key={row.id} className="border-t border-slate-100">
-                    <td className="py-2 text-xs text-slate-500">{row.date}</td>
-                    <td className="font-medium">{row.supplier}</td>
-                    <td className="text-right">{row.items}</td>
-                    <td className="text-right font-semibold">{formatCurrency(row.total)}</td>
+          <article className={`${cardBaseClass} p-4 md:p-5`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Compras recientes</h3>
+                <p className="mt-1 text-xs text-slate-500">Compras más recientes para entender abastecimiento y crédito.</p>
+              </div>
+              <div className="rounded-2xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-600">{purchasesTable.length} filas</div>
+            </div>
+
+            <div className="space-y-3 md:hidden">
+              {visiblePurchasesRows.map((row) => (
+                <div key={row.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-slate-800">{row.supplier}</p>
+                      <p className="mt-1 text-xs text-slate-500">{row.date}</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-1 text-[11px] font-black text-slate-600 shadow-sm">#{row.id}</div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-xl bg-white px-3 py-2">
+                      <p className="font-black uppercase tracking-widest text-slate-400">Items</p>
+                      <p className="mt-1 font-bold text-slate-700">{row.items}</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-2 text-right">
+                      <p className="font-black uppercase tracking-widest text-slate-400">Total</p>
+                      <p className="mt-1 font-bold text-slate-700">{formatCurrency(row.total)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {purchasesTable.length === 0 && !isLoading && <p className="py-4 text-sm text-slate-400">Sin compras en este periodo.</p>}
+              {canShowMorePurchases && (
+                <button
+                  type="button"
+                  onClick={() => setPurchasesVisibleCount((prev) => prev + 4)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  Mostrar 4 más
+                </button>
+              )}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
+              <table className="min-w-[640px] w-full text-sm">
+                <thead className="text-[10px] uppercase tracking-widest text-slate-400">
+                  <tr>
+                    <th className="py-2 text-left">Fecha</th>
+                    <th className="text-left">Proveedor</th>
+                    <th className="text-right">Items</th>
+                    <th className="text-right">Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {purchasesTable.length === 0 && !isLoading && (
-              <p className="text-sm text-slate-400 py-4">Sin compras en este periodo.</p>
-            )}
-          </div>
-        </div>
-      </section>
+                </thead>
+                <tbody className="text-slate-700">
+                  {visiblePurchasesRows.map((row) => (
+                    <tr key={row.id} className="border-t border-slate-100">
+                      <td className="py-3 text-xs text-slate-500">{row.date}</td>
+                      <td className="font-medium">{row.supplier}</td>
+                      <td className="text-right">{row.items}</td>
+                      <td className="text-right font-semibold">{formatCurrency(row.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {purchasesTable.length === 0 && !isLoading && <p className="py-4 text-sm text-slate-400">Sin compras en este periodo.</p>}
+              {canShowMorePurchases && (
+                <button
+                  type="button"
+                  onClick={() => setPurchasesVisibleCount((prev) => prev + 4)}
+                  className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  Mostrar 4 más
+                </button>
+              )}
+            </div>
+          </article>
+        </section>
 
-      {isLoading && (
-        <div className="text-sm text-slate-400">Cargando reportes…</div>
-      )}
+        {isLoading && <div className="text-sm text-slate-400">Cargando reportes…</div>}
+      </div>
     </div>
   );
 };
