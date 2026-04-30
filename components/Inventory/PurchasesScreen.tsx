@@ -114,6 +114,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   const [isLoadingPurchaseItems, setIsLoadingPurchaseItems] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
   const historyPageSize = 5;
+  const [historySearch, setHistorySearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
@@ -1096,10 +1097,27 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   };
 
   const selectedBranchLabel = branchId ? 'Sucursal activa' : 'Seleccione sucursal';
-  const totalHistoryPages = Math.max(1, Math.ceil(history.length / historyPageSize));
+  const filteredHistory = useMemo(() => {
+    const term = historySearch.trim().toLowerCase();
+    if (!term) return history;
+    return history.filter((entry) => {
+      const byId = String(entry.id).includes(term);
+      const byReference = (entry.reference ?? '').toLowerCase().includes(term);
+      const byTotal = entry.total_amount.toFixed(2).includes(term)
+        || formatCurrency(entry.total_amount).toLowerCase().includes(term)
+        || String(Math.round(entry.total_amount)).includes(term);
+      return byId || byReference || byTotal;
+    });
+  }, [history, historySearch]);
+  const totalHistoryPages = Math.max(1, Math.ceil(filteredHistory.length / historyPageSize));
   const historyStart = (historyPage - 1) * historyPageSize;
   const historyEnd = historyStart + historyPageSize;
-  const pagedHistory = history.slice(historyStart, historyEnd);
+  const pagedHistory = filteredHistory.slice(historyStart, historyEnd);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [historySearch, filteredHistory.length]);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white px-6 py-5 rounded-3xl border border-slate-200 shadow-sm">
@@ -1385,6 +1403,15 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         </div>
       ) : (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+          <div className="border-b border-slate-100 px-6 py-4">
+            <input
+              type="text"
+              value={historySearch}
+              onChange={(e) => setHistorySearch(e.target.value)}
+              placeholder="Buscar por entrada, remisión o monto total..."
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-orange-400 focus:bg-white"
+            />
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -1471,10 +1498,10 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                     </td>
                   </tr>
                 ))}
-                {!isLoadingHistory && history.length === 0 && (
+                {!isLoadingHistory && filteredHistory.length === 0 && (
                   <tr>
                     <td colSpan={9} className="p-20 text-center text-slate-300 italic">
-                      No hay registros de compras recientes
+                      No hay registros que coincidan con la búsqueda
                     </td>
                   </tr>
                 )}
@@ -1486,10 +1513,10 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
               </tbody>
             </table>
           </div>
-          {!isLoadingHistory && history.length > 0 && (
+          {!isLoadingHistory && filteredHistory.length > 0 && (
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-6 pb-6">
               <div className="text-[11px] text-slate-500 font-bold">
-                Mostrando {historyStart + 1}-{Math.min(historyEnd, history.length)} de {history.length} registros
+                Mostrando {historyStart + 1}-{Math.min(historyEnd, filteredHistory.length)} de {filteredHistory.length} registros
               </div>
               <div className="flex items-center gap-2">
                 <button
