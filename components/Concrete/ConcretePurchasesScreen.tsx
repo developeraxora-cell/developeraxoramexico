@@ -1110,10 +1110,11 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     return history.filter((entry) => {
       const byId = String(entry.id).includes(term);
       const byReference = (entry.reference ?? '').toLowerCase().includes(term);
+      const bySupplier = (entry.supplier_name ?? '').toLowerCase().includes(term);
       const byTotal = entry.total_amount.toFixed(2).includes(term)
         || formatCurrency(entry.total_amount).toLowerCase().includes(term)
         || String(Math.round(entry.total_amount)).includes(term);
-      return byId || byReference || byTotal;
+      return byId || byReference || bySupplier || byTotal;
     });
   }, [history, historySearch]);
   const totalHistoryPages = Math.max(1, Math.ceil(filteredHistory.length / historyPageSize));
@@ -1415,7 +1416,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
               type="text"
               value={historySearch}
               onChange={(e) => setHistorySearch(e.target.value)}
-              placeholder="Buscar por entrada, remisión o monto total..."
+              placeholder="Buscar por entrada, remisión, proveedor o monto total..."
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-orange-400 focus:bg-white"
             />
           </div>
