@@ -193,6 +193,13 @@ const POSScreen: React.FC<POSProps> = ({
   const [specialPriceValue, setSpecialPriceValue] = useState('');
   const [specialPriceNote, setSpecialPriceNote] = useState('');
   const [specialPriceError, setSpecialPriceError] = useState<string | null>(null);
+  const [isQuickStockModalOpen, setIsQuickStockModalOpen] = useState(false);
+  const [quickStockSearch, setQuickStockSearch] = useState('');
+  const [quickStockProduct, setQuickStockProduct] = useState<CatalogProduct | null>(null);
+  const [quickStockValue, setQuickStockValue] = useState('');
+  const [quickStockReason, setQuickStockReason] = useState('');
+  const [quickStockNotes, setQuickStockNotes] = useState('');
+  const [isSavingQuickStock, setIsSavingQuickStock] = useState(false);
   const [qtyDrafts, setQtyDrafts] = useState<Record<string, string>>({});
   const actionLockRef = useRef(false);
 
@@ -214,11 +221,51 @@ const POSScreen: React.FC<POSProps> = ({
     return filtered.slice(0, 6);
   }, [activeBranchProducts, searchTerm]);
 
+  const quickStockSearchResults = useMemo(() => {
+    const term = quickStockSearch.trim().toLowerCase();
+    if (!term) return activeBranchProducts.slice(0, 8);
+    return activeBranchProducts
+      .filter((product) =>
+        product.name.toLowerCase().includes(term)
+        || (product.sku ?? '').toLowerCase().includes(term)
+        || (product.barcode ?? '').toLowerCase().includes(term)
+      )
+      .slice(0, 8);
+  }, [activeBranchProducts, quickStockSearch]);
+
+  const quickStockCurrentValue = quickStockProduct ? Number(branchStock[String(quickStockProduct.id)] ?? 0) : 0;
+
   const showFeedback = (type: FeedbackType, title: string, description?: string) => {
     setFeedbackType(type);
     setFeedbackTitle(title);
     setFeedbackDescription(description ?? '');
     setFeedbackOpen(true);
+  };
+
+  const openQuickStockModal = () => {
+    setQuickStockSearch('');
+    setQuickStockProduct(null);
+    setQuickStockValue('');
+    setQuickStockReason('');
+    setQuickStockNotes('');
+    setIsQuickStockModalOpen(true);
+  };
+
+  const closeQuickStockModal = () => {
+    if (isSavingQuickStock) return;
+    setIsQuickStockModalOpen(false);
+    setQuickStockSearch('');
+    setQuickStockProduct(null);
+    setQuickStockValue('');
+    setQuickStockReason('');
+    setQuickStockNotes('');
+  };
+
+  const handleSelectQuickStockProduct = (product: CatalogProduct) => {
+    const currentStock = Number(branchStock[String(product.id)] ?? 0);
+    setQuickStockProduct(product);
+    setQuickStockSearch(product.name);
+    setQuickStockValue(String(currentStock));
   };
 
   const closeFeedback = () => {
@@ -1337,6 +1384,74 @@ const POSScreen: React.FC<POSProps> = ({
     loadBranchCatalog();
   }, [loadBranchCatalog]);
 
+  const handleSaveQuickStock = async () => {
+    if (actionLockRef.current) return;
+    if (!branchId || !quickStockProduct) return;
+
+    const nextQty = Number(quickStockValue);
+    if (!Number.isFinite(nextQty) || nextQty < 0) {
+      showFeedback('error', 'Stock inválido', 'El nuevo stock debe ser un número mayor o igual a 0.');
+      return;
+    }
+
+    if (nextQty === quickStockCurrentValue) {
+      showFeedback('alert', 'Sin cambios', 'No hay cambios en el stock para guardar.');
+      return;
+    }
+
+    const observation = quickStockNotes.trim();
+    if (!observation) {
+      showFeedback('error', 'Observación obligatoria', 'Debe ingresar una observación para guardar el ajuste de stock.');
+      return;
+    }
+
+    actionLockRef.current = true;
+    setIsSavingQuickStock(true);
+    showFeedback('loading', 'Guardando ajuste', 'Actualizando stock del producto...');
+
+    try {
+      await catalogService.adjustProductStock({
+        branch_id: branchId,
+        product_id: String(quickStockProduct.id),
+        new_qty_base: nextQty,
+        reason: quickStockReason.trim() || null,
+        notes: observation,
+        created_by: currentUser.name || currentUser.username || null,
+      });
+
+      logMaterialsAudit({
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ACTUALIZAR',
+        entity_type: 'producto',
+        entity_id: String(quickStockProduct.id),
+        description: `Stock ajustado desde caja para ${quickStockProduct.name}`,
+        justification: observation,
+        previous_data: {
+          stock: quickStockCurrentValue,
+        },
+        new_data: {
+          stock: nextQty,
+          reason: quickStockReason.trim() || null,
+          notes: observation,
+          source: 'POS',
+        },
+      });
+
+      await loadBranchCatalog();
+      closeQuickStockModal();
+      showFeedback('success', 'Stock actualizado', 'El catálogo se refrescó y puedes continuar la venta.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo guardar el ajuste de stock.';
+      showFeedback('error', 'Error al actualizar stock', message);
+    } finally {
+      actionLockRef.current = false;
+      setIsSavingQuickStock(false);
+    }
+  };
+
   useEffect(() => {
     setSelectedCustomer(null);
     setCreditCustomers([]);
@@ -1433,7 +1548,7 @@ const POSScreen: React.FC<POSProps> = ({
     setSaleNotesError(null);
     if (method === 'CREDITO') {
       if (!selectedCustomer) {
-        alert('⚠️ Seleccione un cliente para habilitar crédito.');
+        showFeedback('alert', 'Cliente requerido', 'Seleccione un cliente para habilitar crédito.');
         return;
       }
       if (!walletEligible) {
@@ -1467,7 +1582,7 @@ const POSScreen: React.FC<POSProps> = ({
 
     if (requiresCreditCoverage) {
       if (!selectedCustomer) {
-        alert('⚠️ Debe seleccionar un cliente para vender a crédito.');
+        showFeedback('alert', 'Cliente requerido', 'Debe seleccionar un cliente para vender a crédito.');
         return;
       }
       const result = await runCreditCheck(remainingAfterWallet);
@@ -1816,7 +1931,7 @@ const POSScreen: React.FC<POSProps> = ({
     const stockFromProduct = product.stocks.find((s) => s.branchId === branchId)?.qty;
     const branchStock = stockOverride ?? stockFromProduct;
     if (branchStock !== undefined && branchStock <= 0) {
-      alert('⚠️ Sin stock en esta sucursal.');
+      showFeedback('alert', 'Sin stock', 'Este producto no tiene stock en esta sucursal.');
       return;
     }
     const factorToBase = factorUsed ?? customFactor ?? 1;
@@ -1826,7 +1941,7 @@ const POSScreen: React.FC<POSProps> = ({
       : Number((product as any).retail_price ?? (product as any).precio ?? product.pricePerBaseUnit ?? 0);
     const unitPrice = resolveStandardUnitPrice(productId, productUomId ?? product.productUomId, saleTypeResolved, factorToBase, basePrice * factorToBase);
     if (unitPrice <= 0) {
-      alert('⚠️ No hay precio configurado para esa equivalencia.');
+      showFeedback('alert', 'Precio faltante', 'No hay precio configurado para esa equivalencia.');
       return;
     }
     const existingLine = cart.find((item) =>
@@ -1836,7 +1951,7 @@ const POSScreen: React.FC<POSProps> = ({
       + (existingLine ? getCartItemQtyBase(existingLine) : 0)
       + factorToBase;
     if (branchStock !== undefined && totalQtyBaseAfterAdd > branchStock) {
-      alert('⚠️ Stock insuficiente.');
+      showFeedback('alert', 'Stock insuficiente', 'No hay stock suficiente para agregar esa cantidad.');
       return;
     }
 
@@ -1914,7 +2029,7 @@ const POSScreen: React.FC<POSProps> = ({
 
         const totalQtyBase = getProductQtyBaseInCart(prev, item.productId, item.id) + qtyBase;
         if (availableStock !== undefined && totalQtyBase > availableStock) {
-          alert('⚠️ Stock insuficiente.');
+          showFeedback('alert', 'Stock insuficiente', 'No hay stock suficiente para actualizar esa cantidad.');
           return item;
         }
 
@@ -2004,7 +2119,7 @@ const POSScreen: React.FC<POSProps> = ({
         product?.stocks?.find((s) => s.branchId === branchId)?.qty ?? (hasStock ? branchStock[item.productId] : undefined);
       const totalQtyBase = getProductQtyBaseInCart(prev, item.productId, item.id) + qtyBase;
       if (availableStock !== undefined && totalQtyBase > availableStock) {
-        alert('⚠️ Stock insuficiente.');
+        showFeedback('alert', 'Stock insuficiente', 'No hay stock suficiente para cambiar a esa unidad.');
         return prev;
       }
       const duplicateLine = prev.find((candidate) =>
@@ -2016,7 +2131,7 @@ const POSScreen: React.FC<POSProps> = ({
         const mergedQtyBase = mergedQty * factor;
         const mergedTotalQtyBase = getProductQtyBaseInCart(prev, item.productId, item.id) - getCartItemQtyBase(duplicateLine) + mergedQtyBase;
         if (availableStock !== undefined && mergedTotalQtyBase > availableStock) {
-          alert('⚠️ Stock insuficiente.');
+          showFeedback('alert', 'Stock insuficiente', 'No hay stock suficiente para fusionar esas líneas.');
           return prev;
         }
         return prev
@@ -2217,27 +2332,36 @@ const POSScreen: React.FC<POSProps> = ({
           )}
         </div>
 
-        <input
-          type="text"
-          placeholder="Buscar por nombre, SKU o barcode..."
-          className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-orange-500 outline-none text-lg shadow-sm"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key !== 'Enter') return;
-            const term = searchTerm.trim().toLowerCase();
-            if (!term) return;
-            const match = activeBranchProducts.find((p) =>
-              (p.barcode ?? '').toLowerCase() === term ||
-              (p.sku ?? '').toLowerCase() === term ||
-              p.name.toLowerCase() === term
-            );
-            if (match) {
-              handleAddFromCatalog(match);
-              setSearchTerm('');
-            }
-          }}
-        />
+        <div className="flex flex-col gap-3 md:flex-row">
+          <input
+            type="text"
+            placeholder="Buscar por nombre, SKU o barcode..."
+            className="w-full flex-1 p-4 rounded-xl border-2 border-gray-200 focus:border-orange-500 outline-none text-lg shadow-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return;
+              const term = searchTerm.trim().toLowerCase();
+              if (!term) return;
+              const match = activeBranchProducts.find((p) =>
+                (p.barcode ?? '').toLowerCase() === term ||
+                (p.sku ?? '').toLowerCase() === term ||
+                p.name.toLowerCase() === term
+              );
+              if (match) {
+                handleAddFromCatalog(match);
+                setSearchTerm('');
+              }
+            }}
+          />
+          <button
+            type="button"
+            onClick={openQuickStockModal}
+            className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-orange-600 hover:bg-orange-100 md:min-w-[220px]"
+          >
+            Actualizar stock producto
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto pr-2">
           {visibleBranchProducts.map((product) => {
@@ -2780,7 +2904,7 @@ const POSScreen: React.FC<POSProps> = ({
                       setPendingCatalogProduct(null);
                       handleAddFromCatalog(product);
                     } catch (err) {
-                      alert('No se pudo guardar la unidad de venta.');
+                      showFeedback('error', 'Error al guardar', 'No se pudo guardar la unidad de venta.');
                     }
                   }}
                   className="w-full p-4 rounded-2xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
@@ -3258,6 +3382,157 @@ const POSScreen: React.FC<POSProps> = ({
                     Siguiente
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isQuickStockModalOpen && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
+            <div className="bg-slate-900 p-6 text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-tighter">Actualizar stock producto</h3>
+                <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-300">
+                  {quickStockProduct ? quickStockProduct.name : 'Ajuste rápido sin salir de caja'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeQuickStockModal}
+                className="text-slate-400 hover:text-white text-2xl"
+                disabled={isSavingQuickStock}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="space-y-4 p-6">
+              {!quickStockProduct ? (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Buscar producto</label>
+                    <input
+                      type="text"
+                      value={quickStockSearch}
+                      onChange={(e) => setQuickStockSearch(e.target.value)}
+                      placeholder="Buscar por nombre, SKU o barcode..."
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-orange-400 focus:bg-white"
+                      disabled={isSavingQuickStock}
+                    />
+                  </div>
+
+                  <div className="max-h-52 space-y-2 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    {quickStockSearchResults.map((product) => {
+                      const stockQty = Number(branchStock[String(product.id)] ?? 0);
+                      return (
+                        <button
+                          key={product.id}
+                          type="button"
+                          onClick={() => handleSelectQuickStockProduct(product)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-orange-200"
+                        >
+                          <p className="text-sm font-black text-slate-800">{product.name}</p>
+                          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            {product.sku || product.barcode || 'Sin código'} · Stock {formatNumber(stockQty)}
+                          </p>
+                        </button>
+                      );
+                    })}
+                    {quickStockSearchResults.length === 0 && (
+                      <div className="px-2 py-6 text-center text-sm font-semibold text-slate-400">
+                        No hay productos que coincidan.
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between rounded-2xl border border-orange-200 bg-orange-50/40 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-black text-slate-800">{quickStockProduct.name}</p>
+                      <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                        {quickStockProduct.sku || quickStockProduct.barcode || 'Sin código'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuickStockProduct(null);
+                        setQuickStockValue('');
+                        setQuickStockReason('');
+                        setQuickStockNotes('');
+                      }}
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-orange-200 hover:text-orange-500"
+                      disabled={isSavingQuickStock}
+                    >
+                      Cambiar
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stock actual</p>
+                      <p className="mt-1 text-2xl font-black text-slate-900">{formatNumber(quickStockCurrentValue)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Nuevo stock real</label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.001"
+                        value={quickStockValue}
+                        onChange={(e) => setQuickStockValue(e.target.value)}
+                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-orange-400 focus:bg-white"
+                        disabled={isSavingQuickStock}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Motivo (opcional)</label>
+                    <input
+                      type="text"
+                      maxLength={100}
+                      value={quickStockReason}
+                      onChange={(e) => setQuickStockReason(e.target.value)}
+                      placeholder="Ej: Conteo físico"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-orange-400 focus:bg-white"
+                      disabled={isSavingQuickStock}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Observación *</label>
+                    <textarea
+                      rows={3}
+                      value={quickStockNotes}
+                      onChange={(e) => setQuickStockNotes(e.target.value)}
+                      placeholder="Detalle obligatorio del ajuste manual"
+                      className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-orange-400 focus:bg-white"
+                      disabled={isSavingQuickStock}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={closeQuickStockModal}
+                  className="flex-1 rounded-xl bg-slate-100 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 disabled:opacity-50"
+                  disabled={isSavingQuickStock || feedbackLoading}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveQuickStock}
+                  className="flex-1 rounded-xl bg-slate-900 py-3 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50"
+                  disabled={!quickStockProduct || isSavingQuickStock || feedbackLoading}
+                >
+                  {isSavingQuickStock ? 'Guardando...' : 'Guardar ajuste'}
+                </button>
               </div>
             </div>
           </div>
