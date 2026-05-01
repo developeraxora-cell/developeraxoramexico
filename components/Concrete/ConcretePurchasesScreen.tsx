@@ -113,7 +113,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   const [purchaseItems, setPurchaseItems] = useState<PurchaseItemDetail[]>([]);
   const [isLoadingPurchaseItems, setIsLoadingPurchaseItems] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
-  const historyPageSize = 5;
+  const historyPageSize = 15;
   const [historySearch, setHistorySearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
@@ -256,8 +256,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         .select('id, reference, notes, created_at, purchase_date, is_credit, supplier_id, concrete_suppliers ( name )')
         .eq('branch_id', branchId)
         .eq('type', 'PURCHASE')
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .order('created_at', { ascending: false });
       if (txError) throw txError;
       const transactionIds = (transactions ?? []).map((tx) => tx.id);
 
