@@ -3,7 +3,7 @@ import { PDFDocument, PDFPage, rgb } from 'pdf-lib';
 import { Branch, User } from '../../types';
 import { creditService, type CashSaleHistory, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentEvidence, type CreditPaymentMethod, type CreditSummary, type CustomerAddress, type SalePaymentEvidence } from '../../services/credit/credit.service';
 import { walletService, type CustomerWalletMovement, type CustomerWalletSummary } from '../../services/wallet.service';
-import { CreditCard, Eye, FileDown, FileImage, History, MapPin, Paperclip, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
+import { CreditCard, Eye, FileDown, FileImage, History, MapPin, Paperclip, Pencil, Plus, Search, Trash2, Wallet } from 'lucide-react';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
 import { getBranchFooterText } from '../../services/pdf/branchFooter';
@@ -250,6 +250,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [isWalletHistoryOpen, setIsWalletHistoryOpen] = useState(false);
   const [isWalletHistoryLoading, setIsWalletHistoryLoading] = useState(false);
   const [paymentHistoryPage, setPaymentHistoryPage] = useState(1);
+  const [paymentHistorySearchTerm, setPaymentHistorySearchTerm] = useState('');
   const [isPaymentHistoryModalOpen, setIsPaymentHistoryModalOpen] = useState(false);
   const [selectedPaymentForEvidence, setSelectedPaymentForEvidence] = useState<CreditPayment | null>(null);
   const [isPaymentEvidenceModalOpen, setIsPaymentEvidenceModalOpen] = useState(false);
@@ -396,7 +397,17 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     });
   }, [openNotes, paymentSearchTerm]);
   const paymentTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredOpenNotes.length / MODAL_PAGE_SIZE)), [filteredOpenNotes.length]);
-  const paymentHistoryTotalPages = useMemo(() => Math.max(1, Math.ceil(paymentHistory.length / MODAL_PAGE_SIZE)), [paymentHistory.length]);
+  const filteredPaymentHistory = useMemo(() => {
+    const term = paymentHistorySearchTerm.trim().toLowerCase();
+    if (!term) return paymentHistory;
+    return paymentHistory.filter((payment) => {
+      const note = historyNotes.find((row) => row.id === payment.note_id) ?? openNotes.find((row) => row.id === payment.note_id) ?? null;
+      const displayCode = note ? getDisplayNoteCode(note).toLowerCase() : '';
+      const saleReference = String(note?.sale_reference ?? '').toLowerCase();
+      return displayCode.includes(term) || saleReference.includes(term);
+    });
+  }, [paymentHistory, paymentHistorySearchTerm, historyNotes, openNotes]);
+  const paymentHistoryTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredPaymentHistory.length / MODAL_PAGE_SIZE)), [filteredPaymentHistory.length]);
   const pagedHistoryRows = useMemo(() => {
     const start = (historyPage - 1) * MODAL_PAGE_SIZE;
     return filteredHistoryRows.slice(start, start + MODAL_PAGE_SIZE);
@@ -407,8 +418,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   }, [filteredOpenNotes, paymentPage]);
   const pagedPaymentHistory = useMemo(() => {
     const start = (paymentHistoryPage - 1) * MODAL_PAGE_SIZE;
-    return paymentHistory.slice(start, start + MODAL_PAGE_SIZE);
-  }, [paymentHistory, paymentHistoryPage]);
+    return filteredPaymentHistory.slice(start, start + MODAL_PAGE_SIZE);
+  }, [filteredPaymentHistory, paymentHistoryPage]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -513,6 +524,9 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       setPaymentHistoryPage(paymentHistoryTotalPages);
     }
   }, [paymentHistoryPage, paymentHistoryTotalPages]);
+  useEffect(() => {
+    setPaymentHistoryPage(1);
+  }, [paymentHistorySearchTerm]);
 
   const resetWalletCreateState = () => {
     setSelectedWalletCustomer(null);
@@ -845,6 +859,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const handleOpenPaymentHistory = async (customer: CreditCustomer) => {
     setSelectedCustomer(customer);
     setPaymentHistoryPage(1);
+    setPaymentHistorySearchTerm('');
     setHistoryPage(1);
     setHistoryView('CREDIT');
     setHistorySearchTerm('');
@@ -1114,6 +1129,12 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     customerAddress: string;
     cashierName: string;
     branchName: string;
+    payments?: Array<{
+      amount: number;
+      paidAt: string;
+      method: string;
+      reference: string | null;
+    }>;
   }) => {
     const pdfDoc = await PDFDocument.create();
     const fontBold = await pdfDoc.embedFont('Helvetica-Bold');
@@ -1240,6 +1261,46 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       });
 
       if (pageIndex === pages.length - 1) {
+        const payments = input.payments ?? [];
+        if (payments.length > 0) {
+          const paymentTableWidth = 330;
+          const paymentX = (width - paymentTableWidth) / 2;
+          let paymentY = Math.max(140, rowY - 32);
+          const paymentCols = [paymentX, paymentX + 42, paymentX + 132, paymentX + 218, paymentX + paymentTableWidth];
+          const paymentTitle = 'ABONOS REALIZADOS';
+          const paymentTitleSize = 9;
+          const paymentTitleWidth = fontBold.widthOfTextAtSize(paymentTitle, paymentTitleSize);
+          page.drawText(paymentTitle, { x: (width - paymentTitleWidth) / 2, y: paymentY + 22, size: paymentTitleSize, font: fontBold });
+          page.drawRectangle({ x: paymentX, y: paymentY, width: paymentTableWidth, height: 16, color: rgb(0, 0, 0) });
+          ['NO.', 'FECHA', 'METODO', 'MONTO'].forEach((header, index) => {
+            const headerX = paymentCols[index] + 5;
+            page.drawText(header, { x: headerX, y: paymentY + 5, size: 7, font: fontBold, color: rgb(1, 1, 1) });
+          });
+          paymentY -= 16;
+          payments.slice(0, 5).forEach((payment, index) => {
+            page.drawRectangle({
+              x: paymentX,
+              y: paymentY,
+              width: paymentTableWidth,
+              height: 16,
+              borderWidth: 0.5,
+              borderColor: rgb(0, 0, 0),
+            });
+            paymentCols.slice(1, -1).forEach((x) => {
+              page.drawLine({
+                start: { x, y: paymentY },
+                end: { x, y: paymentY + 16 },
+                thickness: 0.5,
+                color: rgb(0, 0, 0),
+              });
+            });
+            page.drawText(String(index + 1), { x: paymentCols[0] + 7, y: paymentY + 5, size: 7, font: fontBold });
+            page.drawText(formatLocalDateTime(payment.paidAt), { x: paymentCols[1] + 5, y: paymentY + 5, size: 7, font: fontBold });
+            page.drawText(String(payment.method ?? '').toUpperCase(), { x: paymentCols[2] + 5, y: paymentY + 5, size: 7, font: fontBold });
+            page.drawText(formatCurrency(Number(payment.amount ?? 0)), { x: paymentCols[3] + 5, y: paymentY + 5, size: 7, font: fontBold });
+            paymentY -= 16;
+          });
+        }
         page.drawText(`TOTAL:  ${formatCurrency(total)}`, { x: width - marginX - 210, y: 108, size: 20, font: fontBold });
       }
       page.drawText(getBranchFooterText(input.branchName), {
@@ -1297,6 +1358,17 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       if (!noteSaleSummaries[summaryKey]) {
         setNoteSaleSummaries((prev) => ({ ...prev, [summaryKey]: summary }));
       }
+      const salePayments = row.kind === 'credit' && row.note
+        ? paymentHistory
+            .filter((payment) => payment.note_id === row.note?.id)
+            .sort((a, b) => new Date(a.paid_at).getTime() - new Date(b.paid_at).getTime())
+            .map((payment) => ({
+              amount: Number(payment.amount ?? 0),
+              paidAt: payment.paid_at,
+              method: payment.method,
+              reference: payment.reference,
+            }))
+        : [];
       await generateSalePdf({
         saleId: summary.saleId,
         createdAt: summary.created_at,
@@ -1312,6 +1384,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         customerAddress: summary.direccion_cliente ?? selectedCustomer?.address ?? '-',
         cashierName: summary.created_by ?? currentUser.name,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+        payments: salePayments,
       });
       setFeedbackOpen(false);
     } catch (err) {
@@ -3464,6 +3537,24 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+              <div className="mb-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <Search className="h-4 w-4 shrink-0 text-slate-400" />
+                <input
+                  value={paymentHistorySearchTerm}
+                  onChange={(e) => setPaymentHistorySearchTerm(e.target.value)}
+                  className="w-full bg-transparent text-sm font-bold text-slate-800 outline-none placeholder:text-slate-400"
+                  placeholder="Buscar por folio, nota de venta o referencia..."
+                />
+                {paymentHistorySearchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentHistorySearchTerm('')}
+                    className="text-xs font-black uppercase tracking-widest text-slate-400 transition hover:text-slate-700"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
               <table className="w-full text-left bg-white rounded-3xl overflow-hidden border border-slate-200">
                 <thead className="bg-slate-900 text-white text-[10px] uppercase tracking-widest">
                   <tr>
@@ -3521,17 +3612,19 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       </tr>
                     );
                   })}
-                  {paymentHistory.length === 0 && (
+                  {filteredPaymentHistory.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-slate-400 text-sm">Sin abonos registrados.</td>
+                      <td colSpan={7} className="p-8 text-center text-slate-400 text-sm">
+                        {paymentHistorySearchTerm ? 'No se encontraron abonos con ese folio o referencia.' : 'Sin abonos registrados.'}
+                      </td>
                     </tr>
                   )}
                 </tbody>
               </table>
-              {paymentHistory.length > 0 && (
+              {filteredPaymentHistory.length > 0 && (
                 <div className="mt-4 flex items-center justify-between px-2">
                   <p className="text-xs text-slate-400">
-                    Mostrando {pagedPaymentHistory.length} de {paymentHistory.length} abonos
+                    Mostrando {pagedPaymentHistory.length} de {filteredPaymentHistory.length} abonos
                   </p>
                   <div className="flex items-center gap-2">
                     <button
