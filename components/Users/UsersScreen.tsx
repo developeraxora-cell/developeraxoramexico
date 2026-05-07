@@ -252,9 +252,11 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
             <Field label="Nombre completo" className="md:col-span-2">
               <input value={form.full_name} onChange={e => onChange({ full_name: e.target.value })} className={inputCls} placeholder="Ej. Carlos García Ruiz" />
             </Field>
-            <Field label="Correo electrónico">
-              <input type="email" value={form.email} onChange={e => onChange({ email: e.target.value })} className={inputCls} placeholder="correo@empresa.com" autoComplete="off" />
-            </Field>
+            {mode === 'edit' && (
+              <Field label="Correo electrónico">
+                <input type="email" value={form.email} onChange={e => onChange({ email: e.target.value })} className={inputCls} placeholder="correo@empresa.com" autoComplete="off" />
+              </Field>
+            )}
             <Field label="Usuario (username)">
               <input value={form.username} onChange={e => onChange({ username: e.target.value })} className={inputCls} placeholder="carlos.garcia" autoComplete="off" />
             </Field>
@@ -675,9 +677,9 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
     setModalError(null);
 
     if (!form.full_name.trim())                            { setModalError('El nombre completo es obligatorio.'); return; }
-    if (!form.email.trim())                                { setModalError('El correo electrónico es obligatorio.'); return; }
+    if (!form.username.trim() && !form.email.trim())       { setModalError('Debes capturar al menos un usuario para iniciar sesión.'); return; }
     if (mode === 'create' && !form.password.trim())        { setModalError('La contraseña inicial es obligatoria.'); return; }
-    if (mode === 'create' && form.password.length < 6)    { setModalError('La contraseña debe tener al menos 6 caracteres.'); return; }
+    if (mode === 'create' && form.password.length < 6)     { setModalError('La contraseña debe tener al menos 6 caracteres.'); return; }
 
     setSaving(true);
     try {
@@ -686,7 +688,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
       if (mode === 'create') {
         const { error: insertErr } = await supabase.from('app_user_profiles').insert({
           id: userId,
-          email: form.email.trim(),
+          email: form.email.trim() || null,
           username: form.username.trim() || null,
           full_name: form.full_name.trim(),
           role_key: form.role_key,
@@ -700,7 +702,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
         if (pwErr) throw pwErr;
       } else {
         const { error: updateErr } = await supabase.from('app_user_profiles').update({
-          email: form.email.trim(),
+          email: form.email.trim() || null,
           username: form.username.trim() || null,
           full_name: form.full_name.trim(),
           role_key: form.role_key,
