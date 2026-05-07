@@ -1,9 +1,15 @@
 
 export enum Role {
+  SUPERADMIN = 'SUPERADMIN',
+  SOCIO = 'SOCIO',
+  MATERIALS_USER = 'MATERIALS_USER',
+  CONCRETE_USER = 'CONCRETE_USER',
   ADMIN = 'ADMIN',
   CAJERO = 'CAJERO',
   ALMACEN = 'ALMACEN'
 }
+
+export type BusinessUnit = 'materiales' | 'concretera' | 'logistica' | 'global';
 
 export interface Branch {
   id: string;
@@ -22,6 +28,13 @@ export interface User {
   role: Role;
   active: boolean;
   branchId?: string;
+  authUserId?: string;
+  email?: string;
+  allowedBranchIds?: string[];
+  allowedBranchDbIds?: number[];
+  businessUnits?: BusinessUnit[];
+  permissions?: string[];
+  sessionMinutes?: number;
 }
 
 export interface Unit {

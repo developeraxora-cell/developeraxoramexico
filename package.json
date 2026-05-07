@@ -14,10 +14,14 @@
     "pdf-lib": "^1.17.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "react-router-dom": "^7.15.0",
+    "react-simple-captcha": "^9.3.1",
     "recharts": "^2.12.7"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.0",
     "supabase": "^2.78.1",
     "typescript": "~5.8.2",

@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { User, Role, Branch } from '../types';
+import { User, Branch } from '../types';
+import { isFullAccessRole, userCanAccessTab } from '../services/auth/permissions';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,7 +19,6 @@ interface NavItem {
   id: string;
   label: string;
   icon: string;
-  roles: Role[];
   children?: NavItem[];
 }
 
@@ -54,24 +54,23 @@ const Layout: React.FC<LayoutProps> = ({
       label: 'Materiales',
       icon: '🏗️',
       items: [
-        { id: 'pos', label: 'Caja / Venta', icon: '🛒', roles: [Role.ADMIN, Role.CAJERO, Role.ALMACEN] },
-        { id: 'purchases', label: 'Compras / Entradas', icon: '📥', roles: [Role.ADMIN, Role.ALMACEN] },
-        { id: 'inventory', label: 'Productos', icon: '📦', roles: [Role.ADMIN, Role.ALMACEN] },
-        { id: 'customers', label: 'Clientes / Crédito', icon: '👥', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
-        { id: 'customer-alerts', label: 'Alertas clientes', icon: '🚨', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
-        { id: 'reports', label: 'Reportes', icon: '📊', roles: [Role.ADMIN, Role.ALMACEN] },
+        { id: 'pos', label: 'Caja / Venta', icon: '🛒' },
+        { id: 'purchases', label: 'Compras / Entradas', icon: '📥' },
+        { id: 'inventory', label: 'Productos', icon: '📦' },
+        { id: 'customers', label: 'Clientes / Crédito', icon: '👥' },
+        { id: 'customer-alerts', label: 'Alertas clientes', icon: '🚨' },
+        { id: 'reports', label: 'Reportes', icon: '📊' },
         {
           id: 'audit-parent',
           label: 'Auditorias',
           icon: '📋',
-          roles: [Role.ADMIN, Role.ALMACEN],
           children: [
-            { id: 'audit-internal', label: 'Auditoria interna', icon: '📋', roles: [Role.ADMIN, Role.ALMACEN] },
-            { id: 'production', label: 'Produccion', icon: '🏭', roles: [Role.ADMIN, Role.ALMACEN] },
+            { id: 'audit-internal', label: 'Auditoria interna', icon: '📋' },
+            { id: 'production', label: 'Produccion', icon: '🏭' },
           ],
         },
-        { id: 'branches', label: 'Sucursales', icon: '🏢', roles: [Role.ADMIN] },
-        { id: 'users', label: 'Personal / Usuarios', icon: '🛡️', roles: [Role.ADMIN] },
+        { id: 'branches', label: 'Sucursales', icon: '🏢' },
+        { id: 'users', label: 'Personal / Usuarios', icon: '🛡️' },
       ]
     },
     {
@@ -79,13 +78,13 @@ const Layout: React.FC<LayoutProps> = ({
       label: 'Concretera',
       icon: '🚛',
       items: [
-        { id: 'concrete-pos', label: 'Caja / Venta', icon: '🛒', roles: [Role.ADMIN, Role.CAJERO, Role.ALMACEN] },
-        { id: 'concrete-purchases', label: 'Compras / Entradas', icon: '📥', roles: [Role.ADMIN, Role.ALMACEN] },
-        { id: 'concrete-inventory', label: 'Productos', icon: '📦', roles: [Role.ADMIN, Role.ALMACEN] },
-        { id: 'concrete-customers', label: 'Clientes / Crédito', icon: '👥', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
-        { id: 'concrete-customer-alerts', label: 'Alertas clientes', icon: '🚨', roles: [Role.ADMIN, Role.ALMACEN, Role.CAJERO] },
-        { id: 'concrete-reports', label: 'Reportes', icon: '📊', roles: [Role.ADMIN, Role.ALMACEN] },
-        { id: 'concrete-audit', label: 'Auditorias', icon: '📋', roles: [Role.ADMIN, Role.ALMACEN] },
+        { id: 'concrete-pos', label: 'Caja / Venta', icon: '🛒' },
+        { id: 'concrete-purchases', label: 'Compras / Entradas', icon: '📥' },
+        { id: 'concrete-inventory', label: 'Productos', icon: '📦' },
+        { id: 'concrete-customers', label: 'Clientes / Crédito', icon: '👥' },
+        { id: 'concrete-customer-alerts', label: 'Alertas clientes', icon: '🚨' },
+        { id: 'concrete-reports', label: 'Reportes', icon: '📊' },
+        { id: 'concrete-audit', label: 'Auditorias', icon: '📋' },
       ]
     },
     {
@@ -93,10 +92,43 @@ const Layout: React.FC<LayoutProps> = ({
       label: 'Logística',
       icon: '⛽',
       items: [
-        { id: 'diesel', label: 'Gestión de Diésel', icon: '🔥', roles: [Role.ADMIN, Role.ALMACEN] },
+        { id: 'diesel', label: 'Gestión de Diésel', icon: '🔥' },
       ]
     }
   ];
+
+  // Al cargar sesión, expandir todos los grupos que tengan al menos un tab accesible
+  useEffect(() => {
+    const accessibleGroupIds = navigation
+      .filter((group) =>
+        group.items.some((item) =>
+          item.children
+            ? item.children.some((child) => userCanAccessTab(currentUser, child.id))
+            : userCanAccessTab(currentUser, item.id)
+        )
+      )
+      .map((group) => group.id);
+    setExpandedGroups(accessibleGroupIds);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
+
+  // Al cambiar de tab, asegurar que su grupo y su padre (si tiene hijos) estén expandidos
+  useEffect(() => {
+    const parentGroup = navigation.find((group) =>
+      group.items.some((item) => item.id === activeTab || item.children?.some((child) => child.id === activeTab))
+    );
+    if (parentGroup) {
+      setExpandedGroups((prev) => (prev.includes(parentGroup.id) ? prev : [...prev, parentGroup.id]));
+    }
+
+    const parentItem = navigation.flatMap((group) => group.items).find((item) =>
+      item.children?.some((child) => child.id === activeTab)
+    );
+    if (parentItem) {
+      setExpandedItems((prev) => (prev.includes(parentItem.id) ? prev : [...prev, parentItem.id]));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const toggleGroup = (id: string) => {
     if (isSidebarCollapsed) {
@@ -111,19 +143,38 @@ const Layout: React.FC<LayoutProps> = ({
     setExpandedItems((prev) => (prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]));
   };
 
-  const currentItem = navigation
+  const canRenderItem = (item: NavItem) => {
+    if (item.children?.length) {
+      return item.children.some((child) => userCanAccessTab(currentUser, child.id));
+    }
+    return userCanAccessTab(currentUser, item.id);
+  };
+
+  const visibleNavigation = navigation
+    .map((group) => ({
+      ...group,
+      items: group.items
+        .map((item) => item.children
+          ? { ...item, children: item.children.filter((child) => userCanAccessTab(currentUser, child.id)) }
+          : item
+        )
+        .filter(canRenderItem),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const currentItem = visibleNavigation
     .flatMap((g) => g.items.flatMap((item) => (item.children ? [item, ...item.children] : [item])))
     .find((i) => i.id === activeTab);
-  const currentGroup = navigation.find((g) =>
+  const currentGroup = visibleNavigation.find((g) =>
     g.items.some((i) => i.id === activeTab || i.children?.some((child) => child.id === activeTab))
   );
   const collapsedFlyoutGroup = collapsedFlyout
-    ? navigation.find(group => group.id === collapsedFlyout.groupId) ?? null
+    ? visibleNavigation.find(group => group.id === collapsedFlyout.groupId) ?? null
     : null;
 
-  const isBranchLocked = !!currentUser.branchId && currentUser.role !== Role.ADMIN;
   const activeBranch = branches.find(b => b.id === selectedBranchId);
   const selectableBranches = branches.filter(b => b.isActive !== false);
+  const isBranchLocked = !isFullAccessRole(currentUser.role) && selectableBranches.length <= 1;
 
   useEffect(() => {
     if (!pinnedFlyoutGroupId) return;
@@ -172,7 +223,7 @@ const Layout: React.FC<LayoutProps> = ({
         </div>
 
         <nav className={`flex-1 mt-4 overflow-y-auto overflow-x-visible no-scrollbar ${isSidebarCollapsed ? 'p-2 space-y-2' : 'p-3 space-y-4'}`}>
-          {navigation.map((group) => (
+          {visibleNavigation.map((group) => (
             <div
               key={group.id}
               className="relative space-y-1"
@@ -234,7 +285,7 @@ const Layout: React.FC<LayoutProps> = ({
 
               {!isSidebarCollapsed && expandedGroups.includes(group.id) && (
                 <div className="space-y-1 ml-2 border-l border-slate-800 pl-2 animate-in slide-in-from-top-2 duration-200">
-                  {group.items.filter(item => item.roles.includes(currentUser.role)).map((item) => (
+                  {group.items.map((item) => (
                     <div key={item.id} className="space-y-1">
                       {item.children ? (
                         <>
@@ -253,7 +304,7 @@ const Layout: React.FC<LayoutProps> = ({
                           </button>
                           {expandedItems.includes(item.id) && (
                             <div className="ml-6 space-y-1 border-l border-slate-800 pl-2">
-                              {item.children.filter(child => child.roles.includes(currentUser.role)).map((child) => (
+                              {item.children.map((child) => (
                                 <button
                                   key={child.id}
                                   onClick={() => {
@@ -357,7 +408,7 @@ const Layout: React.FC<LayoutProps> = ({
             </p>
           </div>
           <div className="space-y-1 p-2">
-            {collapsedFlyoutGroup.items.filter(item => item.roles.includes(currentUser.role)).map((item) => (
+            {collapsedFlyoutGroup.items.map((item) => (
               <div key={item.id} className="space-y-1">
                 {item.children ? (
                   <>
@@ -368,7 +419,7 @@ const Layout: React.FC<LayoutProps> = ({
                       </div>
                     </div>
                     <div className="ml-6 space-y-1 border-l border-slate-800 pl-2">
-                      {item.children.filter(child => child.roles.includes(currentUser.role)).map((child) => (
+                      {item.children.map((child) => (
                         <button
                           key={child.id}
                           onClick={() => {

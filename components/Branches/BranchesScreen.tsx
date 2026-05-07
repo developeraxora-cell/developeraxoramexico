@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { Branch, User, Role } from '../../types';
+import { Branch, User } from '../../types';
 import { branchesService, isSupabaseConfigured } from '../../services/supabaseClient';
+import { isFullAccessRole } from '../../services/auth/permissions';
 import StatusModal, { StatusType } from '../common/StatusModal';
 import ConfirmModal from '../common/ConfirmModal';
 import { formatCurrency } from '../../services/currency';
@@ -146,7 +147,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
   };
 
   const handleSwitchBranch = (branchId: string) => {
-    if (currentUser.role !== Role.ADMIN && currentUser.branchId !== branchId) {
+    if (!isFullAccessRole(currentUser.role) && currentUser.branchId !== branchId) {
       showStatus('warning', 'Acceso restringido', 'No tienes permisos para entrar a esta sucursal.', '🔒');
       return;
     }
@@ -220,7 +221,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
           <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Centro de Expansión</h2>
           <p className="text-sm text-slate-400 font-bold uppercase tracking-widest mt-1">Gestión de Puntos de Venta y Logística</p>
         </div>
-        {currentUser.role === Role.ADMIN && (
+        {isFullAccessRole(currentUser.role) && (
           <button
             onClick={() => setIsModalOpen(true)}
             className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-orange-500/20 active:scale-95 flex items-center gap-2"
@@ -268,7 +269,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
                     {branch.isActive === false && (
                       <span className="block mt-1 text-[9px] font-black text-red-600 uppercase tracking-[0.2em]">Inactiva</span>
                     )}
-                    {currentUser.role === Role.ADMIN && (
+                    {isFullAccessRole(currentUser.role) && (
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleEdit(branch)}

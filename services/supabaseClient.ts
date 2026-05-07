@@ -14,6 +14,25 @@ if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Por favor configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY');
 }
 
+const authCookieStorage = {
+    getItem(key: string) {
+        if (typeof document === 'undefined') return null;
+        const cookie = document.cookie
+            .split('; ')
+            .find((row) => row.startsWith(`${encodeURIComponent(key)}=`));
+        return cookie ? decodeURIComponent(cookie.split('=').slice(1).join('=')) : null;
+    },
+    setItem(key: string, value: string) {
+        if (typeof document === 'undefined') return;
+        const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; Path=/; Max-Age=${60 * 60 * 12}; SameSite=Lax${secure}`;
+    },
+    removeItem(key: string) {
+        if (typeof document === 'undefined') return;
+        document.cookie = `${encodeURIComponent(key)}=; Path=/; Max-Age=0; SameSite=Lax`;
+    }
+};
+
 // Crear cliente de Supabase
 const fallbackUrl = 'http://localhost:54321';
 const fallbackKey = 'public-anon-key';
@@ -24,6 +43,9 @@ export const supabase = createClient(
         auth: {
             persistSession: true,
             autoRefreshToken: true,
+            detectSessionInUrl: true,
+            storageKey: 'lopar-auth-session',
+            storage: authCookieStorage,
         },
     }
 );

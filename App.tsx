@@ -1,6 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Layout from './components/Layout';
+import LoginScreen from './components/Auth/LoginScreen';
 import POSScreen from './components/POS/POSScreen';
 import InventoryScreen from './components/Inventory/InventoryScreen';
 import PurchasesScreen from './components/Inventory/PurchasesScreen';
@@ -28,8 +30,33 @@ import {
   isSupabaseConfigured,
   branchesService
 } from './services/supabaseClient';
-import { INITIAL_CUSTOMERS, INITIAL_PRODUCTS, INITIAL_CONVERSIONS, INITIAL_USERS } from './constants';
+import { INITIAL_CUSTOMERS, INITIAL_PRODUCTS, INITIAL_CONVERSIONS } from './constants';
 import { Customer, Product, ProductConversion, User, Role, Branch, CustomerPayment, DieselTank, Vehicle, Driver, DieselLog, Sale } from './types';
+import { authService } from './services/auth/auth.service';
+import { firstAccessibleTab, isFullAccessRole, userCanAccessTab } from './services/auth/permissions';
+import { tabToPath, pathToTab } from './services/auth/routes';
+const SESSION_TOKEN_KEY = 'lopar_session_token';
+
+const APP_TAB_ORDER = [
+  'pos',
+  'purchases',
+  'inventory',
+  'customers',
+  'customer-alerts',
+  'reports',
+  'audit-internal',
+  'production',
+  'branches',
+  'users',
+  'concrete-pos',
+  'concrete-purchases',
+  'concrete-inventory',
+  'concrete-customers',
+  'concrete-customer-alerts',
+  'concrete-reports',
+  'concrete-audit',
+  'diesel',
+];
 
 const PlaceholderModule: React.FC<{ title: string; subtitle: string }> = ({ title, subtitle }) => (
   <div className="space-y-6">
@@ -43,9 +70,25 @@ const PlaceholderModule: React.FC<{ title: string; subtitle: string }> = ({ titl
   </div>
 );
 
+const AccessDenied: React.FC = () => (
+  <div className="rounded-[28px] border border-slate-200 bg-white p-10 text-center shadow-sm">
+    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-red-400">Acceso denegado</p>
+    <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-900">No tienes permisos para acceder a este modulo.</h2>
+  </div>
+);
+
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('pos');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeTab = pathToTab(location.pathname);
+  const setActiveTab = useCallback((tabId: string) => {
+    navigate(tabToPath(tabId));
+  }, [navigate]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
+  const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>(() => {
     return localStorage.getItem('lopar_selected_branch') || '';
@@ -56,7 +99,6 @@ const App: React.FC = () => {
     localStorage.setItem('lopar_selected_branch', selectedBranchId);
   }, [selectedBranchId]);
 
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [conversions, setConversions] = useState<ProductConversion[]>(INITIAL_CONVERSIONS);
@@ -78,9 +120,67 @@ const App: React.FC = () => {
   ]);
   const [dieselLogs, setDieselLogs] = useState<DieselLog[]>([]);
 
+  const loadSessionUser = useCallback(async (sessionToken?: string | null) => {
+    if (!sessionToken) {
+      setCurrentUser(null);
+      setSessionExpiresAt(null);
+      setAuthLoading(false);
+      return;
+    }
+
+    try {
+      const user = await authService.getCurrentUser(sessionToken);
+      const startedAt = Number(localStorage.getItem('lopar_session_started_at')) || Date.now();
+      localStorage.setItem('lopar_session_started_at', String(startedAt));
+      const profileExpiresAt = startedAt + Math.max(1, user.sessionMinutes ?? 480) * 60 * 1000;
+
+      setCurrentUser(user);
+      setSessionExpiresAt(profileExpiresAt);
+      setAuthError(null);
+    } catch (err) {
+      setCurrentUser(null);
+      setSessionExpiresAt(null);
+      setAuthError(err instanceof Error ? err.message : 'No se pudo validar la sesion.');
+      await authService.signOut();
+    } finally {
+      setAuthLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setAuthLoading(false);
+      return;
+    }
+
+    void loadSessionUser(localStorage.getItem(SESSION_TOKEN_KEY));
+
+    return () => {
+      return;
+    };
+  }, [loadSessionUser]);
+
+  useEffect(() => {
+    if (!currentUser || !sessionExpiresAt) return;
+
+    const remaining = sessionExpiresAt - Date.now();
+    const expire = () => {
+      setSessionExpiredMessage('Tu sesion ha expirado. Por favor, inicia sesion nuevamente.');
+      void authService.signOut(localStorage.getItem(SESSION_TOKEN_KEY));
+    };
+
+    if (remaining <= 0) {
+      expire();
+      return;
+    }
+
+    const timeout = window.setTimeout(expire, remaining);
+    return () => window.clearTimeout(timeout);
+  }, [currentUser, sessionExpiresAt]);
+
   // CARGA INICIAL Y SUBSCRIPCIONES REALTIME
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || !currentUser) return;
 
     loadGlobalData();
 
@@ -106,7 +206,7 @@ const App: React.FC = () => {
       driverSub.unsubscribe();
       branchesSub.unsubscribe();
     };
-  }, []);
+  }, [currentUser?.id]);
 
   const resolveSelectedBranchId = (nextBranches: Branch[], current: string) => {
     const activeMatch = nextBranches.find(b => b.id === current && b.isActive !== false);
@@ -230,45 +330,74 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogin = (username: string) => {
-    const user = users.find(u => u.username === username);
-    if (user) {
-      setCurrentUser(user);
-      if (user.branchId) setSelectedBranchId(user.branchId);
-      setActiveTab('pos');
-    }
+  const handleLogin = async (identifier: string, password: string) => {
+    setAuthError(null);
+    setSessionExpiredMessage(null);
+    localStorage.setItem('lopar_session_started_at', String(Date.now()));
+    const session = await authService.signIn(identifier, password);
+    await loadSessionUser(session.session_token);
   };
 
-  if (!currentUser) {
+  const handleLogout = async () => {
+    localStorage.removeItem('lopar_session_started_at');
+    await authService.signOut(localStorage.getItem(SESSION_TOKEN_KEY));
+    setCurrentUser(null);
+    navigate('/', { replace: true });
+  };
+
+  const activeBranches = useMemo(() => {
+    const enabled = branches.filter(b => b.isActive !== false);
+    if (!currentUser || isFullAccessRole(currentUser.role)) return enabled;
+    const allowed = currentUser.allowedBranchIds ?? [];
+    return enabled.filter((branch) => allowed.includes(branch.id));
+  }, [branches, currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    if (!activeTab || !userCanAccessTab(currentUser, activeTab)) {
+      const firstTab = firstAccessibleTab(currentUser, APP_TAB_ORDER);
+      if (firstTab) navigate(tabToPath(firstTab), { replace: true });
+    }
+  }, [currentUser?.id, activeTab, navigate]);
+
+  useEffect(() => {
+    if (!currentUser || activeBranches.length === 0) return;
+    const selectedIsAllowed = activeBranches.some((branch) => branch.id === selectedBranchId);
+    if (selectedIsAllowed) return;
+
+    const preferred = currentUser.branchId && activeBranches.some((branch) => branch.id === currentUser.branchId)
+      ? currentUser.branchId
+      : activeBranches[0].id;
+    setSelectedBranchId(preferred);
+  }, [activeBranches, currentUser, selectedBranchId]);
+
+  if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md text-center animate-in zoom-in">
-          <span className="text-6xl block mb-6">⚒️</span>
-          <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter mb-8">GRUPO LOPAR</h1>
-          {!isSupabaseConfigured && (
-            <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
-              Configura `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en `.env.local` para habilitar sincronizacion.
-            </div>
-          )}
-          <div className="space-y-4">
-            {users.map(u => (
-              <button key={u.id} onClick={() => handleLogin(u.username)} className="w-full p-4 rounded-2xl border-2 border-slate-100 hover:border-orange-500 hover:bg-orange-50 transition-all flex items-center justify-between group">
-                <div className="text-left">
-                  <p className="font-bold text-slate-800">{u.name}</p>
-                  <p className="text-[10px] font-black text-slate-400 uppercase">{u.role}</p>
-                </div>
-                <span>➡️</span>
-              </button>
-            ))}
-          </div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
+        <div className="rounded-3xl border border-slate-800 bg-slate-900 px-8 py-6 text-center shadow-2xl">
+          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-orange-400">Validando sesion</p>
+          <p className="mt-3 text-sm font-bold text-slate-300">Cargando permisos del usuario...</p>
         </div>
       </div>
     );
   }
 
-  const activeBranches = branches.filter(b => b.isActive !== false);
+  if (!currentUser) {
+    return (
+      <LoginScreen
+        isSupabaseConfigured={isSupabaseConfigured}
+        error={authError}
+        expiredMessage={sessionExpiredMessage}
+        onLogin={handleLogin}
+      />
+    );
+  }
 
   const renderContent = () => {
+    if (!userCanAccessTab(currentUser, activeTab)) {
+      return <AccessDenied />;
+    }
+
     switch (activeTab) {
       case 'pos':
         return <POSScreen products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
@@ -319,7 +448,7 @@ const App: React.FC = () => {
       case 'branches':
         return <BranchesScreen branches={branches} setBranches={setBranches} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} currentUser={currentUser} />;
       case 'users':
-        return <UsersScreen users={users} setUsers={setUsers} branches={branches} />;
+        return <UsersScreen branches={activeBranches} />;
       case 'concrete-pos':
         return <ConcretePOSScreen products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'concrete-purchases':
@@ -344,12 +473,12 @@ const App: React.FC = () => {
       case 'reports':
         return <ReportsScreen selectedBranchId={selectedBranchId} branches={activeBranches} />;
       default:
-        return <POSScreen products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+        return <AccessDenied />;
     }
   };
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} branches={activeBranches} onLogout={() => setCurrentUser(null)} onReset={handleGlobalReset}>
+    <Layout activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} branches={activeBranches} onLogout={handleLogout} onReset={handleGlobalReset}>
       {renderContent()}
     </Layout>
   );
