@@ -6,6 +6,7 @@ import { walletService, type CustomerWalletMovement, type CustomerWalletSummary 
 import { CreditCard, Eye, FileDown, FileImage, History, MapPin, Paperclip, Pencil, Plus, Search, Trash2, Wallet } from 'lucide-react';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
+import { generateWalletHistoryPdf } from '../../services/pdf/walletHistoryPdf';
 import { getBranchFooterText } from '../../services/pdf/branchFooter';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 import ConfirmModal from '../common/ConfirmModal';
@@ -697,6 +698,47 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       showFeedback('error', 'No se pudo cargar', message);
     } finally {
       setIsWalletHistoryLoading(false);
+    }
+  };
+
+  const handleExportWalletHistoryPdf = async (customer: CreditCustomer, wallet: CustomerWalletSummary) => {
+    showFeedback('loading', 'Generando PDF', 'Preparando historial de saldo a favor...');
+
+    try {
+      const movements = await walletService.listWalletMovements(wallet.id);
+      await generateWalletHistoryPdf({
+        moduleLabel: 'MATERIALES',
+        branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          address: customer.address,
+        },
+        wallet: {
+          id: wallet.id,
+          current_balance: Number(wallet.current_balance ?? 0),
+          opened_amount: Number(wallet.opened_amount ?? 0),
+          opened_at: wallet.opened_at,
+          last_recharge_at: wallet.last_recharge_at ?? null,
+        },
+        movements: movements.map((movement) => ({
+          id: movement.id,
+          movement_type: movement.movement_type,
+          amount: Number(movement.amount ?? 0),
+          balance_before: Number(movement.balance_before ?? 0),
+          balance_after: Number(movement.balance_after ?? 0),
+          reference: movement.reference ?? null,
+          notes: movement.notes ?? null,
+          created_by: movement.created_by ?? null,
+          created_at: movement.created_at,
+        })),
+      });
+      setFeedbackOpen(false);
+    } catch (err) {
+      setFeedbackOpen(false);
+      const message = err instanceof Error ? err.message : 'No se pudo generar el historial de saldo a favor.';
+      showFeedback('error', 'PDF no disponible', message);
     }
   };
 
@@ -2236,9 +2278,9 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         <input
           type="text"
           placeholder="Buscar cliente..."
-          className="w-full md:flex-1 p-3 rounded-xl border border-gray-200 outline-none text-sm"
+          className="w-full md:flex-1 p-3 rounded-xl border border-gray-200 outline-none text-sm uppercase"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => setSearchTerm(e.target.value.toUpperCase())}
         />
         <button
           onClick={() => setIsCreateModalOpen(true)}
@@ -2630,6 +2672,13 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                             <p className="text-xs font-semibold text-slate-500">Consulta aperturas, recargas y consumos.</p>
                           </div>
                           <History className="h-5 w-5 shrink-0 text-slate-700" />
+                        </button>
+                        <button type="button" onClick={() => { void handleExportWalletHistoryPdf(selectedCustomer, selectedWallet); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-violet-200 hover:bg-violet-50">
+                          <div>
+                            <p className="text-sm font-black text-slate-900">Exportar historial</p>
+                            <p className="text-xs font-semibold text-slate-500">Genera un PDF con recargas y gastos del saldo.</p>
+                          </div>
+                          <FileDown className="h-5 w-5 shrink-0 text-violet-700" />
                         </button>
                       </>
                     ) : (

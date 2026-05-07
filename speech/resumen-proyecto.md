@@ -6,6 +6,8 @@
 > **Audiencia:** Desarrolladores nuevos, equipo técnico, revisores de código  
 > **Idioma del sistema:** Español (México)
 
+> **Complemento de cambios recientes:** [cambios-recientes.md](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/speech/cambios-recientes.md)
+
 ---
 
 ## Tabla de Contenidos
