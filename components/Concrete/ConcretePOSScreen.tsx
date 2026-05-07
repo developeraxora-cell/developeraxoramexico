@@ -1310,6 +1310,17 @@ const POSScreen: React.FC<POSProps> = ({
         .eq('transaction_id', sale.id);
       if (itemsError) throw itemsError;
 
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sale.created_by ?? '');
+      let cashierName = sale.created_by || currentUser.name;
+      if (isUuid) {
+        const { data: profileData } = await supabase
+          .from('app_user_profiles')
+          .select('full_name, username')
+          .eq('id', sale.created_by)
+          .single();
+        cashierName = profileData?.full_name || profileData?.username || currentUser.name;
+      }
+
       const lines = (itemsData ?? []).map((row: any) => {
         const uomCode = row.concrete_product_uoms?.concrete_uoms?.code ?? row.concrete_product_uoms?.concrete_uoms?.name ?? 'UND';
         const factor = Number(row.factor_used ?? 1);
@@ -1332,7 +1343,7 @@ const POSScreen: React.FC<POSProps> = ({
         paymentMethod: sale.payment_method,
         customerName: sale.nombre_cliente ?? 'PUBLICO GENERAL',
         customerAddress: sale.direccion_cliente ?? '-',
-        cashierName: sale.created_by || currentUser.name,
+        cashierName,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
         branchId: branchId ?? selectedBranchId ?? null,
         edad: parsedMeta.edad,
@@ -1671,7 +1682,7 @@ const POSScreen: React.FC<POSProps> = ({
         credit_amount: creditAmountSnapshot,
         wallet_id: walletSnapshot?.id ?? null,
         payment_notes: walletAppliedSnapshot > 0 ? `Saldo a favor aplicada: ${formatCurrency(walletAppliedSnapshot)}` : null,
-        created_by: currentUser.id,
+        created_by: currentUser.name || currentUser.username || currentUser.id,
         nombre_cliente: selectedCustomer?.name || null,
         direccion_cliente: effectiveSaleAddress === '-' ? null : effectiveSaleAddress,
         cartItems: saleCartSnapshot.map((item) => ({
