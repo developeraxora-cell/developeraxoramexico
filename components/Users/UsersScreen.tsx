@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Clock, Eye, EyeOff, KeyRound, Pencil, Plus,
+  Eye, EyeOff, KeyRound, Pencil, Plus,
   RefreshCw, Search, Trash2, UserCheck, UserCog, Users, UserX, X,
 } from 'lucide-react';
 import { Branch, BusinessUnit } from '../../types';
@@ -685,10 +685,12 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
     try {
       const userId = form.id ?? crypto.randomUUID();
 
+      const resolvedEmail = form.email.trim() || `${form.username.trim()}@lopar.com`;
+
       if (mode === 'create') {
         const { error: insertErr } = await supabase.from('app_user_profiles').insert({
           id: userId,
-          email: form.email.trim() || null,
+          email: resolvedEmail,
           username: form.username.trim() || null,
           full_name: form.full_name.trim(),
           role_key: form.role_key,
@@ -702,7 +704,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
         if (pwErr) throw pwErr;
       } else {
         const { error: updateErr } = await supabase.from('app_user_profiles').update({
-          email: form.email.trim() || null,
+          email: resolvedEmail,
           username: form.username.trim() || null,
           full_name: form.full_name.trim(),
           role_key: form.role_key,
