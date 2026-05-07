@@ -1365,8 +1365,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         setNoteSaleSummaries((prev) => ({ ...prev, [summaryKey]: summary }));
       }
       const salePayments = row.kind === 'credit' && row.note
-        ? paymentHistory
-            .filter((payment) => payment.note_id === row.note?.id)
+        ? (await creditService.listPaymentsByNoteIds([row.note.id]))
             .sort((a, b) => new Date(a.paid_at).getTime() - new Date(b.paid_at).getTime())
             .map((payment) => ({
               amount: Number(payment.amount ?? 0),
