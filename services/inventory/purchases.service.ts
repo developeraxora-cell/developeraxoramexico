@@ -468,7 +468,7 @@ export const purchasesService = {
   },
 
   async deleteSale(input: DeleteSaleInput) {
-    const { data, error } = await supabase.rpc('delete_inventory_sale', {
+    const { data, error } = await supabase.rpc('delete_inventory_sale_with_wallet_reversal', {
       p_sale_id: Number(input.sale_id),
       p_deleted_by: input.deleted_by,
       p_delete_note: input.delete_note,
