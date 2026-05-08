@@ -19,6 +19,21 @@ export interface CreditCustomer {
   updated_at: string | null;
 }
 
+export interface CustomerDocument {
+  id: string;
+  customer_id: string;
+  slot: number;
+  file_url: string;
+  secure_url: string | null;
+  public_id: string | null;
+  resource_type: string;
+  format: string | null;
+  original_filename: string | null;
+  bytes: number | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
 export interface CustomerAddress {
   id: string;
   customer_id: string;
@@ -458,6 +473,80 @@ export const creditService = {
     }
 
     return data as CreditCustomer;
+  },
+
+  async listCustomerDocuments(customerId: string) {
+    const { data, error } = await supabase
+      .from('credit_customer_documents')
+      .select('*')
+      .eq('customer_id', customerId)
+      .order('slot', { ascending: true });
+
+    if (error) throw error;
+    return (data ?? []) as CustomerDocument[];
+  },
+
+  async deleteCustomerDocument(documentId: string) {
+    const { error } = await supabase
+      .from('credit_customer_documents')
+      .delete()
+      .eq('id', documentId);
+    if (error) throw error;
+  },
+
+  async upsertCustomerDocument(input: {
+    customer_id: string;
+    slot: number;
+    file_url: string;
+    secure_url?: string | null;
+    public_id?: string | null;
+    resource_type: string;
+    format?: string | null;
+    original_filename?: string | null;
+    bytes?: number | null;
+  }) {
+    const payload = {
+      customer_id: input.customer_id,
+      slot: input.slot,
+      file_url: input.file_url,
+      secure_url: input.secure_url ?? null,
+      public_id: input.public_id ?? null,
+      resource_type: input.resource_type,
+      format: input.format ?? null,
+      original_filename: input.original_filename ?? null,
+      bytes: input.bytes ?? null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: existing, error: existingError } = await supabase
+      .from('credit_customer_documents')
+      .select('id')
+      .eq('customer_id', input.customer_id)
+      .eq('slot', input.slot)
+      .maybeSingle();
+
+    if (existingError) throw existingError;
+
+    if (existing?.id) {
+      const { data, error } = await supabase
+        .from('credit_customer_documents')
+        .update(payload)
+        .eq('id', existing.id)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      return data as CustomerDocument;
+    }
+
+    const { data, error } = await supabase
+      .from('credit_customer_documents')
+      .insert([payload])
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data as CustomerDocument;
   },
 
   async listNotesByCustomer(customerId: string) {

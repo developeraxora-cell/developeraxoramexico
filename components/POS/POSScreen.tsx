@@ -12,6 +12,7 @@ import { supabase } from '../../services/supabaseClient';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { logMaterialsAudit } from '../../services/audit/audit.service';
 import { getBranchFooterText } from '../../services/pdf/branchFooter';
+import { drawPromissoryFooterBlock } from '../../services/pdf/promissoryNotePdf';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 import ConfirmModal from '../common/ConfirmModal';
 import CustomerSearchSelect from '../common/CustomerSearchSelect';
@@ -982,6 +983,11 @@ const POSScreen: React.FC<POSProps> = ({
     const normalized = value.endsWith('Z') ? value : `${value}Z`;
     return new Date(normalized).toLocaleString();
   };
+  const addDaysToDate = (base: string, days: number) => {
+    const next = new Date(`${base}T00:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + Math.max(1, days));
+    return next.toISOString().slice(0, 10);
+  };
   const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -1065,6 +1071,9 @@ const POSScreen: React.FC<POSProps> = ({
     cashierName: string;
     branchName: string;
     saleNotes: string | null;
+    branchId?: string | null;
+    creditAmount?: number;
+    dueDate?: string | null;
   }) => {
     const pdfDoc = await PDFDocument.create();
     const fontRegular = await pdfDoc.embedFont('Helvetica');
@@ -1200,7 +1209,22 @@ const POSScreen: React.FC<POSProps> = ({
       });
 
       if (pageIndex === pages.length - 1) {
-        page.drawText(`TOTAL:  ${formatCurrency(total)}`, { x: width - marginX - 210, y: 108, size: 20, font: fontBold });
+        const totalY = input.paymentMethod === 'CREDITO' ? 148 : 108;
+        page.drawText(`TOTAL:  ${formatCurrency(total)}`, { x: width - marginX - 210, y: totalY, size: 20, font: fontBold });
+        if (input.paymentMethod === 'CREDITO') {
+          drawPromissoryFooterBlock({
+            page,
+            fontRegular,
+            fontBold,
+            branchName: input.branchName,
+            customerName: input.customerName,
+            amount: Number(input.creditAmount ?? total),
+            dueDate: input.dueDate ?? null,
+            topY: 135,
+            leftX: marginX + 10,
+            rightX: width - marginX - 10,
+          });
+        }
       }
       page.drawText(getBranchFooterText(input.branchName), {
         x: marginX + 80,
@@ -1668,6 +1692,11 @@ const POSScreen: React.FC<POSProps> = ({
         cashierName: currentUser.name,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
         saleNotes: mergedSaleNotes || null,
+        branchId: branchId ?? selectedBranchId ?? null,
+        creditAmount: creditAmountSnapshot,
+        dueDate: paymentTypeSnapshot === 'CREDITO'
+          ? addDaysToDate(new Date().toISOString().slice(0, 10), saleCreditDays)
+          : null,
       };
 
       showFeedback('loading', 'Procesando pago', 'Registrando venta...');

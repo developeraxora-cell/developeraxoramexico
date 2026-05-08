@@ -351,6 +351,17 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
     [alertRows]
   );
 
+  const filterAmounts = useMemo(
+    () => ({
+      VENCIDOS: alertRows.filter((row) => row.hasOverdue).reduce((acc, row) => acc + row.debt, 0),
+      POR_VENCER: alertRows.filter((row) => !row.hasOverdue && row.isNearDue).reduce((acc, row) => acc + row.debt, 0),
+      LIMITE_EXCEDIDO: alertRows.filter((row) => row.isOverLimit).reduce((acc, row) => acc + row.debt, 0),
+      LIMITE_PREVENTIVO: alertRows.filter((row) => !row.isOverLimit && row.isNearLimit).reduce((acc, row) => acc + row.debt, 0),
+      TODOS: alertRows.reduce((acc, row) => acc + row.debt, 0),
+    }),
+    [alertRows]
+  );
+
   const moduleLabel = module === 'concretera' ? 'CONCRETERA' : 'MATERIALES';
 
   return (
@@ -394,8 +405,8 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
         </div>
       </div>
       <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-45px_rgba(15,23,42,0.35)]">
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap gap-2">
               {[
                 { id: 'VENCIDOS', label: 'Vencidos' },
@@ -415,7 +426,14 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
                     : 'border border-slate-200 bg-white text-slate-500 hover:border-orange-200 hover:text-orange-500'
                     }`}
                 >
-                  {option.label} <span className="ml-1 opacity-70">({filterCounters[option.id as AlertFilter]})</span>
+                  <span className="block">
+                    {option.label} <span className="ml-1 opacity-70">({filterCounters[option.id as AlertFilter]})</span>
+                  </span>
+                  {module === 'materiales' && (
+                    <span className={`mt-1 block text-[10px] font-bold normal-case tracking-normal ${filter === option.id ? 'text-white/75' : 'text-slate-400'}`}>
+                      {formatCurrency(filterAmounts[option.id as AlertFilter])}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

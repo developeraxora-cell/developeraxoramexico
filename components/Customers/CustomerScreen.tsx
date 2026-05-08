@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PDFDocument, PDFPage, rgb } from 'pdf-lib';
 import { Branch, User } from '../../types';
-import { creditService, type CashSaleHistory, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentEvidence, type CreditPaymentMethod, type CreditSummary, type CustomerAddress, type SalePaymentEvidence } from '../../services/credit/credit.service';
+import { creditService, type CashSaleHistory, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentEvidence, type CreditPaymentMethod, type CreditSummary, type CustomerAddress, type CustomerDocument, type SalePaymentEvidence } from '../../services/credit/credit.service';
 import { walletService, type CustomerWalletMovement, type CustomerWalletSummary } from '../../services/wallet.service';
 import { CreditCard, Eye, FileDown, FileImage, History, MapPin, Paperclip, Pencil, Plus, Search, Trash2, Wallet } from 'lucide-react';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
 import { generateWalletHistoryPdf } from '../../services/pdf/walletHistoryPdf';
+import { appendPromissoryNotePage } from '../../services/pdf/promissoryNotePdf';
 import { getBranchFooterText } from '../../services/pdf/branchFooter';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 import ConfirmModal from '../common/ConfirmModal';
@@ -213,6 +214,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   const [paymentPage, setPaymentPage] = useState(1);
   const [paymentSearchTerm, setPaymentSearchTerm] = useState('');
   const [formData, setFormData] = useState(defaultCustomerForm);
+  const [customerDocumentRows, setCustomerDocumentRows] = useState<CustomerDocument[]>([]);
+  const [customerDocumentFiles, setCustomerDocumentFiles] = useState<Record<number, File | null>>({ 1: null, 2: null });
+  const [customerDocumentError, setCustomerDocumentError] = useState<string | null>(null);
+  const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false);
+  const [documentsModalSaving, setDocumentsModalSaving] = useState(false);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [noteModalMode, setNoteModalMode] = useState<NoteModalMode>('create');
   const [editingNote, setEditingNote] = useState<CreditNoteWithStatus | null>(null);
@@ -1171,6 +1177,9 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     customerAddress: string;
     cashierName: string;
     branchName: string;
+    branchId?: string | null;
+    totalAmount?: number;
+    dueDate?: string | null;
     payments?: Array<{
       amount: number;
       paidAt: string;
@@ -1354,6 +1363,21 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       page.drawText(`Página ${pageIndex + 1}`, { x: width - marginX - 58, y: 64, size: 9, font: fontBold });
     });
 
+    if (input.paymentMethod === 'CREDITO') {
+      appendPromissoryNotePage({
+        pdfDoc,
+        fontRegular: fontBold,
+        fontBold,
+        watermarkImage,
+        moduleLabel: 'MATERIALES',
+        branchName: input.branchName,
+        branchId: input.branchId ?? null,
+        customerName: input.customerName,
+        amount: Number(input.totalAmount ?? total),
+        dueDate: input.dueDate ?? null,
+      });
+    }
+
     const pdfBytes = await pdfDoc.save();
     openPdfPreview(new Blob([pdfBytes], { type: 'application/pdf' }), buildSalePdfFilename(input.branchName, input.saleId));
   };
@@ -1425,6 +1449,9 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         customerAddress: summary.direccion_cliente ?? selectedCustomer?.address ?? '-',
         cashierName: summary.created_by ?? currentUser.name,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+        branchId: selectedBranchId,
+        totalAmount: row.kind === 'credit' ? Number(row.note?.total ?? 0) : summary.items.reduce((acc, item) => acc + Number(item.line_total ?? (Number(item.qty) * Number(item.unit_price))), 0),
+        dueDate: row.kind === 'credit' ? row.note?.due_date ?? null : null,
         payments: salePayments,
       });
       setFeedbackOpen(false);
@@ -1549,7 +1576,71 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
   const openPaymentEvidenceModal = (payment: CreditPayment) => {
     setSelectedPaymentForEvidence(payment);
+    setPaymentEvidenceFiles([]);
+    setPaymentEvidenceError(null);
     setIsPaymentEvidenceModalOpen(true);
+  };
+
+  const handleUploadPaymentEvidenceToExistingPayment = async () => {
+    if (actionLockRef.current) return;
+    if (!selectedCustomer || !selectedPaymentForEvidence) return;
+    if (paymentEvidenceFiles.length === 0) {
+      setPaymentEvidenceError('Debe adjuntar al menos un archivo.');
+      return;
+    }
+    if (!paymentEvidenceUploadService.isConfigured()) {
+      setPaymentEvidenceError('La carga de evidencias no está configurada.');
+      return;
+    }
+
+    setIsLoading(true);
+    setPaymentEvidenceError(null);
+    actionLockRef.current = true;
+    showFeedback('loading', 'Adjuntando evidencia', 'Subiendo archivos del abono...');
+
+    try {
+      const uploadedEvidences = await Promise.all(
+        paymentEvidenceFiles.map((file) =>
+          paymentEvidenceUploadService.upload(file, {
+            module: 'materiales',
+            branch_id: branchId,
+            customer_id: selectedCustomer.id,
+            payment_id: String(selectedPaymentForEvidence.id),
+            note_id: selectedPaymentForEvidence.note_id,
+          }),
+        ),
+      );
+
+      const created = await Promise.all(
+        uploadedEvidences.map((evidence) =>
+          creditService.createPaymentEvidence({
+            payment_id: String(selectedPaymentForEvidence.id),
+            file_url: evidence.file_url,
+            secure_url: evidence.secure_url,
+            public_id: evidence.public_id,
+            resource_type: evidence.resource_type,
+            format: evidence.format,
+            original_filename: evidence.original_filename,
+            bytes: evidence.bytes,
+            uploaded_by: currentUser.name,
+          }),
+        ),
+      );
+
+      setPaymentEvidencesByPaymentId((prev) => ({
+        ...prev,
+        [String(selectedPaymentForEvidence.id)]: [...created, ...(prev[String(selectedPaymentForEvidence.id)] ?? [])],
+      }));
+      setPaymentEvidenceFiles([]);
+      showFeedback('success', 'Evidencia adjuntada', 'Los archivos del abono se registraron correctamente.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo registrar la evidencia del abono.';
+      setPaymentEvidenceError(message);
+      showFeedback('error', 'No se pudo adjuntar', message);
+    } finally {
+      setIsLoading(false);
+      actionLockRef.current = false;
+    }
   };
 
 
@@ -2061,6 +2152,150 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     }
   };
 
+  const resetCustomerDocuments = useCallback(() => {
+    setCustomerDocumentRows([]);
+    setCustomerDocumentFiles({ 1: null, 2: null });
+    setCustomerDocumentError(null);
+  }, []);
+
+  const loadCustomerDocuments = useCallback(async (customerId: string) => {
+    const rows = await creditService.listCustomerDocuments(customerId);
+    setCustomerDocumentRows(rows);
+    return rows;
+  }, []);
+
+  const handleCustomerDocumentsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      validatePaymentEvidenceFile(file);
+      setCustomerDocumentFiles((prev) => {
+        if (!prev[1]) return { ...prev, 1: file };
+        if (!prev[2]) return { ...prev, 2: file };
+        return prev;
+      });
+      setCustomerDocumentError(null);
+    } catch (error) {
+      setCustomerDocumentError(error instanceof Error ? error.message : 'No se pudo adjuntar el documento.');
+    }
+  };
+
+  const clearCustomerDocumentSlot = (slot: 1 | 2) => {
+    setCustomerDocumentFiles((prev) => ({ ...prev, [slot]: null }));
+  };
+
+  const openDocumentsModal = (customer: CreditCustomer) => {
+    setSelectedCustomer(customer);
+    resetCustomerDocuments();
+    setIsDocumentsModalOpen(true);
+    loadCustomerDocuments(customer.id).catch(() =>
+      setCustomerDocumentError('No se pudieron cargar los documentos.')
+    );
+  };
+
+  const handleDeleteExistingDoc = async (doc: CustomerDocument) => {
+    try {
+      if (doc.public_id) {
+        await paymentEvidenceUploadService.delete({ public_id: doc.public_id, resource_type: doc.resource_type }).catch(() => undefined);
+      }
+      await creditService.deleteCustomerDocument(doc.id);
+      setCustomerDocumentRows((prev) => prev.filter((r) => r.id !== doc.id));
+    } catch {
+      setCustomerDocumentError('No se pudo eliminar el documento.');
+    }
+  };
+
+  const handleSaveDocumentsModal = async () => {
+    if (!selectedCustomer) return;
+    setDocumentsModalSaving(true);
+    setCustomerDocumentError(null);
+    try {
+      await syncCustomerDocuments(selectedCustomer.id);
+      const rows = await loadCustomerDocuments(selectedCustomer.id);
+      setCustomerDocumentRows(rows);
+      setCustomerDocumentFiles({ 1: null, 2: null });
+    } catch {
+      setCustomerDocumentError('No se pudo guardar el documento.');
+    } finally {
+      setDocumentsModalSaving(false);
+    }
+  };
+
+  const handleDocumentSlotFileChange = (slot: 1 | 2, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = '';
+    if (!file) return;
+    try {
+      validatePaymentEvidenceFile(file);
+      setCustomerDocumentFiles((prev) => ({ ...prev, [slot]: file }));
+      setCustomerDocumentError(null);
+    } catch (error) {
+      setCustomerDocumentError(error instanceof Error ? error.message : 'Archivo no válido.');
+    }
+  };
+
+  const previewCustomerDocumentSlot = (slot: 1 | 2, existingDocument?: CustomerDocument | null) => {
+    const file = customerDocumentFiles[slot];
+    const previewUrl = file ? URL.createObjectURL(file) : existingDocument?.secure_url || existingDocument?.file_url || null;
+    if (!previewUrl) return;
+
+    const viewer = window.open(previewUrl, '_blank', 'noopener,noreferrer');
+    if (!viewer) {
+      const anchor = document.createElement('a');
+      anchor.href = previewUrl;
+      anchor.target = '_blank';
+      anchor.rel = 'noreferrer';
+      anchor.click();
+    }
+    if (file) setTimeout(() => URL.revokeObjectURL(previewUrl), 30_000);
+  };
+
+  const syncCustomerDocuments = useCallback(async (customerId: string) => {
+    const filesToUpload = Object.entries(customerDocumentFiles)
+      .map(([slot, file]) => ({ slot: Number(slot), file }))
+      .filter((entry): entry is { slot: number; file: File } => entry.file instanceof File);
+
+    if (filesToUpload.length === 0) return;
+    if (!paymentEvidenceUploadService.isConfigured()) {
+      throw new Error('La carga de documentos no está configurada.');
+    }
+
+    const existingBySlot = customerDocumentRows.reduce<Record<number, CustomerDocument>>((acc, row) => {
+      acc[row.slot] = row;
+      return acc;
+    }, {});
+
+    for (const entry of filesToUpload) {
+      const previous = existingBySlot[entry.slot];
+      const uploaded = await paymentEvidenceUploadService.upload(entry.file, {
+        module: 'materiales',
+        branch_id: branchId,
+        customer_id: customerId,
+      });
+
+      if (previous?.public_id) {
+        await paymentEvidenceUploadService.delete({
+          public_id: previous.public_id,
+          resource_type: previous.resource_type,
+        }).catch(() => undefined);
+      }
+
+      await creditService.upsertCustomerDocument({
+        customer_id: customerId,
+        slot: entry.slot,
+        file_url: uploaded.file_url,
+        secure_url: uploaded.secure_url,
+        public_id: uploaded.public_id,
+        resource_type: uploaded.resource_type,
+        format: uploaded.format,
+        original_filename: uploaded.original_filename,
+        bytes: uploaded.bytes,
+      });
+    }
+  }, [branchId, customerDocumentFiles, customerDocumentRows]);
+
   const handleCreateCustomer = async (event: React.FormEvent) => {
     event.preventDefault();
     if (actionLockRef.current) return;
@@ -2083,6 +2318,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         allow_cash_if_blocked: formData.allow_cash_if_blocked,
       });
 
+      await syncCustomerDocuments(customer.id);
+
       logMaterialsAudit({
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
@@ -2097,6 +2334,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
       setIsCreateModalOpen(false);
       setFormData(defaultCustomerForm);
+      resetCustomerDocuments();
       setCurrentPage(1);
       await loadCustomers();
       showFeedback('success', 'Cliente creado');
@@ -2127,7 +2365,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       allow_cash_if_blocked: customer.allow_cash_if_blocked ?? true,
       justification: '',
     });
+    resetCustomerDocuments();
     setIsEditModalOpen(true);
+    loadCustomerDocuments(customer.id).catch(() =>
+      setCustomerDocumentError('No se pudieron cargar los documentos.')
+    );
   };
 
   const handleOpenAddresses = async (customer: CreditCustomer) => {
@@ -2244,6 +2486,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         allow_cash_if_blocked: formData.allow_cash_if_blocked,
       });
 
+      await syncCustomerDocuments(updated.id);
+
       logMaterialsAudit({
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
@@ -2260,6 +2504,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
       setIsEditModalOpen(false);
       setFormData(defaultCustomerForm);
+      resetCustomerDocuments();
       await loadCustomers();
       showFeedback('success', 'Cliente actualizado');
     } catch (err) {
@@ -2283,7 +2528,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           onChange={(e) => setSearchTerm(e.target.value.toUpperCase())}
         />
         <button
-          onClick={() => setIsCreateModalOpen(true)}
+          onClick={() => {
+            setFormData(defaultCustomerForm);
+            resetCustomerDocuments();
+            setIsCreateModalOpen(true);
+          }}
           disabled={feedbackLoading || isLoading}
           className="w-full md:w-auto bg-slate-900 text-white px-6 py-3 rounded-xl font-bold inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         >
@@ -2477,63 +2726,115 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-in zoom-in flex flex-col">
             <div className="bg-slate-900 p-6 text-white">
               <h3 className="text-xl font-black uppercase tracking-tighter">Nuevo Cliente de Crédito</h3>
               <p className="text-[10px] font-bold uppercase tracking-widest">Sucursal {selectedBranchId || '—'}</p>
             </div>
-            <form onSubmit={handleCreateCustomer} className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre del cliente</label>
-                <input
-                  required
-                  placeholder="Nombre"
-                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                  value={formData.name}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                />
+            <form onSubmit={handleCreateCustomer} className="flex-1 overflow-y-auto p-5">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre del cliente</label>
+                    <input
+                      required
+                      placeholder="Nombre"
+                      className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                      value={formData.name}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Teléfono</label>
+                    <input
+                      placeholder="Teléfono"
+                      className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                      value={formData.phone}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dirección</label>
+                    <input
+                      placeholder="Dirección"
+                      className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                      value={formData.address}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Límite de crédito</label>
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="Límite"
+                      className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                      value={formData.credit_limit}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, credit_limit: Number(e.target.value) }))}
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-xs text-slate-600 font-bold">
+                    <input
+                      type="checkbox"
+                      checked={formData.allow_cash_if_blocked}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, allow_cash_if_blocked: e.target.checked }))}
+                    />
+                    Permitir contado si está bloqueado
+                  </label>
+                </div>
+                <div>
+              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Documentos del cliente</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">Opcional. Puedes adjuntar 1 o 2 archivos PDF o imagen para identificar al cliente.</p>
+                </div>
+                {(() => {
+                  const bothFull = !!customerDocumentFiles[1] && !!customerDocumentFiles[2];
+                  return (
+                    <>
+                      <label className={`flex min-h-[132px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-center shadow-sm transition ${bothFull ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-slate-400 hover:bg-slate-50'}`}>
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white">
+                          <Paperclip className="h-5 w-5" />
+                        </div>
+                        <div className="space-y-0.5 leading-tight">
+                          <p className="text-xs font-black text-slate-800">Click or drag file to this area to upload</p>
+                          <p className="text-[11px] font-semibold text-slate-500">{bothFull ? 'Límite de 2 archivos alcanzado.' : 'Selecciona un archivo a la vez.'}</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Opcional. Adjunta 1 o 2 archivos.</p>
+                        </div>
+                        <input
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,.pdf"
+                          disabled={bothFull}
+                          onChange={handleCustomerDocumentsChange}
+                          className="hidden"
+                        />
+                      </label>
+                      {([1, 2] as const).filter((slot) => !!customerDocumentFiles[slot]).map((slot) => (
+                        <div key={slot} className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-left">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{`Documento ${slot}`}</span>
+                          <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-slate-500">
+                            {customerDocumentFiles[slot]?.name}
+                          </span>
+                          <button type="button" onClick={() => clearCustomerDocumentSlot(slot)} className="rounded-xl border border-red-100 bg-red-50 p-1.5 text-red-500" aria-label={`Eliminar documento ${slot}`}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </>
+                  );
+                })()}
+                {customerDocumentError && <p className="text-xs font-bold text-red-500">{customerDocumentError}</p>}
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Teléfono</label>
-                <input
-                  placeholder="Teléfono"
-                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                  value={formData.phone}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                />
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dirección</label>
-                <input
-                  placeholder="Dirección"
-                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                  value={formData.address}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Límite de crédito</label>
-                <input
-                  type="number"
-                  min={0}
-                  placeholder="Límite"
-                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                  value={formData.credit_limit}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, credit_limit: Number(e.target.value) }))}
-                />
-              </div>
-              <label className="flex items-center gap-2 text-xs text-slate-600 font-bold">
-                <input
-                  type="checkbox"
-                  checked={formData.allow_cash_if_blocked}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, allow_cash_if_blocked: e.target.checked }))}
-                />
-                Permitir contado si está bloqueado
-              </label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-5">
                 <button
                   type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={() => {
+                    setIsCreateModalOpen(false);
+                    setFormData(defaultCustomerForm);
+                    resetCustomerDocuments();
+                  }}
                   disabled={feedbackLoading}
                   className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
                 >
@@ -2702,81 +3003,141 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
       {isEditModalOpen && selectedCustomer && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-in zoom-in flex flex-col">
             <div className="bg-sky-700 p-6 text-white">
               <h3 className="text-xl font-black uppercase tracking-tighter">Editar Cliente</h3>
               <p className="text-[10px] font-bold uppercase tracking-widest">Sucursal {selectedBranchId || '—'}</p>
             </div>
-            <form onSubmit={handleUpdateCustomer} className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre del cliente</label>
-                <input
-                  required
-                  placeholder="Nombre"
-                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                  value={formData.name}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                />
+            <form onSubmit={handleUpdateCustomer} className="flex-1 overflow-y-auto p-5">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre del cliente</label>
+                    <input
+                      required
+                      placeholder="Nombre"
+                      className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                      value={formData.name}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Teléfono</label>
+                    <input
+                      placeholder="Teléfono"
+                      className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                      value={formData.phone}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dirección</label>
+                    <input
+                      placeholder="Dirección"
+                      className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                      value={formData.address}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Límite de crédito</label>
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="Límite"
+                      className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
+                      value={formData.credit_limit === 0 ? '' : formData.credit_limit}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          credit_limit: e.target.value === '' ? 0 : Number(e.target.value),
+                        }))
+                      }
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-xs text-slate-600 font-bold">
+                    <input
+                      type="checkbox"
+                      checked={formData.allow_cash_if_blocked}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, allow_cash_if_blocked: e.target.checked }))}
+                    />
+                    Permitir contado si está bloqueado
+                  </label>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observación obligatoria</label>
+                    <textarea
+                      required
+                      rows={3}
+                      placeholder="Indique por qué se modifica el cliente"
+                      className="w-full p-3 bg-amber-50 rounded-xl border border-amber-200 text-sm resize-none"
+                      value={formData.justification}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, justification: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div>
+              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Documentos del cliente</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">Opcional. Puedes reemplazar 1 o 2 documentos PDF o imagen guardados en Cloudinary.</p>
+                </div>
+                {customerDocumentError && (
+                  <p className="rounded-xl bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600">{customerDocumentError}</p>
+                )}
+                {(() => {
+                  const slot1Full = !!(customerDocumentFiles[1] || customerDocumentRows.find((r) => r.slot === 1));
+                  const slot2Full = !!(customerDocumentFiles[2] || customerDocumentRows.find((r) => r.slot === 2));
+                  const bothFull = slot1Full && slot2Full;
+                  return (
+                    <>
+                      <label className={`flex min-h-[132px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-center shadow-sm transition ${bothFull ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-slate-400 hover:bg-slate-50'}`}>
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-700 text-white">
+                          <Paperclip className="h-5 w-5" />
+                        </div>
+                        <div className="space-y-0.5 leading-tight">
+                          <p className="text-xs font-black text-slate-800">Click or drag file to this area to upload</p>
+                          <p className="text-[11px] font-semibold text-slate-500">{bothFull ? 'Límite de 2 archivos alcanzado.' : 'Selecciona un archivo a la vez.'}</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Opcional. Reemplaza 1 o 2 archivos.</p>
+                        </div>
+                        <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" disabled={bothFull} onChange={handleCustomerDocumentsChange} className="hidden" />
+                      </label>
+                      <div className="space-y-2">
+                        {([1, 2] as const).map((slot) => {
+                          const file = customerDocumentFiles[slot];
+                          const existingDocument = customerDocumentRows.find((row) => row.slot === slot) ?? null;
+                          if (!file && !existingDocument) return null;
+                          return (
+                            <div key={slot} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-700 text-white">
+                                <Paperclip className="h-4 w-4" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{`Documento ${slot}`}</p>
+                                <p className="truncate text-[11px] font-semibold text-slate-600">{file?.name || existingDocument?.original_filename}</p>
+                              </div>
+                              <button type="button" onClick={() => previewCustomerDocumentSlot(slot, existingDocument)} className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-500">
+                                <Eye className="h-4 w-4" />
+                              </button>
+                              <button type="button" onClick={() => { if (existingDocument && !file) void handleDeleteExistingDoc(existingDocument); else clearCustomerDocumentSlot(slot); }} className="rounded-xl border border-red-100 bg-red-50 p-2 text-red-500">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Teléfono</label>
-                <input
-                  placeholder="Teléfono"
-                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                  value={formData.phone}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                />
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dirección</label>
-                <input
-                  placeholder="Dirección"
-                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                  value={formData.address}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Límite de crédito</label>
-                <input
-                  type="number"
-                  min={0}
-                  placeholder="Límite"
-                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                  value={formData.credit_limit === 0 ? '' : formData.credit_limit}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      credit_limit: e.target.value === '' ? 0 : Number(e.target.value),
-                    }))
-                  }
-                />
-              </div>
-              <label className="flex items-center gap-2 text-xs text-slate-600 font-bold">
-                <input
-                  type="checkbox"
-                  checked={formData.allow_cash_if_blocked}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, allow_cash_if_blocked: e.target.checked }))}
-                />
-                Permitir contado si está bloqueado
-              </label>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observación obligatoria</label>
-                <textarea
-                  required
-                  rows={3}
-                  placeholder="Indique por qué se modifica el cliente"
-                  className="w-full p-3 bg-amber-50 rounded-xl border border-amber-200 text-sm resize-none"
-                  value={formData.justification}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, justification: e.target.value }))}
-                />
-              </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-5">
                 <button
                   type="button"
                   onClick={() => {
                     setIsEditModalOpen(false);
                     setFormData(defaultCustomerForm);
+                    resetCustomerDocuments();
                   }}
                   disabled={feedbackLoading || isLoading}
                   className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
@@ -3056,6 +3417,87 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isDocumentsModalOpen && selectedCustomer && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-slate-900 p-6 text-white flex items-start justify-between">
+              <div>
+                <h3 className="text-xl font-black tracking-tighter">Documentos de identidad</h3>
+                <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-emerald-300">{selectedCustomer.name}</p>
+              </div>
+              <button type="button" onClick={() => { setIsDocumentsModalOpen(false); resetCustomerDocuments(); }} className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/10 text-xl transition hover:bg-red-500">&times;</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {customerDocumentError && (
+                <p className="rounded-2xl bg-red-50 px-4 py-2 text-xs font-bold text-red-600">{customerDocumentError}</p>
+              )}
+              {([1, 2] as const).map((slot) => {
+                const existingDoc = customerDocumentRows.find((r) => r.slot === slot) ?? null;
+                const pendingFile = customerDocumentFiles[slot];
+                return (
+                  <div key={slot} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Documento {slot}</p>
+                    {existingDoc && !pendingFile && (
+                      <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-white">
+                          <Paperclip className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[11px] font-semibold text-slate-700">{existingDoc.original_filename ?? `Documento ${slot}`}</p>
+                          <p className="text-[10px] text-slate-400">{existingDoc.format?.toUpperCase()} · {existingDoc.bytes ? `${(existingDoc.bytes / 1024).toFixed(0)} KB` : ''}</p>
+                        </div>
+                        <button type="button" onClick={() => previewCustomerDocumentSlot(slot, existingDoc)} className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-500 hover:bg-sky-50 hover:text-sky-600" title="Ver">
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <label className="cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-500 hover:bg-amber-50 hover:text-amber-600" title="Reemplazar">
+                          <Pencil className="h-4 w-4" />
+                          <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={(e) => handleDocumentSlotFileChange(slot, e)} />
+                        </label>
+                        <button type="button" onClick={() => { void handleDeleteExistingDoc(existingDoc); }} className="rounded-xl border border-red-100 bg-red-50 p-2 text-red-500 hover:bg-red-100" title="Eliminar">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                    {pendingFile && (
+                      <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-white">
+                          <Paperclip className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[11px] font-semibold text-emerald-800">{pendingFile.name}</p>
+                          <p className="text-[10px] text-emerald-600">Listo para guardar</p>
+                        </div>
+                        <button type="button" onClick={() => clearCustomerDocumentSlot(slot)} className="rounded-xl border border-red-100 bg-red-50 p-2 text-red-500 hover:bg-red-100" title="Cancelar">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                    {!existingDoc && !pendingFile && (
+                      <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white py-6 text-center transition hover:border-emerald-300 hover:bg-emerald-50">
+                        <Plus className="h-5 w-5 text-slate-400" />
+                        <p className="text-xs font-bold text-slate-500">Agregar documento {slot}</p>
+                        <p className="text-[10px] text-slate-400">PDF, JPG, PNG o WEBP</p>
+                        <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={(e) => handleDocumentSlotFileChange(slot, e)} />
+                      </label>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="border-t border-slate-200 bg-white p-4 flex gap-3">
+              <button type="button" onClick={() => { setIsDocumentsModalOpen(false); resetCustomerDocuments(); }} className="flex-1 rounded-2xl border border-slate-200 py-3 text-[11px] font-black uppercase text-slate-500 hover:bg-slate-50">
+                Cerrar
+              </button>
+              {(customerDocumentFiles[1] || customerDocumentFiles[2]) && (
+                <button type="button" onClick={() => { void handleSaveDocumentsModal(); }} disabled={documentsModalSaving} className="flex-1 rounded-2xl bg-emerald-700 py-3 text-[11px] font-black uppercase text-white disabled:opacity-60">
+                  {documentsModalSaving ? 'Guardando...' : 'Guardar'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -3723,6 +4165,50 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               </button>
             </div>
             <div className="flex-1 overflow-y-auto bg-slate-50 p-6">
+              <div className="mb-5 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <p className="text-sm font-black text-slate-900">Agregar nuevas evidencias</p>
+                    <p className="mt-1 text-xs font-semibold text-slate-500">Adjunta imagen o PDF para este abono.</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-600 transition-colors hover:border-slate-300">
+                      <Paperclip className="h-4 w-4" />
+                      Seleccionar archivo
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+                        multiple
+                        className="hidden"
+                        onChange={handlePaymentEvidenceFilesChange}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleUploadPaymentEvidenceToExistingPayment}
+                      disabled={feedbackLoading || isLoading || paymentEvidenceFiles.length === 0}
+                      className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-black uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <FileDown className="h-4 w-4" />
+                      Agregar archivo
+                    </button>
+                  </div>
+                </div>
+                {paymentEvidenceFiles.length > 0 && (
+                  <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="space-y-2">
+                      {paymentEvidenceFiles.map((file, index) => (
+                        <div key={`${file.name}-${index}`} className="flex items-center gap-2 text-xs text-slate-600">
+                          <Paperclip className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="truncate">{file.name}</span>
+                          <span className="text-slate-400">({(file.size / (1024 * 1024)).toFixed(2)} MB)</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {paymentEvidenceError && <p className="mt-3 text-xs font-bold text-red-500">{paymentEvidenceError}</p>}
+              </div>
               {selectedPaymentEvidences.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-400">
                   Este abono no tiene evidencias adjuntas.

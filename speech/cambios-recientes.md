@@ -90,6 +90,7 @@ Se hicieron varias correcciones relevantes en la impresión de ventas.
 - paginación real para ventas con muchas filas
 - aumento del número de filas por página antes de saltar a otra hoja
 - soporte de subtotales por `line_total`
+- soporte de `PAGARE MERCANTIL` para ventas a crédito en Materiales
 - corrección de título por unidad de negocio:
   - Materiales imprime `MATERIALES ...`
   - Concretera imprime `CONCRETERA ...`
@@ -161,7 +162,7 @@ En cambios de tipo de venta también se actualizan:
 
 ### Exportación nueva
 
-En `Gestionar cliente -> Saldo a favor` se agregó `Exportar historial`.
+En `Gestionar cliente -> Saldo a favor` de Materiales se agregó `Exportar historial`.
 
 Ese PDF:
 
@@ -170,7 +171,7 @@ Ese PDF:
   - `RECARGAS REALIZADAS`
   - `GASTOS REALIZADOS`
 - centra el contenido de las tablas y muestra total acumulado por cada una
-- funciona en Materiales y Concretera
+- funciona solo en Materiales
 
 ---
 
@@ -281,3 +282,64 @@ El estado actual del proyecto combina:
 - PDFs con subtotales reales y abonos impresos
 - reportes más legibles
 - paridad funcional más alta entre Materiales y Concretera
+
+---
+
+## 13. Alertas de clientes
+
+Se mejoró la vista de `Alertas clientes` para mostrar no solo la cantidad de clientes por filtro, sino también el monto de deuda acumulado por cada categoría.
+
+### Nuevos importes por vista
+
+- `Vencidos`
+- `Por vencer 7 días`
+- `Límite excedido`
+- `Límite preventivo`
+- `Todos`
+
+Cada botón ahora muestra:
+
+- cantidad de clientes dentro del filtro
+- suma total de deuda de ese grupo en pesos
+
+### Archivo
+
+- [components/CreditAlerts/CreditAlertsScreen.tsx](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/components/CreditAlerts/CreditAlertsScreen.tsx)
+
+---
+
+## 14. Documentos de clientes
+
+Se agregó soporte para adjuntar hasta 2 documentos por cliente en alta y edición de clientes de crédito.
+
+### Alcance
+
+- permite subir PDF o imagen
+- se carga a Cloudinary mediante la misma función de subida usada para evidencias
+- funciona tanto al crear como al editar clientes
+- si un documento ya existe y se reemplaza, el archivo anterior se elimina de Cloudinary
+
+### Archivos
+
+- [components/Customers/CustomerScreen.tsx](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/components/Customers/CustomerScreen.tsx)
+- [components/Concrete/ConcreteCustomersScreen.tsx](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/components/Concrete/ConcreteCustomersScreen.tsx)
+- [services/credit/credit.service.ts](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/services/credit/credit.service.ts)
+- [services/concretera/credit.service.ts](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/services/concretera/credit.service.ts)
+- [crear_tablas_documentos_clientes.sql](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/crear_tablas_documentos_clientes.sql)
+
+---
+
+## 15. Evidencias de abonos
+
+Se mejoró el modal `Evidencias del Abono` para permitir adjuntar nuevos archivos directamente desde la vista de evidencias ya registradas.
+
+### Nuevo flujo
+
+- ver evidencias existentes
+- seleccionar uno o varios archivos adicionales
+- adjuntarlos al mismo abono sin salir del modal
+
+### Archivos
+
+- [components/Customers/CustomerScreen.tsx](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/components/Customers/CustomerScreen.tsx)
+- [components/Concrete/ConcreteCustomersScreen.tsx](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/components/Concrete/ConcreteCustomersScreen.tsx)
