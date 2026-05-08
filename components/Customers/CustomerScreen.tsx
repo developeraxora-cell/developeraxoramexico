@@ -1434,6 +1434,13 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               reference: payment.reference,
             }))
         : [];
+      const promissoryDueDate = row.kind === 'credit' && row.note
+        ? row.note.due_date
+          || addDaysToDate(
+            row.note.issue_date || String(summary.created_at ?? '').slice(0, 10),
+            Number(row.note.credit_days_applied || selectedCustomer?.default_credit_days || 30)
+          )
+        : null;
       await generateSalePdf({
         saleId: summary.saleId,
         createdAt: summary.created_at,
@@ -1445,13 +1452,15 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           subtotal: Number(item.line_total ?? (Number(item.qty) * Number(item.unit_price))),
         })),
         paymentMethod: row.kind === 'credit' ? 'CREDITO' : 'EFECTIVO',
-        customerName: summary.nombre_cliente ?? selectedCustomer?.name ?? 'PUBLICO GENERAL',
+        customerName: row.kind === 'credit'
+          ? selectedCustomer?.name ?? summary.nombre_cliente ?? 'PUBLICO GENERAL'
+          : summary.nombre_cliente ?? selectedCustomer?.name ?? 'PUBLICO GENERAL',
         customerAddress: summary.direccion_cliente ?? selectedCustomer?.address ?? '-',
         cashierName: summary.created_by ?? currentUser.name,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
         branchId: selectedBranchId,
         totalAmount: row.kind === 'credit' ? Number(row.note?.total ?? 0) : summary.items.reduce((acc, item) => acc + Number(item.line_total ?? (Number(item.qty) * Number(item.unit_price))), 0),
-        dueDate: row.kind === 'credit' ? row.note?.due_date ?? null : null,
+        dueDate: promissoryDueDate,
         payments: salePayments,
       });
       setFeedbackOpen(false);

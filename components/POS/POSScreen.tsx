@@ -1074,6 +1074,7 @@ const POSScreen: React.FC<POSProps> = ({
     branchId?: string | null;
     creditAmount?: number;
     dueDate?: string | null;
+    creditDaysApplied?: number | null;
   }) => {
     const pdfDoc = await PDFDocument.create();
     const fontRegular = await pdfDoc.embedFont('Helvetica');
@@ -1120,6 +1121,11 @@ const POSScreen: React.FC<POSProps> = ({
     };
 
     const total = input.items.reduce((acc, item) => acc + Number(item.subtotal ?? (item.qty * item.unitPrice)), 0);
+    const hasCreditNote = input.paymentMethod === 'CREDITO' || Number(input.creditAmount ?? 0) > 0;
+    const promissoryDueDate = input.dueDate
+      ?? (hasCreditNote
+        ? addDaysToDate(String(input.createdAt ?? new Date().toISOString()).slice(0, 10), Number(input.creditDaysApplied || 30))
+        : null);
     const itemsPerPage = 24;
     const pages = Array.from({ length: Math.max(1, Math.ceil(input.items.length / itemsPerPage)) }, (_, index) =>
       input.items.slice(index * itemsPerPage, (index + 1) * itemsPerPage)
@@ -1209,9 +1215,9 @@ const POSScreen: React.FC<POSProps> = ({
       });
 
       if (pageIndex === pages.length - 1) {
-        const totalY = input.paymentMethod === 'CREDITO' ? 148 : 108;
+        const totalY = hasCreditNote ? 148 : 108;
         page.drawText(`TOTAL:  ${formatCurrency(total)}`, { x: width - marginX - 210, y: totalY, size: 20, font: fontBold });
-        if (input.paymentMethod === 'CREDITO') {
+        if (hasCreditNote) {
           drawPromissoryFooterBlock({
             page,
             fontRegular,
@@ -1219,7 +1225,7 @@ const POSScreen: React.FC<POSProps> = ({
             branchName: input.branchName,
             customerName: input.customerName,
             amount: Number(input.creditAmount ?? total),
-            dueDate: input.dueDate ?? null,
+            dueDate: promissoryDueDate,
             topY: 135,
             leftX: marginX + 10,
             rightX: width - marginX - 10,
@@ -1286,6 +1292,23 @@ const POSScreen: React.FC<POSProps> = ({
         };
       });
 
+      let linkedCreditNote: { due_date: string | null; total: number | null; credit_days_applied: number | null } | null = null;
+      if (sale.credit_note_id) {
+        const { data: noteData } = await supabase
+          .from('credit_notes')
+          .select('due_date, total, credit_days_applied')
+          .eq('id', sale.credit_note_id)
+          .maybeSingle();
+        linkedCreditNote = noteData as typeof linkedCreditNote;
+      } else if (Number(sale.credit_amount ?? 0) > 0) {
+        const { data: noteData } = await supabase
+          .from('credit_notes')
+          .select('due_date, total, credit_days_applied')
+          .or(`inventory_transaction_id.eq.${sale.id},sale_reference.eq.${sale.id},folio.eq.${sale.id}`)
+          .maybeSingle();
+        linkedCreditNote = noteData as typeof linkedCreditNote;
+      }
+
       await generateSalePdf({
         saleId: sale.id,
         createdAt: sale.created_at,
@@ -1296,6 +1319,9 @@ const POSScreen: React.FC<POSProps> = ({
         cashierName,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
         saleNotes: sale.notes,
+        creditAmount: Number(linkedCreditNote?.total ?? sale.credit_amount ?? 0),
+        dueDate: linkedCreditNote?.due_date ?? null,
+        creditDaysApplied: linkedCreditNote?.credit_days_applied ?? null,
       });
       setFeedbackOpen(false);
     } catch (err) {
@@ -1694,7 +1720,7 @@ const POSScreen: React.FC<POSProps> = ({
         saleNotes: mergedSaleNotes || null,
         branchId: branchId ?? selectedBranchId ?? null,
         creditAmount: creditAmountSnapshot,
-        dueDate: paymentTypeSnapshot === 'CREDITO'
+        dueDate: creditAmountSnapshot > 0
           ? addDaysToDate(new Date().toISOString().slice(0, 10), saleCreditDays)
           : null,
       };
