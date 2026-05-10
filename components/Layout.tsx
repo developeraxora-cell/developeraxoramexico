@@ -94,6 +94,20 @@ const Layout: React.FC<LayoutProps> = ({
       items: [
         { id: 'diesel', label: 'Gestión de Diésel', icon: '🔥' },
       ]
+    },
+    {
+      id: 'transporteria',
+      label: 'Transportería',
+      icon: '🚚',
+      items: [
+        { id: 'transport-pos', label: 'Caja / Venta', icon: '🛒' },
+        { id: 'transport-purchases', label: 'Compras / Entradas', icon: '📥' },
+        { id: 'transport-inventory', label: 'Productos', icon: '📦' },
+        { id: 'transport-customers', label: 'Clientes / Crédito', icon: '👥' },
+        { id: 'transport-customer-alerts', label: 'Alertas clientes', icon: '🚨' },
+        { id: 'transport-reports', label: 'Reportes', icon: '📊' },
+        { id: 'transport-audit', label: 'Auditorías', icon: '📋' },
+      ]
     }
   ];
 
@@ -150,6 +164,9 @@ const Layout: React.FC<LayoutProps> = ({
     return userCanAccessTab(currentUser, item.id);
   };
 
+  const activeBranchUnit = branches.find((b) => b.id === selectedBranchId)?.businessUnit ?? 'materiales';
+  const isTransportBranch = activeBranchUnit === 'transporteria';
+
   const visibleNavigation = navigation
     .map((group) => ({
       ...group,
@@ -160,7 +177,8 @@ const Layout: React.FC<LayoutProps> = ({
         )
         .filter(canRenderItem),
     }))
-    .filter((group) => group.items.length > 0);
+    .filter((group) => group.items.length > 0)
+    .filter((group) => isTransportBranch ? group.id === 'transporteria' : group.id !== 'transporteria');
 
   const currentItem = visibleNavigation
     .flatMap((g) => g.items.flatMap((item) => (item.children ? [item, ...item.children] : [item])))

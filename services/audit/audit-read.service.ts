@@ -6,7 +6,7 @@ export interface AuditLogRow {
   user_id: string;
   user_name?: string | null;
   action_type: 'CREAR' | 'ACTUALIZAR' | 'ELIMINAR' | 'VENTA' | 'COMPRA' | 'CREATE' | 'UPDATE' | 'DELETE' | 'SALE' | 'PURCHASE';
-  module: 'materiales' | 'concretera' | 'materials';
+  module: 'materiales' | 'concretera' | 'transporteria' | 'materials';
   entity_type: 'producto' | 'cliente' | 'venta' | 'compra' | 'nota_credito' | 'abono_credito' | 'product' | 'client' | 'sale' | 'purchase';
   entity_id: string;
   description: string;
@@ -50,7 +50,7 @@ export const auditReadService = {
   },
 
   async list(params: {
-    module: 'materiales' | 'concretera' | 'materials';
+    module: 'materiales' | 'concretera' | 'transporteria' | 'materials';
     branch_id?: string | null;
     action_type?: string;
     entity_type?: string;

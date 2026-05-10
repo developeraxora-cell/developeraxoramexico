@@ -7,14 +7,14 @@ import { CreditCard, Eye, FileDown, FileImage, History, MapPin, Paperclip, Penci
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
 import { generateWalletHistoryPdf } from '../../services/pdf/walletHistoryPdf';
-import { appendPromissoryNotePage } from '../../services/pdf/promissoryNotePdf';
+import { drawPromissoryFooterBlock } from '../../services/pdf/promissoryNotePdf';
 import { getBranchFooterText } from '../../services/pdf/branchFooter';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
 import ConfirmModal from '../common/ConfirmModal';
 import WalletCreateModal from '../Wallet/WalletCreateModal';
 import WalletRechargeModal from '../Wallet/WalletRechargeModal';
 import WalletHistoryModal from '../Wallet/WalletHistoryModal';
-import { logMaterialsAudit } from '../../services/audit/audit.service';
+import { logAuditForModule } from '../../services/audit/audit.service';
 import { supabase } from '../../services/supabaseClient';
 import { customerSelectionService } from '../../services/shared/customerSelection.service';
 import { paymentEvidenceUploadService, validatePaymentEvidenceFile } from '../../services/paymentEvidenceUpload.service';
@@ -149,6 +149,10 @@ const isZeroCostSaleNote = (value: string | null | undefined) =>
   String(value ?? '').toUpperCase().includes('SALIDA SIN COSTO');
 
 const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branches, currentUser }) => {
+  const _custBranchBu = branches.find(b => b.id === selectedBranchId)?.businessUnit;
+  const auditModule = (_custBranchBu === 'transporteria' || _custBranchBu === 'concretera' ? _custBranchBu : 'materiales') as 'materiales' | 'concretera' | 'transporteria';
+  const isTransportBranch = _custBranchBu === 'transporteria';
+
   const PAGE_SIZE = 5;
   type SaleSummaryItem = {
     id: string;
@@ -589,7 +593,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         notes: walletCreateNotes.trim() || null,
       });
 
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -654,7 +658,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         notes: walletRechargeNotes.trim() || null,
       });
 
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -1312,6 +1316,8 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       });
 
       if (pageIndex === pages.length - 1) {
+        const isTransportBranchPdf = branches.find(b => b.id === input.branchId)?.businessUnit === 'transporteria';
+        const showPromissory = input.paymentMethod === 'CREDITO' && !isTransportBranchPdf;
         const payments = input.payments ?? [];
         if (payments.length > 0) {
           const paymentTableWidth = 330;
@@ -1352,7 +1358,22 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
             paymentY -= 16;
           });
         }
-        page.drawText(`TOTAL:  ${formatCurrency(total)}`, { x: width - marginX - 210, y: 108, size: 20, font: fontBold });
+        const totalY = showPromissory ? 148 : 108;
+        page.drawText(`TOTAL:  ${formatCurrency(total)}`, { x: width - marginX - 210, y: totalY, size: 20, font: fontBold });
+        if (showPromissory) {
+          drawPromissoryFooterBlock({
+            page,
+            fontRegular: fontBold,
+            fontBold,
+            branchName: input.branchName,
+            customerName: input.customerName,
+            amount: Number(input.totalAmount ?? total),
+            dueDate: input.dueDate ?? null,
+            topY: 135,
+            leftX: marginX + 10,
+            rightX: width - marginX - 10,
+          });
+        }
       }
       page.drawText(getBranchFooterText(input.branchName), {
         x: marginX + 80,
@@ -1362,21 +1383,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       });
       page.drawText(`Página ${pageIndex + 1}`, { x: width - marginX - 58, y: 64, size: 9, font: fontBold });
     });
-
-    if (input.paymentMethod === 'CREDITO') {
-      appendPromissoryNotePage({
-        pdfDoc,
-        fontRegular: fontBold,
-        fontBold,
-        watermarkImage,
-        moduleLabel: 'MATERIALES',
-        branchName: input.branchName,
-        branchId: input.branchId ?? null,
-        customerName: input.customerName,
-        amount: Number(input.totalAmount ?? total),
-        dueDate: input.dueDate ?? null,
-      });
-    }
 
     const pdfBytes = await pdfDoc.save();
     openPdfPreview(new Blob([pdfBytes], { type: 'application/pdf' }), buildSalePdfFilename(input.branchName, input.saleId));
@@ -1788,7 +1794,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         ),
       }));
 
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -1882,7 +1888,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         notes: paymentEditForm.notes || null,
       });
 
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -1936,7 +1942,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       await creditService.deletePayment(paymentToDelete.id);
 
       const note = getPaymentNote(paymentToDelete.note_id);
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -2054,7 +2060,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           notes: noteForm.notes || null,
         });
 
-        logMaterialsAudit({
+        logAuditForModule(auditModule,{
           branch_id: branchId,
           branch_name: selectedBranch?.name ?? null,
           user_id: currentUser.id,
@@ -2075,7 +2081,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
           notes: noteForm.notes || null,
         });
 
-        logMaterialsAudit({
+        logAuditForModule(auditModule,{
           branch_id: branchId,
           branch_name: selectedBranch?.name ?? null,
           user_id: currentUser.id,
@@ -2130,7 +2136,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     try {
       await creditService.deleteNote(noteToDelete.id);
 
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -2329,7 +2335,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
       await syncCustomerDocuments(customer.id);
 
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -2497,7 +2503,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
       await syncCustomerDocuments(updated.id);
 
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -2645,7 +2651,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 <th className="p-4 text-right">Límite</th>
                 <th className="p-4 text-right">Deuda actual</th>
                 <th className="p-4 text-right">Disponible</th>
-                <th className="p-4 text-right">Saldo a favor</th>
+                {!isTransportBranch && <th className="p-4 text-right">Saldo a favor</th>}
                 <th className="p-4 text-center">Accion</th>
               </tr>
             </thead>
@@ -2677,12 +2683,14 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       </span>
                     </td>
                     <td className="p-4 text-right font-black text-green-600">{formatCurrency(available)}</td>
-                    <td className="p-4 text-right">
-                      <div className="space-y-1">
-                        <p className="font-black text-violet-600">{formatCurrency(wallet?.current_balance ?? 0)}</p>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{wallet?.status ?? 'SIN SALDO'}</p>
-                      </div>
-                    </td>
+                    {!isTransportBranch && (
+                      <td className="p-4 text-right">
+                        <div className="space-y-1">
+                          <p className="font-black text-violet-600">{formatCurrency(wallet?.current_balance ?? 0)}</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{wallet?.status ?? 'SIN SALDO'}</p>
+                        </div>
+                      </td>
+                    )}
                     <td className="p-4 text-center">
                       <button
                         type="button"
@@ -2697,7 +2705,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               })}
               {!isLoading && customers.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-slate-400 text-sm">
+                  <td colSpan={isTransportBranch ? 6 : 7} className="p-6 text-center text-slate-400 text-sm">
                     No hay clientes registrados en esta sucursal.
                   </td>
                 </tr>
@@ -2741,7 +2749,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               <p className="text-[10px] font-bold uppercase tracking-widest">Sucursal {selectedBranchId || '—'}</p>
             </div>
             <form onSubmit={handleCreateCustomer} className="flex-1 overflow-y-auto p-5">
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre del cliente</label>
@@ -2791,7 +2799,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     Permitir contado si está bloqueado
                   </label>
                 </div>
-                <div>
+                {!isTransportBranch && (
               <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Documentos del cliente</p>
@@ -2834,7 +2842,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 })()}
                 {customerDocumentError && <p className="text-xs font-bold text-red-500">{customerDocumentError}</p>}
               </div>
-                </div>
+                )}
               </div>
               <div className="flex gap-2 mt-5">
                 <button
@@ -2883,7 +2891,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
             </div>
             <div className="flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6">
               <div className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className={`grid gap-4 ${isTransportBranch ? 'sm:grid-cols-3' : 'sm:grid-cols-2 xl:grid-cols-4'}`}>
                 <div className="rounded-3xl border border-slate-200 bg-white p-5">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Limite</p>
                   <p className="mt-3 text-2xl font-black text-slate-900">{formatCurrency(Number(selectedCustomer.credit_limit ?? 0))}</p>
@@ -2896,13 +2904,15 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Disponible</p>
                   <p className="mt-3 text-2xl font-black text-green-600">{formatCurrency(selectedSummary?.disponible_credito ?? 0)}</p>
                 </div>
-                <div className="rounded-3xl border border-slate-200 bg-white p-5">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo a favor</p>
-                  <p className="mt-3 text-2xl font-black text-violet-600">{formatCurrency(selectedWallet?.current_balance ?? 0)}</p>
-                </div>
+                {!isTransportBranch && (
+                  <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo a favor</p>
+                    <p className="mt-3 text-2xl font-black text-violet-600">{formatCurrency(selectedWallet?.current_balance ?? 0)}</p>
+                  </div>
+                )}
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+              <div className={`grid gap-4 ${isTransportBranch ? 'lg:grid-cols-2' : 'lg:grid-cols-2 2xl:grid-cols-3'}`}>
                 <div className="rounded-3xl border border-slate-200 bg-white p-5">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</p>
                   <div className="mt-4 space-y-3">
@@ -2947,13 +2957,15 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       </div>
                       <Eye className="h-5 w-5 shrink-0 text-slate-700" />
                     </button>
-                    <button type="button" onClick={() => { void handleOpenCashSalesHistory(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-violet-200 hover:bg-violet-50">
-                      <div>
-                        <p className="text-sm font-black text-slate-900">Ventas en efectivo</p>
-                        <p className="text-xs font-semibold text-slate-500">Consulta ventas al contado y sus comprobantes.</p>
-                      </div>
-                      <FileImage className="h-5 w-5 shrink-0 text-violet-700" />
-                    </button>
+                    {!isTransportBranch && (
+                      <button type="button" onClick={() => { void handleOpenCashSalesHistory(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-violet-200 hover:bg-violet-50">
+                        <div>
+                          <p className="text-sm font-black text-slate-900">Ventas en efectivo</p>
+                          <p className="text-xs font-semibold text-slate-500">Consulta ventas al contado y sus comprobantes.</p>
+                        </div>
+                        <FileImage className="h-5 w-5 shrink-0 text-violet-700" />
+                      </button>
+                    )}
                     <button type="button" onClick={() => { handleOpenPayment(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-green-200 hover:bg-green-50">
                       <div>
                         <p className="text-sm font-black text-slate-900">Registrar abono</p>
@@ -2964,44 +2976,46 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-white p-5">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo a favor</p>
-                  <div className="mt-4 space-y-3">
-                    {selectedWallet ? (
-                      <>
-                        <button type="button" onClick={() => { openWalletRechargeModal(selectedWallet); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-emerald-200 hover:bg-emerald-50">
+                {!isTransportBranch && (
+                  <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo a favor</p>
+                    <div className="mt-4 space-y-3">
+                      {selectedWallet ? (
+                        <>
+                          <button type="button" onClick={() => { openWalletRechargeModal(selectedWallet); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-emerald-200 hover:bg-emerald-50">
+                            <div>
+                              <p className="text-sm font-black text-slate-900">Recargar saldo</p>
+                              <p className="text-xs font-semibold text-slate-500">Aumenta el saldo disponible del cliente.</p>
+                            </div>
+                            <CreditCard className="h-5 w-5 shrink-0 text-emerald-700" />
+                          </button>
+                          <button type="button" onClick={() => { void openWalletHistoryModal(selectedWallet); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-slate-300 hover:bg-slate-100">
+                            <div>
+                              <p className="text-sm font-black text-slate-900">Historial de saldo</p>
+                              <p className="text-xs font-semibold text-slate-500">Consulta aperturas, recargas y consumos.</p>
+                            </div>
+                            <History className="h-5 w-5 shrink-0 text-slate-700" />
+                          </button>
+                          <button type="button" onClick={() => { void handleExportWalletHistoryPdf(selectedCustomer, selectedWallet); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-violet-200 hover:bg-violet-50">
+                            <div>
+                              <p className="text-sm font-black text-slate-900">Exportar historial</p>
+                              <p className="text-xs font-semibold text-slate-500">Genera un PDF con recargas y gastos del saldo.</p>
+                            </div>
+                            <FileDown className="h-5 w-5 shrink-0 text-violet-700" />
+                          </button>
+                        </>
+                      ) : (
+                        <button type="button" onClick={() => { openWalletCreateModal(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-violet-200 hover:bg-violet-50">
                           <div>
-                            <p className="text-sm font-black text-slate-900">Recargar saldo</p>
-                            <p className="text-xs font-semibold text-slate-500">Aumenta el saldo disponible del cliente.</p>
+                            <p className="text-sm font-black text-slate-900">Habilitar saldo a favor</p>
+                            <p className="text-xs font-semibold text-slate-500">Crea el saldo inicial y habilita su uso en ventas.</p>
                           </div>
-                          <CreditCard className="h-5 w-5 shrink-0 text-emerald-700" />
+                          <CreditCard className="h-5 w-5 shrink-0 text-violet-700" />
                         </button>
-                        <button type="button" onClick={() => { void openWalletHistoryModal(selectedWallet); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-slate-300 hover:bg-slate-100">
-                          <div>
-                            <p className="text-sm font-black text-slate-900">Historial de saldo</p>
-                            <p className="text-xs font-semibold text-slate-500">Consulta aperturas, recargas y consumos.</p>
-                          </div>
-                          <History className="h-5 w-5 shrink-0 text-slate-700" />
-                        </button>
-                        <button type="button" onClick={() => { void handleExportWalletHistoryPdf(selectedCustomer, selectedWallet); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-violet-200 hover:bg-violet-50">
-                          <div>
-                            <p className="text-sm font-black text-slate-900">Exportar historial</p>
-                            <p className="text-xs font-semibold text-slate-500">Genera un PDF con recargas y gastos del saldo.</p>
-                          </div>
-                          <FileDown className="h-5 w-5 shrink-0 text-violet-700" />
-                        </button>
-                      </>
-                    ) : (
-                      <button type="button" onClick={() => { openWalletCreateModal(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-violet-200 hover:bg-violet-50">
-                        <div>
-                          <p className="text-sm font-black text-slate-900">Habilitar saldo a favor</p>
-                          <p className="text-xs font-semibold text-slate-500">Crea el saldo inicial y habilita su uso en ventas.</p>
-                        </div>
-                        <CreditCard className="h-5 w-5 shrink-0 text-violet-700" />
-                      </button>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               </div>
             </div>
@@ -3018,7 +3032,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               <p className="text-[10px] font-bold uppercase tracking-widest">Sucursal {selectedBranchId || '—'}</p>
             </div>
             <form onSubmit={handleUpdateCustomer} className="flex-1 overflow-y-auto p-5">
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre del cliente</label>
@@ -3084,7 +3098,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     />
                   </div>
                 </div>
-                <div>
+                {!isTransportBranch && (
               <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Documentos del cliente</p>
@@ -3138,7 +3152,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   );
                 })()}
               </div>
-                </div>
+                )}
               </div>
               <div className="flex gap-2 mt-5">
                 <button

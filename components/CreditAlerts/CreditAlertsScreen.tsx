@@ -9,7 +9,7 @@ interface CreditAlertsScreenProps {
   selectedBranchId: string;
   branches: Branch[];
   currentUser: User;
-  module: 'materiales' | 'concretera';
+  module: 'materiales' | 'concretera' | 'transporteria';
 }
 
 interface AlertCustomer {
@@ -362,7 +362,7 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
     [alertRows]
   );
 
-  const moduleLabel = module === 'concretera' ? 'CONCRETERA' : 'MATERIALES';
+  const moduleLabel = module === 'concretera' ? 'CONCRETERA' : module === 'transporteria' ? 'TRANSPORTERÍA' : 'MATERIALES';
 
   return (
     <div className="space-y-8">

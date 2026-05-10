@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { History, PenLine, Trash2 } from 'lucide-react';
 import { Branch, User } from '../../types';
-import { logMaterialsAudit } from '../../services/audit/audit.service';
+import { logAuditForModule } from '../../services/audit/audit.service';
 import {
   catalogService,
   type Category,
@@ -29,6 +29,9 @@ interface ManualStockModalState {
 }
 
 const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, currentUser, branches }) => {
+  const _invBranchBu = branches.find(b => b.id === selectedBranchId)?.businessUnit;
+  const auditModule = (_invBranchBu === 'transporteria' || _invBranchBu === 'concretera' ? _invBranchBu : 'materiales') as 'materiales' | 'concretera' | 'transporteria';
+
   const PAGE_SIZE = 10;
   const [productsList, setProductsList] = useState<Product[]>([]);
   const [stockByProduct, setStockByProduct] = useState<Record<string, number>>({});
@@ -187,7 +190,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       } else {
         await catalogService.deactivateProduct(productToDelete.id);
       }
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId ?? '',
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -232,7 +235,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       const previousProduct = productToRemove;
       await catalogService.deleteProduct(productToRemove.id);
       closeRemoveModal();
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId ?? '',
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -296,7 +299,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     try {
       const previousPrice = Number((priceProduct as any).retail_price ?? (priceProduct as any).precio ?? 0);
       await catalogService.updateProductPrice(priceProduct.id, nextPrice);
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId ?? '',
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -377,7 +380,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
         notes: observation,
         created_by: currentUser.name || currentUser.username || null,
       });
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,

@@ -59,6 +59,30 @@ interface RoleOption {
   suggestedUnits: BusinessUnit[];
 }
 
+const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
+  materials_user: [
+    'materiales.sales.view', 'materiales.sales.create', 'materiales.sales.delete',
+    'materiales.purchases.view', 'materiales.purchases.create', 'materiales.purchases.delete',
+    'materiales.products.view',
+    'materiales.customers.view', 'materiales.customers.create', 'materiales.customers.edit', 'materiales.customers.delete',
+    'materiales.alerts.view',
+  ],
+  concrete_user: [
+    'concretera.sales.view', 'concretera.sales.create', 'concretera.sales.delete',
+    'concretera.purchases.view', 'concretera.purchases.create', 'concretera.purchases.delete',
+    'concretera.products.view',
+    'concretera.customers.view', 'concretera.customers.create', 'concretera.customers.edit', 'concretera.customers.delete',
+    'concretera.alerts.view', 'concretera.audit.view', 'concretera.reports.view',
+  ],
+  transport_user: [
+    'transporteria.sales.view', 'transporteria.sales.create', 'transporteria.sales.delete',
+    'transporteria.purchases.view', 'transporteria.purchases.create', 'transporteria.purchases.delete',
+    'transporteria.products.view',
+    'transporteria.customers.view', 'transporteria.customers.create', 'transporteria.customers.edit', 'transporteria.customers.delete',
+    'transporteria.alerts.view', 'transporteria.audit.view', 'transporteria.reports.view',
+  ],
+};
+
 const ROLE_OPTIONS: RoleOption[] = [
   {
     value: 'superadmin',
@@ -94,13 +118,22 @@ const ROLE_OPTIONS: RoleOption[] = [
     note: '🔒 Asignar ÚNICAMENTE la sucursal Jesús María',
     suggestedUnits: ['materiales', 'concretera', 'logistica', 'global'],
   },
+  {
+    value: 'transport_user',
+    label: 'Usuario Transportería',
+    color: 'bg-yellow-100 text-yellow-700',
+    modules: ['Transportería · Ventas, Compras, Productos, Clientes, Alertas, Auditorías'],
+    note: '🔒 Solo ve la sucursal de Transportería',
+    suggestedUnits: ['transporteria'],
+  },
 ];
 
 const BUSINESS_UNITS: { value: BusinessUnit; label: string }[] = [
-  { value: 'materiales', label: 'Materiales' },
-  { value: 'concretera', label: 'Concretera' },
-  { value: 'logistica',  label: 'Logística'  },
-  { value: 'global',     label: 'Global'     },
+  { value: 'materiales',   label: 'Materiales'   },
+  { value: 'concretera',   label: 'Concretera'   },
+  { value: 'logistica',    label: 'Logística'    },
+  { value: 'transporteria', label: 'Transportería' },
+  { value: 'global',       label: 'Global'       },
 ];
 
 const inputCls =
@@ -155,50 +188,99 @@ const AccessSection: React.FC<{
   branches: Branch[];
   branchIds: number[];
   businessUnits: BusinessUnit[];
+  roleKey: string;
   onToggleBranch: (id: number) => void;
   onToggleUnit: (u: BusinessUnit) => void;
-}> = ({ branches, branchIds, businessUnits, onToggleBranch, onToggleUnit }) => (
-  <>
-    <div>
-      <p className="mb-3 text-[9px] font-black uppercase tracking-widest text-slate-400">Sucursales permitidas</p>
-      <div className="grid gap-3 md:grid-cols-2">
-        {branches.filter(b => b.dbId !== undefined).map(b => {
-          const checked = branchIds.includes(Number(b.dbId));
-          return (
-            <label key={b.id} className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition ${checked ? 'border-orange-300 bg-orange-50' : 'border-slate-200 bg-slate-50 hover:bg-white'}`}>
-              <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition ${checked ? 'border-orange-600 bg-orange-600' : 'border-slate-300'}`}>
-                {checked && <span className="text-[10px] font-black text-white">✓</span>}
-              </div>
-              <input type="checkbox" className="sr-only" checked={checked} onChange={() => onToggleBranch(Number(b.dbId))} />
-              <div>
-                <p className="text-sm font-black text-slate-800">{b.name}</p>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{b.code}</p>
-              </div>
-            </label>
-          );
-        })}
-      </div>
-    </div>
+}> = ({ branches, branchIds, businessUnits, roleKey, onToggleBranch, onToggleUnit }) => {
+  const isTransportRole = roleKey === 'transport_user';
+  const isSuperAdmin    = roleKey === 'superadmin';
 
-    <div>
-      <p className="mb-3 text-[9px] font-black uppercase tracking-widest text-slate-400">Áreas de negocio</p>
-      <div className="grid gap-3 md:grid-cols-2">
-        {BUSINESS_UNITS.map(u => {
-          const checked = businessUnits.includes(u.value);
-          return (
-            <label key={u.value} className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition ${checked ? 'border-orange-300 bg-orange-50' : 'border-slate-200 bg-slate-50 hover:bg-white'}`}>
-              <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition ${checked ? 'border-orange-600 bg-orange-600' : 'border-slate-300'}`}>
-                {checked && <span className="text-[10px] font-black text-white">✓</span>}
-              </div>
-              <input type="checkbox" className="sr-only" checked={checked} onChange={() => onToggleUnit(u.value)} />
-              <span className="text-sm font-black text-slate-800">{u.label}</span>
-            </label>
-          );
-        })}
+  const isBranchDisabled = (b: Branch) => {
+    if (isSuperAdmin) return false;
+    const isTransportBranch = b.businessUnit === 'transporteria';
+    if (isTransportRole) return !isTransportBranch;
+    return isTransportBranch;
+  };
+
+  const isUnitDisabled = (u: BusinessUnit) => {
+    if (isSuperAdmin) return false;
+    if (isTransportRole) return u !== 'transporteria';
+    return u === 'transporteria';
+  };
+
+  return (
+    <>
+      <div>
+        <p className="mb-3 text-[9px] font-black uppercase tracking-widest text-slate-400">Sucursales permitidas</p>
+        <div className="grid gap-3 md:grid-cols-2">
+          {branches.filter(b => b.dbId !== undefined).map(b => {
+            const checked   = branchIds.includes(Number(b.dbId));
+            const disabled  = isBranchDisabled(b);
+            return (
+              <label
+                key={b.id}
+                className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition
+                  ${disabled ? 'cursor-not-allowed opacity-40 bg-slate-100 border-slate-200' :
+                    checked  ? 'cursor-pointer border-orange-300 bg-orange-50' :
+                               'cursor-pointer border-slate-200 bg-slate-50 hover:bg-white'}`}
+              >
+                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition
+                  ${disabled ? 'border-slate-300 bg-slate-200' :
+                    checked  ? 'border-orange-600 bg-orange-600' : 'border-slate-300'}`}>
+                  {checked && !disabled && <span className="text-[10px] font-black text-white">✓</span>}
+                </div>
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={checked}
+                  disabled={disabled}
+                  onChange={() => !disabled && onToggleBranch(Number(b.dbId))}
+                />
+                <div>
+                  <p className="text-sm font-black text-slate-800">{b.name}</p>
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{b.code}</p>
+                </div>
+              </label>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  </>
-);
+
+      <div>
+        <p className="mb-3 text-[9px] font-black uppercase tracking-widest text-slate-400">Áreas de negocio</p>
+        <div className="grid gap-3 md:grid-cols-2">
+          {BUSINESS_UNITS.map(u => {
+            const checked  = businessUnits.includes(u.value);
+            const disabled = isUnitDisabled(u.value);
+            return (
+              <label
+                key={u.value}
+                className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition
+                  ${disabled ? 'cursor-not-allowed opacity-40 bg-slate-100 border-slate-200' :
+                    checked  ? 'cursor-pointer border-orange-300 bg-orange-50' :
+                               'cursor-pointer border-slate-200 bg-slate-50 hover:bg-white'}`}
+              >
+                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition
+                  ${disabled ? 'border-slate-300 bg-slate-200' :
+                    checked  ? 'border-orange-600 bg-orange-600' : 'border-slate-300'}`}>
+                  {checked && !disabled && <span className="text-[10px] font-black text-white">✓</span>}
+                </div>
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={checked}
+                  disabled={disabled}
+                  onChange={() => !disabled && onToggleUnit(u.value)}
+                />
+                <span className="text-sm font-black text-slate-800">{u.label}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+};
 
 // ─── Modal: Create / Edit User ────────────────────────────────────────────────
 
@@ -323,6 +405,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           branches={branches}
           branchIds={form.branch_ids}
           businessUnits={form.business_units}
+          roleKey={form.role_key}
           onToggleBranch={onToggleBranch}
           onToggleUnit={onToggleUnit}
         />
@@ -642,11 +725,30 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
     setFormModal(prev => {
       if (!prev) return prev;
       const next = { ...prev.form, ...updates };
-      // Al cambiar el rol, auto-sugerir las unidades de negocio del rol
       if ('role_key' in updates && updates.role_key !== prev.form.role_key) {
-        const roleInfo = ROLE_OPTIONS.find(r => r.value === updates.role_key);
-        if (roleInfo && roleInfo.suggestedUnits.length > 0) {
-          next.business_units = [...roleInfo.suggestedUnits];
+        const roleKey  = updates.role_key ?? '';
+        const roleInfo = ROLE_OPTIONS.find(r => r.value === roleKey);
+        if (roleKey === 'superadmin') {
+          const allDbIds = branches.filter(b => b.dbId !== undefined).map(b => Number(b.dbId));
+          next.branch_ids    = allDbIds;
+          next.business_units = BUSINESS_UNITS.map(u => u.value);
+        } else if (roleKey === 'transport_user') {
+          const transportDbIds = branches
+            .filter(b => b.businessUnit === 'transporteria' && b.dbId !== undefined)
+            .map(b => Number(b.dbId));
+          next.branch_ids    = transportDbIds;
+          next.business_units = ['transporteria'];
+        } else {
+          const nonTransportIds = prev.form.branch_ids.filter(id => {
+            const br = branches.find(b => Number(b.dbId) === id);
+            return br?.businessUnit !== 'transporteria';
+          });
+          next.branch_ids = nonTransportIds;
+          if (roleInfo && roleInfo.suggestedUnits.length > 0) {
+            next.business_units = [...roleInfo.suggestedUnits];
+          } else {
+            next.business_units = prev.form.business_units.filter(u => u !== 'transporteria');
+          }
         }
       }
       return { ...prev, form: next };
@@ -731,6 +833,16 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
           form.business_units.map(business_unit => ({ user_id: userId, business_unit }))
         );
         if (buErr) throw buErr;
+      }
+
+      // Re-sync permissions based on role defaults
+      await supabase.from('app_user_permissions').delete().eq('user_id', userId);
+      const defaultPerms = ROLE_DEFAULT_PERMISSIONS[form.role_key] ?? [];
+      if (defaultPerms.length > 0) {
+        const { error: permErr } = await supabase.from('app_user_permissions').insert(
+          defaultPerms.map(permission_key => ({ user_id: userId, permission_key, is_allowed: true }))
+        );
+        if (permErr) throw permErr;
       }
 
       setFormModal(null);

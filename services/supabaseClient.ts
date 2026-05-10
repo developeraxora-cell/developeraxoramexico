@@ -153,6 +153,7 @@ export interface BranchDB {
     address: string;
     is_active: boolean;
     created_at: string;
+    business_unit?: string;
 }
 
 // ============================================================================
@@ -163,7 +164,7 @@ export const branchesService = {
     async getAll() {
         const { data, error } = await supabase
             .from('branches')
-            .select('id, code, name, address, is_active, created_at')
+            .select('id, code, name, address, is_active, created_at, business_unit')
             .order('id');
 
         if (error) throw error;

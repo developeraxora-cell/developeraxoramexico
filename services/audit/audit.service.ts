@@ -1,5 +1,5 @@
 export type AuditActionType = 'CREAR' | 'ACTUALIZAR' | 'ELIMINAR' | 'VENTA' | 'COMPRA';
-export type AuditModule = 'materiales' | 'concretera';
+export type AuditModule = 'materiales' | 'concretera' | 'transporteria';
 export type AuditEntityType = 'producto' | 'cliente' | 'venta' | 'compra' | 'nota_credito' | 'abono_credito';
 
 export interface AuditLogInput {
@@ -132,4 +132,20 @@ export const logConcreteraAudit = (
     ...input,
     module: 'concretera',
   });
+};
+
+export const logTransportAudit = (
+  input: Omit<AuditLogInput, 'module'>
+) => {
+  auditService.enqueue({
+    ...input,
+    module: 'transporteria',
+  });
+};
+
+export const logAuditForModule = (
+  module: AuditModule,
+  input: Omit<AuditLogInput, 'module'>
+) => {
+  auditService.enqueue({ ...input, module });
 };

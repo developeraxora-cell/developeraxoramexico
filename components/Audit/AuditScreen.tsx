@@ -7,7 +7,7 @@ interface AuditScreenProps {
   selectedBranchId: string;
   branches: Branch[];
   currentUser: User;
-  module?: 'materiales' | 'concretera';
+  module?: 'materiales' | 'concretera' | 'transporteria';
   title?: string;
   subtitle?: string;
 }
@@ -67,7 +67,7 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
       setError(null);
       try {
         const result = await auditReadService.list({
-          module: module as 'materiales' | 'concretera' | 'materials',
+          module: module as 'materiales' | 'concretera' | 'transporteria' | 'materials',
           branch_id: branchId,
           action_type: actionFilter || undefined,
           entity_type: entityFilter || undefined,

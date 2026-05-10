@@ -32,6 +32,14 @@ export const TAB_PERMISSIONS: Record<string, TabPermission> = {
   'concrete-production': { businessUnit: 'concretera', moduleKey: 'production' },
 
   diesel: { businessUnit: 'logistica', moduleKey: 'diesel' },
+
+  'transport-pos':              { businessUnit: 'transporteria', moduleKey: 'sales' },
+  'transport-purchases':        { businessUnit: 'transporteria', moduleKey: 'purchases' },
+  'transport-inventory':        { businessUnit: 'transporteria', moduleKey: 'products' },
+  'transport-customers':        { businessUnit: 'transporteria', moduleKey: 'customers' },
+  'transport-customer-alerts':  { businessUnit: 'transporteria', moduleKey: 'alerts' },
+  'transport-audit':            { businessUnit: 'transporteria', moduleKey: 'audit' },
+  'transport-reports':          { businessUnit: 'transporteria', moduleKey: 'reports' },
 };
 
 export const isFullAccessRole = (role?: Role | string | null) =>

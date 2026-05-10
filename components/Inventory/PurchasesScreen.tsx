@@ -16,7 +16,7 @@ import {
 } from '../../services/inventory/catalog.service';
 import { purchasesService } from '../../services/inventory/purchases.service';
 import { formatCurrency, formatNumber } from '../../services/currency';
-import { logMaterialsAudit } from '../../services/audit/audit.service';
+import { logAuditForModule } from '../../services/audit/audit.service';
 import { getBranchFooterText } from '../../services/pdf/branchFooter';
 import { resolveFactorToBase } from '../../services/uomEquivalence';
 
@@ -75,6 +75,9 @@ interface PendingUomSelection {
 }
 
 const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, currentUser, branches }) => {
+  const _purBranchBu = branches.find(b => b.id === selectedBranchId)?.businessUnit;
+  const auditModule = (_purBranchBu === 'transporteria' || _purBranchBu === 'concretera' ? _purBranchBu : 'materiales') as 'materiales' | 'concretera' | 'transporteria';
+
   const [viewMode, setViewMode] = useState<'HISTORY' | 'CREATE'>('HISTORY');
   const [barcodeInput, setBarcodeInput] = useState('');
   const [reference, setReference] = useState('');
@@ -813,7 +816,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
 
       const selectedSupplier = suppliers.find((supplier) => String(supplier.id) === String(supplierId)) ?? null;
 
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -914,7 +917,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
 
     try {
       const result = await purchasesService.clearPurchaseHistory(branchId);
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -982,7 +985,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         delete_note: justification,
       });
 
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,

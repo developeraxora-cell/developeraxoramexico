@@ -10,7 +10,7 @@ import { purchasesService } from '../../services/inventory/purchases.service';
 import { walletService, type CustomerWalletSummary } from '../../services/wallet.service';
 import { supabase } from '../../services/supabaseClient';
 import { formatCurrency, formatNumber } from '../../services/currency';
-import { logMaterialsAudit } from '../../services/audit/audit.service';
+import { logAuditForModule } from '../../services/audit/audit.service';
 import { getBranchFooterText } from '../../services/pdf/branchFooter';
 import { drawPromissoryFooterBlock } from '../../services/pdf/promissoryNotePdf';
 import FeedbackModal, { type FeedbackType } from '../common/FeedbackModal';
@@ -55,6 +55,10 @@ const POSScreen: React.FC<POSProps> = ({
   branches,
   currentUser,
 }) => {
+  const _posBranchBu = branches.find(b => b.id === selectedBranchId)?.businessUnit;
+  const auditModule = (_posBranchBu === 'transporteria' || _posBranchBu === 'concretera' ? _posBranchBu : 'materiales') as 'materiales' | 'concretera' | 'transporteria';
+  const isTransportBranch = _posBranchBu === 'transporteria';
+
   const [searchTerm, setSearchTerm] = useState('');
   const [branchProducts, setBranchProducts] = useState<CatalogProduct[]>([]);
   const [branchStock, setBranchStock] = useState<Record<string, number>>({});
@@ -790,7 +794,7 @@ const POSScreen: React.FC<POSProps> = ({
         setCustomerWallet(refreshedWallet);
       }
 
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -851,7 +855,7 @@ const POSScreen: React.FC<POSProps> = ({
         delete_note: normalizedNote,
       });
 
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -1215,9 +1219,11 @@ const POSScreen: React.FC<POSProps> = ({
       });
 
       if (pageIndex === pages.length - 1) {
-        const totalY = hasCreditNote ? 148 : 108;
+        const isTransportBranch = branches.find(b => b.id === input.branchId)?.businessUnit === 'transporteria';
+        const showPromissory = hasCreditNote && !isTransportBranch;
+        const totalY = showPromissory ? 148 : 108;
         page.drawText(`TOTAL:  ${formatCurrency(total)}`, { x: width - marginX - 210, y: totalY, size: 20, font: fontBold });
-        if (hasCreditNote) {
+        if (showPromissory) {
           drawPromissoryFooterBlock({
             page,
             fontRegular,
@@ -1318,6 +1324,7 @@ const POSScreen: React.FC<POSProps> = ({
         customerAddress: sale.direccion_cliente ?? '-',
         cashierName,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
+        branchId: selectedBranchId,
         saleNotes: sale.notes,
         creditAmount: Number(linkedCreditNote?.total ?? sale.credit_amount ?? 0),
         dueDate: linkedCreditNote?.due_date ?? null,
@@ -1480,7 +1487,7 @@ const POSScreen: React.FC<POSProps> = ({
         created_by: currentUser.name || currentUser.username || null,
       });
 
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -1763,7 +1770,7 @@ const POSScreen: React.FC<POSProps> = ({
         });
       }
 
-      logMaterialsAudit({
+      logAuditForModule(auditModule,{
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
@@ -1819,7 +1826,7 @@ const POSScreen: React.FC<POSProps> = ({
         });
       }
       if (requiresCreditCoverage && creditOverrideSnapshot && customerSnapshot) {
-        logMaterialsAudit({
+        logAuditForModule(auditModule,{
           branch_id: branchId,
           branch_name: selectedBranch?.name ?? null,
           user_id: currentUser.id,
@@ -2390,7 +2397,7 @@ const POSScreen: React.FC<POSProps> = ({
               </p>
             </div>
           )}
-          {walletEligible && (
+          {!isTransportBranch && walletEligible && (
             <div className="px-4 border-l border-slate-100 text-right animate-in fade-in">
               <p className="text-[9px] font-black text-slate-400 uppercase">Saldo a favor</p>
               <p className="text-xl font-black text-violet-600">{formatCurrency(walletAvailableBalance)}</p>
@@ -2420,13 +2427,15 @@ const POSScreen: React.FC<POSProps> = ({
               }
             }}
           />
-          <button
-            type="button"
-            onClick={openQuickStockModal}
-            className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-orange-600 hover:bg-orange-100 md:min-w-[220px]"
-          >
-            Actualizar stock producto
-          </button>
+          {!isTransportBranch && (
+            <button
+              type="button"
+              onClick={openQuickStockModal}
+              className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-orange-600 hover:bg-orange-100 md:min-w-[220px]"
+            >
+              Actualizar stock producto
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto pr-2">
@@ -2942,7 +2951,7 @@ const POSScreen: React.FC<POSProps> = ({
                         String(pendingCatalogProduct.id),
                         uom.id
                       );
-                      logMaterialsAudit({
+                      logAuditForModule(auditModule,{
                         branch_id: branchId,
                         branch_name: selectedBranch?.name ?? null,
                         user_id: currentUser.id,
@@ -3662,6 +3671,7 @@ const POSScreen: React.FC<POSProps> = ({
                   </button>
                 ))}
               </div>
+              {!isTransportBranch && (
               <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -3707,6 +3717,7 @@ const POSScreen: React.FC<POSProps> = ({
                   </div>
                 )}
               </div>
+              )}
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observación obligatoria</label>
                 <textarea
@@ -3752,7 +3763,7 @@ const POSScreen: React.FC<POSProps> = ({
               <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-300">{selectedCustomer?.name ?? 'PÚBLICO GENERAL'}</p>
             </div>
             <div className="space-y-4 p-6">
-              {walletEligible && paymentMethod !== 'SIN_COSTO' && (
+              {!isTransportBranch && walletEligible && paymentMethod !== 'SIN_COSTO' && (
                 <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>

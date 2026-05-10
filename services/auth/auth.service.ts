@@ -28,12 +28,13 @@ const normalizeRole = (value?: string | null): Role => {
   if (key === 'MATERIALS_USER' || key === 'MATERIAL_USER' || key === 'USUARIO_MATERIALES') return Role.MATERIALS_USER;
   if (key === 'CONCRETE_USER' || key === 'CONCRETERA_USER' || key === 'USUARIO_CONCRETERA') return Role.CONCRETE_USER;
   if (key === 'ALMACEN' || key === 'ALMACENISTA') return Role.ALMACEN;
+  if (key === 'TRANSPORT_USER' || key === 'USUARIO_TRANSPORTERIA') return Role.TRANSPORT_USER;
   return Role.CAJERO;
 };
 
 const normalizeBusinessUnit = (value: unknown): BusinessUnit | null => {
   const key = String(value ?? '').trim().toLowerCase();
-  if (key === 'materiales' || key === 'concretera' || key === 'logistica' || key === 'global') return key;
+  if (key === 'materiales' || key === 'concretera' || key === 'logistica' || key === 'transporteria' || key === 'global') return key;
   return null;
 };
 

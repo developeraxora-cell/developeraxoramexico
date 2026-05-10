@@ -56,6 +56,13 @@ const APP_TAB_ORDER = [
   'concrete-reports',
   'concrete-audit',
   'diesel',
+  'transport-pos',
+  'transport-purchases',
+  'transport-inventory',
+  'transport-customers',
+  'transport-customer-alerts',
+  'transport-audit',
+  'transport-reports',
 ];
 
 const PlaceholderModule: React.FC<{ title: string; subtitle: string }> = ({ title, subtitle }) => (
@@ -308,7 +315,8 @@ const App: React.FC = () => {
             name: b.name,
             address: b.address,
             isActive: b.is_active,
-            createdAt: b.created_at
+            createdAt: b.created_at,
+            businessUnit: b.business_unit ?? 'materiales',
         })) as Branch[];
         setBranches(mappedBranches);
         const nextSelected = resolveSelectedBranchId(mappedBranches, selectedBranchId);
@@ -347,9 +355,23 @@ const App: React.FC = () => {
 
   const activeBranches = useMemo(() => {
     const enabled = branches.filter(b => b.isActive !== false);
-    if (!currentUser || isFullAccessRole(currentUser.role)) return enabled;
+    if (!currentUser) return enabled;
+
+    const isTransportUser = currentUser.role === Role.TRANSPORT_USER;
+
+    // ADMIN/SUPERADMIN ven todas las sucursales
+    if (isFullAccessRole(currentUser.role)) return enabled;
+
+    // TRANSPORT_USER solo ve sucursales de transporteria
+    if (isTransportUser) {
+      return enabled.filter(b => b.businessUnit === 'transporteria');
+    }
+
+    // Otros roles: no ven sucursales de transporteria
+    const nonTransport = enabled.filter(b => b.businessUnit !== 'transporteria');
     const allowed = currentUser.allowedBranchIds ?? [];
-    return enabled.filter((branch) => allowed.includes(branch.id));
+    if (allowed.length === 0) return nonTransport;
+    return nonTransport.filter(branch => allowed.includes(branch.id));
   }, [branches, currentUser]);
 
   useEffect(() => {
@@ -471,6 +493,37 @@ const App: React.FC = () => {
       case 'diesel':
         return <DieselScreen tanks={tanks} setTanks={setTanks} vehicles={vehicles} setVehicles={setVehicles} drivers={drivers} setDrivers={setDrivers} logs={dieselLogs} setLogs={setDieselLogs} currentUser={currentUser} selectedBranchId={selectedBranchId} branches={branches} />;
       case 'reports':
+        return <ReportsScreen selectedBranchId={selectedBranchId} branches={activeBranches} />;
+      case 'transport-pos':
+        return <POSScreen products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'transport-purchases':
+        return <PurchasesScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
+      case 'transport-inventory':
+        return <InventoryScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
+      case 'transport-customers':
+        return <CustomerScreen selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'transport-customer-alerts':
+        return (
+          <CreditAlertsScreen
+            selectedBranchId={selectedBranchId}
+            branches={activeBranches}
+            currentUser={currentUser}
+            module="transporteria"
+          />
+        );
+      case 'transport-audit':
+        return (
+          <AuditScreen
+            key="audit-transporteria"
+            selectedBranchId={selectedBranchId}
+            branches={activeBranches}
+            currentUser={currentUser}
+            module="transporteria"
+            title=""
+            subtitle=""
+          />
+        );
+      case 'transport-reports':
         return <ReportsScreen selectedBranchId={selectedBranchId} branches={activeBranches} />;
       default:
         return <AccessDenied />;

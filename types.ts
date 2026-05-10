@@ -4,12 +4,13 @@ export enum Role {
   SOCIO = 'SOCIO',
   MATERIALS_USER = 'MATERIALS_USER',
   CONCRETE_USER = 'CONCRETE_USER',
+  TRANSPORT_USER = 'TRANSPORT_USER',
   ADMIN = 'ADMIN',
   CAJERO = 'CAJERO',
   ALMACEN = 'ALMACEN'
 }
 
-export type BusinessUnit = 'materiales' | 'concretera' | 'logistica' | 'global';
+export type BusinessUnit = 'materiales' | 'concretera' | 'logistica' | 'transporteria' | 'global';
 
 export interface Branch {
   id: string;
@@ -19,6 +20,7 @@ export interface Branch {
   dbId?: number;
   isActive?: boolean;
   createdAt?: string;
+  businessUnit?: string;
 }
 
 export interface User {
