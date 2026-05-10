@@ -24,6 +24,7 @@ interface PurchasesScreenProps {
   selectedBranchId: string;
   currentUser: User;
   branches: Branch[];
+  businessUnit?: string;
 }
 
 interface PurchaseCartItem {
@@ -74,9 +75,11 @@ interface PendingUomSelection {
   uoms: ProductUom[];
 }
 
-const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, currentUser, branches }) => {
+const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, currentUser, branches, businessUnit = 'materiales' }) => {
   const _purBranchBu = branches.find(b => b.id === selectedBranchId)?.businessUnit;
-  const auditModule = (_purBranchBu === 'transporteria' || _purBranchBu === 'concretera' ? _purBranchBu : 'materiales') as 'materiales' | 'concretera' | 'transporteria';
+  const isTransportBranch = businessUnit === 'transporteria';
+  const auditModule = (isTransportBranch ? 'transporteria' : _purBranchBu === 'concretera' ? 'concretera' : 'materiales') as 'materiales' | 'concretera' | 'transporteria';
+  const productBusinessUnit = businessUnit;
 
   const [viewMode, setViewMode] = useState<'HISTORY' | 'CREATE'>('HISTORY');
   const [barcodeInput, setBarcodeInput] = useState('');
@@ -164,7 +167,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       const [uomsData, categoriesData, productsData] = await Promise.all([
         catalogService.listUoms(),
         catalogService.listCategories(),
-        branchId ? catalogService.listProductsByBranch(branchId) : Promise.resolve([] as Product[]),
+        branchId ? catalogService.listProductsByBranch(branchId, productBusinessUnit) : Promise.resolve([] as Product[]),
       ]);
 
       setUoms(uomsData);
@@ -208,7 +211,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       return;
     }
     try {
-      const list = await catalogService.listSuppliersByBranch(branchId);
+      const list = await catalogService.listSuppliersByBranch(branchId, productBusinessUnit);
       setSuppliers(list);
     } catch {
       setSuppliers([]);
@@ -224,6 +227,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         .select('id, reference, notes, created_at, purchase_date, is_credit, supplier_id, suppliers ( name )')
         .eq('branch_id', branchId)
         .eq('type', 'PURCHASE')
+        .eq('business_unit', productBusinessUnit)
         .order('created_at', { ascending: false });
       if (txError) throw txError;
       const transactionIds = (transactions ?? []).map((tx) => tx.id);
@@ -798,6 +802,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     try {
       const transaction = await purchasesService.createPurchase({
         branch_id: branchId,
+        business_unit: productBusinessUnit,
         reference: reference.trim(),
         notes: notes.trim(),
         supplier_id: supplierId,
@@ -1687,6 +1692,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         isOpen={isNewProductOpen}
         barcode={pendingBarcode}
         branchId={branchId}
+        businessUnit={productBusinessUnit}
         uoms={uoms}
         categories={categories}
         isCatalogLoading={isCatalogLoading}

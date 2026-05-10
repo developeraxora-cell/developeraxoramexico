@@ -23,6 +23,7 @@ interface CustomerScreenProps {
   selectedBranchId: string;
   branches: Branch[];
   currentUser: User;
+  businessUnit?: string;
 }
 
 const defaultCustomerForm = {
@@ -148,10 +149,10 @@ const getDisplayNoteCode = (note: Pick<CreditNote, 'folio' | 'sale_reference' | 
 const isZeroCostSaleNote = (value: string | null | undefined) =>
   String(value ?? '').toUpperCase().includes('SALIDA SIN COSTO');
 
-const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branches, currentUser }) => {
+const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branches, currentUser, businessUnit = 'materiales' }) => {
   const _custBranchBu = branches.find(b => b.id === selectedBranchId)?.businessUnit;
-  const auditModule = (_custBranchBu === 'transporteria' || _custBranchBu === 'concretera' ? _custBranchBu : 'materiales') as 'materiales' | 'concretera' | 'transporteria';
-  const isTransportBranch = _custBranchBu === 'transporteria';
+  const isTransportBranch = businessUnit === 'transporteria';
+  const auditModule = (isTransportBranch ? 'transporteria' : _custBranchBu === 'concretera' ? 'concretera' : 'materiales') as 'materiales' | 'concretera' | 'transporteria';
 
   const PAGE_SIZE = 5;
   type SaleSummaryItem = {
@@ -454,7 +455,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
     try {
       const [pageData, branchWallets] = await Promise.all([
-        creditService.listCustomersByBranchPaged(branchId, currentPage, PAGE_SIZE, debouncedSearchTerm, selectedLetter),
+        creditService.listCustomersByBranchPaged(branchId, currentPage, PAGE_SIZE, debouncedSearchTerm, selectedLetter, businessUnit),
         walletService.listWalletsByBranch(branchId),
       ]);
       const summaryMap = await creditService.getSummariesForCustomers(pageData.rows);
@@ -879,7 +880,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setPaymentEvidencesByPaymentId(groupedEvidences);
 
     const creditTransactionIds = new Set(notes.map((note) => String(note.inventory_transaction_id ?? '')).filter(Boolean));
-    const cashSalesRaw = branchId ? await creditService.listCashSalesByCustomer(customer.id, branchId, customer.name) : [];
+    const cashSalesRaw = branchId ? await creditService.listCashSalesByCustomer(customer.id, branchId, customer.name, businessUnit) : [];
     const cashSales = cashSalesRaw.filter((sale) => !creditTransactionIds.has(String(sale.id)) && !isZeroCostSaleNote(sale.notes));
     setCashSaleHistory(cashSales);
     if (cashSales.length > 0) {
@@ -1316,8 +1317,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       });
 
       if (pageIndex === pages.length - 1) {
-        const isTransportBranchPdf = branches.find(b => b.id === input.branchId)?.businessUnit === 'transporteria';
-        const showPromissory = input.paymentMethod === 'CREDITO' && !isTransportBranchPdf;
+        const showPromissory = input.paymentMethod === 'CREDITO' && !isTransportBranch;
         const payments = input.payments ?? [];
         if (payments.length > 0) {
           const paymentTableWidth = 330;
@@ -2051,6 +2051,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       if (noteModalMode === 'create') {
         savedNote = await creditService.createCreditNote({
           branch_id: branchId,
+          business_unit: businessUnit,
           customer_id: selectedCustomer.id,
           folio: noteForm.folio,
           issue_date: noteForm.issue_date,
@@ -2324,6 +2325,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     try {
       const customer = await creditService.createCustomer({
         branch_id: branchId,
+        business_unit: businessUnit,
         name: formData.name,
         phone: formData.phone || null,
         address: formData.address || null,

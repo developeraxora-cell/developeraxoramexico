@@ -357,21 +357,18 @@ const App: React.FC = () => {
     const enabled = branches.filter(b => b.isActive !== false);
     if (!currentUser) return enabled;
 
-    const isTransportUser = currentUser.role === Role.TRANSPORT_USER;
-
-    // ADMIN/SUPERADMIN ven todas las sucursales
     if (isFullAccessRole(currentUser.role)) return enabled;
 
-    // TRANSPORT_USER solo ve sucursales de transporteria
-    if (isTransportUser) {
-      return enabled.filter(b => b.businessUnit === 'transporteria');
-    }
+    // TRANSPORT_USER usa allowedBranchIds normal (debe tener Degollado configurado)
+    // Otros roles no ven sucursales legacy de transporteria
+    const isTransportUser = currentUser.role === Role.TRANSPORT_USER;
+    const visibleBranches = isTransportUser
+      ? enabled
+      : enabled.filter(b => b.businessUnit !== 'transporteria');
 
-    // Otros roles: no ven sucursales de transporteria
-    const nonTransport = enabled.filter(b => b.businessUnit !== 'transporteria');
     const allowed = currentUser.allowedBranchIds ?? [];
-    if (allowed.length === 0) return nonTransport;
-    return nonTransport.filter(branch => allowed.includes(branch.id));
+    if (allowed.length === 0) return visibleBranches;
+    return visibleBranches.filter(b => allowed.includes(b.id));
   }, [branches, currentUser]);
 
   useEffect(() => {
@@ -422,14 +419,15 @@ const App: React.FC = () => {
 
     switch (activeTab) {
       case 'pos':
-        return <POSScreen products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+        return <POSScreen key="pos-materiales" products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'purchases':
-        return <PurchasesScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
+        return <PurchasesScreen key="purchases-materiales" selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
       case 'customers':
-        return <CustomerScreen selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+        return <CustomerScreen key="customers-materiales" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'customer-alerts':
         return (
           <CreditAlertsScreen
+            key="alerts-materiales"
             selectedBranchId={selectedBranchId}
             branches={activeBranches}
             currentUser={currentUser}
@@ -437,7 +435,7 @@ const App: React.FC = () => {
           />
         );
       case 'inventory':
-        return <InventoryScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
+        return <InventoryScreen key="inventory-materiales" selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
       case 'audit':
       case 'audit-internal':
         return (
@@ -493,18 +491,19 @@ const App: React.FC = () => {
       case 'diesel':
         return <DieselScreen tanks={tanks} setTanks={setTanks} vehicles={vehicles} setVehicles={setVehicles} drivers={drivers} setDrivers={setDrivers} logs={dieselLogs} setLogs={setDieselLogs} currentUser={currentUser} selectedBranchId={selectedBranchId} branches={branches} />;
       case 'reports':
-        return <ReportsScreen selectedBranchId={selectedBranchId} branches={activeBranches} />;
+        return <ReportsScreen key="reports-materiales" selectedBranchId={selectedBranchId} branches={activeBranches} />;
       case 'transport-pos':
-        return <POSScreen products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+        return <POSScreen key="pos-transporteria" products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} businessUnit="transporteria" />;
       case 'transport-purchases':
-        return <PurchasesScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
+        return <PurchasesScreen key="purchases-transporteria" selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} businessUnit="transporteria" />;
       case 'transport-inventory':
-        return <InventoryScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
+        return <InventoryScreen key="inventory-transporteria" selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} businessUnit="transporteria" />;
       case 'transport-customers':
-        return <CustomerScreen selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+        return <CustomerScreen key="customers-transporteria" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} businessUnit="transporteria" />;
       case 'transport-customer-alerts':
         return (
           <CreditAlertsScreen
+            key="alerts-transporteria"
             selectedBranchId={selectedBranchId}
             branches={activeBranches}
             currentUser={currentUser}
@@ -524,7 +523,7 @@ const App: React.FC = () => {
           />
         );
       case 'transport-reports':
-        return <ReportsScreen selectedBranchId={selectedBranchId} branches={activeBranches} />;
+        return <ReportsScreen key="reports-transporteria" selectedBranchId={selectedBranchId} branches={activeBranches} businessUnit="transporteria" />;
       default:
         return <AccessDenied />;
     }

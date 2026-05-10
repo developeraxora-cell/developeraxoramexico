@@ -30,6 +30,7 @@ export interface Supplier {
 export interface Product {
   id: string;
   branch_id: string;
+  business_unit?: string;
   sku: string | null;
   barcode: string;
   name: string;
@@ -183,14 +184,16 @@ export const catalogService = {
     return (data ?? null) as Product | null;
   },
 
-  async listProductsByBranch(branchId: string) {
-    const { data, error } = await supabase
+  async listProductsByBranch(branchId: string, businessUnit?: string) {
+    let query = supabase
       .from('products')
-      .select('id, branch_id, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, is_active, created_at, updated_at')
+      .select('id, branch_id, business_unit, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, is_active, created_at, updated_at')
       .eq('branch_id', branchId)
-      .eq('is_active', true)
-      .order('name');
+      .eq('is_active', true);
 
+    if (businessUnit) query = query.eq('business_unit', businessUnit);
+
+    const { data, error } = await query.order('name');
     if (error) throw error;
     return (data ?? []) as Product[];
   },
@@ -207,14 +210,14 @@ export const catalogService = {
     return data as Product;
   },
 
-  async listSuppliersByBranch(branchId: string) {
-    const { data, error } = await supabase
+  async listSuppliersByBranch(branchId: string, businessUnit?: string) {
+    let query = supabase
       .from('suppliers')
       .select('id, branch_id, name, phone, email, address, is_active, created_at')
       .eq('branch_id', branchId)
-      .eq('is_active', true)
-      .order('name');
-
+      .eq('is_active', true);
+    if (businessUnit) query = query.eq('business_unit', businessUnit);
+    const { data, error } = await query.order('name');
     if (error) throw error;
     return (data ?? []) as Supplier[];
   },

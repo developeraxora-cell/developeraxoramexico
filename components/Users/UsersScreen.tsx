@@ -197,9 +197,9 @@ const AccessSection: React.FC<{
 
   const isBranchDisabled = (b: Branch) => {
     if (isSuperAdmin) return false;
-    const isTransportBranch = b.businessUnit === 'transporteria';
-    if (isTransportRole) return !isTransportBranch;
-    return isTransportBranch;
+    const isDegollado = b.name?.toUpperCase().includes('DEGOLLADO') ?? false;
+    if (isTransportRole) return !isDegollado;
+    return false;
   };
 
   const isUnitDisabled = (u: BusinessUnit) => {
@@ -733,10 +733,10 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
           next.branch_ids    = allDbIds;
           next.business_units = BUSINESS_UNITS.map(u => u.value);
         } else if (roleKey === 'transport_user') {
-          const transportDbIds = branches
-            .filter(b => b.businessUnit === 'transporteria' && b.dbId !== undefined)
+          const degolladoDbIds = branches
+            .filter(b => b.name?.toUpperCase().includes('DEGOLLADO') && b.dbId !== undefined)
             .map(b => Number(b.dbId));
-          next.branch_ids    = transportDbIds;
+          next.branch_ids    = degolladoDbIds;
           next.business_units = ['transporteria'];
         } else {
           const nonTransportIds = prev.form.branch_ids.filter(id => {

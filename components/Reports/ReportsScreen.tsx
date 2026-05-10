@@ -21,6 +21,7 @@ import { Branch } from '../../types';
 interface ReportsScreenProps {
   selectedBranchId: string;
   branches: Branch[];
+  businessUnit?: string;
 }
 
 interface CategoryRow {
@@ -126,7 +127,7 @@ const downloadCsv = (filename: string, headers: string[], rows: (string | number
 
 const cardBaseClass = 'rounded-3xl border border-slate-200 bg-white shadow-sm';
 
-const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branches }) => {
+const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branches, businessUnit }) => {
   const branchId = useMemo(() => {
     const match = branches.find((b) => b.id === selectedBranchId);
     if (match?.dbId !== undefined) return String(match.dbId);
@@ -201,7 +202,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
     try {
       const [categoryRes, productRes, uomRes, stockRes] = await Promise.all([
         supabase.from('categories').select('id, name').order('name'),
-        catalogService.listProductsByBranch(branchId),
+        catalogService.listProductsByBranch(branchId, businessUnit),
         supabase.from('uoms').select('id, code, name'),
         catalogService.listStockByBranch(branchId),
       ]);
@@ -227,7 +228,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
       const message = err instanceof Error ? err.message : 'No se pudo cargar referencias.';
       setError(message);
     }
-  }, [branchId]);
+  }, [branchId, businessUnit]);
 
   useEffect(() => {
     loadReference();
@@ -242,7 +243,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
       const rangeStart = parseLocalDateInput(startDate);
       const rangeEnd = parseLocalDateInput(endDate, true);
 
-      const { data: transactions, error: txError } = await supabase
+      let txQuery = supabase
         .from('inventory_transactions')
         .select('id, type, created_at, purchase_date, reference, notes, nombre_cliente, is_credit, suppliers ( name )')
         .eq('branch_id', branchId)
@@ -250,6 +251,10 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
         .gte('created_at', rangeStart.toISOString())
         .lte('created_at', rangeEnd.toISOString())
         .order('created_at', { ascending: false });
+
+      if (businessUnit) txQuery = txQuery.eq('business_unit', businessUnit);
+
+      const { data: transactions, error: txError } = await txQuery;
 
       if (txError) throw txError;
 
@@ -480,7 +485,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
     } finally {
       setIsLoading(false);
     }
-  }, [branchId, startDate, endDate, categoryId, productId, categories, products, uomsById, stockByProduct]);
+  }, [branchId, startDate, endDate, categoryId, productId, categories, products, uomsById, stockByProduct, businessUnit]);
 
   useEffect(() => {
     loadReport();

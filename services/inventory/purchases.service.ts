@@ -13,6 +13,7 @@ export interface PurchaseCartItemInput {
 
 export interface CreatePurchaseInput {
   branch_id: string;
+  business_unit?: string;
   reference?: string | null;
   notes?: string | null;
   supplier_id?: string | null;
@@ -63,6 +64,7 @@ export interface DeletePurchaseInput {
 
 export interface CreateProductInput {
   branch_id: string;
+  business_unit?: string;
   sku: string;
   barcode: string;
   name: string;
@@ -225,7 +227,7 @@ export const purchasesService = {
     return { deleted: ids.length };
   },
   async createPurchase(input: CreatePurchaseInput) {
-    const { branch_id, reference, notes, created_by, cartItems, supplier_id, purchase_date, is_credit } = input;
+    const { branch_id, business_unit, reference, notes, created_by, cartItems, supplier_id, purchase_date, is_credit } = input;
 
     const { data: transaction, error: txError } = await supabase
       .from('inventory_transactions')
@@ -233,6 +235,7 @@ export const purchasesService = {
         {
           type: 'PURCHASE',
           branch_id,
+          business_unit: business_unit ?? 'materiales',
           reference: reference || null,
           notes: notes || null,
           supplier_id: supplier_id || null,

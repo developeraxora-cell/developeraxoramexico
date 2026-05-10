@@ -23,6 +23,7 @@ interface POSProps {
   selectedBranchId: string;
   branches: Branch[];
   currentUser: User;
+  businessUnit?: string;
 }
 
 interface SpecialPriceModalState {
@@ -54,10 +55,11 @@ const POSScreen: React.FC<POSProps> = ({
   selectedBranchId,
   branches,
   currentUser,
+  businessUnit = 'materiales',
 }) => {
   const _posBranchBu = branches.find(b => b.id === selectedBranchId)?.businessUnit;
-  const auditModule = (_posBranchBu === 'transporteria' || _posBranchBu === 'concretera' ? _posBranchBu : 'materiales') as 'materiales' | 'concretera' | 'transporteria';
-  const isTransportBranch = _posBranchBu === 'transporteria';
+  const isTransportBranch = businessUnit === 'transporteria';
+  const auditModule = (isTransportBranch ? 'transporteria' : _posBranchBu === 'concretera' ? 'concretera' : 'materiales') as 'materiales' | 'concretera' | 'transporteria';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [branchProducts, setBranchProducts] = useState<CatalogProduct[]>([]);
@@ -372,7 +374,7 @@ const POSScreen: React.FC<POSProps> = ({
       };
     }
 
-    const customers = await creditService.listCustomersByBranch(branchId);
+    const customers = await creditService.listCustomersByBranch(branchId, businessUnit);
     const matches = customers.filter((customer) => (
       customer.is_active !== false
       && customer.name.trim().toLowerCase() === normalizedCustomerName.toLowerCase()
@@ -429,7 +431,8 @@ const POSScreen: React.FC<POSProps> = ({
         .select('id', { count: 'exact', head: true })
         .eq('branch_id', branchId)
         .eq('is_deleted', false)
-        .eq('type', 'SALE');
+        .eq('type', 'SALE')
+        .eq('business_unit', businessUnit);
 
       if (salesHistoryDateFrom) {
         countQuery = countQuery.gte('created_at', `${salesHistoryDateFrom}T00:00:00`);
@@ -452,7 +455,8 @@ const POSScreen: React.FC<POSProps> = ({
         .select('id, reference, notes, direccion_cliente, created_at, nombre_cliente, created_by, payment_type, wallet_amount, cash_amount, credit_amount, wallet_id, payment_notes')
         .eq('branch_id', branchId)
         .eq('is_deleted', false)
-        .eq('type', 'SALE');
+        .eq('type', 'SALE')
+        .eq('business_unit', businessUnit);
 
       if (salesHistoryDateFrom) {
         transactionsQuery = transactionsQuery.gte('created_at', `${salesHistoryDateFrom}T00:00:00`);
@@ -775,6 +779,7 @@ const POSScreen: React.FC<POSProps> = ({
 
         await creditService.createCreditNote({
           branch_id: branchId,
+          business_unit: businessUnit,
           customer_id: customer.id,
           total: newCreditAmount,
           credit_days_applied: customer.default_credit_days,
@@ -1219,7 +1224,6 @@ const POSScreen: React.FC<POSProps> = ({
       });
 
       if (pageIndex === pages.length - 1) {
-        const isTransportBranch = branches.find(b => b.id === input.branchId)?.businessUnit === 'transporteria';
         const showPromissory = hasCreditNote && !isTransportBranch;
         const totalY = showPromissory ? 148 : 108;
         page.drawText(`TOTAL:  ${formatCurrency(total)}`, { x: width - marginX - 210, y: totalY, size: 20, font: fontBold });
@@ -1348,7 +1352,7 @@ const POSScreen: React.FC<POSProps> = ({
 
     setIsCustomerSearchLoading(true);
     try {
-      const list = await creditService.searchCustomersByBranch(branchId, term);
+      const list = await creditService.searchCustomersByBranch(branchId, term, businessUnit);
       setCreditCustomers(list);
     } catch {
       setCreditCustomers([]);
@@ -1396,7 +1400,7 @@ const POSScreen: React.FC<POSProps> = ({
     setIsCatalogLoading(true);
     try {
       const [productsList, stockRows, uomsList] = await Promise.all([
-        catalogService.listProductsByBranch(branchId),
+        catalogService.listProductsByBranch(branchId, isTransportBranch ? 'transporteria' : 'materiales'),
         catalogService.listStockByBranch(branchId),
         catalogService.listUoms(),
       ]);
@@ -1817,6 +1821,7 @@ const POSScreen: React.FC<POSProps> = ({
       if (creditAmountSnapshot > 0 && customerSnapshot) {
         await creditService.createCreditNote({
           branch_id: branchId,
+          business_unit: businessUnit,
           customer_id: customerSnapshot.id,
           total: creditAmountSnapshot,
           credit_days_applied: saleCreditDays,

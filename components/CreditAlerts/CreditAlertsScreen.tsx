@@ -57,8 +57,8 @@ interface AlertRow {
 }
 
 interface CreditApi {
-  listCustomersByBranch(branchId: string): Promise<AlertCustomer[]>;
-  listOpenNotesByBranch(branchId: string): Promise<AlertNote[]>;
+  listCustomersByBranch(branchId: string, businessUnit?: string): Promise<AlertCustomer[]>;
+  listOpenNotesByBranch(branchId: string, businessUnit?: string): Promise<AlertNote[]>;
 }
 
 const PAGE_SIZE = 10;
@@ -215,6 +215,8 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
     [module]
   );
 
+  const businessUnit = module === 'transporteria' ? 'transporteria' : undefined;
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setDebouncedSearchTerm(searchTerm.trim().toLowerCase());
@@ -240,8 +242,8 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
 
       try {
         const [customerRows, noteRows] = await Promise.all([
-          creditApi.listCustomersByBranch(branchId),
-          creditApi.listOpenNotesByBranch(branchId),
+          creditApi.listCustomersByBranch(branchId, businessUnit),
+          creditApi.listOpenNotesByBranch(branchId, businessUnit),
         ]);
 
         if (!isMounted) return;
@@ -261,7 +263,7 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
     return () => {
       isMounted = false;
     };
-  }, [branchId, creditApi]);
+  }, [branchId, creditApi, businessUnit]);
 
   const alertRows = useMemo(() => {
     const today = new Date();

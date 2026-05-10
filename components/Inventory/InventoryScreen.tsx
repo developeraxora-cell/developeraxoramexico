@@ -21,6 +21,7 @@ interface InventoryScreenProps {
   selectedBranchId: string;
   currentUser: User;
   branches: Branch[];
+  businessUnit?: string;
 }
 
 interface ManualStockModalState {
@@ -28,9 +29,11 @@ interface ManualStockModalState {
   currentStock: number;
 }
 
-const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, currentUser, branches }) => {
+const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, currentUser, branches, businessUnit = 'materiales' }) => {
   const _invBranchBu = branches.find(b => b.id === selectedBranchId)?.businessUnit;
-  const auditModule = (_invBranchBu === 'transporteria' || _invBranchBu === 'concretera' ? _invBranchBu : 'materiales') as 'materiales' | 'concretera' | 'transporteria';
+  const isTransportBranch = businessUnit === 'transporteria';
+  const auditModule = (isTransportBranch ? 'transporteria' : _invBranchBu === 'concretera' ? 'concretera' : 'materiales') as 'materiales' | 'concretera' | 'transporteria';
+  const productBusinessUnit = businessUnit;
 
   const PAGE_SIZE = 10;
   const [productsList, setProductsList] = useState<Product[]>([]);
@@ -118,7 +121,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     setError(null);
     try {
       const [productsData, uomsData, categoriesData, stockRows] = await Promise.all([
-        catalogService.listProductsByBranch(branchId),
+        catalogService.listProductsByBranch(branchId, productBusinessUnit),
         catalogService.listUoms(),
         catalogService.listCategories(),
         catalogService.listStockByBranch(branchId),
@@ -1019,6 +1022,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
         isOpen={isNewProductOpen}
         barcode={pendingBarcode}
         branchId={branchId ?? ''}
+        businessUnit={productBusinessUnit}
         uoms={uoms}
         categories={categories}
         isCatalogLoading={isLoading}
@@ -1043,6 +1047,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
         isOpen={isEditOpen}
         barcode={editProduct?.barcode ?? ''}
         branchId={branchId ?? ''}
+        businessUnit={productBusinessUnit}
         uoms={uoms}
         categories={categories}
         isCatalogLoading={isLoading}
@@ -1057,6 +1062,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
           setEditProduct(null);
           setEditUoms([]);
         }}
+        onCreated={() => { /* not used in edit mode */ }}
         onUpdated={() => {
           setIsEditOpen(false);
           setEditProduct(null);

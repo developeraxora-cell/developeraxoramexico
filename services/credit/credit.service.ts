@@ -335,35 +335,35 @@ export const creditService = {
     if (customerError) throw customerError;
   },
 
-  async listCustomersByBranch(branchId: string) {
-    const { data, error } = await supabase
+  async listCustomersByBranch(branchId: string, businessUnit?: string) {
+    let query = supabase
       .from('credit_customers')
       .select('*')
-      .eq('branch_id', branchId)
-      .order('name');
-
+      .eq('branch_id', branchId);
+    if (businessUnit) query = query.eq('business_unit', businessUnit);
+    const { data, error } = await query.order('name');
     if (error) throw error;
     return (data ?? []) as CreditCustomer[];
   },
 
-  async searchCustomersByBranch(branchId: string, searchTerm: string) {
+  async searchCustomersByBranch(branchId: string, searchTerm: string, businessUnit?: string) {
     const term = searchTerm.trim();
     if (!branchId || term.length < 3) return [] as CreditCustomer[];
 
     const escaped = term.replace(/[%_,]/g, '');
-    const { data, error } = await supabase
+    let query = supabase
       .from('credit_customers')
       .select('*')
       .eq('branch_id', branchId)
       .eq('is_active', true)
-      .or(`name.ilike.%${escaped}%,phone.ilike.%${escaped}%,address.ilike.%${escaped}%`)
-      .order('name');
-
+      .or(`name.ilike.%${escaped}%,phone.ilike.%${escaped}%,address.ilike.%${escaped}%`);
+    if (businessUnit) query = query.eq('business_unit', businessUnit);
+    const { data, error } = await query.order('name');
     if (error) throw error;
     return (data ?? []) as CreditCustomer[];
   },
 
-  async listCustomersByBranchPaged(branchId: string, page: number, pageSize: number, searchTerm = '', startsWith = '') {
+  async listCustomersByBranchPaged(branchId: string, page: number, pageSize: number, searchTerm = '', startsWith = '', businessUnit?: string) {
     const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
     const safePageSize = Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : 5;
     const from = (safePage - 1) * safePageSize;
@@ -373,6 +373,7 @@ export const creditService = {
       .from('credit_customers')
       .select('*', { count: 'exact' })
       .eq('branch_id', branchId);
+    if (businessUnit) query = query.eq('business_unit', businessUnit);
 
     const term = searchTerm.trim();
     if (term) {
@@ -397,6 +398,7 @@ export const creditService = {
 
   async createCustomer(input: {
     branch_id: string;
+    business_unit?: string;
     name: string;
     phone?: string | null;
     address?: string | null;
@@ -572,14 +574,14 @@ export const creditService = {
     return (data ?? []) as CreditNote[];
   },
 
-  async listOpenNotesByBranch(branchId: string) {
-    const { data, error } = await supabase
+  async listOpenNotesByBranch(branchId: string, businessUnit?: string) {
+    let query = supabase
       .from('credit_notes')
       .select('*')
       .eq('branch_id', branchId)
-      .gt('balance', 0)
-      .order('due_date', { ascending: true });
-
+      .gt('balance', 0);
+    if (businessUnit) query = query.eq('business_unit', businessUnit);
+    const { data, error } = await query.order('due_date', { ascending: true });
     if (error) throw error;
     return (data ?? []) as CreditNote[];
   },
@@ -611,15 +613,15 @@ export const creditService = {
   },
 
 
-  async listCashSalesByCustomer(_customerId: string, branchId: string, customerName?: string | null) {
-    const { data, error } = await supabase
+  async listCashSalesByCustomer(_customerId: string, branchId: string, customerName?: string | null, businessUnit?: string) {
+    let query = supabase
       .from('inventory_transactions')
       .select('id, branch_id, type, payment_type, reference, notes, nombre_cliente, direccion_cliente, created_by, created_at')
       .eq('branch_id', branchId)
       .eq('type', 'SALE')
-      .eq('is_deleted', false)
-      .order('created_at', { ascending: false })
-      .limit(500);
+      .eq('is_deleted', false);
+    if (businessUnit) query = query.eq('business_unit', businessUnit);
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(500);
 
     if (error) throw error;
 
@@ -850,6 +852,7 @@ export const creditService = {
 
   async createCreditNote(input: {
     branch_id: string;
+    business_unit?: string;
     customer_id: string;
     total: number;
     credit_days_applied: number;
@@ -873,6 +876,7 @@ export const creditService = {
 
     const payload = {
       branch_id: input.branch_id,
+      business_unit: input.business_unit ?? 'materiales',
       customer_id: input.customer_id,
       folio,
       sale_reference: input.sale_reference?.trim() || null,

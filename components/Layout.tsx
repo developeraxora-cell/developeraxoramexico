@@ -164,8 +164,8 @@ const Layout: React.FC<LayoutProps> = ({
     return userCanAccessTab(currentUser, item.id);
   };
 
-  const activeBranchUnit = branches.find((b) => b.id === selectedBranchId)?.businessUnit ?? 'materiales';
-  const isTransportBranch = activeBranchUnit === 'transporteria';
+  const activeBranchName = branches.find(b => b.id === selectedBranchId)?.name?.toUpperCase() ?? '';
+  const isDegolladoBranch = activeBranchName.includes('DEGOLLADO');
 
   const visibleNavigation = navigation
     .map((group) => ({
@@ -178,7 +178,7 @@ const Layout: React.FC<LayoutProps> = ({
         .filter(canRenderItem),
     }))
     .filter((group) => group.items.length > 0)
-    .filter((group) => isTransportBranch ? group.id === 'transporteria' : group.id !== 'transporteria');
+    .filter((group) => group.id === 'transporteria' ? isDegolladoBranch : true);
 
   const currentItem = visibleNavigation
     .flatMap((g) => g.items.flatMap((item) => (item.children ? [item, ...item.children] : [item])))

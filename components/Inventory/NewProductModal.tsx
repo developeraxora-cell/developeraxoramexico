@@ -29,6 +29,7 @@ interface NewProductModalProps {
   isOpen: boolean;
   barcode: string;
   branchId: string;
+  businessUnit?: string;
   uoms: Uom[];
   categories: Category[];
   isCatalogLoading?: boolean;
@@ -52,6 +53,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   isOpen,
   barcode,
   branchId,
+  businessUnit,
   uoms,
   categories,
   isCatalogLoading = false,
@@ -408,6 +410,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       const resolvedBarcode = manualBarcode || buildAutoBarcode();
       const payload = {
         branch_id: branchId,
+        business_unit: businessUnit ?? 'materiales',
         sku: context.resolvedSku,
         barcode: resolvedBarcode,
         name: name.trim(),
