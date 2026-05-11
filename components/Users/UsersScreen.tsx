@@ -80,6 +80,7 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'transporteria.products.view',
     'transporteria.customers.view', 'transporteria.customers.create', 'transporteria.customers.edit', 'transporteria.customers.delete',
     'transporteria.alerts.view', 'transporteria.audit.view', 'transporteria.reports.view',
+    'logistica.diesel.view',
   ],
 };
 
@@ -122,9 +123,9 @@ const ROLE_OPTIONS: RoleOption[] = [
     value: 'transport_user',
     label: 'Usuario Transportería',
     color: 'bg-yellow-100 text-yellow-700',
-    modules: ['Transportería · Ventas, Compras, Productos, Clientes, Alertas, Auditorías'],
-    note: '🔒 Solo ve la sucursal de Transportería',
-    suggestedUnits: ['transporteria'],
+    modules: ['Transportes · Ventas, Compras, Productos, Clientes, Alertas, Auditorías', 'Logística · Gestión de Diésel'],
+    note: '🔒 Solo ve la sucursal de Degollado',
+    suggestedUnits: ['transporteria', 'logistica'],
   },
 ];
 
@@ -204,7 +205,7 @@ const AccessSection: React.FC<{
 
   const isUnitDisabled = (u: BusinessUnit) => {
     if (isSuperAdmin) return false;
-    if (isTransportRole) return u !== 'transporteria';
+    if (isTransportRole) return u !== 'transporteria' && u !== 'logistica';
     return u === 'transporteria';
   };
 
@@ -737,7 +738,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
             .filter(b => b.name?.toUpperCase().includes('DEGOLLADO') && b.dbId !== undefined)
             .map(b => Number(b.dbId));
           next.branch_ids    = degolladoDbIds;
-          next.business_units = ['transporteria'];
+          next.business_units = ['transporteria', 'logistica'];
         } else {
           const nonTransportIds = prev.form.branch_ids.filter(id => {
             const br = branches.find(b => Number(b.dbId) === id);

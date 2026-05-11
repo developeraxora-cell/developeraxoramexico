@@ -2653,7 +2653,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 <th className="p-4 text-right">Límite</th>
                 <th className="p-4 text-right">Deuda actual</th>
                 <th className="p-4 text-right">Disponible</th>
-                {!isTransportBranch && <th className="p-4 text-right">Saldo a favor</th>}
+                <th className="p-4 text-right">Saldo a favor</th>
                 <th className="p-4 text-center">Accion</th>
               </tr>
             </thead>
@@ -2685,14 +2685,12 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       </span>
                     </td>
                     <td className="p-4 text-right font-black text-green-600">{formatCurrency(available)}</td>
-                    {!isTransportBranch && (
-                      <td className="p-4 text-right">
-                        <div className="space-y-1">
-                          <p className="font-black text-violet-600">{formatCurrency(wallet?.current_balance ?? 0)}</p>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{wallet?.status ?? 'SIN SALDO'}</p>
-                        </div>
-                      </td>
-                    )}
+                    <td className="p-4 text-right">
+                      <div className="space-y-1">
+                        <p className="font-black text-violet-600">{formatCurrency(wallet?.current_balance ?? 0)}</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{wallet?.status ?? 'SIN SALDO'}</p>
+                      </div>
+                    </td>
                     <td className="p-4 text-center">
                       <button
                         type="button"
@@ -2707,7 +2705,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               })}
               {!isLoading && customers.length === 0 && (
                 <tr>
-                  <td colSpan={isTransportBranch ? 6 : 7} className="p-6 text-center text-slate-400 text-sm">
+                  <td colSpan={7} className="p-6 text-center text-slate-400 text-sm">
                     No hay clientes registrados en esta sucursal.
                   </td>
                 </tr>
@@ -2801,7 +2799,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     Permitir contado si está bloqueado
                   </label>
                 </div>
-                {!isTransportBranch && (
               <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Documentos del cliente</p>
@@ -2844,7 +2841,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 })()}
                 {customerDocumentError && <p className="text-xs font-bold text-red-500">{customerDocumentError}</p>}
               </div>
-                )}
               </div>
               <div className="flex gap-2 mt-5">
                 <button
@@ -2893,7 +2889,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
             </div>
             <div className="flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6">
               <div className="space-y-6">
-              <div className={`grid gap-4 ${isTransportBranch ? 'sm:grid-cols-3' : 'sm:grid-cols-2 xl:grid-cols-4'}`}>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-3xl border border-slate-200 bg-white p-5">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Limite</p>
                   <p className="mt-3 text-2xl font-black text-slate-900">{formatCurrency(Number(selectedCustomer.credit_limit ?? 0))}</p>
@@ -2906,15 +2902,13 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Disponible</p>
                   <p className="mt-3 text-2xl font-black text-green-600">{formatCurrency(selectedSummary?.disponible_credito ?? 0)}</p>
                 </div>
-                {!isTransportBranch && (
-                  <div className="rounded-3xl border border-slate-200 bg-white p-5">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo a favor</p>
-                    <p className="mt-3 text-2xl font-black text-violet-600">{formatCurrency(selectedWallet?.current_balance ?? 0)}</p>
-                  </div>
-                )}
+                <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo a favor</p>
+                  <p className="mt-3 text-2xl font-black text-violet-600">{formatCurrency(selectedWallet?.current_balance ?? 0)}</p>
+                </div>
               </div>
 
-              <div className={`grid gap-4 ${isTransportBranch ? 'lg:grid-cols-2' : 'lg:grid-cols-2 2xl:grid-cols-3'}`}>
+              <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
                 <div className="rounded-3xl border border-slate-200 bg-white p-5">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</p>
                   <div className="mt-4 space-y-3">
@@ -2959,15 +2953,13 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       </div>
                       <Eye className="h-5 w-5 shrink-0 text-slate-700" />
                     </button>
-                    {!isTransportBranch && (
-                      <button type="button" onClick={() => { void handleOpenCashSalesHistory(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-violet-200 hover:bg-violet-50">
-                        <div>
-                          <p className="text-sm font-black text-slate-900">Ventas en efectivo</p>
-                          <p className="text-xs font-semibold text-slate-500">Consulta ventas al contado y sus comprobantes.</p>
-                        </div>
-                        <FileImage className="h-5 w-5 shrink-0 text-violet-700" />
-                      </button>
-                    )}
+                    <button type="button" onClick={() => { void handleOpenCashSalesHistory(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-violet-200 hover:bg-violet-50">
+                      <div>
+                        <p className="text-sm font-black text-slate-900">Ventas en efectivo</p>
+                        <p className="text-xs font-semibold text-slate-500">Consulta ventas al contado y sus comprobantes.</p>
+                      </div>
+                      <FileImage className="h-5 w-5 shrink-0 text-violet-700" />
+                    </button>
                     <button type="button" onClick={() => { handleOpenPayment(selectedCustomer); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-green-200 hover:bg-green-50">
                       <div>
                         <p className="text-sm font-black text-slate-900">Registrar abono</p>
@@ -2978,10 +2970,9 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   </div>
                 </div>
 
-                {!isTransportBranch && (
-                  <div className="rounded-3xl border border-slate-200 bg-white p-5">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo a favor</p>
-                    <div className="mt-4 space-y-3">
+                <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo a favor</p>
+                  <div className="mt-4 space-y-3">
                       {selectedWallet ? (
                         <>
                           <button type="button" onClick={() => { openWalletRechargeModal(selectedWallet); }} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left hover:border-emerald-200 hover:bg-emerald-50">
@@ -3017,7 +3008,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       )}
                     </div>
                   </div>
-                )}
               </div>
               </div>
             </div>
@@ -3100,7 +3090,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     />
                   </div>
                 </div>
-                {!isTransportBranch && (
               <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Documentos del cliente</p>
@@ -3154,7 +3143,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   );
                 })()}
               </div>
-                )}
               </div>
               <div className="flex gap-2 mt-5">
                 <button

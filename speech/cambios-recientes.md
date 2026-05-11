@@ -343,3 +343,202 @@ Se mejoró el modal `Evidencias del Abono` para permitir adjuntar nuevos archivo
 
 - [components/Customers/CustomerScreen.tsx](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/components/Customers/CustomerScreen.tsx)
 - [components/Concrete/ConcreteCustomersScreen.tsx](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/components/Concrete/ConcreteCustomersScreen.tsx)
+
+---
+
+## 16. Módulo de Transportería (TRANSPORTES)
+
+Se integró un tercer módulo de negocio: **Transportería**, para la sucursal **Degollado**. Incluye nuevos roles, navegación condicional, corrección de datos segregados y paridad funcional con Materiales.
+
+> **Fecha de implementación:** 2026-05-10 / 2026-05-11
+
+---
+
+### 16.1 Nuevo rol: `transport_user`
+
+Se agregó `Role.TRANSPORT_USER` al sistema. Comportamiento:
+
+- Solo puede ver y operar en la sucursal **Degollado** (filtro por nombre `DEGOLLADO`)
+- Al crear un usuario con este rol, la sucursal Degollado se **auto-selecciona**
+- Unidades de negocio por defecto: `transporteria` + `logistica`
+- Permisos por defecto incluyen `logistica.diesel.view`
+- En `isUnitDisabled`: solo permite marcar `transporteria` y `logistica`
+- En `isBranchDisabled`: solo permite marcar sucursales con nombre `DEGOLLADO`
+
+**Archivo:** `components/Users/UsersScreen.tsx`
+
+---
+
+### 16.2 Navegación sidebar condicional
+
+**Archivo:** `components/Layout.tsx`
+
+#### Cambios aplicados:
+
+| Cambio | Detalle |
+|--------|---------|
+| Icono Concretera | Reemplazado emoji 🧱 por SVG `BrickIcon` personalizado (ladrillo naranja 3D) |
+| Nombre Transportería | Renombrado a `TRANSPORTES` en sidebar |
+| Tipo de icono | `NavItem.icon` y `NavGroup.icon` ahora aceptan `React.ReactNode` (soporta SVG) |
+| Visibilidad transporteria | El grupo TRANSPORTES solo se muestra cuando la sucursal activa contiene `"DEGOLLADO"` en el nombre (`isDegolladoBranch`) |
+| Logística para transport_user | Para `Role.TRANSPORT_USER`, los ítems de Logística (Diésel) se insertan dentro del grupo TRANSPORTES, después del primer ítem (Caja/Venta). El grupo Logística original se oculta. |
+
+**Patrón de detección de sucursal:**
+```ts
+const isDegolladoBranch = activeBranchName.includes('DEGOLLADO');
+```
+
+**Patrón de merge de logística para transport_user:**
+```ts
+if (isTransportUser) {
+  const logisticaGroup = built.find((g) => g.id === 'logistica');
+  const logisticaItems = logisticaGroup?.items ?? [];
+  return built
+    .filter((g) => g.id !== 'logistica')
+    .map((g) => {
+      if (g.id !== 'transporteria') return g;
+      const [first, ...rest] = g.items;
+      return { ...g, items: [first, ...logisticaItems, ...rest] };
+    });
+}
+```
+
+---
+
+### 16.3 Separación de datos por módulo (bug de estado estale)
+
+Al cambiar entre tabs de Materiales y Transportería, React reutilizaba la misma instancia del componente (misma clase), dejando datos stale visibles.
+
+**Solución:** `key` props únicos por contexto en `App.tsx`:
+
+| Componente | key materiales | key transporteria |
+|-----------|----------------|-------------------|
+| POSScreen | `pos-materiales` | `pos-transporteria` |
+| PurchasesScreen | `purchases-materiales` | `purchases-transporteria` |
+| CustomerScreen | `customers-materiales` | `customers-transporteria` |
+| InventoryScreen | `inventory-materiales` | `inventory-transporteria` |
+| CreditAlertsScreen | `alerts-materiales` | `alerts-transporteria` |
+| ReportsScreen | `reports-materiales` | `reports-transporteria` |
+
+Cada `key` distinto fuerza remount completo → estado fresco → datos correctos.
+
+---
+
+### 16.4 Filtros de datos por `businessUnit`
+
+Los módulos que comparte Materiales y Transportería ahora filtran por `businessUnit` prop:
+
+#### CreditAlertsScreen
+- Recibe prop `businessUnit?: string`
+- Ambas llamadas al servicio pasan `businessUnit` para filtrar clientes y notas
+
+#### ReportsScreen
+- Recibe prop `businessUnit?: string`
+- `listProductsByBranch` usa `businessUnit` para catálogo
+- Query de `inventory_transactions` filtra `.eq('business_unit', businessUnit)` cuando está definido
+
+#### POSScreen — Historial de Ventas
+- Query de `inventory_transactions` filtra `.eq('business_unit', businessUnit)` en `countQuery` y `transactionsQuery`
+- `businessUnit` agregado al deps array de `loadSalesHistory`
+
+---
+
+### 16.5 Funcionalidades habilitadas para Transportería
+
+Estas funciones estaban ocultas con `!isTransportBranch` y se habilitaron para transporteria:
+
+| Funcionalidad | Componente |
+|--------------|------------|
+| KPI Saldo a favor | POSScreen |
+| Sección editar tipo de pago con saldo a favor | POSScreen |
+| Confirmar venta con saldo a favor | POSScreen |
+| Botón "Actualizar stock producto" | POSScreen |
+| Grid KPI Saldo a favor | CustomerScreen |
+| Sección gestión saldo a favor | CustomerScreen |
+| Columna "Saldo a favor" en tabla clientes | CustomerScreen |
+| Upload documentos al crear/editar cliente | CustomerScreen |
+| Botón "Ventas en efectivo" | CustomerScreen |
+
+---
+
+### 16.6 Fix crítico: `business_unit` no se guardaba en ventas
+
+**Problema:** `createSale` en `services/inventory/purchases.service.ts` nunca incluía `business_unit` en el INSERT. PostgreSQL aplicaba el DEFAULT `'materiales'` a todas las ventas, incluyendo las de transporteria.
+
+**Consecuencia:** Ventas hechas en transporteria tenían `business_unit = 'materiales'` → no aparecían en el Historial de Ventas de transporteria (que filtra `.eq('business_unit', 'transporteria')`).
+
+**Fix aplicado:**
+
+```ts
+// services/inventory/purchases.service.ts
+
+// 1. Agregado a CreateSaleInput interface:
+business_unit?: string | null;
+
+// 2. Agregado al INSERT:
+business_unit: business_unit ?? 'materiales',
+```
+
+```ts
+// components/POS/POSScreen.tsx
+
+// 3. Ahora se pasa al llamar createSale:
+const transaction = await purchasesService.createSale({
+  branch_id: branchId,
+  business_unit: businessUnit,   // ← nuevo
+  ...
+});
+```
+
+**Ventas históricas mal clasificadas:** Para corregir solo las ventas específicas afectadas:
+
+```sql
+UPDATE inventory_transactions
+SET business_unit = 'transporteria'
+WHERE id IN (1682, 1683, 1684);
+-- Ajustar IDs según ventas reales
+```
+
+---
+
+### 16.7 Fix: Edge Function audit-log rechazaba logs de transporteria
+
+**Archivo:** `supabase/functions/audit-log/index.ts`
+
+**Problema:** El tipo `AuditModule` solo aceptaba `'materiales' | 'concretera'`. `normalizeModule()` retornaba `null` para `'transporteria'` → la Edge Function lanzaba `"Invalid module value"` → todos los logs de auditoría de transportería fallaban silenciosamente.
+
+**Fix:**
+
+```ts
+// Antes:
+type AuditModule = 'materiales' | 'concretera';
+
+// Después:
+type AuditModule = 'materiales' | 'concretera' | 'transporteria';
+```
+
+```ts
+// Agregado en normalizeModule():
+if (normalized === 'transporteria') return 'transporteria' as AuditModule;
+
+// Agregado en moduleAliases:
+transporteria: ['transporteria'],
+```
+
+> ✅ **DESPLEGADA** manualmente vía Supabase Dashboard el 2026-05-11.
+
+---
+
+### 16.8 Resumen de archivos modificados en este ciclo
+
+| Archivo | Tipo de cambio |
+|---------|---------------|
+| `components/Layout.tsx` | BrickIcon SVG, rename TRANSPORTES, isDegolladoBranch, TRANSPORT_USER nav merge |
+| `components/Users/UsersScreen.tsx` | Rol transport_user: branch auto-select, permisos, unidades |
+| `components/POS/POSScreen.tsx` | Saldo a favor habilitado, filtro business_unit historial, fix createSale |
+| `components/Customers/CustomerScreen.tsx` | Saldo a favor, documentos, ventas en efectivo habilitados |
+| `components/CreditAlerts/CreditAlertsScreen.tsx` | Filtro businessUnit para transporteria |
+| `components/Reports/ReportsScreen.tsx` | Filtro businessUnit para transporteria |
+| `services/inventory/purchases.service.ts` | CreateSaleInput + business_unit en INSERT |
+| `supabase/functions/audit-log/index.ts` | Soporte transporteria (pendiente redeploy) |
+| `App.tsx` | key props por contexto (remount), businessUnit en props de screens transporteria |

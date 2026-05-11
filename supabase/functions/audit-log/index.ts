@@ -1,7 +1,7 @@
 import { MongoClient } from 'npm:mongodb@6.18.0';
 
 type AuditActionType = 'CREAR' | 'ACTUALIZAR' | 'ELIMINAR' | 'VENTA' | 'COMPRA';
-type AuditModule = 'materiales' | 'concretera';
+type AuditModule = 'materiales' | 'concretera' | 'transporteria';
 type AuditEntityType = 'producto' | 'cliente' | 'venta' | 'compra';
 
 interface AuditLogPayload {
@@ -40,6 +40,7 @@ const moduleAliases: Record<string, string[]> = {
   materiales: ['materiales', 'materials'],
   materials: ['materiales', 'materials'],
   concretera: ['concretera'],
+  transporteria: ['transporteria'],
 };
 
 const actionAliases: Record<string, string[]> = {
@@ -86,6 +87,7 @@ const normalizeModule = (value: string | null | undefined) => {
   if (!normalized) return null;
   if (normalized === 'materiales' || normalized === 'materials') return 'materiales' as AuditModule;
   if (normalized === 'concretera') return 'concretera' as AuditModule;
+  if (normalized === 'transporteria') return 'transporteria' as AuditModule;
   return null;
 };
 

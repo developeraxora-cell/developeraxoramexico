@@ -546,7 +546,7 @@ const POSScreen: React.FC<POSProps> = ({
     } finally {
       setIsSalesHistoryLoading(false);
     }
-  }, [branchId, salesHistoryDateFrom, salesHistoryDateTo, salesHistoryPage, salesHistorySaleNumber]);
+  }, [branchId, businessUnit, salesHistoryDateFrom, salesHistoryDateTo, salesHistoryPage, salesHistorySaleNumber]);
 
   const openSaleDetail = async (sale: { id: string; created_at: string; nombre_cliente: string | null }) => {
     setSaleDetail(sale);
@@ -1739,6 +1739,7 @@ const POSScreen: React.FC<POSProps> = ({
       showFeedback('loading', 'Procesando pago', 'Registrando venta...');
       const transaction = await purchasesService.createSale({
         branch_id: branchId,
+        business_unit: businessUnit,
         reference: null,
         notes: mergedSaleNotes || null,
         created_by: currentUser.name || currentUser.username || currentUser.id,
@@ -2402,7 +2403,7 @@ const POSScreen: React.FC<POSProps> = ({
               </p>
             </div>
           )}
-          {!isTransportBranch && walletEligible && (
+          {walletEligible && (
             <div className="px-4 border-l border-slate-100 text-right animate-in fade-in">
               <p className="text-[9px] font-black text-slate-400 uppercase">Saldo a favor</p>
               <p className="text-xl font-black text-violet-600">{formatCurrency(walletAvailableBalance)}</p>
@@ -2432,15 +2433,13 @@ const POSScreen: React.FC<POSProps> = ({
               }
             }}
           />
-          {!isTransportBranch && (
-            <button
-              type="button"
-              onClick={openQuickStockModal}
-              className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-orange-600 hover:bg-orange-100 md:min-w-[220px]"
-            >
-              Actualizar stock producto
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={openQuickStockModal}
+            className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-orange-600 hover:bg-orange-100 md:min-w-[220px]"
+          >
+            Actualizar stock producto
+          </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto pr-2">
@@ -3676,7 +3675,6 @@ const POSScreen: React.FC<POSProps> = ({
                   </button>
                 ))}
               </div>
-              {!isTransportBranch && (
               <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -3722,7 +3720,6 @@ const POSScreen: React.FC<POSProps> = ({
                   </div>
                 )}
               </div>
-              )}
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observación obligatoria</label>
                 <textarea
@@ -3768,7 +3765,7 @@ const POSScreen: React.FC<POSProps> = ({
               <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-300">{selectedCustomer?.name ?? 'PÚBLICO GENERAL'}</p>
             </div>
             <div className="space-y-4 p-6">
-              {!isTransportBranch && walletEligible && paymentMethod !== 'SIN_COSTO' && (
+              {walletEligible && paymentMethod !== 'SIN_COSTO' && (
                 <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>

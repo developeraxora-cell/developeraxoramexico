@@ -36,6 +36,7 @@ export interface SaleCartItemInput {
 
 export interface CreateSaleInput {
   branch_id: string;
+  business_unit?: string | null;
   reference?: string | null;
   notes?: string | null;
   created_by: string;
@@ -370,6 +371,7 @@ export const purchasesService = {
   async createSale(input: CreateSaleInput) {
     const {
       branch_id,
+      business_unit,
       reference,
       notes,
       created_by,
@@ -390,6 +392,7 @@ export const purchasesService = {
         {
           type: 'SALE',
           branch_id,
+          business_unit: business_unit ?? 'materiales',
           reference: reference || null,
           notes: notes || null,
           created_by,

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { User, Branch } from '../types';
+import { User, Branch, Role } from '../types';
 import { isFullAccessRole, userCanAccessTab } from '../services/auth/permissions';
 
 interface LayoutProps {
@@ -18,14 +18,14 @@ interface LayoutProps {
 interface NavItem {
   id: string;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
   children?: NavItem[];
 }
 
 interface NavGroup {
   id: string;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
   items: NavItem[];
 }
 
@@ -34,6 +34,25 @@ interface CollapsedFlyoutState {
   top: number;
   left: number;
 }
+
+const BrickIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 100" width="22" height="22">
+    <polygon points="95,40 120,20 120,62 95,82" fill="#A84E20"/>
+    <polygon points="10,40 95,40 120,20 35,20" fill="#E8935A"/>
+    <polygon points="10,40 95,40 95,82 10,82" fill="#C96A30"/>
+    <defs>
+      <clipPath id="brickTop">
+        <polygon points="10,40 95,40 120,20 35,20"/>
+      </clipPath>
+    </defs>
+    <ellipse cx="44" cy="30" rx="11" ry="7" fill="#7A3010" clipPath="url(#brickTop)"/>
+    <ellipse cx="44" cy="30" rx="8" ry="5" fill="#3A1505" clipPath="url(#brickTop)"/>
+    <ellipse cx="67" cy="30" rx="11" ry="7" fill="#7A3010" clipPath="url(#brickTop)"/>
+    <ellipse cx="67" cy="30" rx="8" ry="5" fill="#3A1505" clipPath="url(#brickTop)"/>
+    <ellipse cx="90" cy="30" rx="11" ry="7" fill="#7A3010" clipPath="url(#brickTop)"/>
+    <ellipse cx="90" cy="30" rx="8" ry="5" fill="#3A1505" clipPath="url(#brickTop)"/>
+  </svg>
+);
 
 const Layout: React.FC<LayoutProps> = ({
   children, activeTab, setActiveTab, currentUser, onLogout,
@@ -76,7 +95,7 @@ const Layout: React.FC<LayoutProps> = ({
     {
       id: 'concretera',
       label: 'Concretera',
-      icon: '🚛',
+      icon: <BrickIcon />,
       items: [
         { id: 'concrete-pos', label: 'Caja / Venta', icon: '🛒' },
         { id: 'concrete-purchases', label: 'Compras / Entradas', icon: '📥' },
@@ -97,7 +116,7 @@ const Layout: React.FC<LayoutProps> = ({
     },
     {
       id: 'transporteria',
-      label: 'Transportería',
+      label: 'Transportes',
       icon: '🚚',
       items: [
         { id: 'transport-pos', label: 'Caja / Venta', icon: '🛒' },
@@ -167,18 +186,35 @@ const Layout: React.FC<LayoutProps> = ({
   const activeBranchName = branches.find(b => b.id === selectedBranchId)?.name?.toUpperCase() ?? '';
   const isDegolladoBranch = activeBranchName.includes('DEGOLLADO');
 
-  const visibleNavigation = navigation
-    .map((group) => ({
-      ...group,
-      items: group.items
-        .map((item) => item.children
-          ? { ...item, children: item.children.filter((child) => userCanAccessTab(currentUser, child.id)) }
-          : item
-        )
-        .filter(canRenderItem),
-    }))
-    .filter((group) => group.items.length > 0)
-    .filter((group) => group.id === 'transporteria' ? isDegolladoBranch : true);
+  const isTransportUser = currentUser?.role === Role.TRANSPORT_USER;
+
+  const visibleNavigation = (() => {
+    const built = navigation
+      .map((group) => ({
+        ...group,
+        items: group.items
+          .map((item) => item.children
+            ? { ...item, children: item.children.filter((child) => userCanAccessTab(currentUser, child.id)) }
+            : item
+          )
+          .filter(canRenderItem),
+      }))
+      .filter((group) => group.items.length > 0)
+      .filter((group) => group.id === 'transporteria' ? isDegolladoBranch : true);
+
+    if (!isTransportUser) return built;
+
+    const logisticaGroup = built.find((g) => g.id === 'logistica');
+    const logisticaItems = logisticaGroup?.items ?? [];
+
+    return built
+      .filter((g) => g.id !== 'logistica')
+      .map((g) => {
+        if (g.id !== 'transporteria') return g;
+        const [first, ...rest] = g.items;
+        return { ...g, items: [first, ...logisticaItems, ...rest] };
+      });
+  })();
 
   const currentItem = visibleNavigation
     .flatMap((g) => g.items.flatMap((item) => (item.children ? [item, ...item.children] : [item])))
