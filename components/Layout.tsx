@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { User, Branch, Role } from '../types';
-import { isFullAccessRole, userCanAccessTab } from '../services/auth/permissions';
+import { userCanAccessTab } from '../services/auth/permissions';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -199,8 +199,7 @@ const Layout: React.FC<LayoutProps> = ({
           )
           .filter(canRenderItem),
       }))
-      .filter((group) => group.items.length > 0)
-      .filter((group) => group.id === 'transporteria' ? isDegolladoBranch : true);
+      .filter((group) => group.items.length > 0);
 
     if (!isTransportUser) return built;
 
@@ -228,7 +227,6 @@ const Layout: React.FC<LayoutProps> = ({
 
   const activeBranch = branches.find(b => b.id === selectedBranchId);
   const selectableBranches = branches.filter(b => b.isActive !== false);
-  const isBranchLocked = !isFullAccessRole(currentUser.role) && selectableBranches.length <= 1;
 
   useEffect(() => {
     if (!pinnedFlyoutGroupId) return;
@@ -542,14 +540,13 @@ const Layout: React.FC<LayoutProps> = ({
             </div>
           </div>
 
-          <div className={`flex items-center gap-2 md:gap-4 ${isBranchLocked ? 'cursor-not-allowed' : ''}`}>
-            <div className={`bg-white border-2 rounded-2xl px-3 py-2 md:px-5 md:py-2.5 flex items-center gap-2 md:gap-3 shadow-sm transition-all ${isBranchLocked ? 'border-slate-100' : 'border-orange-500 shadow-orange-500/10'}`}>
+          <div className="flex items-center gap-2 md:gap-4">
+            <div className="bg-white border-2 rounded-2xl px-3 py-2 md:px-5 md:py-2.5 flex items-center gap-2 md:gap-3 shadow-sm transition-all border-orange-500 shadow-orange-500/10">
               <div className="flex min-w-0 flex-col">
                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Ubicación Activa</span>
                 <div className="flex min-w-0 items-center gap-1 md:gap-2">
                   <span className="text-sm md:text-lg">🏢</span>
                   <select
-                    disabled={isBranchLocked}
                     value={selectedBranchId}
                     onChange={(e) => setSelectedBranchId(e.target.value)}
                     className="max-w-[92px] bg-transparent font-black text-slate-900 outline-none text-[10px] md:max-w-[180px] md:text-xs uppercase tracking-tight cursor-pointer"
@@ -558,11 +555,7 @@ const Layout: React.FC<LayoutProps> = ({
                   </select>
                 </div>
               </div>
-              {isBranchLocked ? (
-                <div className="bg-slate-100 p-2 rounded-lg text-slate-400" title="Ubicación bloqueada por perfil">🔒</div>
-              ) : (
-                <div className="bg-green-100 p-2 rounded-lg text-green-600 animate-pulse" title="Ubicación editable (Modo Admin)">🌐</div>
-              )}
+              <div className="bg-green-100 p-2 rounded-lg text-green-600 animate-pulse" title="Ubicación editable">🌐</div>
             </div>
 
             <div className="hidden lg:flex flex-col items-end">

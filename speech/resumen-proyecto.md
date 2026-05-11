@@ -263,7 +263,7 @@ Acceso completo. No requiere permisos en base de datos — `isFullAccessRole()` 
 | `materiales.customers.view` / `.create` | Ver y crear clientes |
 | `materiales.alerts.view` | Ver alertas de crédito |
 
-**Restricción:** Solo su sucursal asignada. Sin Reportes, Auditorías, Sucursales ni Usuarios.
+**Regla real de visibilidad:** el menú se controla por las áreas asignadas en `app_user_business_unit_access` y la sucursal asignada en `app_user_branch_access`. El `role_key` sirve como etiqueta funcional, no como bloqueo duro.
 
 #### concrete_user
 
@@ -275,7 +275,7 @@ Acceso completo. No requiere permisos en base de datos — `isFullAccessRole()` 
 | `concretera.customers.view` / `.create` | Ver y crear clientes |
 | `concretera.alerts.view` | Ver alertas de crédito |
 
-**Restricción:** Solo su sucursal asignada. Sin Reportes ni Auditorías.
+**Regla real de visibilidad:** igual que en Materiales, mandan las áreas asignadas y la sucursal; el rol no es un candado fijo.
 
 #### socio
 
@@ -287,7 +287,7 @@ Incluye: ventas, compras, productos (view + edit), clientes, alertas, reportes, 
 
 ```typescript
 isFullAccessRole(role?)        → true si ADMIN o SUPERADMIN
-userCanAccess(user, bu, mod, action)  → true si tiene el permiso
+userCanAccess(user, bu, mod, action)  → true si el usuario tiene asignada esa unidad de negocio
 userCanAccessTab(user, tabId)  → true si puede ver ese tab
 firstAccessibleTab(user, tabIds) → primer tab visible para el usuario
 ```
@@ -380,7 +380,7 @@ Permisos extra por usuario individual (sobreescribe el rol).
 #### `app_user_sessions`
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
-| `session_token` | TEXT PK | Token único de sesión |
+| `session_token` | UUID PK | Token único de sesión |
 | `user_id` | UUID | FK → `app_user_profiles` |
 | `expires_at` | TIMESTAMPTZ | Expiración |
 | `created_at` | TIMESTAMPTZ | Inicio de sesión |

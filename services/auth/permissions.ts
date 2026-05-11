@@ -57,15 +57,12 @@ export const userCanAccess = (
   if (!user || !user.active) return false;
   if (isFullAccessRole(user.role)) return true;
 
-  const permissionKey = buildPermissionKey(businessUnit, moduleKey, action);
-  const viewPermissionKey = buildPermissionKey(businessUnit, moduleKey, 'view');
-  const permissions = user.permissions ?? [];
-  const hasBusinessUnit = businessUnit === 'global'
-    || businessUnit === 'logistica'
-    || !user.businessUnits?.length
-    || user.businessUnits.includes(businessUnit);
+  const hasBusinessUnit = (user.businessUnits ?? []).includes(businessUnit);
+  if (!hasBusinessUnit) return false;
 
-  return hasBusinessUnit && (permissions.includes(permissionKey) || permissions.includes(viewPermissionKey));
+  // La visibilidad de módulos depende principalmente de la unidad de negocio asignada.
+  // Los permisos finos quedan disponibles para acciones específicas si se usan después.
+  return true;
 };
 
 export const userCanAccessTab = (user: User | null | undefined, tabId: string) => {
@@ -76,4 +73,3 @@ export const userCanAccessTab = (user: User | null | undefined, tabId: string) =
 
 export const firstAccessibleTab = (user: User | null | undefined, tabIds: string[]) =>
   tabIds.find((tabId) => userCanAccessTab(user, tabId)) ?? '';
-

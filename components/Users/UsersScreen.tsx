@@ -84,6 +84,35 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
   ],
 };
 
+const BUSINESS_UNIT_DEFAULT_PERMISSIONS: Record<BusinessUnit, string[]> = {
+  materiales: [
+    'materiales.sales.view', 'materiales.sales.create', 'materiales.sales.delete',
+    'materiales.purchases.view', 'materiales.purchases.create', 'materiales.purchases.delete',
+    'materiales.products.view',
+    'materiales.customers.view', 'materiales.customers.create', 'materiales.customers.edit', 'materiales.customers.delete',
+    'materiales.alerts.view',
+  ],
+  concretera: [
+    'concretera.sales.view', 'concretera.sales.create', 'concretera.sales.delete',
+    'concretera.purchases.view', 'concretera.purchases.create', 'concretera.purchases.delete',
+    'concretera.products.view',
+    'concretera.customers.view', 'concretera.customers.create', 'concretera.customers.edit', 'concretera.customers.delete',
+    'concretera.alerts.view', 'concretera.audit.view', 'concretera.reports.view',
+  ],
+  logistica: ['logistica.diesel.view'],
+  transporteria: [
+    'transporteria.sales.view', 'transporteria.sales.create', 'transporteria.sales.delete',
+    'transporteria.purchases.view', 'transporteria.purchases.create', 'transporteria.purchases.delete',
+    'transporteria.products.view',
+    'transporteria.customers.view', 'transporteria.customers.create', 'transporteria.customers.edit', 'transporteria.customers.delete',
+    'transporteria.alerts.view', 'transporteria.audit.view', 'transporteria.reports.view',
+  ],
+  global: ['global.branches.view', 'global.users.view'],
+};
+
+const collectPermissionsForBusinessUnits = (units: BusinessUnit[]) =>
+  units.flatMap((unit) => BUSINESS_UNIT_DEFAULT_PERMISSIONS[unit] ?? []);
+
 const ROLE_OPTIONS: RoleOption[] = [
   {
     value: 'superadmin',
@@ -124,7 +153,7 @@ const ROLE_OPTIONS: RoleOption[] = [
     label: 'Usuario Transportería',
     color: 'bg-yellow-100 text-yellow-700',
     modules: ['Transportes · Ventas, Compras, Productos, Clientes, Alertas, Auditorías', 'Logística · Gestión de Diésel'],
-    note: '🔒 Solo ve la sucursal de Degollado',
+    note: 'Transportes y Logística quedan preseleccionados, sin bloqueo de selección',
     suggestedUnits: ['transporteria', 'logistica'],
   },
 ];
@@ -189,24 +218,15 @@ const AccessSection: React.FC<{
   branches: Branch[];
   branchIds: number[];
   businessUnits: BusinessUnit[];
-  roleKey: string;
   onToggleBranch: (id: number) => void;
   onToggleUnit: (u: BusinessUnit) => void;
-}> = ({ branches, branchIds, businessUnits, roleKey, onToggleBranch, onToggleUnit }) => {
-  const isTransportRole = roleKey === 'transport_user';
-  const isSuperAdmin    = roleKey === 'superadmin';
-
+}> = ({ branches, branchIds, businessUnits, onToggleBranch, onToggleUnit }) => {
   const isBranchDisabled = (b: Branch) => {
-    if (isSuperAdmin) return false;
-    const isDegollado = b.name?.toUpperCase().includes('DEGOLLADO') ?? false;
-    if (isTransportRole) return !isDegollado;
     return false;
   };
 
   const isUnitDisabled = (u: BusinessUnit) => {
-    if (isSuperAdmin) return false;
-    if (isTransportRole) return u !== 'transporteria' && u !== 'logistica';
-    return u === 'transporteria';
+    return false;
   };
 
   return (
@@ -406,7 +426,6 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           branches={branches}
           branchIds={form.branch_ids}
           businessUnits={form.business_units}
-          roleKey={form.role_key}
           onToggleBranch={onToggleBranch}
           onToggleUnit={onToggleUnit}
         />
@@ -733,22 +752,9 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
           const allDbIds = branches.filter(b => b.dbId !== undefined).map(b => Number(b.dbId));
           next.branch_ids    = allDbIds;
           next.business_units = BUSINESS_UNITS.map(u => u.value);
-        } else if (roleKey === 'transport_user') {
-          const degolladoDbIds = branches
-            .filter(b => b.name?.toUpperCase().includes('DEGOLLADO') && b.dbId !== undefined)
-            .map(b => Number(b.dbId));
-          next.branch_ids    = degolladoDbIds;
-          next.business_units = ['transporteria', 'logistica'];
         } else {
-          const nonTransportIds = prev.form.branch_ids.filter(id => {
-            const br = branches.find(b => Number(b.dbId) === id);
-            return br?.businessUnit !== 'transporteria';
-          });
-          next.branch_ids = nonTransportIds;
           if (roleInfo && roleInfo.suggestedUnits.length > 0) {
             next.business_units = [...roleInfo.suggestedUnits];
-          } else {
-            next.business_units = prev.form.business_units.filter(u => u !== 'transporteria');
           }
         }
       }
@@ -838,7 +844,10 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
 
       // Re-sync permissions based on role defaults
       await supabase.from('app_user_permissions').delete().eq('user_id', userId);
-      const defaultPerms = ROLE_DEFAULT_PERMISSIONS[form.role_key] ?? [];
+      const defaultPerms = Array.from(new Set([
+        ...(ROLE_DEFAULT_PERMISSIONS[form.role_key] ?? []),
+        ...collectPermissionsForBusinessUnits(form.business_units),
+      ]));
       if (defaultPerms.length > 0) {
         const { error: permErr } = await supabase.from('app_user_permissions').insert(
           defaultPerms.map(permission_key => ({ user_id: userId, permission_key, is_allowed: true }))
@@ -847,6 +856,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
       }
 
       setFormModal(null);
+      window.dispatchEvent(new Event('lopar:session-refresh'));
       await loadProfiles();
     } catch (err) {
       setModalError(err instanceof Error ? err.message : 'No se pudo guardar el usuario.');

@@ -15,6 +15,7 @@ Se reemplazó la dependencia operativa de `Supabase Auth` por un flujo propio ba
 - Tabla de sesiones: `public.app_user_sessions`
 - Hash de contraseña guardado en `app_user_profiles.password_hash`
 - La aplicación ya no depende de `auth.users` para login diario
+- La visibilidad de módulos depende de `app_user_business_unit_access` y de la sucursal asignada, no del `role_key`
 
 ### RPCs activas
 
@@ -28,12 +29,18 @@ Se reemplazó la dependencia operativa de `Supabase Auth` por un flujo propio ba
 
 - [services/auth/auth.service.ts](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/services/auth/auth.service.ts)
 - [App.tsx](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/App.tsx)
+- [services/auth/permissions.ts](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/services/auth/permissions.ts)
 
 El login:
 - guarda el token de sesión propio
 - valida sesión por RPC
 - cierra sesión por RPC
 - ya no usa `supabase.auth.signInWithPassword()`
+
+Regla operativa actual:
+- `role_key` identifica el tipo de usuario, pero no bloquea módulos por sí mismo
+- `app_user_business_unit_access` define qué áreas puede ver el usuario
+- `app_user_branch_access` define a qué sucursales puede entrar
 
 ---
 

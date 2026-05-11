@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import LoginScreen from './components/Auth/LoginScreen';
@@ -97,6 +97,7 @@ const App: React.FC = () => {
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
   const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const branchPreselectedForUserRef = useRef<string | null>(null);
   const [selectedBranchId, setSelectedBranchId] = useState<string>(() => {
     return localStorage.getItem('lopar_selected_branch') || '';
   });
@@ -165,6 +166,15 @@ const App: React.FC = () => {
     return () => {
       return;
     };
+  }, [loadSessionUser]);
+
+  useEffect(() => {
+    const handleSessionRefresh = () => {
+      void loadSessionUser(localStorage.getItem(SESSION_TOKEN_KEY));
+    };
+
+    window.addEventListener('lopar:session-refresh', handleSessionRefresh as EventListener);
+    return () => window.removeEventListener('lopar:session-refresh', handleSessionRefresh as EventListener);
   }, [loadSessionUser]);
 
   useEffect(() => {
@@ -359,16 +369,14 @@ const App: React.FC = () => {
 
     if (isFullAccessRole(currentUser.role)) return enabled;
 
-    // TRANSPORT_USER usa allowedBranchIds normal (debe tener Degollado configurado)
-    // Otros roles no ven sucursales legacy de transporteria
+    // No se bloquea por sucursales asignadas: esas solo sirven para preseleccionar.
+    // Otros roles no ven sucursales legacy de transporteria.
     const isTransportUser = currentUser.role === Role.TRANSPORT_USER;
     const visibleBranches = isTransportUser
       ? enabled
       : enabled.filter(b => b.businessUnit !== 'transporteria');
 
-    const allowed = currentUser.allowedBranchIds ?? [];
-    if (allowed.length === 0) return visibleBranches;
-    return visibleBranches.filter(b => allowed.includes(b.id));
+    return visibleBranches;
   }, [branches, currentUser]);
 
   useEffect(() => {
@@ -381,6 +389,16 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!currentUser || activeBranches.length === 0) return;
+    if (
+      currentUser.branchId
+      && branchPreselectedForUserRef.current !== currentUser.id
+      && activeBranches.some((branch) => branch.id === currentUser.branchId)
+    ) {
+      branchPreselectedForUserRef.current = currentUser.id;
+      setSelectedBranchId(currentUser.branchId);
+      return;
+    }
+
     const selectedIsAllowed = activeBranches.some((branch) => branch.id === selectedBranchId);
     if (selectedIsAllowed) return;
 
