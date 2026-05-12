@@ -1036,7 +1036,7 @@ const POSScreen: React.FC<POSProps> = ({
     return cleaned || fallback;
   };
   const buildSalePdfFilename = (branchName: string | null | undefined, saleId: string) => {
-    const moduleToken = 'MATERIALES';
+    const moduleToken = isTransportBranch ? 'TRANSPORTES' : 'MATERIALES';
     const branchToken = toFileToken(branchName, 'SUCURSAL');
     const saleToken = toFileToken(saleId, '0');
     return `${moduleToken}-${branchToken}-${saleToken}.pdf`;
@@ -1163,7 +1163,7 @@ const POSScreen: React.FC<POSProps> = ({
         borderColor: rgb(0, 0, 0),
       });
 
-      const title = `MATERIALES ${(input.branchName || 'SUCURSAL').toUpperCase()}`;
+      const title = `${isTransportBranch ? 'TRANSPORTES' : 'MATERIALES'} ${(input.branchName || 'SUCURSAL').toUpperCase()}`;
       const titleSize = 14;
       const titleWidth = fontBold.widthOfTextAtSize(title, titleSize);
       page.drawText(title, {
