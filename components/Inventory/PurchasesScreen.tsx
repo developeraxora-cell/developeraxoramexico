@@ -568,7 +568,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       const marginX = 48;
       const headerTop = height - 40;
       const branchTitle = (selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL').toUpperCase();
-      const title = `MATERIALES ${branchTitle}`;
+      const title = isTransportBranch ? 'TRANSPORTES LOPAR' : `MATERIALES ${branchTitle}`;
       const titleSize = 14;
       const titleWidth = fontBold.widthOfTextAtSize(title, titleSize);
       page.drawText(title, { x: (width - titleWidth) / 2, y: headerTop, size: titleSize, font: fontBold });

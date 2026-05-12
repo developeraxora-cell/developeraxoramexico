@@ -1163,7 +1163,9 @@ const POSScreen: React.FC<POSProps> = ({
         borderColor: rgb(0, 0, 0),
       });
 
-      const title = `${isTransportBranch ? 'TRANSPORTES' : 'MATERIALES'} ${(input.branchName || 'SUCURSAL').toUpperCase()}`;
+      const title = isTransportBranch
+        ? 'TRANSPORTES LOPAR'
+        : `MATERIALES ${(input.branchName || 'SUCURSAL').toUpperCase()}`;
       const titleSize = 14;
       const titleWidth = fontBold.widthOfTextAtSize(title, titleSize);
       page.drawText(title, {

@@ -1,7 +1,7 @@
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../supabaseClient';
 
-export type CustomerSelectionModule = 'materials' | 'concretera';
+export type CustomerSelectionModule = 'materials' | 'concretera' | 'transporteria';
 
 type CustomerSelectionRow = {
   id: string;

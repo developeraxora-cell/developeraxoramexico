@@ -113,6 +113,14 @@ export interface SalePaymentEvidence {
   created_at: string;
 }
 
+const applyBusinessUnitFilter = <T extends { eq: (column: string, value: any) => T; or: (filters: string) => T }>(
+  query: T,
+  businessUnit?: string
+) => {
+  if (!businessUnit) return query;
+  return query.eq('business_unit', businessUnit);
+};
+
 export interface CreditNoteWithStatus extends CreditNote {
   status: 'PAGADA' | 'VENCIDA' | 'ABIERTA';
   days_overdue: number;
@@ -340,7 +348,7 @@ export const creditService = {
       .from('credit_customers')
       .select('*')
       .eq('branch_id', branchId);
-    if (businessUnit) query = query.eq('business_unit', businessUnit);
+    query = applyBusinessUnitFilter(query, businessUnit);
     const { data, error } = await query.order('name');
     if (error) throw error;
     return (data ?? []) as CreditCustomer[];
@@ -357,7 +365,7 @@ export const creditService = {
       .eq('branch_id', branchId)
       .eq('is_active', true)
       .or(`name.ilike.%${escaped}%,phone.ilike.%${escaped}%,address.ilike.%${escaped}%`);
-    if (businessUnit) query = query.eq('business_unit', businessUnit);
+    query = applyBusinessUnitFilter(query, businessUnit);
     const { data, error } = await query.order('name');
     if (error) throw error;
     return (data ?? []) as CreditCustomer[];
@@ -373,7 +381,7 @@ export const creditService = {
       .from('credit_customers')
       .select('*', { count: 'exact' })
       .eq('branch_id', branchId);
-    if (businessUnit) query = query.eq('business_unit', businessUnit);
+    query = applyBusinessUnitFilter(query, businessUnit);
 
     const term = searchTerm.trim();
     if (term) {
@@ -580,7 +588,7 @@ export const creditService = {
       .select('*')
       .eq('branch_id', branchId)
       .gt('balance', 0);
-    if (businessUnit) query = query.eq('business_unit', businessUnit);
+    query = applyBusinessUnitFilter(query, businessUnit);
     const { data, error } = await query.order('due_date', { ascending: true });
     if (error) throw error;
     return (data ?? []) as CreditNote[];
@@ -620,7 +628,7 @@ export const creditService = {
       .eq('branch_id', branchId)
       .eq('type', 'SALE')
       .eq('is_deleted', false);
-    if (businessUnit) query = query.eq('business_unit', businessUnit);
+    query = applyBusinessUnitFilter(query, businessUnit);
     const { data, error } = await query.order('created_at', { ascending: false }).limit(500);
 
     if (error) throw error;

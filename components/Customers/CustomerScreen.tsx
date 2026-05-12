@@ -152,6 +152,7 @@ const isZeroCostSaleNote = (value: string | null | undefined) =>
 const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branches, currentUser, businessUnit = 'materiales' }) => {
   const _custBranchBu = branches.find(b => b.id === selectedBranchId)?.businessUnit;
   const isTransportBranch = businessUnit === 'transporteria';
+  const selectionModule = isTransportBranch ? 'transporteria' : 'materials';
   const auditModule = (isTransportBranch ? 'transporteria' : _custBranchBu === 'concretera' ? 'concretera' : 'materiales') as 'materiales' | 'concretera' | 'transporteria';
 
   const PAGE_SIZE = 5;
@@ -454,14 +455,25 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     setError(null);
 
     try {
-      const [pageData, branchWallets] = await Promise.all([
-        creditService.listCustomersByBranchPaged(branchId, currentPage, PAGE_SIZE, debouncedSearchTerm, selectedLetter, businessUnit),
-        walletService.listWalletsByBranch(branchId),
-      ]);
-      const summaryMap = await creditService.getSummariesForCustomers(pageData.rows);
+      const pageData = await creditService.listCustomersByBranchPaged(branchId, currentPage, PAGE_SIZE, debouncedSearchTerm, selectedLetter, businessUnit);
       setCustomers(pageData.rows);
       setTotalCustomers(pageData.total);
-      setSummaries(summaryMap);
+
+      try {
+        const summaryMap = await creditService.getSummariesForCustomers(pageData.rows);
+        setSummaries(summaryMap);
+      } catch (summaryErr) {
+        console.error('No se pudieron cargar resumenes de credito:', summaryErr);
+        setSummaries({});
+      }
+
+      let branchWallets: CustomerWalletSummary[] = [];
+      try {
+        branchWallets = await walletService.listWalletsByBranch(branchId);
+      } catch (walletErr) {
+        console.error('No se pudieron cargar saldos a favor:', walletErr);
+      }
+
       setWalletsByCustomerId(
         branchWallets.reduce<Record<string, CustomerWalletSummary>>((acc, wallet) => {
           acc[wallet.customer_id] = wallet;
@@ -469,12 +481,13 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         }, {})
       );
     } catch (err) {
+      console.error('No se pudo cargar clientes:', err);
       const message = err instanceof Error ? err.message : 'No se pudo cargar clientes.';
       setError(message);
     } finally {
       setIsLoading(false);
     }
-  }, [branchId, currentPage, debouncedSearchTerm, PAGE_SIZE, selectedLetter]);
+  }, [branchId, currentPage, debouncedSearchTerm, PAGE_SIZE, selectedLetter, businessUnit]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -497,7 +510,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       active = false;
     };
 
-    void customerSelectionService.listSelectedCustomerIds('materials', branchId)
+    void customerSelectionService.listSelectedCustomerIds(selectionModule, branchId)
       .then((ids) => {
         if (!active) return;
         setSelectedCustomerIds(ids);
@@ -508,7 +521,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       });
 
     const channel = customerSelectionService.subscribe({
-      module: 'materials',
+      module: selectionModule,
       branchId,
       onSelectionChange: (customerId, selected) => {
         if (!active) return;
@@ -523,7 +536,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       active = false;
       customerSelectionService.unsubscribe(channel);
     };
-  }, [branchId]);
+  }, [branchId, selectionModule]);
 
   useEffect(() => {
     if (historyPage > historyTotalPages) {
@@ -830,7 +843,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       nextSelected ? (prev.includes(customerId) ? prev : [...prev, customerId]) : prev.filter((id) => id !== customerId)
     );
     void customerSelectionService.setSelected({
-      module: 'materials',
+      module: selectionModule,
       branchId,
       customerId,
       selected: nextSelected,
@@ -1264,7 +1277,9 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         borderColor: rgb(0, 0, 0),
       });
 
-      const title = `MATERIALES ${(input.branchName || 'SUCURSAL').toUpperCase()}`;
+      const title = isTransportBranch
+        ? 'TRANSPORTES LOPAR'
+        : `MATERIALES ${(input.branchName || 'SUCURSAL').toUpperCase()}`;
       const titleSize = 14;
       const titleWidth = fontBold.widthOfTextAtSize(title, titleSize);
       page.drawText(title, {
@@ -2106,7 +2121,10 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       setNoteForm(createDefaultNoteForm(selectedCustomer.default_credit_days || 30));
       showFeedback('success', noteModalMode === 'create' ? 'Crédito registrado' : 'Crédito actualizado');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'No se pudo guardar el crédito.';
+      const rawMessage = err instanceof Error ? err.message : 'No se pudo guardar el crédito.';
+      const message = rawMessage.includes('uq_credit_notes_branch_folio') || rawMessage.includes('uq_credit_notes_branch_business_unit_folio')
+        ? 'Ya existe una nota con ese folio en este módulo. Usa otro folio o deja el campo vacío para generar uno automático.'
+        : rawMessage;
       setNoteFormError(message);
       showFeedback('error', 'No se pudo guardar', message);
     } finally {
