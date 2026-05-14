@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Branch, User } from '../../types';
 import { branchesService, isSupabaseConfigured } from '../../services/supabaseClient';
-import { isFullAccessRole } from '../../services/auth/permissions';
+import { isFullAccessRole, userCanAccessBranch } from '../../services/auth/permissions';
 import StatusModal, { StatusType } from '../common/StatusModal';
 import ConfirmModal from '../common/ConfirmModal';
 import { formatCurrency } from '../../services/currency';
@@ -147,11 +147,11 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
   };
 
   const handleSwitchBranch = (branchId: string) => {
-    if (!isFullAccessRole(currentUser.role) && currentUser.branchId !== branchId) {
+    const target = branches.find(b => b.id === branchId);
+    if (!target || !userCanAccessBranch(currentUser, target)) {
       showStatus('warning', 'Acceso restringido', 'No tienes permisos para entrar a esta sucursal.', '🔒');
       return;
     }
-    const target = branches.find(b => b.id === branchId);
     if (target && target.isActive === false) {
       showStatus('warning', 'Sucursal inactiva', 'No es posible cambiar a esta sucursal.', '⚠️');
       return;

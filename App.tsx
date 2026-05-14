@@ -33,7 +33,7 @@ import {
 import { INITIAL_CUSTOMERS, INITIAL_PRODUCTS, INITIAL_CONVERSIONS } from './constants';
 import { Customer, Product, ProductConversion, User, Role, Branch, CustomerPayment, DieselTank, Vehicle, Driver, DieselLog, Sale } from './types';
 import { authService } from './services/auth/auth.service';
-import { firstAccessibleTab, isFullAccessRole, userCanAccessTab } from './services/auth/permissions';
+import { firstAccessibleTab, isFullAccessRole, userCanAccessBranch, userCanAccessTab } from './services/auth/permissions';
 import { tabToPath, pathToTab } from './services/auth/routes';
 const SESSION_TOKEN_KEY = 'lopar_session_token';
 
@@ -368,15 +368,8 @@ const App: React.FC = () => {
     if (!currentUser) return enabled;
 
     if (isFullAccessRole(currentUser.role)) return enabled;
-
-    // No se bloquea por sucursales asignadas: esas solo sirven para preseleccionar.
-    // Otros roles no ven sucursales legacy de transporteria.
-    const isTransportUser = currentUser.role === Role.TRANSPORT_USER;
-    const visibleBranches = isTransportUser
-      ? enabled
-      : enabled.filter(b => b.businessUnit !== 'transporteria');
-
-    return visibleBranches;
+    const visibleBranches = enabled.filter((branch) => userCanAccessBranch(currentUser, branch));
+    return visibleBranches.length > 0 ? visibleBranches : enabled.filter((branch) => currentUser.branchId ? branch.id === currentUser.branchId : false);
   }, [branches, currentUser]);
 
   useEffect(() => {
@@ -484,7 +477,7 @@ const App: React.FC = () => {
       case 'concrete-production':
         return <PlaceholderModule title="Produccion" subtitle="Concretera" />;
       case 'branches':
-        return <BranchesScreen branches={branches} setBranches={setBranches} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} currentUser={currentUser} />;
+        return <BranchesScreen branches={activeBranches} setBranches={setBranches} selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId} currentUser={currentUser} />;
       case 'users':
         return <UsersScreen branches={activeBranches} />;
       case 'concrete-pos':
@@ -507,7 +500,7 @@ const App: React.FC = () => {
       case 'concrete-reports':
         return <ConcreteReportsScreen selectedBranchId={selectedBranchId} branches={activeBranches} />;
       case 'diesel':
-        return <DieselScreen tanks={tanks} setTanks={setTanks} vehicles={vehicles} setVehicles={setVehicles} drivers={drivers} setDrivers={setDrivers} logs={dieselLogs} setLogs={setDieselLogs} currentUser={currentUser} selectedBranchId={selectedBranchId} branches={branches} />;
+        return <DieselScreen tanks={tanks} setTanks={setTanks} vehicles={vehicles} setVehicles={setVehicles} drivers={drivers} setDrivers={setDrivers} logs={dieselLogs} setLogs={setDieselLogs} currentUser={currentUser} selectedBranchId={selectedBranchId} branches={activeBranches} />;
       case 'reports':
         return <ReportsScreen key="reports-materiales" selectedBranchId={selectedBranchId} branches={activeBranches} />;
       case 'transport-pos':

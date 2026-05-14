@@ -1,0 +1,130 @@
+PROPUESTA MODULO VINO
+
+Objetivo
+
+Crear un nuevo modulo "Vino" dentro del mismo dominio y con el mismo frontend base del sistema actual. No conviene mezclarlo como una simple extension de Materiales o Transporteria, porque la logica es distinta: aqui el foco es CRM, recompra, segmentacion, lealtad, campañas y WhatsApp.
+
+Enfoque tecnico recomendado
+
+- Mantener el frontend actual como base visual y de navegacion.
+- Reutilizar login, sesion, sucursales y permisos.
+- Crear tablas o esquema propio para Vino.
+- Dejar Materiales, Transporteria y Vino como areas separadas.
+- Usar automatizaciones por jobs, cron o edge functions para alertas y campañas.
+- Integrar WhatsApp con un proveedor externo.
+
+Modulo de clientes
+
+Cada cliente deberia guardar:
+
+- Nombre
+- Telefono
+- WhatsApp
+- Fecha de cumpleaños
+- Productos favoritos
+- Tipo de cliente: vino, whisky, cerveza artesanal, tequila, premium, fiesta/eventos
+- Ticket promedio
+- Frecuencia de compra
+- Ultima visita
+- Metodo de pago frecuente
+- Sucursal favorita
+- Frecuencia de recompra
+
+Automatizaciones deseadas
+
+- Detectar cada cuanto vuelve normalmente un cliente.
+- Marcar clientes en riesgo cuando se atrasen respecto a su patron de compra.
+- Generar alertas por segmento:
+  - clientes premium sin visitar
+  - clientes que dejaron una categoria
+  - clientes dormidos
+  - clientes de fin de semana
+- Lanzar campañas automaticas:
+  - cumpleaños
+  - recuperacion
+  - VIP
+  - fin de semana
+  - eventos especiales
+- Sistema de puntos con niveles:
+  - Bronce
+  - Plata
+  - Oro
+  - Black
+- Recomendaciones inteligentes por historial de compra y gustos.
+
+Fases de implementacion
+
+Fase 1: CRM Vino + historial
+- Clientes
+- Preferencias
+- Historial de compras
+- Ticket promedio
+- Ultima visita
+- Segmentacion basica
+
+Estimado: 60 a 90 horas
+Tiempo: 2 a 3 semanas
+
+Fase 2: recompra y alertas
+- Frecuencia promedio
+- Cliente en riesgo
+- Alertas por categoria
+- Dashboard de lealtad
+
+Estimado: 50 a 75 horas
+Tiempo: 2 semanas
+
+Fase 3: campañas y WhatsApp
+- Segmentacion
+- Mensajes manuales y automaticos
+- Plantillas
+- Cupones
+- Cumpleanos automaticos
+
+Estimado: 80 a 130 horas
+Tiempo: 3 a 4 semanas
+
+Fase 4: lealtad y gamificacion
+- Puntos
+- Niveles
+- Retos
+- Beneficios
+
+Estimado: 60 a 100 horas
+Tiempo: 2 a 3 semanas
+
+Fase 5: recomendaciones e IA ligera
+- Productos relacionados
+- Cross selling
+- Score de abandono
+- Perfil de gustos
+
+Estimado: 70 a 120 horas
+Tiempo: 3 a 4 semanas
+
+Total estimado
+
+- MVP funcional: 190 a 295 horas
+- Tiempo: 7 a 10 semanas
+
+- Version mas completa: 320 a 515 horas
+- Tiempo: 12 a 16 semanas
+
+Recursos necesarios
+
+- Acceso al repo actual
+- Acceso a Supabase
+- Catalogo de productos de vino/licores
+- Definicion de reglas de negocio
+- Proveedor de WhatsApp
+- Lista de sucursales
+- Regla de puntos y niveles
+
+Recomendacion final
+
+Para arrancar rapido:
+
+- Fase 1 y 2 en la base actual.
+- Fase 3 en adelante evaluar un backend separado si WhatsApp y campañas crecen.
+
+Esto permite mantener un solo dominio y un solo frontend, pero con una base tecnica correcta para no mezclar Vino con las reglas de Materiales o Transporteria.

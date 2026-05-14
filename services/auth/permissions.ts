@@ -71,5 +71,21 @@ export const userCanAccessTab = (user: User | null | undefined, tabId: string) =
   return userCanAccess(user, permission.businessUnit, permission.moduleKey, permission.action ?? 'view');
 };
 
+export const userCanAccessBranch = (user: User | null | undefined, branch: { id: string; code: string; dbId?: number; name?: string; isActive?: boolean }) => {
+  if (!user || !user.active) return false;
+  if (isFullAccessRole(user.role)) return true;
+  if (branch.isActive === false) return false;
+
+  const allowedDbIds = new Set((user.allowedBranchDbIds ?? []).map((id) => Number(id)).filter(Number.isFinite));
+  const allowedCodes = new Set((user.allowedBranchIds ?? []).map((id) => String(id).trim()).filter(Boolean));
+  const branchDbId = branch.dbId !== undefined ? Number(branch.dbId) : null;
+  const branchId = String(branch.id).trim();
+  const branchCode = String(branch.code).trim();
+  if (branchDbId !== null && allowedDbIds.has(branchDbId)) return true;
+  if (allowedCodes.has(branchId) || allowedCodes.has(branchCode) || allowedCodes.has(String(branchDbId ?? ''))) return true;
+
+  return false;
+};
+
 export const firstAccessibleTab = (user: User | null | undefined, tabIds: string[]) =>
   tabIds.find((tabId) => userCanAccessTab(user, tabId)) ?? '';

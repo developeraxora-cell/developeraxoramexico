@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { User, Branch, Role } from '../types';
-import { userCanAccessTab } from '../services/auth/permissions';
+import { userCanAccessBranch, userCanAccessTab } from '../services/auth/permissions';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -226,7 +226,7 @@ const Layout: React.FC<LayoutProps> = ({
     : null;
 
   const activeBranch = branches.find(b => b.id === selectedBranchId);
-  const selectableBranches = branches.filter(b => b.isActive !== false);
+  const selectableBranches = branches.filter((branch) => userCanAccessBranch(currentUser, branch));
 
   useEffect(() => {
     if (!pinnedFlyoutGroupId) return;
