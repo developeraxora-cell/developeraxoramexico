@@ -57,11 +57,15 @@ export const userCanAccess = (
   if (!user || !user.active) return false;
   if (isFullAccessRole(user.role)) return true;
 
+  const requiredPermission = buildPermissionKey(businessUnit, moduleKey, action);
+  const permissions = user.permissions ?? [];
+  if (permissions.length > 0) {
+    return permissions.includes(requiredPermission);
+  }
+
   const hasBusinessUnit = (user.businessUnits ?? []).includes(businessUnit);
   if (!hasBusinessUnit) return false;
 
-  // La visibilidad de módulos depende principalmente de la unidad de negocio asignada.
-  // Los permisos finos quedan disponibles para acciones específicas si se usan después.
   return true;
 };
 
