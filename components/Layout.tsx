@@ -59,11 +59,14 @@ const Layout: React.FC<LayoutProps> = ({
   selectedBranchId, setSelectedBranchId, branches, onReset
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
-  const [expandedItems, setExpandedItems] = useState<string[]>(['audit-parent', 'concrete-audit-parent']);
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [collapsedFlyout, setCollapsedFlyout] = useState<CollapsedFlyoutState | null>(null);
   const [pinnedFlyoutGroupId, setPinnedFlyoutGroupId] = useState<string | null>(null);
+  const hasInitializedSidebar = useRef(false);
+  const lastSidebarUserId = useRef<string | null>(null);
+  const hasProcessedInitialTab = useRef(false);
   const asideRef = useRef<HTMLElement | null>(null);
   const flyoutRef = useRef<HTMLDivElement | null>(null);
 
@@ -130,23 +133,31 @@ const Layout: React.FC<LayoutProps> = ({
     }
   ];
 
-  // Al cargar sesión, expandir todos los grupos que tengan al menos un tab accesible
+  // Mantener el sidebar colapsado en la primera carga; luego respetar navegación del usuario.
   useEffect(() => {
-    const accessibleGroupIds = navigation
-      .filter((group) =>
-        group.items.some((item) =>
-          item.children
-            ? item.children.some((child) => userCanAccessTab(currentUser, child.id))
-            : userCanAccessTab(currentUser, item.id)
-        )
-      )
-      .map((group) => group.id);
-    setExpandedGroups(accessibleGroupIds);
+    if (!currentUser?.id) return;
+    if (lastSidebarUserId.current !== currentUser.id) {
+      lastSidebarUserId.current = currentUser.id;
+      hasInitializedSidebar.current = false;
+      hasProcessedInitialTab.current = false;
+    }
+    if (!hasInitializedSidebar.current) {
+      hasInitializedSidebar.current = true;
+      setExpandedGroups([]);
+      setExpandedItems([]);
+      return;
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id]);
 
   // Al cambiar de tab, asegurar que su grupo y su padre (si tiene hijos) estén expandidos
   useEffect(() => {
+    if (!hasInitializedSidebar.current) return;
+    if (!hasProcessedInitialTab.current) {
+      hasProcessedInitialTab.current = true;
+      return;
+    }
+
     const parentGroup = navigation.find((group) =>
       group.items.some((item) => item.id === activeTab || item.children?.some((child) => child.id === activeTab))
     );
