@@ -243,6 +243,8 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
             <option value="cliente">Cliente</option>
             <option value="venta">Venta</option>
             <option value="compra">Compra</option>
+            <option value="nota_credito">Nota de crédito</option>
+            <option value="abono_credito">Abono de crédito</option>
           </select>
 
           <div className="grid grid-cols-2 gap-3 xl:col-span-1">

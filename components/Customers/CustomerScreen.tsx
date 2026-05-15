@@ -14,7 +14,7 @@ import ConfirmModal from '../common/ConfirmModal';
 import WalletCreateModal from '../Wallet/WalletCreateModal';
 import WalletRechargeModal from '../Wallet/WalletRechargeModal';
 import WalletHistoryModal from '../Wallet/WalletHistoryModal';
-import { logAuditForModule } from '../../services/audit/audit.service';
+import { auditService, logAuditForModule } from '../../services/audit/audit.service';
 import { supabase } from '../../services/supabaseClient';
 import { customerSelectionService } from '../../services/shared/customerSelection.service';
 import { paymentEvidenceUploadService, validatePaymentEvidenceFile } from '../../services/paymentEvidenceUpload.service';
@@ -2155,19 +2155,39 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     actionLockRef.current = true;
 
     try {
+      const saleSummary = await fetchNoteSaleSummary(noteToDelete).catch(() => null);
+
       await creditService.deleteNote(noteToDelete.id);
 
-      logAuditForModule(auditModule,{
+      await auditService.write({
+        module: auditModule,
         branch_id: branchId,
         branch_name: selectedBranch?.name ?? null,
         user_id: currentUser.id,
         user_name: currentUser.name,
         action_type: 'ELIMINAR',
-        entity_type: 'nota_credito',
-        entity_id: String(noteToDelete.id),
-        description: `Nota de crédito eliminada: ${noteToDelete.folio}`,
+        entity_type: 'venta',
+        entity_id: String(noteToDelete.inventory_transaction_id ?? noteToDelete.sale_reference ?? noteToDelete.folio ?? noteToDelete.id),
+        description: `Venta eliminada #${getDisplayNoteCode(noteToDelete)}`,
         justification: deleteNoteJustification.trim(),
-        previous_data: noteToDelete as unknown as Record<string, unknown>,
+        previous_data: {
+          ...(noteToDelete as unknown as Record<string, unknown>),
+          sale_id: saleSummary?.saleId ?? noteToDelete.inventory_transaction_id ?? noteToDelete.sale_reference ?? null,
+          customer_name: saleSummary?.nombre_cliente ?? selectedCustomer.name,
+          total_amount: saleSummary?.total_amount ?? Number(noteToDelete.total ?? 0),
+          detalle: saleSummary?.items.map((item) => ({
+            item_id: item.id,
+            producto: item.product_name,
+            sku: item.product_sku,
+            presentacion: item.presentation,
+            unidad: item.uom_name ?? item.uom_code,
+            tipo_venta: item.sale_type,
+            cantidad: Number(item.qty ?? 0),
+            factor: Number(item.factor_used ?? 1),
+            precio_unitario: Number(item.unit_price ?? 0),
+            subtotal: Number(item.line_total ?? 0),
+          })) ?? [],
+        },
       });
 
       const refreshedNotes = await creditService.listNotesByCustomer(selectedCustomer.id);

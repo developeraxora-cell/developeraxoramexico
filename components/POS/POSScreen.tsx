@@ -607,6 +607,36 @@ const POSScreen: React.FC<POSProps> = ({
     }
   };
 
+  const fetchSaleAuditDetail = async (saleId: string) => {
+    const { data, error } = await supabase
+      .from('inventory_transaction_items')
+      .select(`
+        id,
+        qty,
+        unit_price,
+        line_total,
+        qty_base,
+        factor_used,
+        products ( name, sku ),
+        product_uoms ( uoms ( name, code ) )
+      `)
+      .eq('transaction_id', saleId);
+
+    if (error) throw error;
+
+    return (data ?? []).map((row: any) => ({
+      item_id: String(row.id),
+      producto: row.products?.name ?? null,
+      sku: row.products?.sku ?? null,
+      unidad: row.product_uoms?.uoms?.name ?? row.product_uoms?.uoms?.code ?? null,
+      cantidad: Number(row.qty ?? 0),
+      cantidad_base: Number(row.qty_base ?? 0),
+      factor: Number(row.factor_used ?? 1),
+      precio_unitario: Number(row.unit_price ?? 0),
+      subtotal: Number(row.line_total ?? (Number(row.qty ?? 0) * Number(row.unit_price ?? 0))),
+    }));
+  };
+
   useEffect(() => {
     if (!isSalesHistoryOpen) return;
     void loadSalesHistory();
@@ -854,6 +884,8 @@ const POSScreen: React.FC<POSProps> = ({
     setIsDeletingSale(true);
     setDeleteSaleError(null);
     try {
+      const detalle = await fetchSaleAuditDetail(saleToDelete.id);
+
       await purchasesService.deleteSale({
         sale_id: saleToDelete.id,
         deleted_by: currentUser.id,
@@ -876,6 +908,7 @@ const POSScreen: React.FC<POSProps> = ({
           created_at: saleToDelete.created_at,
           items_count: saleToDelete.items_count,
           total_amount: saleToDelete.total_amount,
+          detalle,
         },
         new_data: {
           deleted: true,
