@@ -239,6 +239,31 @@ Se rediseñaron y corrigieron los reportes para uso móvil y escritorio.
 - tablas recientes con menos ruido
 - mejoras de responsividad en móvil
 
+---
+
+## 10. Navegación y permisos visuales
+
+La navegación lateral ahora inicia en estado colapsado por defecto para mostrar solo los encabezados de módulo.
+
+### Estado actual
+
+- El sidebar arranca sin desplegar submenús.
+- Los módulos visibles se muestran agrupados por unidad de negocio:
+  - Materiales
+  - Concretera
+  - Logística
+  - Transportes
+- El usuario abre manualmente cada grupo cuando lo necesita.
+- El estado expandido no se fuerza al cargar la sesión.
+
+### Permisos
+
+- La visibilidad de módulos y sucursales sigue dependiendo de:
+  - `app_user_business_unit_access`
+  - `app_user_branch_access`
+- El rol identifica el tipo de usuario, pero no actúa como bloqueo fijo por sí solo.
+- La sucursal preseleccionada no equivale a permiso; solo es valor inicial.
+
 ### Gráficas
 
 - `Top productos` ordenado por facturación real

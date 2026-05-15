@@ -854,10 +854,11 @@ type ConcreteSaleMeta = {
 ### Navegación (Layout)
 
 El sidebar (`components/Layout.tsx`) implementa:
-- **Grupos colapsables** por unidad de negocio (Materiales, Concretera, Logística)
+- **Grupos colapsables** por unidad de negocio (Materiales, Concretera, Logística, Transportes)
 - **Items con sub-ítems** (Auditorías tiene hijos: Auditoría interna, Producción)
 - **Filtrado automático** de items según `userCanAccessTab()`
-- **Auto-expansión** del grupo del tab activo al navegar
+- **Carga inicial colapsada**: al entrar al sistema solo se muestran los encabezados de módulo
+- **Auto-expansión** del grupo del tab activo al navegar después de interactuar
 - **Selector de sucursal** en el encabezado (con validación de permisos)
 - **Avatar de usuario** con nombre, rol y botón de logout
 - **Colapso total** del sidebar con toggle
