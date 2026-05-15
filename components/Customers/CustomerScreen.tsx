@@ -136,11 +136,13 @@ const createDefaultPaymentEditForm = () => ({
 const ALPHABET_FILTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const getDisplayNoteCode = (note: Pick<CreditNote, 'folio' | 'sale_reference' | 'inventory_transaction_id'>) => {
   const saleReference = String(note.sale_reference ?? '').trim();
-  if (saleReference.toUpperCase().startsWith('LEG-') && note.inventory_transaction_id) {
+  const folio = String(note.folio ?? '').trim();
+  const upperFolio = folio.toUpperCase();
+  if ((saleReference.toUpperCase().startsWith('LEG-') || upperFolio.startsWith('REP-')) && note.inventory_transaction_id) {
     return String(note.inventory_transaction_id);
   }
 
-  return String(note.folio ?? '').trim()
+  return folio
     || saleReference
     || (note.inventory_transaction_id ? String(note.inventory_transaction_id) : '')
     || '—';
