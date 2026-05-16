@@ -40,6 +40,9 @@ export const TAB_PERMISSIONS: Record<string, TabPermission> = {
   'transport-customer-alerts':  { businessUnit: 'transporteria', moduleKey: 'alerts' },
   'transport-audit':            { businessUnit: 'transporteria', moduleKey: 'audit' },
   'transport-reports':          { businessUnit: 'transporteria', moduleKey: 'reports' },
+
+  'vinos-customers':            { businessUnit: 'vinos', moduleKey: 'customers' },
+  'vinos-inventory':            { businessUnit: 'vinos', moduleKey: 'products' },
 };
 
 export const isFullAccessRole = (role?: Role | string | null) =>
@@ -56,6 +59,11 @@ export const userCanAccess = (
 ) => {
   if (!user || !user.active) return false;
   if (isFullAccessRole(user.role)) return true;
+
+  // For VINOS_ADMIN: only vinos BU, regardless of DB business_units or permissions
+  if (user.role === Role.VINOS_ADMIN) {
+    return businessUnit === 'vinos';
+  }
 
   const requiredPermission = buildPermissionKey(businessUnit, moduleKey, action);
   const permissions = user.permissions ?? [];

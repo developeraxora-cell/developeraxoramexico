@@ -130,6 +130,15 @@ const Layout: React.FC<LayoutProps> = ({
         { id: 'transport-reports', label: 'Reportes', icon: '📊' },
         { id: 'transport-audit', label: 'Auditorías', icon: '📋' },
       ]
+    },
+    {
+      id: 'vinos',
+      label: 'Vinos',
+      icon: '🍷',
+      items: [
+        { id: 'vinos-customers', label: 'Clientes', icon: '👥' },
+        { id: 'vinos-inventory', label: 'Productos', icon: '📦' },
+      ]
     }
   ];
 

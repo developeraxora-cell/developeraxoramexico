@@ -63,6 +63,8 @@ const APP_TAB_ORDER = [
   'transport-customer-alerts',
   'transport-audit',
   'transport-reports',
+  'vinos-customers',
+  'vinos-inventory',
 ];
 
 const PlaceholderModule: React.FC<{ title: string; subtitle: string }> = ({ title, subtitle }) => (
@@ -535,6 +537,10 @@ const App: React.FC = () => {
         );
       case 'transport-reports':
         return <ReportsScreen key="reports-transporteria" selectedBranchId={selectedBranchId} branches={activeBranches} businessUnit="transporteria" />;
+      case 'vinos-customers':
+        return <PlaceholderModule title="Clientes" subtitle="Vinos" />;
+      case 'vinos-inventory':
+        return <PlaceholderModule title="Productos" subtitle="Vinos" />;
       default:
         return <AccessDenied />;
     }

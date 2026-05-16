@@ -7,10 +7,11 @@ export enum Role {
   TRANSPORT_USER = 'TRANSPORT_USER',
   ADMIN = 'ADMIN',
   CAJERO = 'CAJERO',
-  ALMACEN = 'ALMACEN'
+  ALMACEN = 'ALMACEN',
+  VINOS_ADMIN = 'vinos_admin'
 }
 
-export type BusinessUnit = 'materiales' | 'concretera' | 'logistica' | 'transporteria' | 'global';
+export type BusinessUnit = 'materiales' | 'concretera' | 'logistica' | 'transporteria' | 'global' | 'vinos';
 
 export interface Branch {
   id: string;

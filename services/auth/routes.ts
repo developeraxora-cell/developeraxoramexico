@@ -24,6 +24,9 @@ export const TAB_PATHS: Record<string, string> = {
   'transport-customer-alerts': '/transporteria/alertas',
   'transport-audit':           '/transporteria/auditorias',
   'transport-reports':         '/transporteria/reportes',
+
+  'vinos-customers':           '/vinos/clientes',
+  'vinos-inventory':           '/vinos/productos',
 };
 
 export const PATH_TO_TAB: Record<string, string> = Object.fromEntries(
