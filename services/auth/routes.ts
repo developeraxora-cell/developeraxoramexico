@@ -27,6 +27,10 @@ export const TAB_PATHS: Record<string, string> = {
 
   'vinos-customers':           '/vinos/clientes',
   'vinos-inventory':           '/vinos/productos',
+  'vinos-pos':                 '/vinos/ventas',
+  'vinos-purchases':           '/vinos/compras',
+  'vinos-audit':               '/vinos/auditorias',
+  'vinos-reports':             '/vinos/reportes',
 };
 
 export const PATH_TO_TAB: Record<string, string> = Object.fromEntries(

@@ -18,6 +18,12 @@ import ConcreteInventoryScreen from './components/Concrete/ConcreteInventoryScre
 import ConcreteCustomersScreen from './components/Concrete/ConcreteCustomersScreen';
 import ConcreteReportsScreen from './components/Concrete/ConcreteReportsScreen';
 import CreditAlertsScreen from './components/CreditAlerts/CreditAlertsScreen';
+import VinosCustomersScreen from './components/Vinos/VinosCustomersScreen';
+import VinosProductsScreen from './components/Vinos/VinosProductsScreen';
+import VinosPOSScreen from './components/Vinos/VinosPOSScreen';
+import VinosPurchasesScreen from './components/Vinos/VinosPurchasesScreen';
+import VinosAuditScreen from './components/Vinos/VinosAuditScreen';
+import VinosReportsScreen from './components/Vinos/VinosReportsScreen';
 import {
   dieselTanksService,
   vehiclesService,
@@ -63,8 +69,12 @@ const APP_TAB_ORDER = [
   'transport-customer-alerts',
   'transport-audit',
   'transport-reports',
-  'vinos-customers',
+  'vinos-pos',
+  'vinos-purchases',
   'vinos-inventory',
+  'vinos-customers',
+  'vinos-reports',
+  'vinos-audit',
 ];
 
 const PlaceholderModule: React.FC<{ title: string; subtitle: string }> = ({ title, subtitle }) => (
@@ -538,9 +548,17 @@ const App: React.FC = () => {
       case 'transport-reports':
         return <ReportsScreen key="reports-transporteria" selectedBranchId={selectedBranchId} branches={activeBranches} businessUnit="transporteria" />;
       case 'vinos-customers':
-        return <PlaceholderModule title="Clientes" subtitle="Vinos" />;
+        return <VinosCustomersScreen key="customers-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'vinos-inventory':
-        return <PlaceholderModule title="Productos" subtitle="Vinos" />;
+        return <VinosProductsScreen key="inventory-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'vinos-pos':
+        return <VinosPOSScreen key="pos-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'vinos-purchases':
+        return <VinosPurchasesScreen key="purchases-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'vinos-audit':
+        return <VinosAuditScreen key="audit-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'vinos-reports':
+        return <VinosReportsScreen key="reports-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       default:
         return <AccessDenied />;
     }

@@ -9,7 +9,7 @@ const API_KEY = Deno.env.get('CLOUDINARY_API_KEY') ?? '';
 const API_SECRET = Deno.env.get('CLOUDINARY_API_SECRET') ?? '';
 const BASE_FOLDER = (Deno.env.get('CLOUDINARY_FOLDER') ?? 'grupo-lopar').trim().replace(/^\/+|\/+$/g, '');
 
-type ModuleName = 'materiales' | 'concretera';
+type ModuleName = 'materiales' | 'concretera' | 'vinos';
 
 const jsonResponse = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
@@ -33,16 +33,18 @@ const sha1Hex = async (value: string) => {
 
 const buildFolder = (input: {
   module: ModuleName;
+  category?: string | null;
   branchId?: string | null;
   customerId?: string | null;
   noteId?: string | null;
   paymentId?: string | null;
   transactionId?: string | null;
 }) => {
+  const category = (input.category ?? 'abonos').trim() || 'abonos';
   const parts = [
     BASE_FOLDER || 'grupo-lopar',
     input.module,
-    'abonos',
+    category,
     input.branchId ? `branch-${input.branchId}` : null,
     input.customerId ? `customer-${input.customerId}` : null,
     input.noteId ? `note-${input.noteId}` : null,
@@ -119,12 +121,13 @@ Deno.serve(async (request) => {
     }
 
     const module = String(formData.get('module') ?? '').trim().toLowerCase();
-    if (module !== 'materiales' && module !== 'concretera') {
+    if (module !== 'materiales' && module !== 'concretera' && module !== 'vinos') {
       return jsonResponse(400, { error: 'Módulo inválido para la evidencia.' });
     }
 
     const folder = buildFolder({
-      module,
+      module: module as ModuleName,
+      category: String(formData.get('category') ?? '').trim() || null,
       branchId: String(formData.get('branch_id') ?? '').trim() || null,
       customerId: String(formData.get('customer_id') ?? '').trim() || null,
       noteId: String(formData.get('note_id') ?? '').trim() || null,
