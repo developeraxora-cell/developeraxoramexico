@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
-import { Plus, Search, Filter, Calendar, Truck, FileText, ArrowDownToLine } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Plus, Search, Trash2, Calendar, Truck, FileText, ArrowDownToLine, X, Loader2, Eye, RefreshCw,
+} from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
+import { vinosPurchasesService, type PurchaseRow, type PurchaseWithItems, type CartItem } from '../../services/vinos/purchases.service';
+import { vinosCustomersService } from '../../services/vinos/customers.service';
+import { vinosProductsService, type ProductWithStock } from '../../services/vinos/products.service';
+import { vinosCatalogService, type Supplier, type Uom } from '../../services/vinos/catalog.service';
 
 interface Props {
   selectedBranchId: string;
@@ -9,28 +15,266 @@ interface Props {
   currentUser: User;
 }
 
-const VinosPurchasesScreen: React.FC<Props> = () => {
-  const [search, setSearch] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+interface ProductUomOption {
+  product_uom_id: string;
+  uom_id: string;
+  factor_to_base: number;
+  uom_name: string;
+  uom_symbol: string | null;
+}
 
-  const stats = {
-    total_compras: 0,
-    monto_mes: 0,
-    proveedores: 0,
-    pendientes: 0,
+interface ProductWithUoms extends ProductWithStock {
+  product_uoms?: { id: string; uom_id: string; factor_to_base: number; uom: Uom }[];
+}
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) => {
+  const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [branchDbId, setBranchDbId] = useState<number | null>(null);
+
+  // tab
+  const [tab, setTab] = useState<'historial' | 'nueva'>('historial');
+
+  // form nueva compra
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [products, setProducts] = useState<ProductWithUoms[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierId, setSupplierId] = useState('');
+  const [reference, setReference] = useState('');
+  const [purchaseDate, setPurchaseDate] = useState(todayISO());
+  const [isCredit, setIsCredit] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [productSearch, setProductSearch] = useState('');
+
+  // detail modal
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detail, setDetail] = useState<PurchaseWithItems | null>(null);
+
+  // delete modal
+  const [deleteTarget, setDeleteTarget] = useState<PurchaseRow | null>(null);
+  const [deleteNote, setDeleteNote] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  // supplier modal
+  const [supplierModalOpen, setSupplierModalOpen] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState('');
+  const [newSupplierPhone, setNewSupplierPhone] = useState('');
+  const [newSupplierEmail, setNewSupplierEmail] = useState('');
+  const [newSupplierRfc, setNewSupplierRfc] = useState('');
+
+  // ── branch id ────────────────────────────────────────────
+  useEffect(() => {
+    vinosCustomersService.getBranchId(selectedBranchId).then(setBranchDbId);
+  }, [selectedBranchId]);
+
+  // ── load purchases ───────────────────────────────────────
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const rows = await vinosPurchasesService.list(branchDbId ?? undefined, { search: search.trim() || undefined });
+      setPurchases(rows);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }, [branchDbId, search]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // ── load catálogo al abrir modal nueva compra ───────────
+  const loadModalData = async () => {
+    try {
+      const [list, sups] = await Promise.all([
+        vinosProductsService.listWithStock(branchDbId ?? undefined),
+        vinosCatalogService.listSuppliers(),
+      ]);
+      const puRows = await vinosProductsService.listAllProductUoms(list.map(p => p.id));
+      const byProduct: Record<string, ProductWithUoms['product_uoms']> = {};
+      puRows.forEach(row => {
+        byProduct[row.product_id] = byProduct[row.product_id] || [];
+        byProduct[row.product_id]!.push({ id: row.id, uom_id: row.uom_id, factor_to_base: row.factor_to_base, uom: row.uom as Uom });
+      });
+      const prods = list.map(p => ({ ...p, product_uoms: byProduct[p.id] ?? [] })) as ProductWithUoms[];
+      setProducts(prods);
+      setSuppliers(sups);
+    } catch (e) { console.error(e); }
   };
 
+  const resetForm = () => {
+    setSupplierId('');
+    setReference('');
+    setPurchaseDate(todayISO());
+    setIsCredit(false);
+    setNotes('');
+    setCart([]);
+    setProductSearch('');
+    setFormError('');
+  };
+
+  // Cargar catálogo cuando se entra a tab nueva
+  useEffect(() => {
+    if (tab === 'nueva' && branchDbId) loadModalData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, branchDbId]);
+
+  // ── productos filtrados ─────────────────────────────────
+  const filteredProducts = useMemo(() => {
+    const q = productSearch.trim().toLowerCase();
+    if (!q) return products.slice(0, 20);
+    return products.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.sku.toLowerCase().includes(q) ||
+      (p.barcode ?? '').includes(q)
+    ).slice(0, 20);
+  }, [products, productSearch]);
+
+  // ── carrito ─────────────────────────────────────────────
+  const addProductToCart = (p: ProductWithUoms) => {
+    // por defecto unidad base (factor 1 en product_uoms, o usar uom_id del producto)
+    const baseOption = p.product_uoms?.find(pu => Number(pu.factor_to_base) === 1) ?? p.product_uoms?.[0];
+    if (!baseOption) {
+      setFormError(`El producto "${p.name}" no tiene unidades configuradas.`);
+      return;
+    }
+    setCart(prev => [...prev, {
+      product_id: p.id,
+      product_uom_id: baseOption.id,
+      factor_to_base: Number(baseOption.factor_to_base),
+      qty: 1,
+      cost_per_unit: 0,
+      product_name: p.name,
+      product_sku: p.sku,
+      uom_name: baseOption.uom?.name ?? '',
+    }]);
+    setProductSearch('');
+  };
+
+  const updateCartItem = (idx: number, patch: Partial<CartItem>) =>
+    setCart(prev => prev.map((row, i) => i === idx ? { ...row, ...patch } : row));
+
+  const removeCartItem = (idx: number) =>
+    setCart(prev => prev.filter((_, i) => i !== idx));
+
+  const changeCartItemUom = (idx: number, productUomId: string) => {
+    const item = cart[idx];
+    const product = products.find(p => p.id === item.product_id);
+    const pu = product?.product_uoms?.find(u => u.id === productUomId);
+    if (!pu) return;
+    updateCartItem(idx, {
+      product_uom_id: pu.id,
+      factor_to_base: Number(pu.factor_to_base),
+      uom_name: pu.uom?.name ?? '',
+    });
+  };
+
+  const total = useMemo(() => cart.reduce((sum, it) => sum + (Number(it.qty) * Number(it.cost_per_unit)), 0), [cart]);
+
+  // ── stats ───────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    const ofMonth = purchases.filter(p => new Date(p.purchase_date) >= monthStart);
+    const suppliersSet = new Set(purchases.map(p => p.supplier_id).filter(Boolean));
+    const credito = purchases.filter(p => p.is_credit).length;
+    return {
+      total: purchases.length,
+      monto_mes: ofMonth.reduce((s, p) => s + Number(p.total), 0),
+      proveedores: suppliersSet.size,
+      credito,
+    };
+  }, [purchases]);
+
+  // ── save ────────────────────────────────────────────────
+  const handleSave = async () => {
+    if (!branchDbId) { setFormError('Sucursal no encontrada.'); return; }
+    if (cart.length === 0) { setFormError('Agrega al menos un producto.'); return; }
+    for (const it of cart) {
+      if (Number(it.qty) <= 0) { setFormError('Cantidad debe ser mayor a 0.'); return; }
+      if (Number(it.cost_per_unit) < 0) { setFormError('Costo unitario inválido.'); return; }
+    }
+
+    setSaving(true);
+    setFormError('');
+    try {
+      await vinosPurchasesService.create({
+        branch_id: branchDbId,
+        supplier_id: supplierId || null,
+        reference: reference.trim() || null,
+        purchase_date: purchaseDate,
+        notes: notes.trim() || null,
+        is_credit: isCredit,
+        created_by: currentUser.id,
+        items: cart,
+      });
+      await load();
+      resetForm();
+      setTab('historial');
+    } catch (e: unknown) {
+      setFormError(e instanceof Error ? e.message : 'Error al guardar.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── detail ──────────────────────────────────────────────
+  const openDetail = async (p: PurchaseRow) => {
+    setDetail(null);
+    setDetailOpen(true);
+    try {
+      const d = await vinosPurchasesService.getDetail(p.id);
+      setDetail(d);
+    } catch (e) { console.error(e); }
+  };
+
+  // ── delete ──────────────────────────────────────────────
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    if (!deleteNote.trim()) { return; }
+    setDeleting(true);
+    try {
+      await vinosPurchasesService.softDelete(deleteTarget.id, deleteNote.trim());
+      setPurchases(prev => prev.filter(p => p.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      setDeleteNote('');
+    } catch (e) { console.error(e); }
+    finally { setDeleting(false); }
+  };
+
+  // ── add supplier ────────────────────────────────────────
+  const createSupplier = async () => {
+    const name = newSupplierName.trim();
+    if (!name) return;
+    try {
+      const s = await vinosCatalogService.createSupplier({
+        name,
+        phone: newSupplierPhone.trim() || null,
+        email: newSupplierEmail.trim() || null,
+        address: null,
+        rfc: newSupplierRfc.trim() || null,
+        notes: null,
+      });
+      setSuppliers(prev => [...prev, s]);
+      setSupplierId(s.id);
+      setNewSupplierName(''); setNewSupplierPhone(''); setNewSupplierEmail(''); setNewSupplierRfc('');
+      setSupplierModalOpen(false);
+    } catch (e) { console.error(e); }
+  };
+
+  // ── render ──────────────────────────────────────────────
   return (
     <div className="space-y-6">
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: 'Total compras', value: stats.total_compras,           icon: ArrowDownToLine },
-          { label: 'Monto del mes', value: formatCurrency(stats.monto_mes), icon: FileText },
-          { label: 'Proveedores',    value: stats.proveedores,             icon: Truck },
-          { label: 'Pendientes',     value: stats.pendientes,              icon: Calendar },
+          { label: 'Total compras',  value: purchases.length,                icon: ArrowDownToLine },
+          { label: 'Monto del mes',  value: formatCurrency(stats.monto_mes), icon: FileText },
+          { label: 'Proveedores',    value: stats.proveedores,                icon: Truck },
+          { label: 'Compras a crédito', value: stats.credito,                 icon: Calendar },
         ].map(s => (
           <div key={s.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between">
@@ -42,66 +286,450 @@ const VinosPurchasesScreen: React.FC<Props> = () => {
         ))}
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-sm">
+      {/* Header con título + acción */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-3xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-600">
+            {tab === 'historial' ? <ArrowDownToLine size={20}/> : <Plus size={20}/>}
+          </div>
+          <div>
+            <h2 className="text-xl font-black tracking-tight text-slate-900">
+              {tab === 'historial' ? 'Historial de Compras' : 'Nueva Compra'}
+            </h2>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sucursal activa</p>
+          </div>
+        </div>
+        {tab === 'historial' ? (
+          <button
+            onClick={() => { setTab('nueva'); if (cart.length === 0) resetForm(); }}
+            className="flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-700"
+          >
+            <Plus size={15}/> Registrar compra
+          </button>
+        ) : (
+          <button
+            onClick={() => setTab('historial')}
+            className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+          >
+            Volver al historial
+          </button>
+        )}
+      </div>
+
+      {tab === 'historial' && (
+      <>
+      {/* Search */}
+      <div className="flex gap-2 max-w-2xl">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input
             className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-            placeholder="Folio, proveedor, producto…"
+            placeholder="Folio, proveedor, total…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <button className="flex items-center gap-2 rounded-2xl bg-orange-600 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500">
-          <Plus size={15} /> Nueva entrada
+        <button onClick={load} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50" title="Recargar">
+          <RefreshCw size={14} />
         </button>
-      </div>
-
-      {/* Filtros fecha */}
-      <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-        <Filter size={16} className="mt-7 text-slate-400" />
-        <div>
-          <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Desde</label>
-          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-            className="rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-orange-400" />
-        </div>
-        <div>
-          <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Hasta</label>
-          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-            className="rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-orange-400" />
-        </div>
-        <div className="flex-1 min-w-[160px]">
-          <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Proveedor</label>
-          <select className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-400">
-            <option>Todos los proveedores</option>
-          </select>
-        </div>
-        <button className="rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-700">Aplicar</button>
       </div>
 
       {/* Tabla */}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="py-20 text-center">
-          <ArrowDownToLine size={40} className="mx-auto text-slate-300" />
-          <p className="mt-3 text-sm font-black uppercase tracking-widest text-slate-400">Sin compras registradas</p>
-          <p className="mt-1 text-xs text-slate-400">Registra tu primera entrada de inventario.</p>
-        </div>
-
-        {/* Tabla oculta hasta tener datos */}
-        <div className="hidden overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50">
-                {['Folio','Fecha','Proveedor','Productos','Subtotal','IVA','Total',''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
+        {loading ? (
+          <div className="py-16 text-center text-sm font-bold text-slate-400">Cargando compras…</div>
+        ) : purchases.length === 0 ? (
+          <div className="py-20 text-center">
+            <ArrowDownToLine size={40} className="mx-auto text-slate-300" />
+            <p className="mt-3 text-sm font-black uppercase tracking-widest text-slate-400">Sin compras registradas</p>
+            <p className="mt-1 text-xs text-slate-400">Registra tu primera entrada de inventario.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50">
+                  {['Folio','Fecha','Proveedor','Notas','Total',''].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {purchases.map(p => (
+                  <tr key={p.id} className="hover:bg-slate-50 border-l-4" style={{ borderLeftColor: p.is_credit ? '#ef4444' : '#22c55e' }}>
+                    <td className="px-4 py-3 text-xs font-mono text-slate-700">{p.reference ?? <span className="text-slate-400">—</span>}</td>
+                    <td className="px-4 py-3 text-xs text-slate-600">{p.purchase_date}</td>
+                    <td className="px-4 py-3 text-xs text-slate-700">{p.supplier?.name ?? <span className="text-slate-400">—</span>}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500 truncate max-w-[200px]">{p.notes ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm font-black text-slate-900">{formatCurrency(p.total)}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => openDetail(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Ver detalle"><Eye size={14}/></button>
+                        <button onClick={() => { setDeleteTarget(p); setDeleteNote(''); }} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
+                      </div>
+                    </td>
+                  </tr>
                 ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100"></tbody>
-          </table>
-        </div>
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
+      </>
+      )}
+
+      {tab === 'nueva' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+          {/* Columna izq: 3 cards (escaneo + proveedor/fecha + referencia/notas) */}
+          <div className="space-y-4">
+
+            {/* Card 1: Escaneo / búsqueda */}
+            <div className="rounded-3xl border border-slate-200 bg-white shadow-sm p-5">
+              <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Paso 1: Escaneo de producto</h3>
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-9 pr-4 text-sm outline-none focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-100"
+                  placeholder="Escanee el barcode o escriba el nombre"
+                  value={productSearch}
+                  onChange={e => setProductSearch(e.target.value)}
+                />
+                {productSearch && filteredProducts.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
+                    {filteredProducts.map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => addProductToCart(p)}
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-orange-50"
+                      >
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-base">🍷</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate font-bold text-slate-800">{p.name}</p>
+                          <p className="text-[10px] text-slate-400 font-mono">{p.sku}</p>
+                        </div>
+                        <Plus size={14} className="text-orange-500"/>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-slate-400">1 scan = 1 producto (luego ingrese cantidad)</p>
+            </div>
+
+            {/* Card 2: Proveedor y fecha */}
+            <div className="rounded-3xl border border-slate-200 bg-white shadow-sm p-5 space-y-4">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Proveedor y fecha</h3>
+
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <label className="text-[11px] font-black uppercase tracking-widest text-slate-500">Proveedor</label>
+                  <button
+                    type="button"
+                    onClick={() => setSupplierModalOpen(true)}
+                    className="text-[10px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-600"
+                  >
+                    + Nuevo proveedor
+                  </button>
+                </div>
+                <select
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:bg-white"
+                  value={supplierId}
+                  onChange={e => setSupplierId(e.target.value)}
+                >
+                  <option value="">Seleccionar proveedor</option>
+                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                {suppliers.length === 0 && (
+                  <p className="mt-1 text-[10px] text-slate-400">No hay proveedores. Crea uno con "+ Nuevo proveedor".</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Fecha de compra</label>
+                  <input
+                    type="date"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:bg-white"
+                    value={purchaseDate}
+                    onChange={e => setPurchaseDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Compra a crédito</label>
+                  <select
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:bg-white"
+                    value={isCredit ? 'si' : 'no'}
+                    onChange={e => setIsCredit(e.target.value === 'si')}
+                  >
+                    <option value="no">No</option>
+                    <option value="si">Sí</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Referencia y notas */}
+            <div className="rounded-3xl border border-slate-200 bg-white shadow-sm p-5 space-y-3">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Referencia y notas</h3>
+              <input
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:bg-white"
+                placeholder="Referencia (Factura, Remisión, etc.)"
+                value={reference}
+                onChange={e => setReference(e.target.value)}
+              />
+              <textarea
+                rows={3}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:bg-white resize-none"
+                placeholder="Notas"
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+              />
+              {formError && (
+                <p className="rounded-xl bg-red-50 px-4 py-2 text-xs font-bold text-red-600">{formError}</p>
+              )}
+            </div>
+
+          </div>
+
+          {/* Columna der: card carrito con scroll + totals + botones */}
+          <div className="rounded-3xl border border-slate-200 bg-white shadow-sm flex flex-col max-h-[calc(100vh-260px)]">
+            {/* Header carrito */}
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Productos en la entrada</h3>
+                <p className="text-[10px] font-bold text-slate-400">{cart.length} producto{cart.length !== 1 ? 's' : ''} · {cart.reduce((s, it) => s + Number(it.qty), 0)} unidades</p>
+              </div>
+              {cart.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setCart([])}
+                  className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-red-500"
+                >
+                  Vaciar
+                </button>
+              )}
+            </div>
+
+            {/* Lista con scroll */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 min-h-[300px]">
+              {cart.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center">
+                  <ArrowDownToLine size={36} className="text-slate-300" />
+                  <p className="mt-3 text-xs font-black uppercase tracking-widest text-slate-400">Carrito vacío</p>
+                  <p className="mt-1 text-[10px] text-slate-400">Busca productos en el panel izquierdo.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cart.map((it, idx) => {
+                    const product = products.find(p => p.id === it.product_id);
+                    const subtotal = Number(it.qty) * Number(it.cost_per_unit);
+                    return (
+                      <div key={idx} className="rounded-2xl border border-slate-200 bg-slate-50/40 p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-slate-900">{it.product_name}</p>
+                            <p className="text-[10px] text-slate-400 font-mono">{it.product_sku}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeCartItem(idx)}
+                            className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                          >
+                            <Trash2 size={14}/>
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Unidad</label>
+                            <select
+                              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-orange-400"
+                              value={it.product_uom_id}
+                              onChange={e => changeCartItemUom(idx, e.target.value)}
+                            >
+                              {(product?.product_uoms ?? []).map(pu => (
+                                <option key={pu.id} value={pu.id}>
+                                  {pu.uom?.name ?? ''} · x{pu.factor_to_base}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Cantidad</label>
+                            <input
+                              type="number" min="0" step="0.01"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-orange-400"
+                              value={it.qty}
+                              onChange={e => updateCartItem(idx, { qty: Number(e.target.value) })}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Costo unit.</label>
+                            <input
+                              type="number" min="0" step="0.01"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-orange-400"
+                              value={it.cost_per_unit}
+                              onChange={e => updateCartItem(idx, { cost_per_unit: Number(e.target.value) })}
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between border-t border-slate-200 pt-2">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Subtotal</span>
+                          <span className="text-sm font-black text-slate-900">{formatCurrency(subtotal)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer: total + botones */}
+            <div className="border-t border-slate-100 bg-slate-50/50 px-6 py-4 space-y-3">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total compra</span>
+                <span className="text-2xl font-black text-orange-600">{formatCurrency(total)}</span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCart([])}
+                  disabled={cart.length === 0}
+                  className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+                >
+                  Limpiar
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || cart.length === 0}
+                  className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
+                >
+                  {saving && <Loader2 size={14} className="animate-spin"/>}
+                  {saving ? 'Guardando…' : 'Registrar entrada'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL DETALLE COMPRA ───────────────────────── */}
+      {detailOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <h2 className="text-base font-black uppercase tracking-tight text-slate-900">Detalle de compra</h2>
+              <button onClick={() => { setDetailOpen(false); setDetail(null); }} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={18}/></button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              {!detail ? (
+                <p className="py-8 text-center text-sm text-slate-400">Cargando…</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                    <div><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Folio</p><p className="text-sm font-bold text-slate-900 font-mono">{detail.reference ?? '—'}</p></div>
+                    <div><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha</p><p className="text-sm font-bold text-slate-900">{detail.purchase_date}</p></div>
+                    <div><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Proveedor</p><p className="text-sm font-bold text-slate-900">{detail.supplier?.name ?? '—'}</p></div>
+                    <div><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total</p><p className="text-sm font-black text-orange-600">{formatCurrency(detail.total)}</p></div>
+                  </div>
+                  {detail.notes && <p className="mb-4 text-xs text-slate-500 italic">Notas: {detail.notes}</p>}
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        <th className="py-2 text-left">Producto</th>
+                        <th className="py-2 text-left">Unidad</th>
+                        <th className="py-2 text-right">Cant.</th>
+                        <th className="py-2 text-right">Costo</th>
+                        <th className="py-2 text-right">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {detail.items.map(it => (
+                        <tr key={it.id}>
+                          <td className="py-2 text-slate-700">{it.product?.name ?? '—'}</td>
+                          <td className="py-2 text-slate-600">{it.uom?.name ?? '—'}</td>
+                          <td className="py-2 text-right text-slate-700">{it.qty}</td>
+                          <td className="py-2 text-right text-slate-700">{formatCurrency(it.cost_per_unit)}</td>
+                          <td className="py-2 text-right font-bold text-slate-900">{formatCurrency(it.subtotal)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL ELIMINAR ─────────────────────────────── */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-500"><Trash2 size={22}/></div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">¿Eliminar compra?</h3>
+                <p className="text-xs text-slate-500">Folio {deleteTarget.reference ?? '—'} · {formatCurrency(deleteTarget.total)}</p>
+              </div>
+            </div>
+            <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Motivo de eliminación *</label>
+            <textarea
+              rows={3}
+              className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 resize-none"
+              value={deleteNote}
+              onChange={e => setDeleteNote(e.target.value)}
+              placeholder="Explica por qué se elimina…"
+            />
+            <div className="mt-4 flex gap-3">
+              <button onClick={() => { setDeleteTarget(null); setDeleteNote(''); }} className="flex-1 rounded-2xl border border-slate-200 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">Cancelar</button>
+              <button onClick={handleDelete} disabled={deleting || !deleteNote.trim()} className="flex-1 rounded-2xl bg-red-500 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-red-600 disabled:opacity-40">
+                {deleting ? 'Eliminando…' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL NUEVO PROVEEDOR ──────────────────────── */}
+      {supplierModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Nuevo proveedor</h3>
+              <button onClick={() => setSupplierModalOpen(false)} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={16}/></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Nombre *</label>
+                <input className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400" value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Teléfono</label>
+                  <input className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400" value={newSupplierPhone} onChange={e => setNewSupplierPhone(e.target.value)} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">RFC</label>
+                  <input className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400" value={newSupplierRfc} onChange={e => setNewSupplierRfc(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Email</label>
+                <input type="email" className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400" value={newSupplierEmail} onChange={e => setNewSupplierEmail(e.target.value)} />
+              </div>
+            </div>
+            <div className="mt-5 flex gap-3">
+              <button onClick={() => setSupplierModalOpen(false)} className="flex-1 rounded-2xl border border-slate-200 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">Cancelar</button>
+              <button onClick={createSupplier} disabled={!newSupplierName.trim()} className="flex-1 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-40">Crear</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

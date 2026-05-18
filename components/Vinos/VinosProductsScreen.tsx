@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Plus, Search, Pencil, Trash2, Package, TrendingUp, AlertTriangle, X, Loader2, Settings, RefreshCw,
+  Plus, Search, Pencil, Trash2, Package, TrendingUp, AlertTriangle, X, Loader2, Settings, RefreshCw, Check, ChevronDown, Save,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
@@ -62,7 +62,8 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
   const [uoms, setUoms] = useState<Uom[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [branchDbId, setBranchDbId] = useState<number | null>(null);
 
   // modal producto
@@ -118,8 +119,8 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
   // ── filtered ─────────────────────────────────────────────
   const filtered = useMemo(() => {
     let arr = products;
-    if (categoryFilter !== 'all') {
-      arr = arr.filter(p => p.category_id === categoryFilter);
+    if (categoryFilters.length > 0) {
+      arr = arr.filter(p => p.category_id && categoryFilters.includes(p.category_id));
     }
     const q = search.trim().toLowerCase();
     if (q) {
@@ -130,7 +131,11 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
       );
     }
     return arr;
-  }, [products, search, categoryFilter]);
+  }, [products, search, categoryFilters]);
+
+  const toggleCategoryFilter = (id: string) => {
+    setCategoryFilters(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  };
 
   // ── stats ────────────────────────────────────────────────
   const stats = useMemo(() => ({
@@ -358,6 +363,38 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
     try {
       await vinosCatalogService.deleteUom(id);
       setUoms(prev => prev.filter(u => u.id !== id));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '';
+      alert(msg.includes('foreign') || msg.includes('violates') ? 'No se puede eliminar: hay productos usando esta unidad. Edita el nombre.' : (msg || 'Error al eliminar.'));
+    }
+  };
+
+  // edit inline state
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryName, setEditingCategoryName] = useState('');
+  const [editingUomId, setEditingUomId] = useState<string | null>(null);
+  const [editingUomName, setEditingUomName] = useState('');
+  const [editingUomSymbol, setEditingUomSymbol] = useState('');
+
+  const startEditCategory = (c: Category) => { setEditingCategoryId(c.id); setEditingCategoryName(c.name); };
+  const cancelEditCategory = () => { setEditingCategoryId(null); setEditingCategoryName(''); };
+  const saveEditCategory = async () => {
+    if (!editingCategoryId || !editingCategoryName.trim()) return;
+    try {
+      const updated = await vinosCatalogService.updateCategory(editingCategoryId, { name: editingCategoryName.trim() });
+      setCategories(prev => prev.map(c => c.id === updated.id ? updated : c));
+      cancelEditCategory();
+    } catch (e) { console.error(e); }
+  };
+
+  const startEditUom = (u: Uom) => { setEditingUomId(u.id); setEditingUomName(u.name); setEditingUomSymbol(u.symbol ?? ''); };
+  const cancelEditUom = () => { setEditingUomId(null); setEditingUomName(''); setEditingUomSymbol(''); };
+  const saveEditUom = async () => {
+    if (!editingUomId || !editingUomName.trim()) return;
+    try {
+      const updated = await vinosCatalogService.updateUom(editingUomId, { name: editingUomName.trim(), symbol: editingUomSymbol.trim() || null });
+      setUoms(prev => prev.map(u => u.id === updated.id ? updated : u));
+      cancelEditUom();
     } catch (e) { console.error(e); }
   };
 
@@ -395,20 +432,59 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          {/* Select de categoría */}
-          <select
-            value={categoryFilter}
-            onChange={e => setCategoryFilter(e.target.value)}
-            className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-orange-400 min-w-[180px]"
-          >
-            <option value="all">Todas las categorías ({products.length})</option>
-            {categories.map(c => {
-              const count = products.filter(p => p.category_id === c.id).length;
-              return <option key={c.id} value={c.id}>{c.name} ({count})</option>;
-            })}
-          </select>
+          {/* Multi-select checkbox dropdown de categorías */}
+          <div className="relative min-w-[220px]">
+            <button
+              type="button"
+              onClick={() => setCategoryDropdownOpen(o => !o)}
+              className="flex w-full items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 outline-none hover:border-slate-300"
+            >
+              <span className="truncate">
+                {categoryFilters.length === 0
+                  ? `Todas las categorías (${products.length})`
+                  : `${categoryFilters.length} seleccionadas`}
+              </span>
+              <ChevronDown size={14} className={`shrink-0 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {categoryDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setCategoryDropdownOpen(false)} />
+                <div className="absolute z-40 mt-1 w-full max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
+                  <button
+                    type="button"
+                    onClick={() => setCategoryFilters([])}
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-bold text-slate-600 hover:bg-orange-50"
+                  >
+                    <span>Limpiar selección</span>
+                    {categoryFilters.length === 0 && <Check size={14} className="text-orange-500" />}
+                  </button>
+                  <div className="border-t border-slate-100" />
+                  {categories.length === 0 ? (
+                    <p className="px-3 py-4 text-center text-xs text-slate-400">No hay categorías</p>
+                  ) : categories.map(c => {
+                    const count = products.filter(p => p.category_id === c.id).length;
+                    const active = categoryFilters.includes(c.id);
+                    return (
+                      <label key={c.id} className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-slate-50 ${active ? 'bg-orange-50/60' : ''}`}>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            className="h-3.5 w-3.5 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                            checked={active}
+                            onChange={() => toggleCategoryFilter(c.id)}
+                          />
+                          <span className={`font-bold ${active ? 'text-orange-700' : 'text-slate-700'}`}>{c.name}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400">{count}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
           <button onClick={() => setCatalogModalOpen(true)} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">
-            <Settings size={14} /> Catálogo
+            <Settings size={14} /> Ajustes
           </button>
           <button onClick={load} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50" title="Recargar">
             <RefreshCw size={14} />
@@ -427,10 +503,10 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
           <div className="py-20 text-center">
             <Package size={40} className="mx-auto text-slate-300" />
             <p className="mt-3 text-sm font-black uppercase tracking-widest text-slate-400">
-              {search || categoryFilter !== 'all' ? 'Sin resultados' : 'Sin productos'}
+              {search || categoryFilters.length > 0 ? 'Sin resultados' : 'Sin productos'}
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              {search || categoryFilter !== 'all' ? 'Prueba con otro filtro.' : 'Agrega tu primer producto al catálogo.'}
+              {search || categoryFilters.length > 0 ? 'Prueba con otro filtro.' : 'Agrega tu primer producto al catálogo.'}
             </p>
           </div>
         ) : (
@@ -731,7 +807,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h2 className="text-base font-black uppercase tracking-tight text-slate-900">Gestionar catálogo</h2>
+              <h2 className="text-base font-black uppercase tracking-tight text-slate-900">Ajustes — Categorías y Unidades</h2>
               <button onClick={() => setCatalogModalOpen(false)} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={18}/></button>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-5 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -754,12 +830,32 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
                 <ul className="space-y-1 max-h-72 overflow-y-auto">
                   {categories.length === 0 ? (
                     <li className="text-center py-6 text-xs text-slate-400">Sin categorías</li>
-                  ) : categories.map(c => (
-                    <li key={c.id} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm">
-                      <span className="text-slate-700">{c.name}</span>
-                      <button onClick={() => removeCategory(c.id)} className="text-slate-400 hover:text-red-500"><Trash2 size={14}/></button>
-                    </li>
-                  ))}
+                  ) : categories.map(c => {
+                    const editing = editingCategoryId === c.id;
+                    return (
+                      <li key={c.id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${editing ? 'border-orange-300 bg-orange-50' : 'border-slate-200'}`}>
+                        {editing ? (
+                          <>
+                            <input
+                              autoFocus
+                              className="flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm outline-none focus:border-orange-500"
+                              value={editingCategoryName}
+                              onChange={e => setEditingCategoryName(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') saveEditCategory(); if (e.key === 'Escape') cancelEditCategory(); }}
+                            />
+                            <button onClick={saveEditCategory} className="rounded-md bg-orange-600 p-1.5 text-white hover:bg-orange-500" title="Guardar"><Save size={14}/></button>
+                            <button onClick={cancelEditCategory} className="rounded-md border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50" title="Cancelar"><X size={14}/></button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="flex-1 text-slate-700">{c.name}</span>
+                            <button onClick={() => startEditCategory(c)} className="text-slate-400 hover:text-orange-500" title="Editar"><Pencil size={14}/></button>
+                            <button onClick={() => removeCategory(c.id)} className="text-slate-400 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
+                          </>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
 
@@ -786,12 +882,39 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
                 <ul className="space-y-1 max-h-72 overflow-y-auto">
                   {uoms.length === 0 ? (
                     <li className="text-center py-6 text-xs text-slate-400">Sin unidades</li>
-                  ) : uoms.map(u => (
-                    <li key={u.id} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm">
-                      <span className="text-slate-700">{u.name}{u.symbol ? <span className="text-slate-400"> ({u.symbol})</span> : null}</span>
-                      <button onClick={() => removeUom(u.id)} className="text-slate-400 hover:text-red-500"><Trash2 size={14}/></button>
-                    </li>
-                  ))}
+                  ) : uoms.map(u => {
+                    const editing = editingUomId === u.id;
+                    return (
+                      <li key={u.id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${editing ? 'border-orange-300 bg-orange-50' : 'border-slate-200'}`}>
+                        {editing ? (
+                          <>
+                            <input
+                              autoFocus
+                              className="flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm outline-none focus:border-orange-500"
+                              placeholder="Nombre"
+                              value={editingUomName}
+                              onChange={e => setEditingUomName(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') saveEditUom(); if (e.key === 'Escape') cancelEditUom(); }}
+                            />
+                            <input
+                              className="w-16 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm outline-none focus:border-orange-500"
+                              placeholder="Símb."
+                              value={editingUomSymbol}
+                              onChange={e => setEditingUomSymbol(e.target.value)}
+                            />
+                            <button onClick={saveEditUom} className="rounded-md bg-orange-600 p-1.5 text-white hover:bg-orange-500" title="Guardar"><Save size={14}/></button>
+                            <button onClick={cancelEditUom} className="rounded-md border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50" title="Cancelar"><X size={14}/></button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="flex-1 text-slate-700">{u.name}{u.symbol ? <span className="text-slate-400"> ({u.symbol})</span> : null}</span>
+                            <button onClick={() => startEditUom(u)} className="text-slate-400 hover:text-orange-500" title="Editar"><Pencil size={14}/></button>
+                            <button onClick={() => removeUom(u.id)} className="text-slate-400 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
+                          </>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
 

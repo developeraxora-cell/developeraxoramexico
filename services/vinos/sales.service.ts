@@ -1,0 +1,334 @@
+import { supabaseVinos, isVinosConfigured } from '../vinosClient';
+
+export type PriceTier = 'MENUDEO' | 'MEDIO_MAYOREO' | 'MAYOREO';
+export type PaymentMethod = 'EFECTIVO' | 'CREDITO' | 'CORTESIA';
+
+export interface SaleCartItem {
+  product_id: string;
+  product_uom_id: string;
+  factor_to_base: number;
+  qty: number;
+  price_type: PriceTier;
+  unit_price: number;
+  product_name?: string;
+  product_sku?: string;
+  uom_name?: string;
+}
+
+export interface CreateSaleInput {
+  branch_id: number;
+  customer_id?: string | null;
+  payment_method: PaymentMethod;
+  subtotal: number;
+  discount_amount: number;
+  total: number;
+  coupon_code?: string | null;
+  wallet_used?: number;
+  credit_used?: number;
+  cash_received?: number;
+  notes?: string | null;
+  delivery_address?: string | null;
+  created_by: string;
+  items: SaleCartItem[];
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  description: string | null;
+  discount_type: 'PERCENT' | 'FIXED';
+  discount_value: number;
+  min_purchase: number;
+  max_uses: number | null;
+  uses: number;
+  valid_from: string | null;
+  valid_to: string | null;
+  is_active: boolean;
+}
+
+export interface SaleRow {
+  id: string;
+  branch_id: number;
+  customer_id: string | null;
+  payment_method: PaymentMethod;
+  price_type: PriceTier;
+  subtotal: number;
+  discount_amount: number;
+  total: number;
+  coupon_code: string | null;
+  wallet_used: number;
+  credit_used: number;
+  cash_received: number;
+  notes: string | null;
+  delivery_address: string | null;
+  created_by: string;
+  created_at: string;
+  deleted_at: string | null;
+  delete_note: string | null;
+  customer?: { id: string; name: string } | null;
+}
+
+export const vinosSalesService = {
+
+  async list(branchId?: number, opts?: { search?: string; from?: string; to?: string; customerId?: string }): Promise<SaleRow[]> {
+    if (!isVinosConfigured) return [];
+    let query = supabaseVinos
+      .from('sales')
+      .select('*, customer:customers(id,name), items:sale_items(id)')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (branchId) query = query.eq('branch_id', branchId);
+    if (opts?.customerId) query = query.eq('customer_id', opts.customerId);
+    if (opts?.from) query = query.gte('created_at', `${opts.from}T00:00:00`);
+    if (opts?.to) query = query.lte('created_at', `${opts.to}T23:59:59`);
+    const { data, error } = await query;
+    if (error) throw error;
+    let rows = (data ?? []) as SaleRow[];
+    if (opts?.search) {
+      const q = opts.search.toLowerCase();
+      rows = rows.filter(r =>
+        (r.customer?.name ?? '').toLowerCase().includes(q) ||
+        String(r.total).includes(q) ||
+        (r.coupon_code ?? '').toLowerCase().includes(q) ||
+        r.id.toLowerCase().includes(q)
+      );
+    }
+    return rows;
+  },
+
+  async customerCreditBalance(customerId: string): Promise<{ debt: number }> {
+    if (!isVinosConfigured) return { debt: 0 };
+    const { data, error } = await supabaseVinos
+      .from('sales')
+      .select('credit_used')
+      .eq('customer_id', customerId)
+      .eq('payment_method', 'CREDITO')
+      .is('deleted_at', null);
+    if (error) return { debt: 0 };
+    const debt = (data ?? []).reduce((s: number, r: { credit_used: number }) => s + Number(r.credit_used ?? 0), 0);
+    return { debt };
+  },
+
+  async softDelete(saleId: string, deleteNote: string): Promise<void> {
+    if (!isVinosConfigured) throw new Error('DB vinos no configurada');
+    const { error } = await supabaseVinos
+      .from('sales')
+      .update({ deleted_at: new Date().toISOString(), delete_note: deleteNote })
+      .eq('id', saleId);
+    if (error) throw error;
+  },
+
+  async updatePaymentType(saleId: string, newType: PaymentMethod): Promise<void> {
+    if (!isVinosConfigured) throw new Error('DB vinos no configurada');
+
+    // 1. Cargar venta actual
+    const { data: sale, error: loadErr } = await supabaseVinos
+      .from('sales')
+      .select('id, customer_id, payment_method, total, credit_used, wallet_used')
+      .eq('id', saleId)
+      .single();
+    if (loadErr || !sale) throw new Error('Venta no encontrada.');
+
+    const oldType = sale.payment_method as PaymentMethod;
+    if (oldType === newType) return;
+
+    const totalNum = Number(sale.total);
+    const oldCreditUsed = Number(sale.credit_used ?? 0);
+
+    // 2. Si nuevo tipo es CREDITO: requiere cliente + crédito disponible
+    if (newType === 'CREDITO') {
+      if (!sale.customer_id) throw new Error('No se puede pasar a crédito: la venta no tiene cliente vinculado.');
+      const { data: cust } = await supabaseVinos
+        .from('customers')
+        .select('credit_limit, name')
+        .eq('id', sale.customer_id)
+        .single();
+      if (!cust) throw new Error('Cliente no encontrado.');
+      const available = Number(cust.credit_limit ?? 0);
+      if (available < totalNum) throw new Error(`Crédito insuficiente. Disponible: $${available.toFixed(2)}`);
+    }
+
+    // 3. Revertir efecto del tipo anterior
+    if (oldType === 'CREDITO' && sale.customer_id && oldCreditUsed > 0) {
+      const { data: cust } = await supabaseVinos
+        .from('customers')
+        .select('credit_limit')
+        .eq('id', sale.customer_id)
+        .single();
+      const restored = Number(cust?.credit_limit ?? 0) + oldCreditUsed;
+      await supabaseVinos
+        .from('customers')
+        .update({ credit_limit: restored, updated_at: new Date().toISOString() })
+        .eq('id', sale.customer_id);
+    }
+
+    // 4. Aplicar efecto del tipo nuevo
+    let newCreditUsed = 0;
+    const updates: Record<string, unknown> = { payment_method: newType };
+
+    if (newType === 'CREDITO' && sale.customer_id) {
+      newCreditUsed = totalNum;
+      const { data: cust } = await supabaseVinos
+        .from('customers')
+        .select('credit_limit')
+        .eq('id', sale.customer_id)
+        .single();
+      const newLimit = Math.max(0, Number(cust?.credit_limit ?? 0) - totalNum);
+      await supabaseVinos
+        .from('customers')
+        .update({ credit_limit: newLimit, updated_at: new Date().toISOString() })
+        .eq('id', sale.customer_id);
+    }
+
+    updates.credit_used = newCreditUsed;
+
+    // 5. Si pasa a EFECTIVO desde CREDITO, opcionalmente desvincular cliente
+    //    Decisión: SOLO desvincular si oldType === CREDITO y newType === EFECTIVO Y no usa wallet.
+    //    Si tiene wallet_used > 0 dejar vínculo (wallet pertenece al cliente).
+    if (oldType === 'CREDITO' && newType === 'EFECTIVO' && Number(sale.wallet_used ?? 0) === 0) {
+      updates.customer_id = null;
+    }
+
+    const { error: updErr } = await supabaseVinos
+      .from('sales')
+      .update(updates)
+      .eq('id', saleId);
+    if (updErr) throw updErr;
+  },
+
+  async create(input: CreateSaleInput): Promise<string> {
+    if (!isVinosConfigured) throw new Error('DB vinos no configurada');
+    if (input.items.length === 0) throw new Error('Agrega al menos un producto.');
+
+    // Determine ticket-level price_type (most frequent in items)
+    const tierCount: Record<PriceTier, number> = { MENUDEO: 0, MEDIO_MAYOREO: 0, MAYOREO: 0 };
+    input.items.forEach(it => { tierCount[it.price_type] = (tierCount[it.price_type] || 0) + 1; });
+    const dominantTier = (Object.keys(tierCount) as PriceTier[]).reduce((a, b) => tierCount[a] >= tierCount[b] ? a : b);
+
+    const { data: sale, error: sErr } = await supabaseVinos
+      .from('sales')
+      .insert({
+        branch_id: input.branch_id,
+        customer_id: input.customer_id ?? null,
+        payment_method: input.payment_method,
+        price_type: dominantTier,
+        subtotal: input.subtotal,
+        discount_amount: input.discount_amount,
+        total: input.total,
+        coupon_code: input.coupon_code ?? null,
+        wallet_used: input.wallet_used ?? 0,
+        credit_used: input.credit_used ?? 0,
+        cash_received: input.cash_received ?? 0,
+        notes: input.notes ?? null,
+        delivery_address: input.delivery_address ?? null,
+        created_by: input.created_by,
+      })
+      .select('id')
+      .single();
+    if (sErr) throw sErr;
+
+    const itemsPayload = input.items.map(it => ({
+      sale_id: sale.id,
+      product_id: it.product_id,
+      product_uom_id: it.product_uom_id || null,
+      qty: it.qty,
+      factor_used: it.factor_to_base || 1,
+      qty_base: Number(it.qty) * Number(it.factor_to_base || 1),
+      price_type: it.price_type,
+      unit_price: it.unit_price,
+      line_total: Number(it.qty) * Number(it.unit_price),
+    }));
+
+    const { error: iErr } = await supabaseVinos.from('sale_items').insert(itemsPayload);
+    if (iErr) throw iErr;
+
+    // Wallet usage
+    if (input.wallet_used && input.wallet_used > 0 && input.customer_id) {
+      await supabaseVinos.from('customer_wallet_movements').insert({
+        customer_id: input.customer_id,
+        amount: -Number(input.wallet_used),
+        type: 'USO',
+        related_sale_id: sale.id,
+        notes: `Uso en venta ${sale.id}`,
+        created_by: input.created_by,
+      });
+      // Decrement balance
+      const { data: cust } = await supabaseVinos
+        .from('customers')
+        .select('wallet_balance')
+        .eq('id', input.customer_id)
+        .single();
+      const newBalance = Math.max(0, Number(cust?.wallet_balance ?? 0) - Number(input.wallet_used));
+      await supabaseVinos
+        .from('customers')
+        .update({ wallet_balance: newBalance, updated_at: new Date().toISOString() })
+        .eq('id', input.customer_id);
+    }
+
+    // Credit usage → decrement credit_limit
+    if (input.credit_used && input.credit_used > 0 && input.customer_id) {
+      const { data: cust } = await supabaseVinos
+        .from('customers')
+        .select('credit_limit')
+        .eq('id', input.customer_id)
+        .single();
+      const newLimit = Math.max(0, Number(cust?.credit_limit ?? 0) - Number(input.credit_used));
+      await supabaseVinos
+        .from('customers')
+        .update({ credit_limit: newLimit, updated_at: new Date().toISOString() })
+        .eq('id', input.customer_id);
+    }
+
+    // Coupon usage counter
+    if (input.coupon_code) {
+      const { data: c } = await supabaseVinos
+        .from('coupons')
+        .select('id, uses')
+        .eq('code', input.coupon_code)
+        .single();
+      if (c?.id) {
+        await supabaseVinos
+          .from('coupons')
+          .update({ uses: Number(c.uses ?? 0) + 1 })
+          .eq('id', c.id);
+      }
+    }
+
+    return sale.id as string;
+  },
+
+  async validateCoupon(code: string, subtotal: number): Promise<{ valid: true; coupon: Coupon; discount: number } | { valid: false; error: string }> {
+    if (!isVinosConfigured) return { valid: false, error: 'DB no configurada.' };
+    const { data, error } = await supabaseVinos
+      .from('coupons')
+      .select('*')
+      .eq('code', code.trim().toUpperCase())
+      .eq('is_active', true)
+      .maybeSingle();
+    if (error || !data) return { valid: false, error: 'Cupón no encontrado.' };
+
+    const c = data as Coupon;
+    const today = new Date().toISOString().slice(0, 10);
+    if (c.valid_from && today < c.valid_from) return { valid: false, error: 'Cupón aún no es válido.' };
+    if (c.valid_to && today > c.valid_to) return { valid: false, error: 'Cupón expirado.' };
+    if (c.max_uses !== null && c.uses >= c.max_uses) return { valid: false, error: 'Cupón alcanzó usos máximos.' };
+    if (subtotal < Number(c.min_purchase ?? 0)) return { valid: false, error: `Mínimo de compra: $${c.min_purchase}` };
+
+    const discount = c.discount_type === 'PERCENT'
+      ? (subtotal * Number(c.discount_value)) / 100
+      : Number(c.discount_value);
+
+    return { valid: true, coupon: c, discount: Math.min(discount, subtotal) };
+  },
+
+  async listCoupons(): Promise<Coupon[]> {
+    if (!isVinosConfigured) return [];
+    const { data, error } = await supabaseVinos
+      .from('coupons')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as Coupon[];
+  },
+};
