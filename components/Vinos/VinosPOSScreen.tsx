@@ -9,6 +9,7 @@ import { vinosCustomersService, type VinosCustomer } from '../../services/vinos/
 import { vinosSalesService, type SaleCartItem, type PaymentMethod, type PriceTier } from '../../services/vinos/sales.service';
 import { supabaseVinos } from '../../services/vinosClient';
 import { generateVinosSaleTicket } from '../../services/vinos/saleTicketPdf';
+import { logVinosAudit } from '../../services/audit/audit.service';
 
 interface Props {
   selectedBranchId: string;
@@ -98,8 +99,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const [saleDetailItems, setSaleDetailItems] = useState<Array<{ id: string; product_id: string; qty: number; unit_price: number; line_total: number; price_type: string; product?: { name: string; sku: string } | null; uom?: { name: string } | null }>>([]);
   const [editTypeOpen, setEditTypeOpen] = useState(false);
   const [editTypeRow, setEditTypeRow] = useState<import('../../services/vinos/sales.service').SaleRow | null>(null);
-  const [editTypeValue, setEditTypeValue] = useState<PaymentMethod>('EFECTIVO');
+  const [editTypeValue, setEditTypeValue] = useState<'EFECTIVO' | 'CREDITO'>('EFECTIVO');
+  const [editTypeUseWallet, setEditTypeUseWallet] = useState(false);
+  const [editTypeWalletAmount, setEditTypeWalletAmount] = useState('0');
+  const [editTypeObservation, setEditTypeObservation] = useState('');
+  const [editTypeCustomerSnapshot, setEditTypeCustomerSnapshot] = useState<{ wallet_balance: number; wallet_enabled: boolean; credit_limit: number; name: string } | null>(null);
   const [editTypeSaving, setEditTypeSaving] = useState(false);
+  const [editTypeError, setEditTypeError] = useState('');
   const [deleteSaleOpen, setDeleteSaleOpen] = useState(false);
   const [deleteSaleRow, setDeleteSaleRow] = useState<import('../../services/vinos/sales.service').SaleRow | null>(null);
   const [deleteSaleNote, setDeleteSaleNote] = useState('');
@@ -327,30 +333,64 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     } catch (e) { console.error(e); }
   };
 
-  const openEditType = (s: import('../../services/vinos/sales.service').SaleRow) => {
+  const openEditType = async (s: import('../../services/vinos/sales.service').SaleRow) => {
     setEditTypeRow(s);
-    setEditTypeValue(s.payment_method);
+    setEditTypeValue(s.payment_method === 'CREDITO' ? 'CREDITO' : 'EFECTIVO');
+    // Si la venta ya usaba wallet, pre-marcar checkbox y amount
+    const prevWallet = Number(s.wallet_used ?? 0);
+    setEditTypeUseWallet(prevWallet > 0);
+    setEditTypeWalletAmount(prevWallet > 0 ? String(prevWallet) : '0');
+    setEditTypeObservation('');
+    setEditTypeError('');
+    setEditTypeCustomerSnapshot(null);
     setEditTypeOpen(true);
+    if (s.customer_id) {
+      const { data } = await supabaseVinos
+        .from('customers')
+        .select('name, wallet_enabled, wallet_balance, credit_limit')
+        .eq('id', s.customer_id)
+        .single();
+      if (data) setEditTypeCustomerSnapshot({
+        name: data.name,
+        wallet_enabled: !!data.wallet_enabled,
+        wallet_balance: Number(data.wallet_balance ?? 0),
+        credit_limit: Number(data.credit_limit ?? 0),
+      });
+    }
   };
 
   const saveEditType = async () => {
     if (!editTypeRow) return;
+    if (!editTypeObservation.trim()) { setEditTypeError('La observación es obligatoria.'); return; }
     setEditTypeSaving(true);
+    setEditTypeError('');
     try {
-      await vinosSalesService.updatePaymentType(editTypeRow.id, editTypeValue);
-      // Reload row from DB to get fresh credit_used and customer_id
-      const { data: fresh } = await supabaseVinos
-        .from('sales')
-        .select('*, customer:customers(id,name)')
-        .eq('id', editTypeRow.id)
-        .single();
-      if (fresh) {
-        setHistorySales(prev => prev.map(s => s.id === editTypeRow.id ? fresh as typeof s : s));
-      }
+      await vinosSalesService.updatePaymentType({
+        saleId: editTypeRow.id,
+        newType: editTypeValue,
+        useWallet: editTypeUseWallet,
+        walletAmount: Number(editTypeWalletAmount) || 0,
+        observation: editTypeObservation.trim(),
+        actorId: currentUser.id,
+      });
+      logVinosAudit({
+        branch_id: selectedBranchId,
+        branch_name: branches.find(b => b.id === selectedBranchId)?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ACTUALIZAR',
+        entity_type: 'venta',
+        entity_id: editTypeRow.id,
+        description: `Cambio tipo venta: ${editTypeRow.payment_method} → ${editTypeValue}`,
+        justification: editTypeObservation.trim(),
+        previous_data: { payment_method: editTypeRow.payment_method, credit_used: editTypeRow.credit_used, wallet_used: editTypeRow.wallet_used },
+        new_data: { payment_method: editTypeValue, useWallet: editTypeUseWallet, walletAmount: Number(editTypeWalletAmount) || 0 },
+      });
+      await loadHistory();
       setEditTypeOpen(false);
       setFeedback({ type: 'success', msg: 'Tipo de venta actualizado.' });
     } catch (e: unknown) {
-      setFeedback({ type: 'error', msg: e instanceof Error ? e.message : 'Error al actualizar.' });
+      setEditTypeError(e instanceof Error ? e.message : 'Error al actualizar.');
     }
     finally { setEditTypeSaving(false); }
   };
@@ -366,6 +406,18 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     setDeletingSale(true);
     try {
       await vinosSalesService.softDelete(deleteSaleRow.id, deleteSaleNote.trim());
+      logVinosAudit({
+        branch_id: selectedBranchId,
+        branch_name: branches.find(b => b.id === selectedBranchId)?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ELIMINAR',
+        entity_type: 'venta',
+        entity_id: deleteSaleRow.id,
+        description: `Venta eliminada · ${formatCurrency(deleteSaleRow.total)}`,
+        justification: deleteSaleNote.trim(),
+        previous_data: { total: deleteSaleRow.total, payment_method: deleteSaleRow.payment_method, customer_id: deleteSaleRow.customer_id },
+      });
       setHistorySales(prev => prev.filter(s => s.id !== deleteSaleRow.id));
       setDeleteSaleOpen(false);
     } catch (e) { console.error(e); }
@@ -452,7 +504,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
     setCharging(true);
     try {
-      await vinosSalesService.create({
+      const saleId = await vinosSalesService.create({
         branch_id: branchDbId,
         customer_id: customerId || null,
         payment_method: paymentMethod,
@@ -466,6 +518,18 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         notes: saleNotes.trim() || null,
         created_by: currentUser.id,
         items: cart,
+      });
+
+      logVinosAudit({
+        branch_id: selectedBranchId,
+        branch_name: branches.find(b => b.id === selectedBranchId)?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'VENTA',
+        entity_type: 'venta',
+        entity_id: saleId,
+        description: `Venta ${formatCurrency(total)} · ${paymentMethod} · ${cart.length} producto(s)`,
+        new_data: { payment_method: paymentMethod, total, customer_id: customerId, items_count: cart.length, wallet_used: walletUsedActual, credit_used: isCredito ? totalAfterWallet : 0, coupon_code: couponCode || null, notes: saleNotes || null },
       });
       setFeedback({ type: 'success', msg: '✓ Venta registrada' });
       clearCart();
@@ -1212,32 +1276,146 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
       {/* ─── MODAL EDITAR TIPO DE VENTA ─────────────────── */}
       {editTypeOpen && editTypeRow && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Editar tipo de venta</h3>
-              <button onClick={() => setEditTypeOpen(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X size={16}/></button>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-orange-600 to-orange-500 px-6 py-4 text-white">
+              <h3 className="text-base font-black uppercase tracking-tight">Editar tipo de venta</h3>
+              <p className="text-[11px] font-bold opacity-90">V-{editTypeRow.id.replace(/-/g, '').slice(0, 6).toUpperCase()} · {formatCurrency(editTypeRow.total)}</p>
             </div>
-            <div className="px-6 py-5 space-y-4">
-              <p className="text-xs text-slate-500">Cambia el método de pago de la venta <strong className="text-slate-900">{editTypeRow.id.slice(0, 8)}</strong>.</p>
+
+            <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+
+              {/* Cliente info */}
+              {editTypeCustomerSnapshot ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</p>
+                  <p className="mt-0.5 text-sm font-bold text-slate-900">{editTypeCustomerSnapshot.name}</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
+                    <div className="rounded-lg bg-white p-2">
+                      <p className="font-black uppercase tracking-widest text-slate-400">Saldo a favor</p>
+                      <p className="mt-0.5 text-sm font-black text-purple-600">{formatCurrency(editTypeCustomerSnapshot.wallet_balance)}</p>
+                    </div>
+                    <div className="rounded-lg bg-white p-2">
+                      <p className="font-black uppercase tracking-widest text-slate-400">Crédito disp.</p>
+                      <p className="mt-0.5 text-sm font-black text-blue-600">{formatCurrency(editTypeCustomerSnapshot.credit_limit)}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-700">⚠ Venta sin cliente vinculado. Solo se puede cambiar entre EFECTIVO ↔ EFECTIVO.</p>
+              )}
+
+              {/* Selector nuevo tipo */}
               <div>
-                <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Nuevo tipo</label>
-                <select
-                  value={editTypeValue}
-                  onChange={e => setEditTypeValue(e.target.value as PaymentMethod)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-orange-400"
-                >
-                  <option value="EFECTIVO">EFECTIVO</option>
-                  <option value="CREDITO">CREDITO</option>
-                  <option value="CORTESIA">SIN COSTO</option>
-                </select>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Nuevo tipo de pago</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['EFECTIVO', 'CREDITO'] as const).map(t => {
+                    const active = editTypeValue === t;
+                    const disabled = t === 'CREDITO' && !editTypeCustomerSnapshot;
+                    return (
+                      <button
+                        key={t}
+                        disabled={disabled}
+                        onClick={() => setEditTypeValue(t)}
+                        className={`rounded-2xl border-2 px-4 py-3 text-left transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
+                          active
+                            ? 'border-orange-500 bg-orange-50'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        <p className={`text-xs font-black uppercase tracking-widest ${active ? 'text-orange-700' : 'text-slate-600'}`}>{t}</p>
+                        <p className="mt-0.5 text-[10px] text-slate-400">
+                          {t === 'EFECTIVO' ? 'Pago completo / al contado' : 'Se descuenta del crédito'}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] text-amber-700">⚠ Solo cambia la clasificación. No revierte stock ni movimientos de saldo/crédito.</p>
+
+              {/* Saldo a favor — visible si cliente tiene wallet_enabled o la venta ya usaba wallet */}
+              {editTypeCustomerSnapshot?.wallet_enabled && (() => {
+                const oldWalletUsed = Number(editTypeRow.wallet_used ?? 0);
+                // tras rollback el cliente recupera el wallet_used → balance disponible = balance + oldWalletUsed
+                const effectiveBalance = editTypeCustomerSnapshot.wallet_balance + oldWalletUsed;
+                if (effectiveBalance <= 0) return null;
+                const maxApply = Math.min(effectiveBalance, Number(editTypeRow.total));
+                return (
+                  <div className={`rounded-2xl border-2 p-3 transition-colors ${editTypeUseWallet ? 'border-purple-400 bg-purple-50' : 'border-slate-200 bg-white'}`}>
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Wallet size={16} className="text-purple-500"/>
+                        <div>
+                          <p className="text-sm font-bold text-slate-800">Aplicar saldo a favor</p>
+                          <p className="text-[10px] text-slate-500">
+                            Disponible tras revertir: {formatCurrency(effectiveBalance)}
+                            {oldWalletUsed > 0 && <span className="ml-1 italic">(esta venta usó {formatCurrency(oldWalletUsed)})</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                        checked={editTypeUseWallet}
+                        onChange={e => {
+                          setEditTypeUseWallet(e.target.checked);
+                          if (e.target.checked) setEditTypeWalletAmount(String(maxApply));
+                        }}
+                      />
+                    </label>
+                    {editTypeUseWallet && (
+                      <input
+                        type="number" min="0" step="0.01" max={maxApply}
+                        className="mt-3 w-full rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-purple-400"
+                        value={editTypeWalletAmount}
+                        onChange={e => setEditTypeWalletAmount(e.target.value)}
+                      />
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Observación obligatoria */}
+              <div>
+                <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Observación <span className="text-red-500">(obligatoria)</span>
+                </label>
+                <textarea
+                  rows={3}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 resize-none"
+                  placeholder="Explica por qué se está modificando el tipo de venta…"
+                  value={editTypeObservation}
+                  onChange={e => setEditTypeObservation(e.target.value)}
+                />
+              </div>
+
+              {/* Info rollback */}
+              <div className="rounded-xl bg-blue-50 border border-blue-200 px-3 py-2 text-[11px] text-blue-700 leading-relaxed">
+                <strong>Rollback automático:</strong> se revierten saldo y crédito de la venta anterior, luego se aplica el nuevo método con saldo/crédito del cliente actual.
+              </div>
+
+              {editTypeError && (
+                <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600">{editTypeError}</p>
+              )}
             </div>
-            <div className="flex gap-2 border-t border-slate-200 bg-slate-50 px-6 py-3">
-              <button onClick={() => setEditTypeOpen(false)} className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100">Cancelar</button>
-              <button onClick={saveEditType} disabled={editTypeSaving || editTypeValue === editTypeRow.payment_method} className="flex-[2] rounded-xl bg-orange-600 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-orange-500 disabled:opacity-40">
-                {editTypeSaving ? 'Guardando…' : 'Guardar cambio'}
+
+            {/* Footer botones */}
+            <div className="flex gap-2 border-t border-slate-100 bg-slate-50/50 px-6 py-4">
+              <button
+                onClick={() => setEditTypeOpen(false)}
+                disabled={editTypeSaving}
+                className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveEditType}
+                disabled={editTypeSaving || !editTypeObservation.trim()}
+                className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
+              >
+                {editTypeSaving && <Loader2 size={14} className="animate-spin"/>}
+                {editTypeSaving ? 'Aplicando…' : 'Guardar cambio'}
               </button>
             </div>
           </div>

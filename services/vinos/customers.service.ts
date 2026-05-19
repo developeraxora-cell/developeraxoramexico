@@ -103,6 +103,18 @@ export const vinosCustomersService = {
       .select()
       .single();
     if (error) throw error;
+
+    // Si tiene saldo inicial > 0, registrar movimiento APERTURA
+    const initialWallet = Number(input.wallet_balance ?? 0);
+    if (input.wallet_enabled && initialWallet > 0) {
+      await supabaseVinos.from('customer_wallet_movements').insert({
+        customer_id: data.id,
+        amount: initialWallet,
+        type: 'APERTURA',
+        notes: 'Apertura de saldo al crear cliente',
+      });
+    }
+
     return data as VinosCustomer;
   },
 

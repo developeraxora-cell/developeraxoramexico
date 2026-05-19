@@ -24,6 +24,18 @@ export interface VinosSalePdfInput {
   total: number;
 }
 
+// Reemplazar caracteres no soportados por WinAnsi (Helvetica)
+const sanitize = (text: string): string => {
+  if (!text) return '';
+  return String(text)
+    .replace(/[—–]/g, '-')   // em/en dash
+    .replace(/[‘’]/g, "'")   // smart quotes
+    .replace(/[“”]/g, '"')
+    .replace(/[…]/g, '...')       // ellipsis
+    .replace(/[→←]/g, '->')  // arrows
+    .replace(/[^\x00-\xFF]/g, '?');    // cualquier char fuera Latin-1
+};
+
 const formatLocalDateTime = (value: string) => {
   const raw = String(value ?? '').trim();
   if (!raw) return '-';
@@ -95,7 +107,7 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput) => {
       borderColor: rgb(0, 0, 0),
     });
 
-    const title = `VINOS ${(input.branchName || 'CASA TAHONA').toUpperCase()}`;
+    const title = sanitize(`VINOS ${(input.branchName || 'CASA TAHONA').toUpperCase()}`);
     const titleSize = 14;
     const titleWidth = fontBold.widthOfTextAtSize(title, titleSize);
     page.drawText(title, {
@@ -107,14 +119,13 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput) => {
 
     const rightInfoX = width - marginX - 155;
     const status = statusLabel(input);
-    page.drawText(`FECHA:  ${formatLocalDateTime(input.createdAt)}`, { x: marginX + 10, y: infoTop, size: 10, font: fontBold });
-    page.drawText(`CLIENTE:  ${(input.customerName || 'PUBLICO GENERAL').toUpperCase()}`, { x: marginX + 10, y: infoTop - 24, size: 10, font: fontBold });
-    page.drawText(`DIRECCION:  ${(input.customerAddress || '-').toUpperCase()}`, { x: marginX + 10, y: infoTop - 48, size: 10, font: fontBold });
-    page.drawText(status, { x: marginX + 10, y: infoTop - 72, size: 10, font: fontBold });
-    page.drawText(`OBSERVACION:  ${(input.saleNotes?.trim() || '-').toUpperCase()}`, { x: marginX + 10, y: infoTop - 96, size: 10, font: fontBold });
+    page.drawText(sanitize(`FECHA:  ${formatLocalDateTime(input.createdAt)}`), { x: marginX + 10, y: infoTop, size: 10, font: fontBold });
+    page.drawText(sanitize(`CLIENTE:  ${(input.customerName || 'PUBLICO GENERAL').toUpperCase()}`), { x: marginX + 10, y: infoTop - 24, size: 10, font: fontBold });
+    page.drawText(sanitize(status), { x: marginX + 10, y: infoTop - 48, size: 10, font: fontBold });
+    page.drawText(sanitize(`OBSERVACION:  ${(input.saleNotes?.trim() || '-').toUpperCase()}`), { x: marginX + 10, y: infoTop - 72, size: 10, font: fontBold });
     page.drawText('NOTA DE VENTA', { x: rightInfoX + 18, y: infoTop, size: 12, font: fontBold });
-    page.drawText(String(input.saleId).slice(0, 8).toUpperCase(), { x: rightInfoX + 70, y: infoTop - 24, size: 12, font: fontBold });
-    page.drawText(`CAJERO:  ${(input.cashierName || '-').toUpperCase()}`, { x: rightInfoX - 42, y: infoTop - 72, size: 10, font: fontBold });
+    page.drawText(`V-${String(input.saleId).replace(/-/g, '').slice(0, 6).toUpperCase()}`, { x: rightInfoX + 60, y: infoTop - 24, size: 12, font: fontBold });
+    page.drawText(sanitize(`CAJERO:  ${(input.cashierName || '-').toUpperCase()}`), { x: rightInfoX - 42, y: infoTop - 48, size: 10, font: fontBold });
 
     page.drawRectangle({ x: marginX, y: tableTop - 16, width: tableWidth, height: 16, color: rgb(0, 0, 0) });
     ['PRODUCTO', 'PRESENTACION', 'CANTIDAD', 'PRECIO UNITARIO', 'SUBTOTAL'].forEach((header, idx) => {
@@ -141,8 +152,8 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput) => {
           color: rgb(0, 0, 0),
         });
       }
-      drawCellText(page, item.name.toUpperCase(), 0, rowY + 4, 8, fontBold);
-      drawCellText(page, item.presentation.toUpperCase(), 1, rowY + 4, 8, fontBold);
+      drawCellText(page, sanitize(item.name.toUpperCase()), 0, rowY + 4, 8, fontBold);
+      drawCellText(page, sanitize(item.presentation.toUpperCase()), 1, rowY + 4, 8, fontBold);
       drawCellText(page, Number(item.qty).toFixed(2), 2, rowY + 4, 8, fontBold);
       drawCellText(page, formatCurrency(Number(item.unitPrice)), 3, rowY + 4, 8, fontBold);
       drawCellText(page, formatCurrency(subtotal), 4, rowY + 4, 8, fontBold);
@@ -150,36 +161,21 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput) => {
     });
 
     if (pageIndex === pages.length - 1) {
-      const totalY = 108;
-      // Resumen extra: descuento, wallet, credit if applicable
-      let extraY = totalY + 84;
-      const drawSummaryLine = (label: string, value: string) => {
-        page.drawText(label, { x: width - marginX - 260, y: extraY, size: 9, font: fontRegular });
-        page.drawText(value, { x: width - marginX - 80, y: extraY, size: 9, font: fontBold });
-        extraY -= 14;
-      };
-      drawSummaryLine('SUBTOTAL:', formatCurrency(input.subtotal));
-      if (input.discount > 0) drawSummaryLine('DESCUENTO:', `-${formatCurrency(input.discount)}`);
-      if (input.walletUsed && input.walletUsed > 0) drawSummaryLine('SALDO APLICADO:', `-${formatCurrency(input.walletUsed)}`);
-      if (input.creditUsed && input.creditUsed > 0) drawSummaryLine('CREDITO APLICADO:', formatCurrency(input.creditUsed));
-
-      page.drawText(`TOTAL:  ${formatCurrency(input.total)}`, { x: width - marginX - 210, y: totalY, size: 20, font: fontBold });
+      page.drawText(`TOTAL:  ${formatCurrency(input.total)}`, { x: width - marginX - 210, y: 108, size: 20, font: fontBold });
     }
 
-    page.drawText(`Casa Tahona — Vinos · ${input.branchName || ''}`.trim(), { x: marginX + 80, y: 64, size: 9, font: fontBold });
-    page.drawText(`Página ${pageIndex + 1} / ${pages.length}`, { x: width - marginX - 80, y: 64, size: 9, font: fontBold });
+    page.drawText(sanitize(`Casa Tahona - Vinos - ${input.branchName || ''}`.trim()), { x: marginX + 80, y: 64, size: 9, font: fontBold });
+    page.drawText(`Pagina ${pageIndex + 1} / ${pages.length}`, { x: width - marginX - 80, y: 64, size: 9, font: fontBold });
   });
 
   const pdfBytes = await pdfDoc.save();
   const blob = new Blob([pdfBytes], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
-  const win = window.open(url, '_blank', 'noopener,noreferrer');
-  if (!win) {
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.target = '_blank';
-    anchor.rel = 'noopener noreferrer';
-    anchor.click();
-  }
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `venta-V-${String(input.saleId).replace(/-/g, '').slice(0, 6).toUpperCase()}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 };

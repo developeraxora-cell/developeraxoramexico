@@ -1,5 +1,5 @@
 export type AuditActionType = 'CREAR' | 'ACTUALIZAR' | 'ELIMINAR' | 'VENTA' | 'COMPRA';
-export type AuditModule = 'materiales' | 'concretera' | 'transporteria';
+export type AuditModule = 'materiales' | 'concretera' | 'transporteria' | 'vinos';
 export type AuditEntityType = 'producto' | 'cliente' | 'venta' | 'compra' | 'nota_credito' | 'abono_credito';
 
 export interface AuditLogInput {
@@ -141,6 +141,63 @@ export const logTransportAudit = (
     ...input,
     module: 'transporteria',
   });
+};
+
+export const logVinosAudit = (
+  input: Omit<AuditLogInput, 'module'>
+) => {
+  auditService.enqueue({
+    ...input,
+    module: 'vinos',
+  });
+};
+
+export interface AuditQueryParams {
+  module?: AuditModule;
+  branch_id?: string;
+  action_type?: AuditActionType;
+  entity_type?: AuditEntityType;
+  user_id?: string;
+  search?: string;
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export interface AuditQueryRow {
+  log_id: string;
+  branch_id: string;
+  branch_name: string | null;
+  user_id: string;
+  user_name: string | null;
+  action_type: AuditActionType;
+  module: AuditModule;
+  entity_type: AuditEntityType;
+  entity_id: string;
+  description: string;
+  justification: string | null;
+  observation: string | null;
+  timestamp: string;
+}
+
+export const fetchAuditLogs = async (params: AuditQueryParams): Promise<{ rows: AuditQueryRow[]; total: number; page: number; page_size: number }> => {
+  if (!AUDIT_API_URL) return { rows: [], total: 0, page: 1, page_size: 0 };
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+  });
+  const headers: Record<string, string> = {};
+  if (SUPABASE_ANON_KEY) {
+    headers.apikey = SUPABASE_ANON_KEY;
+    headers.Authorization = `Bearer ${SUPABASE_ANON_KEY}`;
+  }
+  const res = await fetch(`${AUDIT_API_URL}?${qs.toString()}`, { headers });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.ok) {
+    return { rows: [], total: 0, page: 1, page_size: 0 };
+  }
+  return { rows: json.rows ?? [], total: Number(json.total ?? 0), page: Number(json.page ?? 1), page_size: Number(json.page_size ?? 0) };
 };
 
 export const logAuditForModule = (

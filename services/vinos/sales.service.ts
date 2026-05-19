@@ -119,81 +119,148 @@ export const vinosSalesService = {
     if (error) throw error;
   },
 
-  async updatePaymentType(saleId: string, newType: PaymentMethod): Promise<void> {
+  async updatePaymentType(input: {
+    saleId: string;
+    newType: 'EFECTIVO' | 'CREDITO';
+    useWallet: boolean;
+    walletAmount: number;
+    observation: string;
+    actorId?: string;
+  }): Promise<void> {
     if (!isVinosConfigured) throw new Error('DB vinos no configurada');
 
-    // 1. Cargar venta actual
+    // 1. Load sale
     const { data: sale, error: loadErr } = await supabaseVinos
       .from('sales')
-      .select('id, customer_id, payment_method, total, credit_used, wallet_used')
-      .eq('id', saleId)
+      .select('id, customer_id, payment_method, total, credit_used, wallet_used, payment_type_audit')
+      .eq('id', input.saleId)
       .single();
     if (loadErr || !sale) throw new Error('Venta no encontrada.');
 
-    const oldType = sale.payment_method as PaymentMethod;
-    if (oldType === newType) return;
-
-    const totalNum = Number(sale.total);
+    const total = Number(sale.total);
+    const oldType = sale.payment_method as 'EFECTIVO' | 'CREDITO' | 'CORTESIA';
     const oldCreditUsed = Number(sale.credit_used ?? 0);
+    const oldWalletUsed = Number(sale.wallet_used ?? 0);
 
-    // 2. Si nuevo tipo es CREDITO: requiere cliente + crédito disponible
-    if (newType === 'CREDITO') {
-      if (!sale.customer_id) throw new Error('No se puede pasar a crédito: la venta no tiene cliente vinculado.');
-      const { data: cust } = await supabaseVinos
-        .from('customers')
-        .select('credit_limit, name')
-        .eq('id', sale.customer_id)
-        .single();
-      if (!cust) throw new Error('Cliente no encontrado.');
-      const available = Number(cust.credit_limit ?? 0);
-      if (available < totalNum) throw new Error(`Crédito insuficiente. Disponible: $${available.toFixed(2)}`);
+    // 2. ROLLBACK: restore credit and wallet from old state
+    if (sale.customer_id) {
+      if (oldCreditUsed > 0 || oldWalletUsed > 0) {
+        const { data: cust } = await supabaseVinos
+          .from('customers')
+          .select('credit_limit, wallet_balance')
+          .eq('id', sale.customer_id)
+          .single();
+        const restoredCredit = Number(cust?.credit_limit ?? 0) + oldCreditUsed;
+        const restoredWallet = Number(cust?.wallet_balance ?? 0) + oldWalletUsed;
+        await supabaseVinos
+          .from('customers')
+          .update({
+            credit_limit: restoredCredit,
+            wallet_balance: restoredWallet,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', sale.customer_id);
+        if (oldWalletUsed > 0) {
+          await supabaseVinos.from('customer_wallet_movements').insert({
+            customer_id: sale.customer_id,
+            amount: oldWalletUsed,
+            type: 'AJUSTE',
+            related_sale_id: sale.id,
+            notes: `Reverso por edición de tipo de venta`,
+            created_by: input.actorId ?? null,
+          });
+        }
+      }
     }
 
-    // 3. Revertir efecto del tipo anterior
-    if (oldType === 'CREDITO' && sale.customer_id && oldCreditUsed > 0) {
-      const { data: cust } = await supabaseVinos
-        .from('customers')
-        .select('credit_limit')
-        .eq('id', sale.customer_id)
-        .single();
-      const restored = Number(cust?.credit_limit ?? 0) + oldCreditUsed;
-      await supabaseVinos
-        .from('customers')
-        .update({ credit_limit: restored, updated_at: new Date().toISOString() })
-        .eq('id', sale.customer_id);
+    // 3. Validate new state
+    if (input.useWallet && !sale.customer_id) {
+      throw new Error('Para usar saldo se requiere cliente vinculado.');
+    }
+    if (input.newType === 'CREDITO' && !sale.customer_id) {
+      throw new Error('Para crédito se requiere cliente vinculado.');
     }
 
-    // 4. Aplicar efecto del tipo nuevo
+    // Determine wallet amount (clamp)
+    let newWalletUsed = 0;
+    if (input.useWallet && sale.customer_id) {
+      const { data: cust } = await supabaseVinos
+        .from('customers')
+        .select('wallet_balance, wallet_enabled')
+        .eq('id', sale.customer_id)
+        .single();
+      if (!cust?.wallet_enabled) throw new Error('Cliente no tiene saldo a favor activo.');
+      const available = Number(cust.wallet_balance ?? 0);
+      newWalletUsed = Math.min(Math.max(0, Number(input.walletAmount) || 0), available, total);
+    }
+
+    const remaining = Math.max(0, total - newWalletUsed);
     let newCreditUsed = 0;
-    const updates: Record<string, unknown> = { payment_method: newType };
 
-    if (newType === 'CREDITO' && sale.customer_id) {
-      newCreditUsed = totalNum;
+    if (input.newType === 'CREDITO' && sale.customer_id && remaining > 0) {
       const { data: cust } = await supabaseVinos
         .from('customers')
         .select('credit_limit')
         .eq('id', sale.customer_id)
         .single();
-      const newLimit = Math.max(0, Number(cust?.credit_limit ?? 0) - totalNum);
+      const available = Number(cust?.credit_limit ?? 0);
+      if (available < remaining) throw new Error(`Crédito insuficiente. Disponible: $${available.toFixed(2)}`);
+      newCreditUsed = remaining;
+    }
+
+    // 4. Apply new state to customer
+    if (sale.customer_id && (newCreditUsed > 0 || newWalletUsed > 0)) {
+      const { data: cust } = await supabaseVinos
+        .from('customers')
+        .select('credit_limit, wallet_balance')
+        .eq('id', sale.customer_id)
+        .single();
+      const newCreditLimit = Math.max(0, Number(cust?.credit_limit ?? 0) - newCreditUsed);
+      const newWalletBalance = Math.max(0, Number(cust?.wallet_balance ?? 0) - newWalletUsed);
       await supabaseVinos
         .from('customers')
-        .update({ credit_limit: newLimit, updated_at: new Date().toISOString() })
+        .update({
+          credit_limit: newCreditLimit,
+          wallet_balance: newWalletBalance,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', sale.customer_id);
+      if (newWalletUsed > 0) {
+        await supabaseVinos.from('customer_wallet_movements').insert({
+          customer_id: sale.customer_id,
+          amount: -newWalletUsed,
+          type: 'USO',
+          related_sale_id: sale.id,
+          notes: `Edición de tipo de venta`,
+          created_by: input.actorId ?? null,
+        });
+      }
     }
 
-    updates.credit_used = newCreditUsed;
-
-    // 5. Si pasa a EFECTIVO desde CREDITO, opcionalmente desvincular cliente
-    //    Decisión: SOLO desvincular si oldType === CREDITO y newType === EFECTIVO Y no usa wallet.
-    //    Si tiene wallet_used > 0 dejar vínculo (wallet pertenece al cliente).
-    if (oldType === 'CREDITO' && newType === 'EFECTIVO' && Number(sale.wallet_used ?? 0) === 0) {
-      updates.customer_id = null;
-    }
+    // 5. Update sale row — guardar audit en columna separada, NO tocar notes
+    const auditEntry = {
+      at: new Date().toISOString(),
+      from: oldType,
+      to: input.newType,
+      observation: input.observation.trim(),
+      actor: input.actorId ?? null,
+      old_wallet_used: oldWalletUsed,
+      old_credit_used: oldCreditUsed,
+      new_wallet_used: newWalletUsed,
+      new_credit_used: newCreditUsed,
+    };
+    const prevAudit = Array.isArray(sale.payment_type_audit) ? sale.payment_type_audit : [];
+    const nextAudit = [...prevAudit, auditEntry];
 
     const { error: updErr } = await supabaseVinos
       .from('sales')
-      .update(updates)
-      .eq('id', saleId);
+      .update({
+        payment_method: input.newType,
+        credit_used: newCreditUsed,
+        wallet_used: newWalletUsed,
+        payment_type_audit: nextAudit,
+      })
+      .eq('id', input.saleId);
     if (updErr) throw updErr;
   },
 
