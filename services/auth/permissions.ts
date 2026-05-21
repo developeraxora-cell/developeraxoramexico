@@ -47,6 +47,7 @@ export const TAB_PERMISSIONS: Record<string, TabPermission> = {
   'vinos-purchases':            { businessUnit: 'vinos', moduleKey: 'purchases' },
   'vinos-audit':                { businessUnit: 'vinos', moduleKey: 'audit' },
   'vinos-reports':              { businessUnit: 'vinos', moduleKey: 'reports' },
+  'vinos-campaigns':            { businessUnit: 'vinos', moduleKey: 'campaigns' },
 };
 
 export const isFullAccessRole = (role?: Role | string | null) =>

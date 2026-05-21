@@ -23,6 +23,8 @@ export interface CreateSaleInput {
   discount_amount: number;
   total: number;
   coupon_code?: string | null;
+  promotion_id?: string | null;
+  promotion_code?: string | null;
   wallet_used?: number;
   credit_used?: number;
   cash_received?: number;
@@ -30,6 +32,16 @@ export interface CreateSaleInput {
   delivery_address?: string | null;
   created_by: string;
   items: SaleCartItem[];
+}
+
+export interface Promotion {
+  id: string;
+  code: string;
+  customer_id: string | null;
+  discount_percent: number;
+  valid_from: string;
+  valid_to: string;
+  status: 'ACTIVA' | 'USADA' | 'VENCIDA' | 'CANCELADA';
 }
 
 export interface Coupon {
@@ -142,35 +154,26 @@ export const vinosSalesService = {
     const oldCreditUsed = Number(sale.credit_used ?? 0);
     const oldWalletUsed = Number(sale.wallet_used ?? 0);
 
-    // 2. ROLLBACK: restore credit and wallet from old state
-    if (sale.customer_id) {
-      if (oldCreditUsed > 0 || oldWalletUsed > 0) {
-        const { data: cust } = await supabaseVinos
-          .from('customers')
-          .select('credit_limit, wallet_balance')
-          .eq('id', sale.customer_id)
-          .single();
-        const restoredCredit = Number(cust?.credit_limit ?? 0) + oldCreditUsed;
-        const restoredWallet = Number(cust?.wallet_balance ?? 0) + oldWalletUsed;
-        await supabaseVinos
-          .from('customers')
-          .update({
-            credit_limit: restoredCredit,
-            wallet_balance: restoredWallet,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', sale.customer_id);
-        if (oldWalletUsed > 0) {
-          await supabaseVinos.from('customer_wallet_movements').insert({
-            customer_id: sale.customer_id,
-            amount: oldWalletUsed,
-            type: 'AJUSTE',
-            related_sale_id: sale.id,
-            notes: `Reverso por edición de tipo de venta`,
-            created_by: input.actorId ?? null,
-          });
-        }
-      }
+    // 2. ROLLBACK: solo wallet (credit_limit es fijo; la deuda se recalcula por credit_used)
+    if (sale.customer_id && oldWalletUsed > 0) {
+      const { data: cust } = await supabaseVinos
+        .from('customers')
+        .select('wallet_balance')
+        .eq('id', sale.customer_id)
+        .single();
+      const restoredWallet = Number(cust?.wallet_balance ?? 0) + oldWalletUsed;
+      await supabaseVinos
+        .from('customers')
+        .update({ wallet_balance: restoredWallet, updated_at: new Date().toISOString() })
+        .eq('id', sale.customer_id);
+      await supabaseVinos.from('customer_wallet_movements').insert({
+        customer_id: sale.customer_id,
+        amount: oldWalletUsed,
+        type: 'AJUSTE',
+        related_sale_id: sale.id,
+        notes: `Reverso por edición de tipo de venta`,
+        created_by: input.actorId ?? null,
+      });
     }
 
     // 3. Validate new state
@@ -203,38 +206,33 @@ export const vinosSalesService = {
         .select('credit_limit')
         .eq('id', sale.customer_id)
         .single();
-      const available = Number(cust?.credit_limit ?? 0);
+      // Disponible = línea - deuda actual (excluyendo el crédito de esta misma venta)
+      const { debt } = await this.customerCreditBalance(sale.customer_id);
+      const available = Math.max(0, Number(cust?.credit_limit ?? 0) - (debt - oldCreditUsed));
       if (available < remaining) throw new Error(`Crédito insuficiente. Disponible: $${available.toFixed(2)}`);
       newCreditUsed = remaining;
     }
 
-    // 4. Apply new state to customer
-    if (sale.customer_id && (newCreditUsed > 0 || newWalletUsed > 0)) {
+    // 4. Apply new state — solo wallet (credit_limit es fijo)
+    if (sale.customer_id && newWalletUsed > 0) {
       const { data: cust } = await supabaseVinos
         .from('customers')
-        .select('credit_limit, wallet_balance')
+        .select('wallet_balance')
         .eq('id', sale.customer_id)
         .single();
-      const newCreditLimit = Math.max(0, Number(cust?.credit_limit ?? 0) - newCreditUsed);
       const newWalletBalance = Math.max(0, Number(cust?.wallet_balance ?? 0) - newWalletUsed);
       await supabaseVinos
         .from('customers')
-        .update({
-          credit_limit: newCreditLimit,
-          wallet_balance: newWalletBalance,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ wallet_balance: newWalletBalance, updated_at: new Date().toISOString() })
         .eq('id', sale.customer_id);
-      if (newWalletUsed > 0) {
-        await supabaseVinos.from('customer_wallet_movements').insert({
-          customer_id: sale.customer_id,
-          amount: -newWalletUsed,
-          type: 'USO',
-          related_sale_id: sale.id,
-          notes: `Edición de tipo de venta`,
-          created_by: input.actorId ?? null,
-        });
-      }
+      await supabaseVinos.from('customer_wallet_movements').insert({
+        customer_id: sale.customer_id,
+        amount: -newWalletUsed,
+        type: 'USO',
+        related_sale_id: sale.id,
+        notes: `Edición de tipo de venta`,
+        created_by: input.actorId ?? null,
+      });
     }
 
     // 5. Update sale row — guardar audit en columna separada, NO tocar notes
@@ -284,6 +282,8 @@ export const vinosSalesService = {
         discount_amount: input.discount_amount,
         total: input.total,
         coupon_code: input.coupon_code ?? null,
+        promotion_id: input.promotion_id ?? null,
+        promotion_code: input.promotion_code ?? null,
         wallet_used: input.wallet_used ?? 0,
         credit_used: input.credit_used ?? 0,
         cash_received: input.cash_received ?? 0,
@@ -333,18 +333,21 @@ export const vinosSalesService = {
         .eq('id', input.customer_id);
     }
 
-    // Credit usage → decrement credit_limit
-    if (input.credit_used && input.credit_used > 0 && input.customer_id) {
-      const { data: cust } = await supabaseVinos
-        .from('customers')
-        .select('credit_limit')
-        .eq('id', input.customer_id)
-        .single();
-      const newLimit = Math.max(0, Number(cust?.credit_limit ?? 0) - Number(input.credit_used));
+    // El crédito usado se registra en sales.credit_used; la deuda = Σ credit_used - Σ pagos.
+    // credit_limit es la línea fija registrada al cliente, no se decrementa.
+
+    // Promotion redemption → marcar USADA
+    if (input.promotion_id) {
       await supabaseVinos
-        .from('customers')
-        .update({ credit_limit: newLimit, updated_at: new Date().toISOString() })
-        .eq('id', input.customer_id);
+        .from('promotions')
+        .update({
+          status: 'USADA',
+          used_at: new Date().toISOString(),
+          sale_id: sale.id,
+          redeemed_by: input.customer_id ?? null,
+        })
+        .eq('id', input.promotion_id)
+        .eq('status', 'ACTIVA');
     }
 
     // Coupon usage counter
@@ -387,6 +390,33 @@ export const vinosSalesService = {
       : Number(c.discount_value);
 
     return { valid: true, coupon: c, discount: Math.min(discount, subtotal) };
+  },
+
+  async validatePromotion(code: string, subtotal: number, customerId?: string | null): Promise<{ valid: true; promotion: Promotion; discount: number } | { valid: false; error: string }> {
+    if (!isVinosConfigured) return { valid: false, error: 'DB no configurada.' };
+    const { data, error } = await supabaseVinos
+      .from('promotions')
+      .select('id, code, customer_id, discount_percent, valid_from, valid_to, status')
+      .eq('code', code.trim().toUpperCase())
+      .maybeSingle();
+    if (error || !data) return { valid: false, error: 'Promoción no encontrada.' };
+
+    const p = data as Promotion;
+    // La promoción solo la puede usar el cliente al que se le otorgó
+    if (p.customer_id) {
+      if (!customerId) return { valid: false, error: 'Esta promoción pertenece a un cliente. Selecciónalo para usarla.' };
+      if (customerId !== p.customer_id) return { valid: false, error: 'Esta promoción pertenece a otro cliente.' };
+    }
+    if (p.status === 'USADA') return { valid: false, error: 'Esta promoción ya fue utilizada.' };
+    if (p.status === 'CANCELADA') return { valid: false, error: 'Promoción cancelada.' };
+    if (p.status === 'VENCIDA') return { valid: false, error: 'Promoción vencida.' };
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (today < p.valid_from) return { valid: false, error: 'La promoción aún no es válida.' };
+    if (today > p.valid_to) return { valid: false, error: 'Promoción vencida.' };
+
+    const discount = (subtotal * Number(p.discount_percent)) / 100;
+    return { valid: true, promotion: p, discount: Math.min(discount, subtotal) };
   },
 
   async listCoupons(): Promise<Coupon[]> {

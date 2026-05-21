@@ -22,6 +22,7 @@ export interface VinosSalePdfInput {
   subtotal: number;
   discount: number;
   total: number;
+  discountCode?: string | null;   // código de cupón/promoción aplicado
 }
 
 // Reemplazar caracteres no soportados por WinAnsi (Helvetica)
@@ -161,6 +162,23 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput) => {
     });
 
     if (pageIndex === pages.length - 1) {
+      const discountAmt = Number(input.discount ?? 0);
+      if (discountAmt > 0) {
+        const sub = Number(input.subtotal ?? 0);
+        const pct = sub > 0 ? Math.round((discountAmt / sub) * 100) : 0;
+        const labelX = width - marginX - 250;
+        const valueX = width - marginX - 90;
+        let sy = 165;
+        const rightVal = (txt: string, y: number) => {
+          const w = fontBold.widthOfTextAtSize(txt, 11);
+          page.drawText(txt, { x: width - marginX - 10 - w, y, size: 11, font: fontBold });
+        };
+        page.drawText('SUBTOTAL:', { x: labelX, y: sy, size: 11, font: fontBold });
+        rightVal(formatCurrency(sub), sy);
+        sy -= 18;
+        page.drawText(sanitize(`DESCUENTO ${pct}%:`), { x: labelX, y: sy, size: 11, font: fontBold });
+        rightVal(`-${formatCurrency(discountAmt)}`, sy);
+      }
       page.drawText(`TOTAL:  ${formatCurrency(input.total)}`, { x: width - marginX - 210, y: 108, size: 20, font: fontBold });
     }
 

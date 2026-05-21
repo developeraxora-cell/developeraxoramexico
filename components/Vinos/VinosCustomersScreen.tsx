@@ -55,6 +55,116 @@ const TYPE_LABEL: Record<CustomerType, string> = Object.fromEntries(
   CUSTOMER_TYPES.map(t => [t.value, t.label]),
 ) as Record<CustomerType, string>;
 
+// ─── países (prefijo telefónico) ─────────────────────────────────────────────
+
+interface Country { code: string; dial: string; name: string; flag: string; }
+
+const COUNTRIES: Country[] = [
+  { code: 'MX', dial: '52',  name: 'México',          flag: '🇲🇽' },
+  { code: 'PE', dial: '51',  name: 'Perú',            flag: '🇵🇪' },
+  { code: 'US', dial: '1',   name: 'Estados Unidos',  flag: '🇺🇸' },
+  { code: 'AR', dial: '54',  name: 'Argentina',       flag: '🇦🇷' },
+  { code: 'CO', dial: '57',  name: 'Colombia',        flag: '🇨🇴' },
+  { code: 'CL', dial: '56',  name: 'Chile',           flag: '🇨🇱' },
+  { code: 'EC', dial: '593', name: 'Ecuador',         flag: '🇪🇨' },
+  { code: 'BO', dial: '591', name: 'Bolivia',         flag: '🇧🇴' },
+  { code: 'VE', dial: '58',  name: 'Venezuela',       flag: '🇻🇪' },
+  { code: 'BR', dial: '55',  name: 'Brasil',          flag: '🇧🇷' },
+  { code: 'PY', dial: '595', name: 'Paraguay',        flag: '🇵🇾' },
+  { code: 'UY', dial: '598', name: 'Uruguay',         flag: '🇺🇾' },
+  { code: 'GT', dial: '502', name: 'Guatemala',       flag: '🇬🇹' },
+  { code: 'CR', dial: '506', name: 'Costa Rica',      flag: '🇨🇷' },
+  { code: 'PA', dial: '507', name: 'Panamá',          flag: '🇵🇦' },
+  { code: 'ES', dial: '34',  name: 'España',          flag: '🇪🇸' },
+];
+
+const DEFAULT_DIAL = '52';
+const MAX_PHONE_DIGITS = 9;
+
+// dials ordenados por longitud desc para parsear el más específico primero
+const DIALS_BY_LEN = [...COUNTRIES].sort((a, b) => b.dial.length - a.dial.length);
+
+function parsePhone(raw: string): { dial: string; number: string } {
+  const cleaned = (raw ?? '').replace(/[^\d+]/g, '');
+  const digits = cleaned.replace(/^\+/, '');
+  if (!digits) return { dial: DEFAULT_DIAL, number: '' };
+  const match = DIALS_BY_LEN.find(c => digits.startsWith(c.dial));
+  if (match) return { dial: match.dial, number: digits.slice(match.dial.length).slice(0, MAX_PHONE_DIGITS) };
+  return { dial: DEFAULT_DIAL, number: digits.slice(0, MAX_PHONE_DIGITS) };
+}
+
+function buildPhone(dial: string, number: string): string {
+  return number ? `+${dial} ${number}` : '';
+}
+
+function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const parsed = parsePhone(value);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const selected = COUNTRIES.find(c => c.dial === parsed.dial) ?? COUNTRIES[0];
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return COUNTRIES;
+    return COUNTRIES.filter(c => c.dial.includes(q) || c.name.toLowerCase().includes(q));
+  }, [search]);
+
+  return (
+    <div className="relative flex items-stretch gap-2">
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          className="flex h-full items-center gap-1.5 rounded-2xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+        >
+          <span className="text-base leading-none">{selected.flag}</span>
+          <span className="font-bold text-slate-700">+{selected.dial}</span>
+          <svg className="h-3 w-3 text-slate-400" viewBox="0 0 12 12" fill="none"><path d="M3 4.5 6 7.5 9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => { setOpen(false); setSearch(''); }} />
+            <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+              <input
+                autoFocus
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar país o código…"
+                className="mb-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-orange-400"
+              />
+              <div className="max-h-56 overflow-y-auto">
+                {filtered.length === 0 && <p className="px-2 py-3 text-center text-xs text-slate-400">Sin resultados</p>}
+                {filtered.map(c => (
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => { onChange(buildPhone(c.dial, parsed.number)); setOpen(false); setSearch(''); }}
+                    className={`flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs hover:bg-orange-50 ${c.dial === parsed.dial ? 'bg-orange-50' : ''}`}
+                  >
+                    <span className="text-base leading-none">{c.flag}</span>
+                    <span className="flex-1 font-semibold text-slate-700">{c.name}</span>
+                    <span className="font-bold text-slate-400">+{c.dial}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+      <input
+        inputMode="numeric"
+        value={parsed.number}
+        onChange={e => {
+          const digits = e.target.value.replace(/\D/g, '').slice(0, MAX_PHONE_DIGITS);
+          onChange(buildPhone(parsed.dial, digits));
+        }}
+        placeholder="987654321"
+        className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+      />
+    </div>
+  );
+}
+
 interface FormState {
   name: string;
   phone: string;
@@ -677,6 +787,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
         subtotal: Number(sale.subtotal),
         discount: Number(sale.discount_amount ?? 0),
         total: Number(sale.total),
+        discountCode: (sale as { promotion_code?: string | null; coupon_code?: string | null }).promotion_code ?? (sale as { coupon_code?: string | null }).coupon_code ?? null,
       });
     } catch (e) { console.error(e); }
   };
@@ -1080,11 +1191,9 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   </div>
                   <div>
                     <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Teléfono / WhatsApp</label>
-                    <input
-                      className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    <PhoneInput
                       value={form.phone}
-                      onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                      placeholder="55 1234 5678"
+                      onChange={v => setForm(f => ({ ...f, phone: v }))}
                     />
                   </div>
                   <div>

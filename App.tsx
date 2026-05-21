@@ -24,6 +24,7 @@ import VinosPOSScreen from './components/Vinos/VinosPOSScreen';
 import VinosPurchasesScreen from './components/Vinos/VinosPurchasesScreen';
 import VinosAuditScreen from './components/Vinos/VinosAuditScreen';
 import VinosReportsScreen from './components/Vinos/VinosReportsScreen';
+import VinosCampaignsScreen from './components/Vinos/VinosCampaignsScreen';
 import {
   dieselTanksService,
   vehiclesService,
@@ -74,6 +75,7 @@ const APP_TAB_ORDER = [
   'vinos-inventory',
   'vinos-customers',
   'vinos-reports',
+  'vinos-campaigns',
   'vinos-audit',
 ];
 
@@ -559,6 +561,8 @@ const App: React.FC = () => {
         return <VinosAuditScreen key="audit-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'vinos-reports':
         return <VinosReportsScreen key="reports-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'vinos-campaigns':
+        return <VinosCampaignsScreen key="campaigns-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       default:
         return <AccessDenied />;
     }

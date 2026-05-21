@@ -69,10 +69,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   // pago
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('EFECTIVO');
   const [cashReceived, setCashReceived] = useState('');
+  const [useCoupon, setUseCoupon] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponMsg, setCouponMsg] = useState('');
   const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [appliedPromoId, setAppliedPromoId] = useState<string | null>(null);
   const [useWallet, setUseWallet] = useState(false);
   const [walletAmount, setWalletAmount] = useState('0');
 
@@ -188,7 +190,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const isCredito = paymentMethod === 'CREDITO';
   const isEfectivo = paymentMethod === 'EFECTIVO';
 
-  const creditAvailable = selectedCustomer?.credit_limit ?? 0;
+  const creditAvailable = Math.max(0, (selectedCustomer?.credit_limit ?? 0) - customerDebt);
   const total = isCortesia ? 0 : totalAfterWallet;
   const cashReceivedNum = Number(cashReceived) || 0;
   const change = isEfectivo && cashReceivedNum > 0 ? Math.max(0, cashReceivedNum - total) : 0;
@@ -245,7 +247,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const clearCart = () => {
     setCart([]);
     setCustomerId('');
-    setCouponCode(''); setCouponDiscount(0); setCouponMsg('');
+    setUseCoupon(false); setCouponCode(''); setCouponDiscount(0); setCouponMsg(''); setAppliedPromoId(null);
     setUseWallet(false); setWalletAmount('0');
     setCashReceived('');
     setPaymentMethod('EFECTIVO');
@@ -253,24 +255,36 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     setCheckoutOpen(false);
   };
 
-  // ── cupon ──────────────────────────────────────────────
+  // ── cupón (incluye promociones de campaña) ─────────────
   const validateCoupon = async () => {
     const code = couponCode.trim();
     if (!code) return;
     setValidatingCoupon(true);
     setCouponMsg('');
-    const result = await vinosSalesService.validateCoupon(code, subtotal);
-    if (result.valid) {
-      setCouponDiscount(result.discount);
-      setCouponMsg(`✓ Aplicado: -${formatCurrency(result.discount)}`);
+    // 1. Intentar como promoción de campaña
+    const promo = await vinosSalesService.validatePromotion(code, subtotal, customerId || null);
+    if (promo.valid) {
+      setCouponDiscount(promo.discount);
+      setAppliedPromoId(promo.promotion.id);
+      setCouponMsg(`✓ ${promo.promotion.discount_percent}% aplicado: -${formatCurrency(promo.discount)}`);
+      setValidatingCoupon(false);
+      return;
+    }
+    // 2. Intentar como cupón genérico
+    const coupon = await vinosSalesService.validateCoupon(code, subtotal);
+    if (coupon.valid) {
+      setCouponDiscount(coupon.discount);
+      setAppliedPromoId(null);
+      setCouponMsg(`✓ Aplicado: -${formatCurrency(coupon.discount)}`);
     } else {
       setCouponDiscount(0);
-      setCouponMsg(`✗ ${result.error}`);
+      setAppliedPromoId(null);
+      setCouponMsg(`✗ ${promo.valid === false ? promo.error : coupon.error}`);
     }
     setValidatingCoupon(false);
   };
 
-  const removeCoupon = () => { setCouponCode(''); setCouponDiscount(0); setCouponMsg(''); };
+  const removeCoupon = () => { setCouponCode(''); setCouponDiscount(0); setCouponMsg(''); setAppliedPromoId(null); };
 
   // ── history ───────────────────────────────────────────
   const loadHistory = async () => {
@@ -293,6 +307,17 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     if (historyOpen) { loadHistory(); setHistoryPage(1); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyFrom, historyTo, historySearch]);
+
+  // Al cambiar de cliente, limpiar cupón aplicado (las promociones van por dueño)
+  useEffect(() => { removeCoupon(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [customerId]);
+
+  // Cargar deuda del cliente para calcular crédito disponible (límite - deuda)
+  useEffect(() => {
+    if (!customerId) { setCustomerDebt(0); return; }
+    vinosSalesService.customerCreditBalance(customerId)
+      .then(({ debt }) => setCustomerDebt(debt))
+      .catch(() => setCustomerDebt(0));
+  }, [customerId]);
 
   // ── helpers color / type detection ────────────────────
   const getSaleTypeInfo = (s: import('../../services/vinos/sales.service').SaleRow) => {
@@ -464,6 +489,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         subtotal: Number(s.subtotal),
         discount: Number(s.discount_amount ?? 0),
         total: Number(s.total),
+        discountCode: (s as { promotion_code?: string | null }).promotion_code ?? s.coupon_code ?? null,
       });
     } catch (e) {
       console.error(e);
@@ -497,11 +523,6 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       setFeedback({ type: 'error', msg: `Crédito insuficiente. Disponible: ${formatCurrency(creditAvailable)}` });
       return;
     }
-    if (isEfectivo && !isCortesia && cashReceivedNum < total) {
-      setFeedback({ type: 'error', msg: 'Efectivo recibido es menor al total.' });
-      return;
-    }
-
     setCharging(true);
     try {
       const saleId = await vinosSalesService.create({
@@ -511,7 +532,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         subtotal,
         discount_amount: couponDiscount,
         total,
-        coupon_code: couponCode.trim() || null,
+        coupon_code: !appliedPromoId && couponDiscount > 0 ? couponCode.trim().toUpperCase() : null,
+        promotion_id: appliedPromoId,
+        promotion_code: appliedPromoId ? couponCode.trim().toUpperCase() : null,
         wallet_used: walletUsedActual,
         credit_used: isCredito ? totalAfterWallet : 0,
         cash_received: 0,
@@ -529,7 +552,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         entity_type: 'venta',
         entity_id: saleId,
         description: `Venta ${formatCurrency(total)} · ${paymentMethod} · ${cart.length} producto(s)`,
-        new_data: { payment_method: paymentMethod, total, customer_id: customerId, items_count: cart.length, wallet_used: walletUsedActual, credit_used: isCredito ? totalAfterWallet : 0, coupon_code: couponCode || null, notes: saleNotes || null },
+        new_data: { payment_method: paymentMethod, total, customer_id: customerId, items_count: cart.length, wallet_used: walletUsedActual, credit_used: isCredito ? totalAfterWallet : 0, coupon_code: !appliedPromoId && couponDiscount > 0 ? couponCode.toUpperCase() : null, promotion_code: appliedPromoId ? couponCode.toUpperCase() : null, notes: saleNotes || null },
       });
       setFeedback({ type: 'success', msg: '✓ Venta registrada' });
       clearCart();
@@ -873,30 +896,42 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
 
               {/* Cupón */}
-              <section>
-                <div className="mb-2 flex items-center gap-2">
-                  <Gift size={14} className="text-slate-400"/>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cupón / Promoción</span>
-                </div>
-                {couponDiscount > 0 ? (
-                  <div className="flex items-center justify-between rounded-xl bg-green-50 px-3 py-2 text-xs">
-                    <span className="font-bold text-green-700">{couponCode.toUpperCase()} · -{formatCurrency(couponDiscount)}</span>
-                    <button onClick={removeCoupon} className="text-green-700 hover:text-red-500"><X size={12}/></button>
+              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Gift size={14} className="text-orange-500"/>
+                    <span className="text-sm font-bold text-slate-700">¿Usar cupón?</span>
                   </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <input
-                      className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-xs uppercase outline-none focus:border-orange-400"
-                      placeholder="Código (opcional)"
-                      value={couponCode}
-                      onChange={e => setCouponCode(e.target.value)}
-                    />
-                    <button onClick={validateCoupon} disabled={!couponCode.trim() || validatingCoupon} className="rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-700 disabled:opacity-40">
-                      {validatingCoupon ? '…' : 'Aplicar'}
-                    </button>
-                  </div>
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                    checked={useCoupon}
+                    onChange={e => { setUseCoupon(e.target.checked); if (!e.target.checked) removeCoupon(); }}
+                  />
+                </label>
+                {useCoupon && (
+                  couponDiscount > 0 ? (
+                    <div className="mt-2 flex items-center justify-between rounded-xl bg-green-50 px-3 py-2 text-xs">
+                      <span className="font-bold text-green-700">{couponCode.toUpperCase()} · -{formatCurrency(couponDiscount)}</span>
+                      <button onClick={removeCoupon} className="text-green-700 hover:text-red-500"><X size={12}/></button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mt-2 flex gap-2">
+                        <input
+                          className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs uppercase outline-none focus:border-orange-400"
+                          placeholder="Código del cupón"
+                          value={couponCode}
+                          onChange={e => setCouponCode(e.target.value)}
+                        />
+                        <button onClick={validateCoupon} disabled={!couponCode.trim() || validatingCoupon} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-700 disabled:opacity-40">
+                          {validatingCoupon ? '…' : 'Aplicar'}
+                        </button>
+                      </div>
+                      {couponMsg && <p className="mt-1 text-[10px] font-bold text-red-500">{couponMsg}</p>}
+                    </>
+                  )
                 )}
-                {couponMsg && couponDiscount === 0 && <p className="mt-1 text-[10px] font-bold text-red-500">{couponMsg}</p>}
               </section>
 
               {/* Saldo a favor */}
