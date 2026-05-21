@@ -79,7 +79,7 @@ const COUNTRIES: Country[] = [
 ];
 
 const DEFAULT_DIAL = '52';
-const MAX_PHONE_DIGITS = 9;
+const MAX_PHONE_DIGITS = 10;
 
 // dials ordenados por longitud desc para parsear el más específico primero
 const DIALS_BY_LEN = [...COUNTRIES].sort((a, b) => b.dial.length - a.dial.length);
@@ -101,7 +101,16 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
   const parsed = parsePhone(value);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const selected = COUNTRIES.find(c => c.dial === parsed.dial) ?? COUNTRIES[0];
+  // dial en estado propio: el dial elegido persiste aunque el número esté vacío
+  const [dial, setDial] = useState(parsed.dial);
+  // sincronizar con value externo solo cuando trae dial reconocible (ej. al editar)
+  useEffect(() => {
+    const p = parsePhone(value);
+    if (value && p.dial !== dial) setDial(p.dial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  const selected = COUNTRIES.find(c => c.dial === dial) ?? COUNTRIES[0];
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -110,6 +119,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
   }, [search]);
 
   return (
+    <div>
     <div className="relative flex items-stretch gap-2">
       <div className="relative">
         <button
@@ -138,8 +148,8 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
                   <button
                     key={c.code}
                     type="button"
-                    onClick={() => { onChange(buildPhone(c.dial, parsed.number)); setOpen(false); setSearch(''); }}
-                    className={`flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs hover:bg-orange-50 ${c.dial === parsed.dial ? 'bg-orange-50' : ''}`}
+                    onClick={() => { setDial(c.dial); onChange(buildPhone(c.dial, parsed.number)); setOpen(false); setSearch(''); }}
+                    className={`flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs hover:bg-orange-50 ${c.dial === dial ? 'bg-orange-50' : ''}`}
                   >
                     <span className="text-base leading-none">{c.flag}</span>
                     <span className="flex-1 font-semibold text-slate-700">{c.name}</span>
@@ -156,11 +166,13 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
         value={parsed.number}
         onChange={e => {
           const digits = e.target.value.replace(/\D/g, '').slice(0, MAX_PHONE_DIGITS);
-          onChange(buildPhone(parsed.dial, digits));
+          onChange(buildPhone(dial, digits));
         }}
         placeholder="987654321"
         className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
       />
+    </div>
+    <p className="mt-1 text-right text-[10px] font-bold text-slate-400">{parsed.number.length} / {MAX_PHONE_DIGITS} dígitos</p>
     </div>
   );
 }
