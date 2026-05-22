@@ -4,7 +4,7 @@ const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL ?? '').trim().replace(/\
 const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim();
 const WHATSAPP_URL = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/whatsapp-send` : '';
 
-export type SegmentType = 'AT_RISK' | 'INFREQUENT' | 'LOYALTY' | 'CUSTOMER_TYPE' | 'STATUS' | 'BIRTHDAY' | 'ALL' | 'MANUAL';
+export type SegmentType = 'AT_RISK' | 'INFREQUENT' | 'LOYALTY' | 'CUSTOMER_TYPE' | 'STATUS' | 'BIRTHDAY' | 'ALL' | 'MANUAL' | 'CUSTOM';
 export type CampaignStatus = 'BORRADOR' | 'ENVIADA' | 'FINALIZADA' | 'CANCELADA';
 export type PromotionStatus = 'ACTIVA' | 'USADA' | 'VENCIDA' | 'CANCELADA';
 
@@ -12,9 +12,10 @@ export interface SegmentConfig {
   levels?: string[];
   types?: string[];
   statuses?: string[];
-  days?: number;
+  days?: number;            // poco frecuentes: sin comprar en >= N días
+  birthday?: boolean;       // cumpleañeros del mes
   customer_ids?: string[];
-  recipient_ids?: string[];   // lista final (segmento + agregados manualmente)
+  recipient_ids?: string[]; // lista final (filtros + agregados manualmente)
 }
 
 export interface Campaign {
@@ -186,6 +187,33 @@ export const vinosCampaignsService = {
     return rows as Recipient[];
   },
 
+  // Filtros combinables (AND): nivel + estado + tipo + cumpleaños + inactividad
+  async resolveByFilters(config: SegmentConfig, branchId: number | null): Promise<Recipient[]> {
+    if (!isVinosConfigured) return [];
+    let q = supabaseVinos
+      .from('customers')
+      .select('id, name, phone, loyalty_level, status, last_purchase_date, customer_types, birthday')
+      .eq('is_active', true);
+    if (branchId) q = q.eq('branch_id', branchId);
+    if (config.levels?.length) q = q.in('loyalty_level', config.levels);
+    if (config.statuses?.length) q = q.in('status', config.statuses);
+    if (config.types?.length) q = q.overlaps('customer_types', config.types);
+    if (config.birthday) q = q.not('birthday', 'is', null);
+    if (config.days && config.days > 0) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - config.days);
+      q = q.lt('last_purchase_date', cutoff.toISOString().slice(0, 10));
+    }
+    const { data, error } = await q.order('name', { ascending: true });
+    if (error) throw error;
+    let rows = (data ?? []) as (Recipient & { birthday?: string | null })[];
+    if (config.birthday) {
+      const month = new Date().getMonth() + 1;
+      rows = rows.filter(r => r.birthday && Number(String(r.birthday).slice(5, 7)) === month);
+    }
+    return rows as Recipient[];
+  },
+
   async create(input: CreateCampaignInput): Promise<Campaign> {
     if (!isVinosConfigured) throw new Error('DB vinos no configurada');
     const { data, error } = await supabaseVinos
@@ -214,7 +242,11 @@ export const vinosCampaignsService = {
   async listRecipients(campaign: Campaign): Promise<Recipient[]> {
     if (!isVinosConfigured) return [];
     const ids = campaign.segment_config?.recipient_ids ?? [];
-    if (ids.length === 0) return this.resolveRecipients(campaign.segment_type, campaign.segment_config, campaign.branch_id);
+    if (ids.length === 0) {
+      return campaign.segment_type === 'CUSTOM'
+        ? this.resolveByFilters(campaign.segment_config, campaign.branch_id)
+        : this.resolveRecipients(campaign.segment_type, campaign.segment_config, campaign.branch_id);
+    }
     const { data, error } = await supabaseVinos
       .from('customers')
       .select('id, name, phone, loyalty_level, status, last_purchase_date')

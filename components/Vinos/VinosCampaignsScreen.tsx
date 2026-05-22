@@ -46,6 +46,41 @@ const MESSAGE_TEMPLATES: MessageTemplate[] = [
 const DEFAULT_TEMPLATE_FOR = (seg: SegmentType | null): MessageTemplate =>
   MESSAGE_TEMPLATES.find(t => t.segment === seg) ?? MESSAGE_TEMPLATES[0];
 
+function MultiSelect({ label, options, selected, onToggle }: {
+  label: string;
+  options: { value: string; label: string }[];
+  selected: string[];
+  onToggle: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const summary = selected.length === 0 ? 'Todos'
+    : selected.length <= 2 ? options.filter(o => selected.includes(o.value)).map(o => o.label).join(', ')
+    : `${selected.length} seleccionados`;
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className={`flex w-full items-center justify-between rounded-2xl border px-3 py-2.5 text-left text-sm outline-none ${selected.length ? 'border-purple-400 bg-purple-50' : 'border-slate-200'}`}>
+        <span className="truncate"><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}: </span><span className="font-bold text-slate-700">{summary}</span></span>
+        <svg className="h-3 w-3 shrink-0 text-slate-400" viewBox="0 0 12 12" fill="none"><path d="M3 4.5 6 7.5 9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1 shadow-xl">
+            {options.map(o => (
+              <label key={o.value} className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-2 text-xs hover:bg-purple-50">
+                <input type="checkbox" checked={selected.includes(o.value)} onChange={() => onToggle(o.value)}
+                  className="h-4 w-4 rounded border-slate-300 text-purple-600" />
+                <span className="font-semibold text-slate-700">{o.label}</span>
+              </label>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 const LOYALTY_LEVELS = ['BRONCE', 'PLATA', 'ORO', 'BLACK'];
 const STATUSES = ['ACTIVO', 'DORMIDO', 'EN_RIESGO', 'PERDIDO'];
 const CUSTOMER_TYPES = ['vino', 'whisky', 'cerveza_artesanal', 'tequila', 'premium', 'fiesta_eventos'];
@@ -88,10 +123,11 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
   const [discount, setDiscount] = useState('10');
   const [validFrom, setValidFrom] = useState(todayStr());
   const [validTo, setValidTo] = useState(plusDaysStr(15));
-  const [segmentType, setSegmentType] = useState<SegmentType | null>(null);
-  const [levels, setLevels] = useState<string[]>(['ORO', 'BLACK']);
-  const [statuses, setStatuses] = useState<string[]>(['EN_RIESGO']);
-  const [types, setTypes] = useState<string[]>(['vino']);
+  const [levels, setLevels] = useState<string[]>([]);
+  const [statuses, setStatuses] = useState<string[]>([]);
+  const [types, setTypes] = useState<string[]>([]);
+  const [birthdayMonth, setBirthdayMonth] = useState(false);
+  const [infreqEnabled, setInfreqEnabled] = useState(false);
   const [infreqDays, setInfreqDays] = useState('30');
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [resolving, setResolving] = useState(false);
@@ -135,43 +171,47 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
     return () => clearTimeout(t);
   }, [feedback]);
 
-  const segmentConfig = useCallback((): SegmentConfig => {
-    switch (segmentType) {
-      case 'LOYALTY':       return { levels };
-      case 'STATUS':        return { statuses };
-      case 'CUSTOMER_TYPE': return { types };
-      case 'INFREQUENT':    return { days: Number(infreqDays) || 30 };
-      default:              return {};
-    }
-  }, [segmentType, levels, statuses, types, infreqDays]);
+  const buildFilterConfig = useCallback((): SegmentConfig => ({
+    levels: levels.length ? levels : undefined,
+    statuses: statuses.length ? statuses : undefined,
+    types: types.length ? types : undefined,
+    birthday: birthdayMonth || undefined,
+    days: infreqEnabled ? (Number(infreqDays) || 30) : undefined,
+  }), [levels, statuses, types, birthdayMonth, infreqEnabled, infreqDays]);
+
+  const hasActiveFilter = levels.length > 0 || statuses.length > 0 || types.length > 0 || birthdayMonth || infreqEnabled;
+
+  // Plantilla sugerida según filtros activos
+  const suggestedTemplate = useCallback((): MessageTemplate => {
+    if (birthdayMonth) return MESSAGE_TEMPLATES.find(t => t.segment === 'BIRTHDAY')!;
+    if (statuses.some(s => s === 'EN_RIESGO' || s === 'PERDIDO')) return MESSAGE_TEMPLATES.find(t => t.segment === 'AT_RISK')!;
+    if (infreqEnabled) return MESSAGE_TEMPLATES.find(t => t.segment === 'INFREQUENT')!;
+    if (levels.length) return MESSAGE_TEMPLATES.find(t => t.segment === 'LOYALTY')!;
+    return MESSAGE_TEMPLATES[0];
+  }, [birthdayMonth, statuses, infreqEnabled, levels]);
 
   const openCreate = () => {
     setStep(1); setName(''); setDiscount('10'); setValidFrom(todayStr()); setValidTo(plusDaysStr(15));
-    setSegmentType(null); setLevels(['ORO', 'BLACK']); setStatuses(['EN_RIESGO']); setTypes(['vino']);
-    setInfreqDays('30'); setRecipients([]); setAddSearch(''); setMessage(DEFAULT_MESSAGE);
+    setLevels([]); setStatuses([]); setTypes([]); setBirthdayMonth(false); setInfreqEnabled(false); setInfreqDays('30');
+    setRecipients([]); setAddSearch(''); setMessage(DEFAULT_MESSAGE);
     setCreateOpen(true);
   };
 
-  const applySegment = async (type: SegmentType) => {
-    setSegmentType(type);
-    // Sugerir plantilla del segmento si el mensaje sigue siendo una plantilla sin editar
-    if (MESSAGE_TEMPLATES.some(t => t.text === message)) setMessage(DEFAULT_TEMPLATE_FOR(type).text);
+  const applyFilters = async () => {
+    if (!hasActiveFilter) { setRecipients(prev => prev); return; }
+    // Sugerir plantilla si el mensaje sigue siendo una plantilla sin editar
+    if (MESSAGE_TEMPLATES.some(t => t.text === message)) setMessage(suggestedTemplate().text);
     setResolving(true);
     try {
-      const cfg: SegmentConfig =
-        type === 'LOYALTY' ? { levels } :
-        type === 'STATUS' ? { statuses } :
-        type === 'CUSTOMER_TYPE' ? { types } :
-        type === 'INFREQUENT' ? { days: Number(infreqDays) || 30 } : {};
-      const r = await vinosCampaignsService.resolveRecipients(type, cfg, branchDbId);
-      // Mantener agregados manuales que no estén en el segmento
+      const r = await vinosCampaignsService.resolveByFilters(buildFilterConfig(), branchDbId);
+      // Mantener agregados manuales que no estén en el resultado de filtros
       setRecipients(prev => {
         const ids = new Set(r.map(x => x.id));
         const manualExtras = prev.filter(x => !ids.has(x.id));
         return [...r, ...manualExtras];
       });
     } catch (e) {
-      setFeedback({ type: 'error', msg: e instanceof Error ? e.message : 'Error al resolver segmento' });
+      setFeedback({ type: 'error', msg: e instanceof Error ? e.message : 'Error al aplicar filtros' });
     } finally { setResolving(false); }
   };
 
@@ -211,8 +251,8 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
     try {
       const camp = await vinosCampaignsService.create({
         name: name.trim(),
-        segment_type: segmentType ?? 'MANUAL',
-        segment_config: segmentConfig(),
+        segment_type: hasActiveFilter ? 'CUSTOM' : 'MANUAL',
+        segment_config: buildFilterConfig(),
         recipient_ids: recipients.map(r => r.id),
         discount_percent: Number(discount),
         valid_from: validFrom,
@@ -443,52 +483,38 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               {step === 2 && (
                 <>
                   <div>
-                    <p className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-500"><Users size={12} className="mb-0.5 mr-1 inline" />1. Elige un segmento</p>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {SEGMENTS.map(s => (
-                        <button key={s.value} onClick={() => applySegment(s.value)}
-                          className={`rounded-xl border px-3 py-2 text-left ${segmentType === s.value ? 'border-purple-400 bg-purple-50' : 'border-slate-200'}`}>
-                          <p className="text-xs font-black text-slate-800">{s.label}</p>
-                          <p className="text-[9px] text-slate-400">{s.desc}</p>
-                        </button>
-                      ))}
+                    <p className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-500"><Users size={12} className="mb-0.5 mr-1 inline" />1. Filtra clientes (se combinan)</p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <MultiSelect label="Nivel" selected={levels} onToggle={v => toggle(levels, v, setLevels)}
+                        options={LOYALTY_LEVELS.map(l => ({ value: l, label: l }))} />
+                      <MultiSelect label="Estado" selected={statuses} onToggle={v => toggle(statuses, v, setStatuses)}
+                        options={STATUSES.map(s => ({ value: s, label: s }))} />
+                      <MultiSelect label="Tipo" selected={types} onToggle={v => toggle(types, v, setTypes)}
+                        options={CUSTOMER_TYPES.map(t => ({ value: t, label: t }))} />
                     </div>
-                    {segmentType === 'LOYALTY' && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {LOYALTY_LEVELS.map(l => (
-                          <button key={l} onClick={() => { toggle(levels, l, setLevels); }}
-                            className={`rounded-full px-3 py-1 text-xs font-bold ${levels.includes(l) ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{l}</button>
-                        ))}
-                        <button onClick={() => applySegment('LOYALTY')} className="rounded-full bg-slate-900 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">Aplicar</button>
-                      </div>
-                    )}
-                    {segmentType === 'STATUS' && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {STATUSES.map(s => (
-                          <button key={s} onClick={() => { toggle(statuses, s, setStatuses); }}
-                            className={`rounded-full px-3 py-1 text-xs font-bold ${statuses.includes(s) ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{s}</button>
-                        ))}
-                        <button onClick={() => applySegment('STATUS')} className="rounded-full bg-slate-900 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">Aplicar</button>
-                      </div>
-                    )}
-                    {segmentType === 'CUSTOMER_TYPE' && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {CUSTOMER_TYPES.map(t => (
-                          <button key={t} onClick={() => { toggle(types, t, setTypes); }}
-                            className={`rounded-full px-3 py-1 text-xs font-bold ${types.includes(t) ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{t}</button>
-                        ))}
-                        <button onClick={() => applySegment('CUSTOMER_TYPE')} className="rounded-full bg-slate-900 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">Aplicar</button>
-                      </div>
-                    )}
-                    {segmentType === 'INFREQUENT' && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-500">Sin comprar en</span>
-                        <input type="number" min="1" value={infreqDays} onChange={e => setInfreqDays(e.target.value)}
-                          className="w-20 rounded-xl border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-purple-400" />
-                        <span className="text-xs font-bold text-slate-500">días</span>
-                        <button onClick={() => applySegment('INFREQUENT')} className="rounded-full bg-slate-900 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">Aplicar</button>
-                      </div>
-                    )}
+                    <div className="mt-2 flex flex-wrap items-center gap-4">
+                      <label className="flex cursor-pointer items-center gap-2">
+                        <input type="checkbox" checked={birthdayMonth} onChange={e => setBirthdayMonth(e.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-purple-600" />
+                        <span className="text-xs font-bold text-slate-600">🎂 Cumpleañeros del mes</span>
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-2">
+                        <input type="checkbox" checked={infreqEnabled} onChange={e => setInfreqEnabled(e.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-purple-600" />
+                        <span className="text-xs font-bold text-slate-600">Sin comprar en</span>
+                      </label>
+                      {infreqEnabled && (
+                        <div className="flex items-center gap-1">
+                          <input type="number" min="1" value={infreqDays} onChange={e => setInfreqDays(e.target.value)}
+                            className="w-16 rounded-xl border border-slate-200 px-2 py-1 text-sm outline-none focus:border-purple-400" />
+                          <span className="text-xs font-bold text-slate-500">días</span>
+                        </div>
+                      )}
+                      <button onClick={applyFilters} disabled={!hasActiveFilter}
+                        className="ml-auto rounded-xl bg-slate-900 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-700 disabled:opacity-40">
+                        Aplicar filtros
+                      </button>
+                    </div>
                   </div>
 
                   {/* Agregar clientes manualmente */}

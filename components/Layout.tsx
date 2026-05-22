@@ -133,7 +133,7 @@ const Layout: React.FC<LayoutProps> = ({
     },
     {
       id: 'vinos',
-      label: 'Vinos',
+      label: 'Casa Tahona',
       icon: '🍷',
       items: [
         { id: 'vinos-pos', label: 'Caja / Venta', icon: '🛒' },
