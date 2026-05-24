@@ -11,7 +11,16 @@ node_modules
 dist
 dist-ssr
 *.local
-./claude
+
+# Asistentes IA / documentacion interna (no publicar)
+.claude/
+.agents/
+.codex
+speech/
+CLAUDE.md
+CLAUDE.original.md
+AGENTS.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
