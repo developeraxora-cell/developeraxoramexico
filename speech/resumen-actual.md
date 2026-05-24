@@ -87,6 +87,7 @@ La visibilidad real del sistema depende de:
 - Caja / Venta
 - Compras / Entradas
 - Productos
+- Inventario fisico
 - Clientes / Crédito
 - Alertas clientes
 - Reportes
@@ -150,7 +151,18 @@ La visibilidad real del sistema depende de:
 - modal de actualización de stock con observación
 - conservación del carrito al ajustar stock
 
-### 5.5 Reportes
+### 5.5 Inventario fisico
+
+- nuevo modulo en Materiales: `/materiales/inventario`
+- creacion de inventarios por nombre, fecha inicio, fecha fin y estado
+- captura de productos con stock sistema, stock fisico, diferencia y observacion obligatoria si hay diferencia
+- resumen de total de productos, sin diferencias, faltantes, sobrantes
+- fiabilidad calculada solo con productos tipo `ANILLO`
+- tablas nuevas:
+  - `material_physical_inventories`
+  - `material_physical_inventory_items`
+
+### 5.6 Reportes
 
 - vistas más compactas y responsivas
 - tarjetas y gráficas más limpias
@@ -251,4 +263,3 @@ La propuesta está documentada en:
 ### Resumen consolidado
 
 - `speech/resumen-actual.md`
-

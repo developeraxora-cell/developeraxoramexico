@@ -45,33 +45,39 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
   } as const;
 
   const style = config[type];
+  const defaultDescription = type === 'loading'
+    ? 'Procesando...'
+    : type === 'success'
+      ? 'Operación realizada correctamente.'
+      : type === 'alert'
+        ? 'Revisa la información e intenta nuevamente.'
+        : 'No se pudo completar la operación.';
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div className={`${style.accent} p-6 text-white flex justify-between items-center`}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className={`${style.accent} px-5 py-4 text-white flex justify-between items-center`}>
           <div className="flex items-center gap-3">
-            <span className="text-2xl">{style.icon}</span>
+            <span className="text-xl">{style.icon}</span>
             <div>
-              <h3 className="text-lg font-black uppercase tracking-tighter">{title}</h3>
-              {description && <p className="text-xs text-white/80">{description}</p>}
+              <h3 className="text-base font-black uppercase tracking-tighter">{title}</h3>
             </div>
           </div>
           {!isBlocking && onClose && (
-            <button onClick={onClose} className="bg-white/10 w-10 h-10 rounded-xl text-xl font-black">
+            <button onClick={onClose} className="bg-white/10 w-9 h-9 rounded-xl text-lg font-black">
               ×
             </button>
           )}
         </div>
-        <div className="p-6">
-          <p className={`text-sm font-semibold ${style.text}`}>
-            {description || 'Procesando...'}
+        <div className="p-5">
+          <p className={`text-sm font-semibold leading-relaxed ${style.text}`}>
+            {description || defaultDescription}
           </p>
           {!isBlocking && onClose && (
-            <div className="mt-6 flex justify-end">
+            <div className="mt-5 flex justify-end">
               <button
                 onClick={onClose}
-                className="px-6 py-3 rounded-2xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest"
+                className="px-5 py-2.5 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest"
               >
                 Aceptar
               </button>

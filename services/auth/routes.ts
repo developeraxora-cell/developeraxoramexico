@@ -2,6 +2,7 @@ export const TAB_PATHS: Record<string, string> = {
   'pos':                      '/materiales/ventas',
   'purchases':                '/materiales/compras',
   'inventory':                '/materiales/productos',
+  'physical-inventory':       '/materiales/inventario',
   'customers':                '/materiales/clientes',
   'customer-alerts':          '/materiales/alertas',
   'reports':                  '/materiales/reportes',

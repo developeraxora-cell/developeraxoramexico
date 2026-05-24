@@ -198,6 +198,27 @@ export const catalogService = {
     return (data ?? []) as Product[];
   },
 
+  async searchProductsByBranch(branchId: string, businessUnit: string | undefined, term: string, limit = 20) {
+    const normalizedTerm = term.trim();
+    if (normalizedTerm.length < 3) return [] as Product[];
+
+    const escapedTerm = normalizedTerm.replace(/[%_]/g, (match) => `\\${match}`);
+    let query = supabase
+      .from('products')
+      .select('id, branch_id, business_unit, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, is_active, created_at, updated_at')
+      .eq('branch_id', branchId)
+      .eq('is_active', true)
+      .or(`name.ilike.%${escapedTerm}%,sku.ilike.%${escapedTerm}%,barcode.ilike.%${escapedTerm}%`)
+      .order('name')
+      .limit(limit);
+
+    if (businessUnit) query = query.eq('business_unit', businessUnit);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data ?? []) as Product[];
+  },
+
   async updateProductPrice(productId: string, retail_price: number) {
     const { data, error } = await supabase
       .from('products')

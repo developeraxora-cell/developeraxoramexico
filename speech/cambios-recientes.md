@@ -264,6 +264,36 @@ La navegación lateral ahora inicia en estado colapsado por defecto para mostrar
 - El rol identifica el tipo de usuario, pero no actúa como bloqueo fijo por sí solo.
 - La sucursal preseleccionada no equivale a permiso; solo es valor inicial.
 
+---
+
+## 11. Inventario fisico de Materiales
+
+Se agrego un modulo nuevo dentro de Materiales para conteos fisicos de inventario.
+
+### Flujo
+
+- crear inventario con nombre, fecha inicio, fecha fin y estado
+- listar inventarios creados por sucursal
+- seleccionar inventario para capturar productos
+- buscar producto por nombre, codigo o codigo de barras
+- registrar stock sistema, stock fisico, diferencia y observacion
+- exigir observacion cuando exista diferencia
+- finalizar o reactivar inventario
+
+### Metricas
+
+- total de productos capturados
+- productos sin diferencia
+- productos con faltante
+- productos con sobrante
+- porcentaje de fiabilidad solo para productos `ANILLO`
+
+### Archivos
+
+- [components/Inventory/PhysicalInventoryScreen.tsx](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/components/Inventory/PhysicalInventoryScreen.tsx)
+- [services/inventory/physicalInventory.service.ts](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/services/inventory/physicalInventory.service.ts)
+- [crear_modulo_inventario_fisico_materiales.sql](/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/crear_modulo_inventario_fisico_materiales.sql)
+
 ### Gráficas
 
 - `Top productos` ordenado por facturación real

@@ -79,6 +79,7 @@ const Layout: React.FC<LayoutProps> = ({
         { id: 'pos', label: 'Caja / Venta', icon: '🛒' },
         { id: 'purchases', label: 'Compras / Entradas', icon: '📥' },
         { id: 'inventory', label: 'Productos', icon: '📦' },
+        { id: 'physical-inventory', label: 'Inventario', icon: '📋' },
         { id: 'customers', label: 'Clientes / Crédito', icon: '👥' },
         { id: 'customer-alerts', label: 'Alertas clientes', icon: '🚨' },
         { id: 'reports', label: 'Reportes', icon: '📊' },

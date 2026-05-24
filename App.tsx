@@ -5,6 +5,8 @@ import Layout from './components/Layout';
 import LoginScreen from './components/Auth/LoginScreen';
 import POSScreen from './components/POS/POSScreen';
 import InventoryScreen from './components/Inventory/InventoryScreen';
+import PhysicalInventoryScreen from './components/Inventory/PhysicalInventoryScreen';
+import ProductionScreen from './components/Production/ProductionScreen';
 import PurchasesScreen from './components/Inventory/PurchasesScreen';
 import DieselScreen from './components/Diesel/DieselScreen';
 import CustomerScreen from './components/Customers/CustomerScreen';
@@ -48,6 +50,7 @@ const APP_TAB_ORDER = [
   'pos',
   'purchases',
   'inventory',
+  'physical-inventory',
   'customers',
   'customer-alerts',
   'reports',
@@ -91,6 +94,20 @@ const PlaceholderModule: React.FC<{ title: string; subtitle: string }> = ({ titl
   </div>
 );
 
+const AppLoading: React.FC<{ message?: string }> = ({ message = 'Cargando...' }) => (
+  <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-slate-50">
+    <div className="relative h-16 w-16">
+      <div className="absolute inset-0 rounded-full border-4 border-orange-100" />
+      <div className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-t-orange-500" />
+      <div className="absolute inset-2 rounded-full bg-orange-50" />
+    </div>
+    <div className="text-center">
+      <p className="text-[11px] font-black uppercase tracking-[0.32em] text-orange-500">GRUPO LOPAR</p>
+      <p className="mt-2 text-sm font-bold text-slate-500">{message}</p>
+    </div>
+  </div>
+);
+
 const AccessDenied: React.FC = () => (
   <div className="rounded-[28px] border border-slate-200 bg-white p-10 text-center shadow-sm">
     <p className="text-[11px] font-black uppercase tracking-[0.24em] text-red-400">Acceso denegado</p>
@@ -107,6 +124,7 @@ const App: React.FC = () => {
   }, [navigate]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
+  const [globalLoading, setGlobalLoading] = useState(isSupabaseConfigured);
   const [authError, setAuthError] = useState<string | null>(null);
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
   const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
@@ -213,6 +231,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!isSupabaseConfigured || !currentUser) return;
 
+    setGlobalLoading(true);
     loadGlobalData();
 
     // Suscripciones para sincronización entre dispositivos
@@ -350,6 +369,8 @@ const App: React.FC = () => {
       }
     } catch (err) {
       console.error("Error syncing data:", err);
+    } finally {
+      setGlobalLoading(false);
     }
   };
 
@@ -416,14 +437,7 @@ const App: React.FC = () => {
   }, [activeBranches, currentUser, selectedBranchId]);
 
   if (authLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
-        <div className="rounded-3xl border border-slate-800 bg-slate-900 px-8 py-6 text-center shadow-2xl">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-orange-400">Validando sesion</p>
-          <p className="mt-3 text-sm font-bold text-slate-300">Cargando permisos del usuario...</p>
-        </div>
-      </div>
-    );
+    return <AppLoading message="Cargando informacion..." />;
   }
 
   if (!currentUser) {
@@ -435,6 +449,10 @@ const App: React.FC = () => {
         onLogin={handleLogin}
       />
     );
+  }
+
+  if (globalLoading) {
+    return <AppLoading message="Cargando informacion..." />;
   }
 
   const renderContent = () => {
@@ -461,6 +479,8 @@ const App: React.FC = () => {
         );
       case 'inventory':
         return <InventoryScreen key="inventory-materiales" selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
+      case 'physical-inventory':
+        return <PhysicalInventoryScreen key="physical-inventory-materiales" selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
       case 'audit':
       case 'audit-internal':
         return (
@@ -474,7 +494,7 @@ const App: React.FC = () => {
           />
         );
       case 'production':
-        return <PlaceholderModule title="Produccion" subtitle="Materiales" />;
+        return <ProductionScreen key="production-materiales" selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
       case 'concrete-audit':
       case 'concrete-audit-internal':
         return (

@@ -12,6 +12,7 @@ export const TAB_PERMISSIONS: Record<string, TabPermission> = {
   pos: { businessUnit: 'materiales', moduleKey: 'sales' },
   purchases: { businessUnit: 'materiales', moduleKey: 'purchases' },
   inventory: { businessUnit: 'materiales', moduleKey: 'products' },
+  'physical-inventory': { businessUnit: 'materiales', moduleKey: 'products' },
   customers: { businessUnit: 'materiales', moduleKey: 'customers' },
   'customer-alerts': { businessUnit: 'materiales', moduleKey: 'alerts' },
   reports: { businessUnit: 'materiales', moduleKey: 'reports' },
