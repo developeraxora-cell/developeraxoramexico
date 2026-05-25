@@ -45,6 +45,7 @@ export interface Product {
   base_uom_id: string;
   is_divisible: boolean;
   attrs: Record<string, unknown> | null;
+  peso_unitario?: number | null;
   is_active: boolean | null;
   created_at: string;
   updated_at: string | null;
@@ -187,7 +188,7 @@ export const catalogService = {
   async listProductsByBranch(branchId: string, businessUnit?: string) {
     let query = supabase
       .from('products')
-      .select('id, branch_id, business_unit, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, is_active, created_at, updated_at')
+      .select('id, branch_id, business_unit, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, peso_unitario, is_active, created_at, updated_at')
       .eq('branch_id', branchId)
       .eq('is_active', true);
 
@@ -205,7 +206,7 @@ export const catalogService = {
     const escapedTerm = normalizedTerm.replace(/[%_]/g, (match) => `\\${match}`);
     let query = supabase
       .from('products')
-      .select('id, branch_id, business_unit, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, is_active, created_at, updated_at')
+      .select('id, branch_id, business_unit, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, peso_unitario, is_active, created_at, updated_at')
       .eq('branch_id', branchId)
       .eq('is_active', true)
       .or(`name.ilike.%${escapedTerm}%,sku.ilike.%${escapedTerm}%,barcode.ilike.%${escapedTerm}%`)

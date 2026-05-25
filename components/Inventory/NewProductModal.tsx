@@ -77,6 +77,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   const [wholesalePrice, setWholesalePrice] = useState<string>('');
   const [retailPrice, setRetailPrice] = useState<string>('');
   const [minStock, setMinStock] = useState<string>('');
+  const [pesoUnitario, setPesoUnitario] = useState<string>('');
   const [categoryId, setCategoryId] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [baseUomId, setBaseUomId] = useState('');
@@ -148,6 +149,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       setWholesalePrice(String(Number((existingProduct as any).wholesale_price ?? 0)));
       setRetailPrice(String(Number((existingProduct as any).retail_price ?? (existingProduct as any).precio ?? 0)));
       setMinStock(String(Number((existingProduct as any).min_stock ?? 0)));
+      setPesoUnitario(String(Number((existingProduct as any).peso_unitario ?? 0)));
       setCategoryId(existingProduct.category_id ?? '');
       setNewCategoryName('');
       setBaseUomId(existingProduct.base_uom_id ?? '');
@@ -193,6 +195,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     setWholesalePrice('');
     setRetailPrice('');
     setMinStock('');
+    setPesoUnitario('');
     setCategoryId('');
     setNewCategoryName('');
     setBaseUomId('');
@@ -418,6 +421,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
         wholesale_price: context.wholesalePriceNumber,
         retail_price: context.retailPriceNumber,
         min_stock: Number(minStock || 0),
+        peso_unitario: Number(pesoUnitario || 0),
         description: description.trim() || null,
         category_id: resolvedCategoryId,
         brand_id: null,
@@ -636,6 +640,18 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-semibold text-sm"
                 value={minStock}
                 onChange={(e) => setMinStock(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Peso unitario (kg)</label>
+              <input
+                type="number"
+                min={0}
+                step="0.001"
+                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-semibold text-sm"
+                value={pesoUnitario}
+                onChange={(e) => setPesoUnitario(e.target.value)}
+                placeholder="Para anillos (Producción)"
               />
             </div>
             <div className="space-y-1 md:col-span-2">

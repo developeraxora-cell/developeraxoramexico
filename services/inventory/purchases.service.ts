@@ -79,6 +79,7 @@ export interface CreateProductInput {
   base_uom_id: string;
   is_divisible: boolean;
   attrs?: Record<string, unknown> | null;
+  peso_unitario?: number | null;
 }
 
 export interface CreateProductUomInput {
