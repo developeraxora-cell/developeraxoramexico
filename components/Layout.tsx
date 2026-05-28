@@ -83,15 +83,8 @@ const Layout: React.FC<LayoutProps> = ({
         { id: 'customers', label: 'Clientes / Crédito', icon: '👥' },
         { id: 'customer-alerts', label: 'Alertas clientes', icon: '🚨' },
         { id: 'reports', label: 'Reportes', icon: '📊' },
-        {
-          id: 'audit-parent',
-          label: 'Auditorias',
-          icon: '📋',
-          children: [
-            { id: 'audit-internal', label: 'Auditoria interna', icon: '📋' },
-            { id: 'production', label: 'Produccion', icon: '🏭' },
-          ],
-        },
+        { id: 'audit-internal', label: 'Auditoria', icon: '📋' },
+        { id: 'production', label: 'Produccion', icon: '🏭' },
         { id: 'branches', label: 'Sucursales', icon: '🏢' },
         { id: 'users', label: 'Personal / Usuarios', icon: '🛡️' },
       ]
