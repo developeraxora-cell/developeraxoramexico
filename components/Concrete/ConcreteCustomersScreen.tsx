@@ -3118,16 +3118,6 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                 <p className="text-orange-400 font-bold tracking-widest uppercase text-[10px] mt-1">{selectedCustomer.name}</p>
               </div>
               <div className="flex items-center gap-3">
-{historyView === 'CREDIT' && (
-                <button
-                  type="button"
-                  onClick={() => openCreateNoteModal(selectedCustomer)}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white"
-                >
-                  <Plus className="h-4 w-4" />
-                  Nuevo crédito
-                </button>
-                )}
                 <button
                   onClick={() => setIsHistoryModalOpen(false)}
                   className="bg-white/10 w-10 h-10 rounded-2xl flex items-center justify-center text-2xl hover:bg-red-500 transition-all"
