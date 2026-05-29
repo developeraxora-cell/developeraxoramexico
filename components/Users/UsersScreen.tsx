@@ -66,6 +66,7 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'materiales.products.view',
     'materiales.customers.view', 'materiales.customers.create', 'materiales.customers.edit', 'materiales.customers.delete',
     'materiales.alerts.view',
+    'materiales.production.view',
   ],
   concrete_user: [
     'concretera.sales.view', 'concretera.sales.create', 'concretera.sales.delete',
@@ -79,7 +80,7 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'materiales.purchases.view', 'materiales.purchases.create', 'materiales.purchases.delete',
     'materiales.products.view',
     'materiales.customers.view', 'materiales.customers.create', 'materiales.customers.edit', 'materiales.customers.delete',
-    'materiales.alerts.view', 'materiales.reports.view', 'materiales.audit.view',
+    'materiales.alerts.view', 'materiales.production.view', 'materiales.reports.view', 'materiales.audit.view',
     'concretera.sales.view', 'concretera.sales.create', 'concretera.sales.delete',
     'concretera.purchases.view', 'concretera.purchases.create', 'concretera.purchases.delete',
     'concretera.products.view',
@@ -105,6 +106,7 @@ const BUSINESS_UNIT_DEFAULT_PERMISSIONS: Record<BusinessUnit, string[]> = {
     'materiales.products.view',
     'materiales.customers.view', 'materiales.customers.create', 'materiales.customers.edit', 'materiales.customers.delete',
     'materiales.alerts.view',
+    'materiales.production.view',
   ],
   concretera: [
     'concretera.sales.view', 'concretera.sales.create', 'concretera.sales.delete',

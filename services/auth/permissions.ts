@@ -73,11 +73,16 @@ export const userCanAccess = (
 
   const requiredPermission = buildPermissionKey(businessUnit, moduleKey, action);
   const permissions = user.permissions ?? [];
+  const hasBusinessUnit = (user.businessUnits ?? []).includes(businessUnit);
+
+  if (businessUnit === 'materiales' && moduleKey === 'production' && action === 'view') {
+    return hasBusinessUnit || permissions.includes(requiredPermission);
+  }
+
   if (permissions.length > 0) {
     return permissions.includes(requiredPermission);
   }
 
-  const hasBusinessUnit = (user.businessUnits ?? []).includes(businessUnit);
   if (!hasBusinessUnit) return false;
 
   return true;

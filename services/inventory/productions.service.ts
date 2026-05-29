@@ -13,6 +13,7 @@ export interface ProcessProductionInput {
   business_unit?: string;
   date: string;                       // YYYY-MM-DD
   responsible: string | null;
+  producer: string | null;
   observation: string | null;
   alambon_product_id: number | string | null;
   alambon_name: string | null;
@@ -26,6 +27,7 @@ export interface ProductionOrderRow {
   branch_id: number;
   production_date: string;
   responsible: string | null;
+  producer: string | null;
   observation: string | null;
   alambon_used: number;
   created_by: string | null;
@@ -62,6 +64,7 @@ export const productionsService = {
       p_business_unit: input.business_unit ?? 'materiales',
       p_date: input.date,
       p_responsible: input.responsible,
+      p_producer: input.producer,
       p_observation: input.observation,
       p_alambon_product_id: input.alambon_product_id !== null ? Number(input.alambon_product_id) : null,
       p_alambon_name: input.alambon_name,
@@ -86,7 +89,7 @@ export const productionsService = {
   async listByBranch(branchId: number | string, limit = 100) {
     const { data, error } = await supabase
       .from('production_orders')
-      .select('id, branch_id, production_date, responsible, observation, alambon_used, created_by, created_at')
+      .select('id, branch_id, production_date, responsible, producer, observation, alambon_used, created_by, created_at')
       .eq('branch_id', Number(branchId))
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -141,7 +144,7 @@ export const productionsService = {
     if (error) throw error;
   },
 
-  async updateOrder(productionId: number, patch: { production_date?: string; responsible?: string | null; observation?: string | null }) {
+  async updateOrder(productionId: number, patch: { production_date?: string; responsible?: string | null; producer?: string | null; observation?: string | null }) {
     const { error } = await supabase.from('production_orders').update(patch).eq('id', productionId);
     if (error) throw error;
   },

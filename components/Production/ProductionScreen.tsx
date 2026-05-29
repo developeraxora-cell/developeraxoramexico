@@ -18,10 +18,12 @@ interface ProductionRow {
   id: number;
   date: string;
   responsible: string;
+  producer: string;
   observation: string;
   registeredAt: string;
   rawDate: string;
   rawResponsible: string;
+  rawProducer: string;
   rawObservation: string;
 }
 
@@ -66,10 +68,12 @@ const ProductionScreen: React.FC<ProductionScreenProps> = ({ selectedBranchId, c
         id: r.id,
         date: fmtDate(r.production_date),
         responsible: r.responsible ?? '-',
+        producer: r.producer ?? '-',
         observation: r.observation ?? '',
         registeredAt: fmtDateTime(r.created_at),
         rawDate: (r.production_date ?? '').slice(0, 10) || today(),
         rawResponsible: r.responsible ?? '',
+        rawProducer: r.producer ?? '',
         rawObservation: r.observation ?? '',
       })));
     } catch (err) {
@@ -99,6 +103,7 @@ const ProductionScreen: React.FC<ProductionScreenProps> = ({ selectedBranchId, c
         id: production.id,
         production_date: production.rawDate,
         responsible: production.rawResponsible,
+        producer: production.rawProducer,
         observation: production.rawObservation,
       },
     });
@@ -200,7 +205,7 @@ const ProductionListView: React.FC<{
   const term = normalize(search.trim());
   const filtered = term
     ? productions.filter((p) =>
-        normalize(`${p.id} ${p.date} ${p.responsible} ${p.observation} ${p.registeredAt}`).includes(term))
+        normalize(`${p.id} ${p.date} ${p.responsible} ${p.producer} ${p.observation}`).includes(term))
     : productions;
 
   return (
@@ -250,7 +255,7 @@ const ProductionListView: React.FC<{
                   <th className="px-4 py-3">Fecha</th>
                   <th className="px-4 py-3">Responsable</th>
                   <th className="px-4 py-3">Observaciones</th>
-                  <th className="px-4 py-3">Fecha Registro</th>
+                  <th className="px-4 py-3">Productor</th>
                   <th className="px-4 py-3 text-center">Acciones</th>
                 </tr>
               </thead>
@@ -275,7 +280,7 @@ const ProductionListView: React.FC<{
                     <td className="px-4 py-3 font-bold text-slate-600">{production.date}</td>
                     <td className="px-4 py-3 font-bold text-slate-600">{production.responsible}</td>
                     <td className="px-4 py-3 font-bold text-slate-400">{production.observation || '-'}</td>
-                    <td className="px-4 py-3 font-bold text-slate-600">{production.registeredAt}</td>
+                    <td className="px-4 py-3 font-bold text-slate-600">{production.producer}</td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <ActionButton title="Eliminar producción" onClick={() => onDelete(production)} icon={<Trash2 size={15} />} tone="red" />
@@ -455,9 +460,10 @@ interface BranchUser {
 
 const ResponsibleSearch: React.FC<{
   branchDbId: string | null;
+  label?: string;
   value: string;
   onChange: (value: string) => void;
-}> = ({ branchDbId, value, onChange }) => {
+}> = ({ branchDbId, label = 'Responsable', value, onChange }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<BranchUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -548,7 +554,7 @@ const ResponsibleSearch: React.FC<{
 
   return (
     <div ref={boxRef} className="relative">
-      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Responsable</span>
+      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</span>
       <div className="relative mt-1.5">
         <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
@@ -614,10 +620,11 @@ const NewProductionView: React.FC<{
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [pesoModalOpen, setPesoModalOpen] = useState(false);
+  const responsible = currentUser.name || currentUser.username || currentUser.id;
 
   // Formulario
   const [date, setDate] = useState(today());
-  const [responsible, setResponsible] = useState('');
+  const [producer, setProducer] = useState('');
   const [observation, setObservation] = useState('');
   const [alambonId, setAlambonId] = useState('');
   const [rows, setRows] = useState<FinishedRow[]>([{ key: crypto.randomUUID(), productId: '', pareas: '' }]);
@@ -699,7 +706,7 @@ const NewProductionView: React.FC<{
 
   const clearForm = () => {
     setDate(today());
-    setResponsible('');
+    setProducer('');
     setObservation('');
     setRows([{ key: crypto.randomUUID(), productId: '', pareas: '' }]);
   };
@@ -725,6 +732,7 @@ const NewProductionView: React.FC<{
 
     if (!branchDbId) { setError('Sucursal inválida.'); return; }
     if (!alambon) { setError('Seleccioná el alambrón (materia prima).'); return; }
+    if (!producer.trim()) { setError('Seleccioná el productor.'); return; }
     const items = buildItems();
     if (items.length === 0) { setError('Agregá al menos un anillo con número de pareas.'); return; }
     if (exceedsStock) {
@@ -738,7 +746,8 @@ const NewProductionView: React.FC<{
         branch_id: branchDbId,
         business_unit: 'materiales',
         date,
-        responsible: responsible.trim() || null,
+        responsible,
+        producer: producer.trim(),
         observation: observation.trim() || null,
         alambon_product_id: alambon.id,
         alambon_name: alambon.name,
@@ -787,7 +796,16 @@ const NewProductionView: React.FC<{
             />
           </label>
 
-          <ResponsibleSearch branchDbId={branchDbId} value={responsible} onChange={setResponsible} />
+          <label className="block">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Responsable</span>
+            <input
+              type="text"
+              value={responsible}
+              readOnly
+              className="mt-1.5 w-full cursor-default rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none"
+            />
+          </label>
+
 
           <label className="block">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -803,24 +821,30 @@ const NewProductionView: React.FC<{
           </label>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={saving || exceedsStock}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-            {saving ? 'Procesando...' : 'Procesar Producción'}
-          </button>
-          <button
-            type="button"
-            onClick={clearForm}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:bg-slate-200"
-          >
-            <Eraser size={15} />
-            Limpiar
-          </button>
+        <div className="mt-4 grid gap-3 md:grid-cols-3 md:items-end">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={saving || exceedsStock}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+              {saving ? 'Procesando...' : 'Procesar Producción'}
+            </button>
+            <button
+              type="button"
+              onClick={clearForm}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:bg-slate-200"
+            >
+              <Eraser size={15} />
+              Limpiar
+            </button>
+          </div>
+
+          <div>
+            <ResponsibleSearch branchDbId={branchDbId} label="Productor" value={producer} onChange={setProducer} />
+          </div>
         </div>
       </div>
 
