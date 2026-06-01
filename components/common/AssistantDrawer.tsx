@@ -74,6 +74,9 @@ const impliesCsvFromPrevious = (text: string) =>
 const wantsExactSqlExport = (text: string) =>
   /\b(sentencia\s+sql|consulta\s+sql|sql)\b/i.test(text);
 const isSalesReportRequest = (text: string) => /\b(reporte|informe|an[aá]lisis)\b/i.test(text) && /\bventas?\b/i.test(text);
+const isSalesSummaryRequest = (text: string) =>
+  /\b(cu[aá]nto|total|ticket\s+promedio|n[uú]mero\s+de\s+ventas|vend[ií]|vendimos|vendido|factur[eé]|facturamos|ingresos?)\b/i.test(text) &&
+  /\b(hoy|ayer|semana|mes|ventas?|vend[ií]|vendimos|factur[eé]|facturamos|ingresos?)\b/i.test(text);
 const isPurchasesReportRequest = (text: string) => /\b(reporte|informe|an[aá]lisis)\b/i.test(text) && /\b(compras?|entradas?)\b/i.test(text);
 const isRecurringCustomersRequest = (text: string) =>
   /\bclientes?\b/i.test(text) && /\b(recurrentes?|frecuentes?|frecuencia|compran\s+m[aá]s|m[aá]s\s+compran)\b/i.test(text);
@@ -612,7 +615,7 @@ const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
       setStatusLabel('');
     };
 
-    if (isSalesReportRequest(text) && !shouldPrepareDownload) {
+    if ((isSalesReportRequest(text) || isSalesSummaryRequest(text)) && !shouldPrepareDownload) {
       try {
         const resolvedBranchId = await resolveBranchId(branchId);
         const bu = businessUnit || 'materiales';
