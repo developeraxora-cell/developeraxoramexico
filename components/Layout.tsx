@@ -71,6 +71,7 @@ const Layout: React.FC<LayoutProps> = ({
   const hasProcessedInitialTab = useRef(false);
   const asideRef = useRef<HTMLElement | null>(null);
   const flyoutRef = useRef<HTMLDivElement | null>(null);
+  const canUseAssistant = currentUser?.role === Role.SOCIO || currentUser?.role === Role.SUPERADMIN;
 
   const navigation: NavGroup[] = [
     {
@@ -248,6 +249,12 @@ const Layout: React.FC<LayoutProps> = ({
 
   const activeBranch = branches.find(b => b.id === selectedBranchId);
   const selectableBranches = branches.filter((branch) => userCanAccessBranch(currentUser, branch));
+
+  useEffect(() => {
+    if (!canUseAssistant && isAssistantOpen) {
+      setIsAssistantOpen(false);
+    }
+  }, [canUseAssistant, isAssistantOpen]);
 
   useEffect(() => {
     if (!pinnedFlyoutGroupId) return;
@@ -548,10 +555,10 @@ const Layout: React.FC<LayoutProps> = ({
               {isMobileMenuOpen ? '✕' : '☰'}
             </button>
 
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-900 rounded-lg md:rounded-xl flex items-center justify-center text-lg md:text-xl shadow-lg">
+            <div className="hidden md:flex w-10 h-10 bg-slate-900 rounded-xl items-center justify-center text-xl shadow-lg">
               {currentItem?.icon || '🏢'}
             </div>
-            <div className="min-w-0">
+            <div className="hidden md:block min-w-0">
               <h1 className="truncate text-base font-black text-slate-900 uppercase tracking-tighter leading-none sm:text-lg md:text-xl">
                 {currentItem?.label || 'Escritorio'}
               </h1>
@@ -578,40 +585,60 @@ const Layout: React.FC<LayoutProps> = ({
               </div>
               <div className="bg-green-100 p-2 rounded-lg text-green-600 animate-pulse" title="Ubicación editable">🌐</div>
             </div>
-            {/* AI Assistant trigger */}
-            <button
-              onClick={() => setIsAssistantOpen(true)}
-              title="Asistente IA"
-              aria-label="Abrir asistente IA"
-              className="group relative flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-orange-400 shadow-lg shadow-slate-900/20 transition-all hover:bg-slate-800 hover:text-orange-300 hover:shadow-orange-500/20 md:h-11 md:w-11"
-            >
-              <span className="absolute right-1 top-1 h-2 w-2 animate-pulse rounded-full bg-orange-500 ring-2 ring-slate-900" />
-              <svg className="h-6 w-6 transition-transform group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3.5V6" />
-                <circle cx="12" cy="2.6" r="1" fill="currentColor" stroke="none" />
-                <rect x="4" y="6" width="16" height="12" rx="3.5" />
-                <path d="M2 11v3M22 11v3" />
-                <circle cx="9" cy="12" r="1.3" fill="currentColor" stroke="none" />
-                <circle cx="15" cy="12" r="1.3" fill="currentColor" stroke="none" />
-                <path d="M9.5 15.2h5" />
-              </svg>
-            </button>
+            {canUseAssistant && (
+              <button
+                onClick={() => setIsAssistantOpen(true)}
+                title="Asistente IA"
+                aria-label="Abrir asistente IA"
+                className="group relative flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-orange-400 shadow-lg shadow-slate-900/20 transition-all hover:bg-slate-800 hover:text-orange-300 hover:shadow-orange-500/20 md:h-11 md:w-11"
+              >
+                <span className="absolute right-1 top-1 h-2 w-2 animate-pulse rounded-full bg-orange-500 ring-2 ring-slate-900" />
+                <svg className="h-6 w-6 transition-transform group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3.5V6" />
+                  <circle cx="12" cy="2.6" r="1" fill="currentColor" stroke="none" />
+                  <rect x="4" y="6" width="16" height="12" rx="3.5" />
+                  <path d="M2 11v3M22 11v3" />
+                  <circle cx="9" cy="12" r="1.3" fill="currentColor" stroke="none" />
+                  <circle cx="15" cy="12" r="1.3" fill="currentColor" stroke="none" />
+                  <path d="M9.5 15.2h5" />
+                </svg>
+              </button>
+            )}
           </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="max-w-[1600px] mx-auto pb-32">
+            {/* Título del módulo en móvil (sale del header en pantallas chicas) */}
+            <div className="md:hidden mb-4 flex items-center gap-3">
+              <div className="w-9 h-9 bg-slate-900 rounded-lg flex items-center justify-center text-lg shadow-lg shrink-0">
+                {currentItem?.icon || '🏢'}
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-black text-slate-900 uppercase tracking-tighter leading-none">
+                  {currentItem?.label || 'Escritorio'}
+                </h1>
+                <p className="mt-1 truncate text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  {currentGroup?.label || 'General'}
+                </p>
+              </div>
+            </div>
             {children}
           </div>
         </div>
       </main>
 
-      <AssistantDrawer
-        isOpen={isAssistantOpen}
-        onClose={() => setIsAssistantOpen(false)}
-        branchName={activeBranch?.name}
-        userName={currentUser?.name?.split(' ')[0]}
-      />
+      {canUseAssistant && (
+        <AssistantDrawer
+          isOpen={isAssistantOpen}
+          onClose={() => setIsAssistantOpen(false)}
+          branchName={activeBranch?.name}
+          userName={currentUser?.name?.split(' ')[0]}
+          userId={currentUser?.id}
+          businessUnit={currentGroup?.id || 'materiales'}
+          branchId={selectedBranchId}
+        />
+      )}
     </div>
   );
 };
