@@ -69,6 +69,9 @@ const isDownloadOnlyRequest = (text: string) => DOWNLOAD_ONLY_RE.test(text) || G
 const isDownloadInstruction = (text: string) => DOWNLOAD_INSTRUCTION_RE.test(text) || FAILED_DOWNLOAD_RE.test(text);
 const isLowStockProductsRequest = (text: string) =>
   /\b(productos?|inventario)\b/i.test(text) && /\b(stock\s+(bajo|minimo|mínimo)|bajo\s+stock|m[ií]nimo(?:\s+de)?\s+stock)\b/i.test(text);
+const isStockQuestionRequest = (text: string) =>
+  /\b(productos?|producto|inventario|stock|existencias?)\b/i.test(text) &&
+  /\b(menos|menor|bajo|baja|m[ií]nimo|minimo|agotad[oa]s?|existencias?)\b/i.test(text);
 const impliesCsvFromPrevious = (text: string) =>
   /\b(csv|consulta sql|select\s|ejecutar_sql|json|productos?|stock|m[ií]nimo|unidades|lista)\b/i.test(text);
 const wantsExactSqlExport = (text: string) =>
@@ -118,6 +121,17 @@ function normalizeCsvRows(rows: any[]): any[] {
 
 const formatMoney = (value: number) =>
   value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const formatDataValue = (value: any) => {
+  if (value === null || value === undefined || value === '') return 'N/D';
+  if (typeof value === 'number') return value.toLocaleString('es-MX', { maximumFractionDigits: 2 });
+  if (typeof value === 'object') return JSON.stringify(value);
+  const numeric = Number(value);
+  if (String(value).trim() !== '' && Number.isFinite(numeric) && /^-?\d+(\.\d+)?$/.test(String(value).trim())) {
+    return numeric.toLocaleString('es-MX', { maximumFractionDigits: 2 });
+  }
+  return String(value);
+};
 
 const isoDate = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -309,6 +323,74 @@ function buildPurchasesReport(rows: any[], input: { branchName?: string; busines
     '- 🟡 MEDIA PRIORIDAD: revisar proveedores con mayor volumen para negociar mejores condiciones.',
     '- 🟢 BAJA PRIORIDAD: comparar compras contra ventas del mismo periodo para detectar sobreinventario.',
   ].join('\n');
+}
+
+function buildProductStockAnswer(rows: any[], input: { branchName?: string; businessUnit?: string }): string {
+  const normalized = normalizeCsvRows(rows);
+  if (normalized.length === 0) {
+    return [
+      `Sucursal: ${input.branchName || 'Sucursal activa'}`,
+      `Módulo: ${input.businessUnit || 'materiales'}`,
+      '',
+      '📊 RESULTADO',
+      'No encontré productos con stock registrado para esta sucursal y módulo.',
+    ].join('\n');
+  }
+
+  const stockOf = (row: any) => Number(row.stock ?? row.qty_base ?? row.existencia ?? 0);
+  const first = normalized[0];
+  const minStock = stockOf(first);
+  const tied = normalized.filter((row) => stockOf(row) === minStock);
+  const tiedLines = tied
+    .slice(0, 10)
+    .map((row) => {
+      const name = row.producto ?? row.name ?? row.nombre ?? 'Producto sin nombre';
+      const minimum = row.minimo ?? row.min_stock;
+      return `- ${name}: stock ${formatDataValue(stockOf(row))}${minimum !== undefined ? `, mínimo ${formatDataValue(minimum)}` : ''}`;
+    })
+    .join('\n');
+
+  const firstName = first.producto ?? first.name ?? first.nombre ?? 'Producto sin nombre';
+  const firstMinimum = first.minimo ?? first.min_stock;
+  const isBelowMinimum = firstMinimum !== undefined && Number.isFinite(Number(firstMinimum)) && minStock < Number(firstMinimum);
+
+  return [
+    `Sucursal: ${input.branchName || 'Sucursal activa'}`,
+    `Módulo: ${input.businessUnit || 'materiales'}`,
+    '',
+    '📊 RESULTADO',
+    `El producto con menos stock es ${firstName}, con ${formatDataValue(minStock)} unidades${firstMinimum !== undefined ? ` y mínimo de ${formatDataValue(firstMinimum)}` : ''}.`,
+    tied.length > 1 ? 'Algunos productos empatados con el mismo stock:' : '',
+    tied.length > 1 ? tiedLines : '',
+    '',
+    '⚠️ PUNTO DE ATENCIÓN',
+    isBelowMinimum
+      ? '- Está por debajo del mínimo configurado; conviene revisarlo para reposición.'
+      : '- Es el nivel más bajo encontrado en el inventario actual; conviene validar si requiere reposición.',
+  ].filter(Boolean).join('\n');
+}
+
+function buildGenericDataAnswer(rows: any[], input: { branchName?: string; businessUnit?: string; requestText: string }): string {
+  const normalized = normalizeCsvRows(rows);
+  const sample = normalized.slice(0, 5);
+  const keys = Array.from(sample.reduce((set: Set<string>, row) => {
+    Object.keys(row ?? {}).forEach((key) => set.add(key));
+    return set;
+  }, new Set<string>())).slice(0, 6);
+  const lines = sample
+    .map((row, index) => `- ${index + 1}. ${keys.map((key) => `${key}: ${formatDataValue(row?.[key])}`).join(' | ')}`)
+    .join('\n');
+
+  return [
+    `Sucursal: ${input.branchName || 'Sucursal activa'}`,
+    `Módulo: ${input.businessUnit || 'materiales'}`,
+    '',
+    '📊 RESULTADO',
+    `Encontré ${normalized.length} registro${normalized.length !== 1 ? 's' : ''} para tu consulta.`,
+    '',
+    lines || '- No hay filas para mostrar.',
+    normalized.length > sample.length ? `\nMostré los primeros ${sample.length}; puedes pedirme el CSV para descargar la lista completa.` : '',
+  ].filter(Boolean).join('\n');
 }
 
 function extractLowStockRows(text: string): Array<{ producto: string; stock: string; minimo: string }> {
@@ -614,6 +696,63 @@ const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
       setIsTyping(false);
       setStatusLabel('');
     };
+
+    if (isStockQuestionRequest(text) && !shouldPrepareDownload) {
+      try {
+        const resolvedBranchId = await resolveBranchId(branchId);
+        const lowerText = text.toLowerCase();
+        const bu = /\bconcretera\b/i.test(lowerText)
+          ? 'concretera'
+          : /\bmateriales?\b/i.test(lowerText)
+            ? 'materiales'
+            : businessUnit === 'concretera'
+              ? 'concretera'
+              : 'materiales';
+        const branchFilter = resolvedBranchId ? `s.branch_id = ${resolvedBranchId}` : '1 = 1';
+        const limit = /\b(cu[aá]l|cual|menos|menor)\b/i.test(text) ? 10 : 25;
+        const sql = bu === 'concretera'
+          ? `SELECT p.name AS producto, s.qty_base AS stock, p.min_stock AS minimo
+FROM concrete_inventory_stock s
+JOIN concrete_products p ON s.product_id = p.id
+WHERE ${branchFilter}
+  AND COALESCE(p.is_active, true) = true
+ORDER BY COALESCE(s.qty_base, 0) ASC, p.name ASC
+LIMIT ${limit}`
+          : `SELECT p.name AS producto, s.qty_base AS stock, p.min_stock AS minimo
+FROM inventory_stock s
+JOIN products p ON s.product_id = p.id
+WHERE ${branchFilter}
+  AND p.business_unit = '${bu}'
+  AND COALESCE(p.is_active, true) = true
+ORDER BY COALESCE(s.qty_base, 0) ASC, p.name ASC
+LIMIT ${limit}`;
+        const result = await executeTool('ejecutar_sql', { consulta: sql, proposito: 'Consultar productos con menor stock' }, {
+          businessUnit: bu,
+          branchCode: branchId,
+          branchName,
+          branchId: resolvedBranchId,
+        });
+        const parsed = JSON.parse(result);
+        setDebugQueries([{ sql, rows: parsed?.filas, error: parsed?.error, data: parsed?.datos, label: 'Productos con menor stock' }]);
+        if (!parsed?.error && Array.isArray(parsed?.datos)) {
+          setMessages([
+            ...baseline,
+            {
+              id: uid('a'),
+              role: 'assistant',
+              text: buildProductStockAnswer(parsed.datos, { branchName, businessUnit: bu }),
+            },
+          ]);
+          setIsTyping(false);
+          setStatusLabel('');
+          lastSqlRef.current = sql;
+          exportRowsRef.current = parsed.datos;
+          return;
+        }
+      } catch (error) {
+        console.error('No se pudo consultar productos por stock:', error);
+      }
+    }
 
     if ((isSalesReportRequest(text) || isSalesSummaryRequest(text)) && !shouldPrepareDownload) {
       try {
@@ -946,6 +1085,19 @@ ORDER BY s.qty_base ASC, p.name ASC`;
               id: assistantId,
               role: 'assistant',
               text: buildSalesReportFallback(rows, { branchName, businessUnit, requestText: text }),
+            },
+          ]);
+          return;
+        }
+        if (rows.length > 0) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: assistantId,
+              role: 'assistant',
+              text: isStockQuestionRequest(text)
+                ? buildProductStockAnswer(rows, { branchName, businessUnit })
+                : buildGenericDataAnswer(rows, { branchName, businessUnit, requestText: text }),
             },
           ]);
           return;
