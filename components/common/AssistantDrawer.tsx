@@ -83,6 +83,9 @@ const isSalesSummaryRequest = (text: string) =>
 const isPurchasesReportRequest = (text: string) => /\b(reporte|informe|an[aá]lisis)\b/i.test(text) && /\b(compras?|entradas?)\b/i.test(text);
 const isRecurringCustomersRequest = (text: string) =>
   /\bclientes?\b/i.test(text) && /\b(recurrentes?|frecuentes?|frecuencia|compran\s+m[aá]s|m[aá]s\s+compran)\b/i.test(text);
+const isDebtCustomersRequest = (text: string) =>
+  /\b(clientes?|cliente|cartera|cr[eé]dito|cobranza|adeudos?|deudas?|debe(?:n)?|deudores?)\b/i.test(text) &&
+  /\b(mayor|m[aá]s|cantidad|saldo|deuda|deudas?|adeudo|debe(?:n)?|pendiente|pendientes|vencid[ao]s?)\b/i.test(text);
 
 const safeFileToken = (value: string, fallback: string) => {
   const cleaned = value
@@ -325,6 +328,46 @@ function buildPurchasesReport(rows: any[], input: { branchName?: string; busines
   ].join('\n');
 }
 
+function buildDebtCustomersReport(rows: any[], input: { branchName?: string; businessUnit?: string }): string {
+  const normalized = normalizeCsvRows(rows);
+  const totalDebt = normalized.reduce((sum, row) => sum + Number(row.deuda ?? row.saldo ?? row.balance ?? 0), 0);
+  const totalOverdue = normalized.reduce((sum, row) => sum + Number(row.deuda_vencida ?? 0), 0);
+  const totalNotes = normalized.reduce((sum, row) => sum + Number(row.notas_abiertas ?? row.notas ?? 0), 0);
+  const topLines = normalized.slice(0, 10)
+    .map((row, index) => {
+      const debt = Number(row.deuda ?? row.saldo ?? row.balance ?? 0);
+      const overdue = Number(row.deuda_vencida ?? 0);
+      const notes = Number(row.notas_abiertas ?? row.notas ?? 0);
+      const nextDue = row.proximo_vencimiento ? `, próximo vencimiento ${row.proximo_vencimiento}` : '';
+      const overdueText = overdue > 0 ? `, vencido ${formatMoney(overdue)}` : '';
+      return `- ${index + 1}. ${row.cliente ?? 'Cliente no especificado'}: ${formatMoney(debt)} pendiente, ${notes} nota${notes !== 1 ? 's' : ''}${overdueText}${nextDue}`;
+    })
+    .join('\n');
+
+  return [
+    `Sucursal: ${input.branchName || 'Sucursal activa'}`,
+    `Módulo: ${input.businessUnit || 'materiales'}`,
+    '',
+    '📊 RESUMEN DE CARTERA',
+    normalized.length > 0
+      ? `Encontré ${normalized.length} cliente${normalized.length !== 1 ? 's' : ''} con saldo pendiente. La deuda total abierta es ${formatMoney(totalDebt)} en ${totalNotes} nota${totalNotes !== 1 ? 's' : ''}.`
+      : 'No encontré clientes con saldo pendiente en la sucursal y módulo activos.',
+    '',
+    '📈 INDICADORES CLAVE',
+    `- Deuda total pendiente: ${formatMoney(totalDebt)}`,
+    `- Deuda vencida: ${formatMoney(totalOverdue)}`,
+    `- Notas abiertas: ${totalNotes}`,
+    '',
+    '🔎 CLIENTES CON MAYOR DEUDA',
+    topLines || '- Sin clientes con deuda abierta.',
+    '',
+    '⚠️ PUNTO DE ATENCIÓN',
+    totalOverdue > 0
+      ? '- Hay saldo vencido; prioriza cobranza sobre los clientes con mayor deuda vencida.'
+      : '- No se detectó saldo vencido en estos resultados; mantén seguimiento antes del próximo vencimiento.',
+  ].join('\n');
+}
+
 function buildProductStockAnswer(rows: any[], input: { branchName?: string; businessUnit?: string }): string {
   const normalized = normalizeCsvRows(rows);
   if (normalized.length === 0) {
@@ -373,10 +416,9 @@ function buildProductStockAnswer(rows: any[], input: { branchName?: string; busi
 function buildGenericDataAnswer(rows: any[], input: { branchName?: string; businessUnit?: string; requestText: string }): string {
   const normalized = normalizeCsvRows(rows);
   const sample = normalized.slice(0, 5);
-  const keys = Array.from(sample.reduce((set: Set<string>, row) => {
-    Object.keys(row ?? {}).forEach((key) => set.add(key));
-    return set;
-  }, new Set<string>())).slice(0, 6);
+  const keySet = new Set<string>();
+  for (const row of sample) Object.keys(row ?? {}).forEach((key) => keySet.add(key));
+  const keys: string[] = Array.from(keySet).slice(0, 6);
   const lines = sample
     .map((row, index) => `- ${index + 1}. ${keys.map((key) => `${key}: ${formatDataValue(row?.[key])}`).join(' | ')}`)
     .join('\n');
@@ -696,6 +738,92 @@ const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
       setIsTyping(false);
       setStatusLabel('');
     };
+
+    if (isDebtCustomersRequest(text) && !shouldPrepareDownload) {
+      try {
+        const resolvedBranchId = await resolveBranchId(branchId);
+        const lowerText = text.toLowerCase();
+        const bu = /\bconcretera\b/i.test(lowerText)
+          ? 'concretera'
+          : /\bmateriales?\b/i.test(lowerText)
+            ? 'materiales'
+            : businessUnit === 'concretera'
+              ? 'concretera'
+              : 'materiales';
+        const notesTable = bu === 'concretera' ? 'concrete_credit_notes' : 'credit_notes';
+        const customersTable = bu === 'concretera' ? 'concrete_credit_customers' : 'credit_customers';
+        const branchFilterByCustomer = resolvedBranchId ? `c.branch_id = ${resolvedBranchId}` : '1 = 1';
+        const branchFilterByNote = resolvedBranchId ? `cn.branch_id = ${resolvedBranchId}` : '1 = 1';
+        const buFilterByCustomer = bu === 'concretera' ? '' : `  AND c.business_unit = '${bu}'\n`;
+        const buFilterByNote = bu === 'concretera' ? '' : `  AND cn.business_unit = '${bu}'\n`;
+        const debtSqlByCustomer = `SELECT c.name AS cliente,
+       COUNT(cn.id) AS notas_abiertas,
+       COALESCE(SUM(cn.balance), 0) AS deuda,
+       COALESCE(SUM(CASE WHEN cn.due_date < CURRENT_DATE THEN cn.balance ELSE 0 END), 0) AS deuda_vencida,
+       COUNT(CASE WHEN cn.due_date < CURRENT_DATE THEN 1 END) AS notas_vencidas,
+       MIN(cn.due_date) AS proximo_vencimiento
+FROM ${notesTable} cn
+JOIN ${customersTable} c ON c.id = cn.customer_id
+WHERE cn.balance > 0
+${buFilterByCustomer}  AND ${branchFilterByCustomer}
+GROUP BY c.id, c.name
+ORDER BY deuda DESC, notas_abiertas DESC
+LIMIT 20`;
+        const debtSqlByNote = `SELECT c.name AS cliente,
+       COUNT(cn.id) AS notas_abiertas,
+       COALESCE(SUM(cn.balance), 0) AS deuda,
+       COALESCE(SUM(CASE WHEN cn.due_date < CURRENT_DATE THEN cn.balance ELSE 0 END), 0) AS deuda_vencida,
+       COUNT(CASE WHEN cn.due_date < CURRENT_DATE THEN 1 END) AS notas_vencidas,
+       MIN(cn.due_date) AS proximo_vencimiento
+FROM ${notesTable} cn
+JOIN ${customersTable} c ON c.id = cn.customer_id
+WHERE cn.balance > 0
+${buFilterByNote}  AND ${branchFilterByNote}
+GROUP BY c.id, c.name
+ORDER BY deuda DESC, notas_abiertas DESC
+LIMIT 20`;
+        let lastDebtError = '';
+        for (const sql of [debtSqlByCustomer, debtSqlByNote]) {
+          const result = await executeTool('ejecutar_sql', { consulta: sql, proposito: 'Clientes con mayor deuda pendiente' }, {
+            businessUnit: bu,
+            branchCode: branchId,
+            branchName,
+            branchId: resolvedBranchId,
+          });
+          const parsed = JSON.parse(result);
+          setDebugQueries([{ sql, rows: parsed?.filas, error: parsed?.error, data: parsed?.datos, label: 'Clientes con mayor deuda' }]);
+          if (!parsed?.error && Array.isArray(parsed?.datos)) {
+            setMessages([
+              ...baseline,
+              {
+                id: uid('a'),
+                role: 'assistant',
+                text: buildDebtCustomersReport(parsed.datos, { branchName, businessUnit: bu }),
+              },
+            ]);
+            setIsTyping(false);
+            setStatusLabel('');
+            lastSqlRef.current = sql;
+            exportRowsRef.current = parsed.datos;
+            return;
+          }
+          lastDebtError = parsed?.error || 'La consulta no devolvió datos válidos.';
+        }
+        setMessages([
+          ...baseline,
+          {
+            id: uid('a'),
+            role: 'assistant',
+            text: `Sucursal: ${branchName || 'Sucursal activa'}\nMódulo: ${bu}\n\nNo pude consultar la cartera con el esquema actual. Detalle: ${lastDebtError}`,
+          },
+        ]);
+        setIsTyping(false);
+        setStatusLabel('');
+        return;
+      } catch (error) {
+        console.error('No se pudo consultar cartera por cliente:', error);
+      }
+    }
 
     if (isStockQuestionRequest(text) && !shouldPrepareDownload) {
       try {
@@ -1095,9 +1223,11 @@ ORDER BY s.qty_base ASC, p.name ASC`;
             {
               id: assistantId,
               role: 'assistant',
-              text: isStockQuestionRequest(text)
-                ? buildProductStockAnswer(rows, { branchName, businessUnit })
-                : buildGenericDataAnswer(rows, { branchName, businessUnit, requestText: text }),
+              text: isDebtCustomersRequest(text)
+                ? buildDebtCustomersReport(rows, { branchName, businessUnit })
+                : isStockQuestionRequest(text)
+                  ? buildProductStockAnswer(rows, { branchName, businessUnit })
+                  : buildGenericDataAnswer(rows, { branchName, businessUnit, requestText: text }),
             },
           ]);
           return;

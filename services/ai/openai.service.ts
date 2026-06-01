@@ -17,7 +17,7 @@ interface RunOpenAIOptions {
 }
 
 export async function runOpenAIAgent(
-  { onToken, onStatus, ctx, signal }: RunOpenAIOptions,
+  { onToken, onStatus, onQuery, ctx, signal }: RunOpenAIOptions,
   history: OllamaMessage[],
 ): Promise<string> {
   if (!isSupabaseConfigured) {
@@ -55,6 +55,12 @@ export async function runOpenAIAgent(
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error((data as any)?.error || `No se pudo consultar OpenAI (${response.status}).`);
+  }
+
+  // Emitir las consultas SQL ejecutadas (debug + exportación CSV).
+  const queries = Array.isArray((data as any)?.queries) ? (data as any).queries : [];
+  for (const q of queries) {
+    onQuery?.({ sql: q?.sql ?? '', rows: q?.rows, error: q?.error, data: q?.data, label: q?.label });
   }
 
   const text = String((data as any)?.text ?? '').trim();
