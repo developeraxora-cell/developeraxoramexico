@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Search, Trash2, User as UserIcon, CreditCard, Banknote, Gift, Tag, Receipt, X, Loader2, Plus, Minus, Wallet, CheckCircle, Eye, FileText, Pencil,
+  Search, Trash2, User as UserIcon, CreditCard, Banknote, Gift, Tag, Receipt, X, Loader2, Plus, Minus, Wallet, Eye, FileText, Pencil,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
@@ -10,6 +10,7 @@ import { vinosSalesService, type SaleCartItem, type PaymentMethod, type PriceTie
 import { supabaseVinos } from '../../services/vinosClient';
 import { generateVinosSaleTicket } from '../../services/vinos/saleTicketPdf';
 import { logVinosAudit } from '../../services/audit/audit.service';
+import Toast from '../common/Toast';
 
 interface Props {
   selectedBranchId: string;
@@ -1555,16 +1556,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         </div>
       )}
 
-      {/* ─── TOAST FEEDBACK ───────────────────────────── */}
-      {feedback && (
-        <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-2 rounded-2xl px-4 py-3 shadow-2xl ${
-          feedback.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-        }`}>
-          {feedback.type === 'success' ? <CheckCircle size={16}/> : <X size={16}/>}
-          <span className="text-sm font-bold">{feedback.msg}</span>
-          <button onClick={() => setFeedback(null)} className="ml-2 opacity-70 hover:opacity-100"><X size={14}/></button>
-        </div>
-      )}
+      {feedback && <Toast type={feedback.type} message={feedback.msg} onClose={() => setFeedback(null)} />}
     </div>
   );
 };

@@ -42,18 +42,35 @@ const STATUS_CONFIG: Record<CustomerStatus, { label: string; dot: string }> = {
   PERDIDO:   { label: 'Perdido',   dot: 'bg-red-500'    },
 };
 
-const CUSTOMER_TYPES: { value: CustomerType; label: string; emoji: string }[] = [
-  { value: 'vino',              label: 'Vino',              emoji: '🍷' },
-  { value: 'whisky',            label: 'Whisky',            emoji: '🥃' },
-  { value: 'cerveza_artesanal', label: 'Cerveza artesanal', emoji: '🍺' },
-  { value: 'tequila',           label: 'Tequila',           emoji: '🌵' },
-  { value: 'premium',           label: 'Premium',           emoji: '⭐' },
-  { value: 'fiesta_eventos',    label: 'Fiestas / Eventos', emoji: '🎉' },
+interface CustomerTypeOption {
+  value: CustomerType;
+  label: string;
+}
+
+const DEFAULT_CUSTOMER_TYPES: CustomerTypeOption[] = [
+  { value: 'vino',              label: 'Vino' },
+  { value: 'whisky',            label: 'Whisky' },
+  { value: 'cerveza_artesanal', label: 'Cerveza artesanal' },
+  { value: 'tequila',           label: 'Tequila' },
+  { value: 'premium',           label: 'Premium' },
+  { value: 'fiesta_eventos',    label: 'Fiestas / Eventos' },
 ];
 
-const TYPE_LABEL: Record<CustomerType, string> = Object.fromEntries(
-  CUSTOMER_TYPES.map(t => [t.value, t.label]),
-) as Record<CustomerType, string>;
+const DEFAULT_TYPE_LABEL: Record<string, string> = Object.fromEntries(
+  DEFAULT_CUSTOMER_TYPES.map(t => [t.value, t.label]),
+) as Record<string, string>;
+
+const humanizeCustomerType = (value: string) =>
+  DEFAULT_TYPE_LABEL[value] ?? value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+const normalizeCustomerType = (label: string) =>
+  label
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
 
 // ─── países (prefijo telefónico) ─────────────────────────────────────────────
 
@@ -220,6 +237,10 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [customerTypeOptions, setCustomerTypeOptions] = useState<CustomerTypeOption[]>(DEFAULT_CUSTOMER_TYPES);
+  const [typeModalOpen, setTypeModalOpen] = useState(false);
+  const [newTypeLabel, setNewTypeLabel] = useState('');
+  const [newTypeError, setNewTypeError] = useState('');
 
   // documents in modal
   interface QueuedFile { file: File; description: string }
@@ -321,6 +342,25 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    const existingTypes = customers.flatMap(c => c.customer_types ?? []);
+    if (existingTypes.length === 0) return;
+    setCustomerTypeOptions(prev => {
+      const nextMap = new Map(prev.map(option => [option.value, option]));
+      existingTypes.forEach(type => {
+        if (type && !nextMap.has(type)) {
+          nextMap.set(type, { value: type, label: humanizeCustomerType(type) });
+        }
+      });
+      return Array.from(nextMap.values());
+    });
+  }, [customers]);
+
+  const customerTypeLabelMap = useMemo(
+    () => Object.fromEntries(customerTypeOptions.map(option => [option.value, option.label])) as Record<string, string>,
+    [customerTypeOptions]
+  );
+
   // ── filtered ────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -387,6 +427,45 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       const next = has ? f.customer_types.filter(x => x !== t) : [...f.customer_types, t];
       return { ...f, customer_types: next.length ? next : ['vino'] };
     });
+  };
+
+  const openTypeModal = () => {
+    setNewTypeLabel('');
+    setNewTypeError('');
+    setTypeModalOpen(true);
+  };
+
+  const closeTypeModal = () => {
+    setTypeModalOpen(false);
+    setNewTypeLabel('');
+    setNewTypeError('');
+  };
+
+  const handleCreateCustomerType = () => {
+    const label = newTypeLabel.trim();
+    const value = normalizeCustomerType(label);
+    if (!label) {
+      setNewTypeError('Escribe el nombre del tipo de cliente.');
+      return;
+    }
+    if (!value) {
+      setNewTypeError('Usa al menos una letra o número.');
+      return;
+    }
+    const labelExists = customerTypeOptions.some(option => option.label.trim().toLowerCase() === label.toLowerCase());
+    const valueExists = customerTypeOptions.some(option => option.value === value);
+    if (labelExists || valueExists) {
+      setNewTypeError('Ese tipo de cliente ya existe.');
+      return;
+    }
+
+    const nextOption = { value, label };
+    setCustomerTypeOptions(prev => [...prev, nextOption]);
+    setForm(prev => ({
+      ...prev,
+      customer_types: prev.customer_types.includes(value) ? prev.customer_types : [...prev.customer_types, value],
+    }));
+    closeTypeModal();
   };
 
   const MAX_DOCS = 2;
@@ -1116,7 +1195,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                         <div className="flex flex-wrap gap-1">
                           {(c.customer_types ?? []).map(t => (
                             <span key={t} className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">
-                              {TYPE_LABEL[t] ?? t}
+                              {customerTypeLabelMap[t] ?? humanizeCustomerType(t)}
                             </span>
                           ))}
                         </div>
@@ -1232,11 +1311,20 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
 
               {/* SECCIÓN 2: Tipo de cliente (checkboxes, full width) */}
               <section>
-                <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
-                  Tipo de cliente <span className="font-normal normal-case text-slate-400/80">(puede ser más de uno)</span>
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  {CUSTOMER_TYPES.map(t => {
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
+                    Tipo de cliente <span className="font-normal normal-case text-slate-400/80">(puede ser más de uno)</span>
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={openTypeModal}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-orange-700 transition-colors hover:border-orange-300 hover:bg-orange-100"
+                  >
+                    <Plus size={13} /> Nuevo tipo
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  {customerTypeOptions.map(t => {
                     const active = form.customer_types.includes(t.value);
                     return (
                       <label
@@ -1415,6 +1503,58 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                 {saving
                   ? (queuedFiles.length > 0 ? 'Subiendo archivos…' : 'Guardando…')
                   : editTarget ? 'Guardar cambios' : 'Crear cliente'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {typeModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Nuevo tipo de cliente</h3>
+                <p className="mt-0.5 text-[11px] font-bold text-slate-400">Crea una etiqueta para clasificar clientes.</p>
+              </div>
+              <button onClick={closeTypeModal} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="px-6 py-5">
+              <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Nombre del tipo</label>
+              <input
+                autoFocus
+                className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                value={newTypeLabel}
+                onChange={e => {
+                  setNewTypeLabel(e.target.value);
+                  if (newTypeError) setNewTypeError('');
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleCreateCustomerType();
+                }}
+                placeholder="Ej. Coleccionista, Distribuidor, Restaurante"
+              />
+              <p className="mt-2 text-[11px] font-semibold text-slate-400">
+                Se guardará como opción seleccionable y quedará asociada al cliente al guardar.
+              </p>
+              {newTypeError && (
+                <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600">{newTypeError}</p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50/70 px-6 py-4">
+              <button
+                onClick={closeTypeModal}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateCustomerType}
+                className="rounded-2xl bg-orange-600 px-5 py-2 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500"
+              >
+                Agregar tipo
               </button>
             </div>
           </div>

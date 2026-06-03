@@ -11,6 +11,7 @@ import {
 } from '../../services/vinos/campaigns.service';
 import { vinosCustomersService, type VinosCustomer } from '../../services/vinos/customers.service';
 import { logVinosAudit } from '../../services/audit/audit.service';
+import Toast from '../common/Toast';
 
 interface Props {
   selectedBranchId: string;
@@ -83,7 +84,18 @@ function MultiSelect({ label, options, selected, onToggle }: {
 
 const LOYALTY_LEVELS = ['BRONCE', 'PLATA', 'ORO', 'BLACK'];
 const STATUSES = ['ACTIVO', 'DORMIDO', 'EN_RIESGO', 'PERDIDO'];
-const CUSTOMER_TYPES = ['vino', 'whisky', 'cerveza_artesanal', 'tequila', 'premium', 'fiesta_eventos'];
+const DEFAULT_CUSTOMER_TYPES = [
+  { value: 'vino', label: 'Vino' },
+  { value: 'whisky', label: 'Whisky' },
+  { value: 'cerveza_artesanal', label: 'Cerveza artesanal' },
+  { value: 'tequila', label: 'Tequila' },
+  { value: 'premium', label: 'Premium' },
+  { value: 'fiesta_eventos', label: 'Fiestas / Eventos' },
+];
+
+const DEFAULT_TYPE_LABEL = Object.fromEntries(DEFAULT_CUSTOMER_TYPES.map(t => [t.value, t.label]));
+const humanizeCustomerType = (value: string) =>
+  DEFAULT_TYPE_LABEL[value] ?? value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
 const VARIABLES = ['{{nombre_cliente}}', '{{promocion}}', '{{fecha_inicio_promocion}}', '{{fecha_fin_promocion}}', '{{descuento}}'];
 
@@ -164,6 +176,14 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
   }, [branchDbId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const customerTypeOptions = useMemo(() => {
+    const map = new Map(DEFAULT_CUSTOMER_TYPES.map(option => [option.value, option]));
+    allCustomers.flatMap(customer => customer.customer_types ?? []).forEach(type => {
+      if (type && !map.has(type)) map.set(type, { value: type, label: humanizeCustomerType(type) });
+    });
+    return Array.from(map.values());
+  }, [allCustomers]);
 
   useEffect(() => {
     if (!feedback) return;
@@ -350,11 +370,7 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
 
   return (
     <div className="space-y-6">
-      {feedback && (
-        <div className={`rounded-2xl px-4 py-3 text-sm font-bold ${feedback.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-          {feedback.msg}
-        </div>
-      )}
+      {feedback && <Toast type={feedback.type} message={feedback.msg} onClose={() => setFeedback(null)} />}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
@@ -490,7 +506,7 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       <MultiSelect label="Estado" selected={statuses} onToggle={v => toggle(statuses, v, setStatuses)}
                         options={STATUSES.map(s => ({ value: s, label: s }))} />
                       <MultiSelect label="Tipo" selected={types} onToggle={v => toggle(types, v, setTypes)}
-                        options={CUSTOMER_TYPES.map(t => ({ value: t, label: t }))} />
+                        options={customerTypeOptions} />
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-4">
                       <label className="flex cursor-pointer items-center gap-2">

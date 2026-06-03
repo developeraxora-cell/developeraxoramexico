@@ -2,7 +2,7 @@ import { supabaseVinos, isVinosConfigured } from '../vinosClient';
 
 export type LoyaltyLevel = 'BRONCE' | 'PLATA' | 'ORO' | 'BLACK';
 export type CustomerStatus = 'ACTIVO' | 'DORMIDO' | 'EN_RIESGO' | 'PERDIDO';
-export type CustomerType = 'vino' | 'whisky' | 'cerveza_artesanal' | 'tequila' | 'premium' | 'fiesta_eventos';
+export type CustomerType = string;
 
 export interface CustomerDocument {
   id: string;
