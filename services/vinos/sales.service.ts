@@ -80,6 +80,8 @@ export interface SaleRow {
   customer?: { id: string; name: string } | null;
 }
 
+const STOCK_EPSILON = 0.000001;
+
 export const vinosSalesService = {
 
   async list(branchId?: number, opts?: { search?: string; from?: string; to?: string; customerId?: string }): Promise<SaleRow[]> {
@@ -265,6 +267,46 @@ export const vinosSalesService = {
   async create(input: CreateSaleInput): Promise<string> {
     if (!isVinosConfigured) throw new Error('DB vinos no configurada');
     if (input.items.length === 0) throw new Error('Agrega al menos un producto.');
+
+    const requiredByProduct = input.items.reduce<Record<string, number>>((acc, it) => {
+      const qty = Number(it.qty);
+      const factor = Number(it.factor_to_base || 1);
+      if (!Number.isFinite(qty) || qty <= 0) {
+        throw new Error(`Cantidad inválida para ${it.product_name ?? 'un producto'}.`);
+      }
+      if (!Number.isFinite(factor) || factor <= 0) {
+        throw new Error(`Unidad inválida para ${it.product_name ?? 'un producto'}.`);
+      }
+      acc[it.product_id] = (acc[it.product_id] ?? 0) + (qty * factor);
+      return acc;
+    }, {});
+
+    const productIds = Object.keys(requiredByProduct);
+    const { data: stockRows, error: stockErr } = await supabaseVinos
+      .from('product_stocks')
+      .select('product_id, qty, product:products(name)')
+      .eq('branch_id', input.branch_id)
+      .in('product_id', productIds);
+    if (stockErr) throw stockErr;
+
+    const stockByProduct = new Map<string, { qty: number; name: string | null }>();
+    (stockRows ?? []).forEach((row: { product_id: string; qty: number; product?: { name: string } | { name: string }[] | null }) => {
+      const product = Array.isArray(row.product) ? row.product[0] : row.product;
+      stockByProduct.set(row.product_id, {
+        qty: Number(row.qty ?? 0),
+        name: product?.name ?? null,
+      });
+    });
+
+    for (const [productId, requiredQtyBase] of Object.entries(requiredByProduct)) {
+      const stock = stockByProduct.get(productId);
+      const availableQtyBase = Number(stock?.qty ?? 0);
+      if (requiredQtyBase - availableQtyBase > STOCK_EPSILON) {
+        const item = input.items.find(it => it.product_id === productId);
+        const productName = item?.product_name ?? stock?.name ?? 'producto';
+        throw new Error(`Stock insuficiente para "${productName}". Disponible: ${availableQtyBase}, solicitado: ${requiredQtyBase}.`);
+      }
+    }
 
     // Determine ticket-level price_type (most frequent in items)
     const tierCount: Record<PriceTier, number> = { MENUDEO: 0, MEDIO_MAYOREO: 0, MAYOREO: 0 };

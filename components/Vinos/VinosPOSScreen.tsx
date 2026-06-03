@@ -43,6 +43,8 @@ const PRICE_TIER_LABEL: Record<PriceTier, string> = {
   MAYOREO: 'Mayoreo',
 };
 
+const STOCK_EPSILON = 0.000001;
+
 const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branches }) => {
   const [products, setProducts] = useState<ProductFull[]>([]);
   const [customers, setCustomers] = useState<VinosCustomer[]>([]);
@@ -216,30 +218,94 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     return pu.price_wholesale;
   };
 
+  const getCartItemQtyBase = (item: SaleCartItem) =>
+    Number(item.qty || 0) * Number(item.factor_to_base || 1);
+
+  const getProductQtyBaseInCart = (items: SaleCartItem[], productId: string, excludeIdx?: number) =>
+    items.reduce((sum, item, idx) => {
+      if (item.product_id !== productId || idx === excludeIdx) return sum;
+      return sum + getCartItemQtyBase(item);
+    }, 0);
+
+  const getProductStock = (productId: string) =>
+    Number(products.find(p => p.id === productId)?.total_stock ?? 0);
+
+  const showStockInsufficient = (productName: string, availableBase: number, factorToBase: number, uomName?: string) => {
+    const availableInSelectedUom = Math.max(0, Math.floor((availableBase / factorToBase) * 100) / 100);
+    setFeedback({
+      type: 'error',
+      msg: `Stock insuficiente para "${productName}". Disponible: ${availableInSelectedUom} ${uomName || 'unidad(es)'} (${Math.max(0, availableBase)} base).`,
+    });
+  };
+
+  const canUseStock = (
+    productId: string,
+    productName: string,
+    qty: number,
+    factorToBase: number,
+    uomName?: string,
+    excludeIdx?: number
+  ) => {
+    const stockBase = getProductStock(productId);
+    if (stockBase <= 0) {
+      setFeedback({ type: 'error', msg: `Sin stock para "${productName}".` });
+      return false;
+    }
+    const otherCartQtyBase = getProductQtyBaseInCart(cart, productId, excludeIdx);
+    const requestedQtyBase = qty * factorToBase;
+    const availableBase = stockBase - otherCartQtyBase;
+    if (requestedQtyBase - availableBase > STOCK_EPSILON) {
+      showStockInsufficient(productName, availableBase, factorToBase, uomName);
+      return false;
+    }
+    return true;
+  };
+
   const handleAddToCart = () => {
     if (!addProductTarget) return;
     const pu = addProductTarget.product_uoms.find(u => u.id === stepUomId);
     if (!pu) return;
     const qty = Number(stepQty);
     if (!qty || qty <= 0) return;
+    const factorToBase = Number(pu.factor_to_base || 1);
+    const uomName = pu.uom?.name ?? '';
+    if (!canUseStock(addProductTarget.id, addProductTarget.name, qty, factorToBase, uomName)) return;
     const unit_price = getPriceForTier(pu, stepTier);
 
     setCart(prev => [...prev, {
       product_id: addProductTarget.id,
       product_uom_id: pu.id,
-      factor_to_base: Number(pu.factor_to_base),
+      factor_to_base: factorToBase,
       qty,
       price_type: stepTier,
       unit_price,
       product_name: addProductTarget.name,
       product_sku: addProductTarget.sku,
-      uom_name: pu.uom?.name ?? '',
+      uom_name: uomName,
     }]);
     setAddProductTarget(null);
   };
 
   const updateCartItem = (idx: number, patch: Partial<SaleCartItem>) =>
-    setCart(prev => prev.map((row, i) => i === idx ? { ...row, ...patch } : row));
+    setCart(prev => {
+      const current = prev[idx];
+      if (!current) return prev;
+      const next = { ...current, ...patch };
+      const nextQty = Number(next.qty);
+      const nextFactor = Number(next.factor_to_base || 1);
+      if (!Number.isFinite(nextQty) || nextQty <= 0) {
+        return prev.map((row, i) => i === idx ? next : row);
+      }
+      const stockBase = getProductStock(next.product_id);
+      const otherCartQtyBase = getProductQtyBaseInCart(prev, next.product_id, idx);
+      const requestedQtyBase = nextQty * nextFactor;
+      const availableBase = stockBase - otherCartQtyBase;
+      if (requestedQtyBase - availableBase > STOCK_EPSILON) {
+        showStockInsufficient(next.product_name ?? 'producto', availableBase, nextFactor, next.uom_name);
+        return prev;
+      }
+      return prev.map((row, i) => i === idx ? next : row);
+    });
 
   const removeCartItem = (idx: number) =>
     setCart(prev => prev.filter((_, i) => i !== idx));
