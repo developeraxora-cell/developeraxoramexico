@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ArrowLeft, ArrowLeftRight, Eraser, Factory, Loader2, Package, PackagePlus, Plus, Save, Scale, Search, Trash2, UserRound, X } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, ArrowLeft, ArrowLeftRight, Eraser, Factory, Loader2, Package, PackagePlus, Plus, Save, Scale, Trash2, Users, X } from 'lucide-react';
 import { Branch, User } from '../../types';
-import { supabase } from '../../services/supabaseClient';
 import { catalogService, type Product, type Uom } from '../../services/inventory/catalog.service';
 import { productionsService, type ProductionItemRow } from '../../services/inventory/productions.service';
 import { logMaterialsAudit } from '../../services/audit/audit.service';
@@ -450,145 +449,265 @@ const MovementsModal: React.FC<{
   );
 };
 
-// ── Búsqueda de responsable (usuarios de la sucursal, desde 3 letras) ──────────
+// ── Selector de productor + modal de administración ────────────────────────────
 
-interface BranchUser {
-  id: string;
-  full_name: string;
-  username: string;
+interface ProductorRow {
+  id: number;
+  name: string;
 }
 
-const ResponsibleSearch: React.FC<{
+const ProductorSelect: React.FC<{
   branchDbId: string | null;
-  label?: string;
   value: string;
   onChange: (value: string) => void;
-}> = ({ branchDbId, label = 'Responsable', value, onChange }) => {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<BranchUser[]>([]);
+}> = ({ branchDbId, value, onChange }) => {
+  const [list, setList] = useState<ProductorRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const userIdsRef = useRef<string[] | null>(null);
-  const boxRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [adminOpen, setAdminOpen] = useState(false);
 
-  // Cierra al hacer click fuera
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  // IDs de usuarios con acceso a la sucursal (se cachea por sucursal)
-  useEffect(() => {
-    userIdsRef.current = null;
-  }, [branchDbId]);
-
-  const ensureBranchUserIds = useCallback(async (): Promise<string[]> => {
-    if (userIdsRef.current) return userIdsRef.current;
-    if (!branchDbId) return [];
-    const { data, error } = await supabase
-      .from('app_user_branch_access')
-      .select('user_id')
-      .eq('branch_id', Number(branchDbId));
-    if (error) throw error;
-    const ids = (data ?? []).map((r: any) => r.user_id);
-    userIdsRef.current = ids;
-    return ids;
-  }, [branchDbId]);
-
-  // Búsqueda con debounce, solo desde 3 caracteres
-  useEffect(() => {
-    const term = query.trim();
-    if (term.length < 3) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
+  const load = useCallback(async () => {
+    if (!branchDbId) { setList([]); return; }
     setLoading(true);
-    const timer = setTimeout(async () => {
-      try {
-        const ids = await ensureBranchUserIds();
-        if (ids.length === 0) {
-          if (!cancelled) setResults([]);
-          return;
-        }
-        const escaped = term.replace(/[%_]/g, (m) => `\\${m}`);
-        const { data, error } = await supabase
-          .from('app_user_profiles')
-          .select('id, full_name, username')
-          .in('id', ids)
-          .eq('active', true)
-          .or(`full_name.ilike.%${escaped}%,username.ilike.%${escaped}%`)
-          .order('full_name')
-          .limit(8);
-        if (error) throw error;
-        if (!cancelled) {
-          setResults((data ?? []).map((r: any) => ({
-            id: r.id,
-            full_name: r.full_name ?? '',
-            username: r.username ?? '',
-          })));
-        }
-      } catch (err) {
-        console.error('Error buscando responsable:', err);
-        if (!cancelled) setResults([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }, 300);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [query, ensureBranchUserIds]);
+    setError(null);
+    try {
+      const data = await productionsService.listProductores(branchDbId);
+      setList(data.map((p) => ({ id: p.id, name: p.name })));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar los productores.');
+    } finally {
+      setLoading(false);
+    }
+  }, [branchDbId]);
 
-  const select = (user: BranchUser) => {
-    onChange(user.full_name || user.username);
-    setQuery('');
-    setResults([]);
-    setOpen(false);
-  };
+  useEffect(() => { load(); }, [load]);
 
   return (
-    <div ref={boxRef} className="relative">
-      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</span>
-      <div className="relative mt-1.5">
-        <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          value={open ? query : value}
-          onFocus={() => { setOpen(true); setQuery(''); }}
-          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-          placeholder={value ? value : 'Buscar responsable (mín. 3 letras)...'}
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pl-9 text-sm font-semibold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
-        />
-        {loading && <Loader2 size={15} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-orange-400" />}
-      </div>
-
-      {open && query.trim().length >= 3 && (
-        <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-          {loading && (
-            <div className="px-3 py-3 text-center text-xs font-semibold text-slate-400">Buscando...</div>
-          )}
-          {!loading && results.length === 0 && (
-            <div className="px-3 py-3 text-center text-xs font-semibold text-slate-400">Sin coincidencias en esta sucursal.</div>
-          )}
-          {!loading && results.map((user) => (
-            <button
-              key={user.id}
-              type="button"
-              onClick={() => select(user)}
-              className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-orange-50"
-            >
-              <UserRound size={15} className="text-slate-400" />
-              <span className="flex-1">{user.full_name || user.username}</span>
-              {user.username && <span className="text-[10px] font-bold text-slate-400">@{user.username}</span>}
-            </button>
+    <div>
+      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Productor</span>
+      <div className="mt-1.5 flex gap-2">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+        >
+          <option value="">{loading ? 'Cargando...' : list.length === 0 ? 'Sin productores — agregá uno' : 'Seleccionar productor...'}</option>
+          {list.map((p) => (
+            <option key={p.id} value={p.name}>{p.name}</option>
           ))}
-        </div>
+        </select>
+        <button
+          type="button"
+          onClick={() => setAdminOpen(true)}
+          title="Administrar productores"
+          className="inline-flex items-center justify-center rounded-xl bg-slate-100 px-3 text-slate-600 transition hover:bg-slate-200"
+        >
+          <Users size={15} />
+        </button>
+      </div>
+      {error && <span className="mt-1 block text-[11px] font-semibold text-red-500">{error}</span>}
+
+      {adminOpen && (
+        <ProductoresAdminModal
+          branchDbId={branchDbId}
+          onClose={() => setAdminOpen(false)}
+          onChanged={load}
+        />
       )}
+    </div>
+  );
+};
+
+const ProductoresAdminModal: React.FC<{
+  branchDbId: string | null;
+  onClose: () => void;
+  onChanged: () => Promise<void> | void;
+}> = ({ branchDbId, onClose, onChanged }) => {
+  const [list, setList] = useState<ProductorRow[]>([]);
+  const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!branchDbId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await productionsService.listProductores(branchDbId);
+      setList(data.map((p) => ({ id: p.id, name: p.name })));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar.');
+    } finally {
+      setLoading(false);
+    }
+  }, [branchDbId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const add = async () => {
+    if (!branchDbId) return;
+    const clean = name.trim();
+    if (!clean) { setError('El nombre es obligatorio.'); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      await productionsService.createProductor(branchDbId, clean);
+      setName('');
+      await load();
+      await onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo crear el productor.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (id: number) => {
+    setError(null);
+    try {
+      await productionsService.deleteProductor(id);
+      await load();
+      await onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo eliminar.');
+    }
+  };
+
+  // Animación: monta cerrado, abre en RAF; al cerrar, espera la transición
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setOpen(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const close = () => {
+    setOpen(false);
+    setTimeout(onClose, 280);
+  };
+
+  // ESC cierra
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50">
+      {/* Backdrop */}
+      <div
+        className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${
+          open ? 'opacity-100' : 'opacity-0'
+        }`}
+        onMouseDown={close}
+      />
+
+      {/* Drawer desde la derecha, slide hacia la izquierda */}
+      <aside
+        className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${
+          open ? 'translate-x-0' : 'translate-x-full'
+        }`}
+        role="dialog"
+        aria-label="Administrar productores"
+      >
+        {/* Header con gradiente */}
+        <header className="relative overflow-hidden border-b border-slate-100 bg-gradient-to-br from-orange-50 via-white to-white px-5 py-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-sm">
+                <Users size={18} />
+              </div>
+              <div>
+                <h2 className="text-base font-black tracking-tight text-slate-900">Productores</h2>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {list.length} {list.length === 1 ? 'registrado' : 'registrados'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={close}
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/70 text-slate-500 shadow-sm transition hover:bg-white hover:text-slate-800"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </header>
+
+        {/* Form de alta */}
+        <div className="border-b border-slate-100 px-5 py-4">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nuevo Productor</span>
+          <div className="mt-1.5 flex gap-2">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
+              placeholder="Nombre completo..."
+              className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100"
+            />
+            <button
+              type="button"
+              onClick={add}
+              disabled={saving || !name.trim()}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition hover:from-emerald-600 hover:to-emerald-700 disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-400"
+            >
+              {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+              Agregar
+            </button>
+          </div>
+          {error && (
+            <div className="mt-2 flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">
+              <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+              {error}
+            </div>
+          )}
+        </div>
+
+        {/* Lista */}
+        <div className="flex-1 overflow-auto px-5 py-4">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Lista</span>
+          <div className="mt-2 space-y-1.5">
+            {loading && (
+              <div className="flex items-center justify-center py-12 text-slate-400">
+                <Loader2 size={18} className="animate-spin" />
+              </div>
+            )}
+            {!loading && list.length === 0 && (
+              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                  <Users size={20} />
+                </div>
+                <p className="text-xs font-bold text-slate-400">Sin productores todavía.</p>
+                <p className="text-[11px] font-semibold text-slate-300">Agregá uno arriba.</p>
+              </div>
+            )}
+            {!loading && list.map((p) => (
+              <div
+                key={p.id}
+                className="group flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2.5 transition hover:border-orange-200 hover:bg-orange-50/40"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-black uppercase text-slate-500 group-hover:bg-orange-100 group-hover:text-orange-600">
+                  {p.name.slice(0, 2)}
+                </div>
+                <span className="flex-1 truncate text-sm font-bold text-slate-700">{p.name}</span>
+                <button
+                  type="button"
+                  onClick={() => remove(p.id)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition hover:bg-red-50 hover:text-red-500"
+                  title="Eliminar productor"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <footer className="border-t border-slate-100 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+          Eliminar es soft delete · se mantienen producciones registradas
+        </footer>
+      </aside>
     </div>
   );
 };
@@ -843,7 +962,7 @@ const NewProductionView: React.FC<{
           </div>
 
           <div>
-            <ResponsibleSearch branchDbId={branchDbId} label="Productor" value={producer} onChange={setProducer} />
+            <ProductorSelect branchDbId={branchDbId} value={producer} onChange={setProducer} />
           </div>
         </div>
       </div>

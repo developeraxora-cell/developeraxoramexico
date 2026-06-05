@@ -149,6 +149,43 @@ export const productionsService = {
     if (error) throw error;
   },
 
+  // ── Productores ────────────────────────────────────────────────────────────
+
+  async listProductores(branchId: number | string) {
+    const { data, error } = await supabase
+      .from('productores')
+      .select('id, branch_id, name, active, created_at')
+      .eq('branch_id', Number(branchId))
+      .eq('active', true)
+      .order('name');
+    if (error) {
+      const code = String(error.code ?? '');
+      const msg = String(error.message ?? '').toLowerCase();
+      if (code === '42P01' || msg.includes('productores')) {
+        throw new Error('Falta la tabla productores. Ejecute crear_tabla_productores.sql.');
+      }
+      throw error;
+    }
+    return (data ?? []) as { id: number; branch_id: number; name: string; active: boolean; created_at: string }[];
+  },
+
+  async createProductor(branchId: number | string, name: string) {
+    const clean = name.trim();
+    if (!clean) throw new Error('El nombre del productor es obligatorio.');
+    const { data, error } = await supabase
+      .from('productores')
+      .insert({ branch_id: Number(branchId), name: clean, active: true })
+      .select('id, branch_id, name, active, created_at')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteProductor(id: number) {
+    const { error } = await supabase.from('productores').update({ active: false }).eq('id', id);
+    if (error) throw error;
+  },
+
   // Actualiza el peso unitario (kg) de un producto (anillo)
   async updatePeso(productId: number | string, peso: number) {
     const { error } = await supabase
