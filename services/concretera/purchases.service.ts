@@ -595,8 +595,10 @@ export const purchasesService = {
       if (uomError) throw uomError;
       createdUoms = (data ?? []) as ProductUom[];
 
-      // No eliminamos UOMs antiguas aqui para no romper FKs historicas
-      // (concrete_inventory_transaction_items.product_uom_id).
+      await cleanupUnusedConcreteProductUoms(
+        productId,
+        uomsPayload.map((uom) => String(uom.uom_id))
+      );
     } catch (uomSyncError) {
       if (!isRlsErrorForTable(uomSyncError, 'concrete_product_uoms')) {
         throw uomSyncError;

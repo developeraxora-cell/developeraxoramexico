@@ -97,6 +97,13 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'transporteria.alerts.view', 'transporteria.audit.view', 'transporteria.reports.view',
     'logistica.diesel.view',
   ],
+  vinos_admin: [
+    'vinos.sales.view', 'vinos.sales.create', 'vinos.sales.delete',
+    'vinos.purchases.view', 'vinos.purchases.create', 'vinos.purchases.delete',
+    'vinos.products.view',
+    'vinos.customers.view', 'vinos.customers.create', 'vinos.customers.edit', 'vinos.customers.delete',
+    'vinos.audit.view', 'vinos.reports.view', 'vinos.campaigns.view',
+  ],
 };
 
 const BUSINESS_UNIT_DEFAULT_PERMISSIONS: Record<BusinessUnit, string[]> = {
@@ -122,6 +129,13 @@ const BUSINESS_UNIT_DEFAULT_PERMISSIONS: Record<BusinessUnit, string[]> = {
     'transporteria.products.view',
     'transporteria.customers.view', 'transporteria.customers.create', 'transporteria.customers.edit', 'transporteria.customers.delete',
     'transporteria.alerts.view', 'transporteria.audit.view', 'transporteria.reports.view',
+  ],
+  vinos: [
+    'vinos.sales.view', 'vinos.sales.create', 'vinos.sales.delete',
+    'vinos.purchases.view', 'vinos.purchases.create', 'vinos.purchases.delete',
+    'vinos.products.view',
+    'vinos.customers.view', 'vinos.customers.create', 'vinos.customers.edit', 'vinos.customers.delete',
+    'vinos.audit.view', 'vinos.reports.view', 'vinos.campaigns.view',
   ],
   global: ['global.branches.view', 'global.users.view'],
 };
@@ -172,6 +186,14 @@ const ROLE_OPTIONS: RoleOption[] = [
     note: 'Transportes y Logística quedan preseleccionados, sin bloqueo de selección',
     suggestedUnits: ['transporteria', 'logistica'],
   },
+  {
+    value: 'vinos_admin',
+    label: 'Usuario Casa Tahona',
+    color: 'bg-fuchsia-100 text-fuchsia-700',
+    modules: ['Vinos · Ventas, Compras, Productos, Clientes, Reportes, Campañas y Auditorías'],
+    note: '🔒 Solo debe asignarse a la sucursal Casa Tahona y al módulo Vinos',
+    suggestedUnits: ['vinos'],
+  },
 ];
 
 const BUSINESS_UNITS: { value: BusinessUnit; label: string }[] = [
@@ -179,8 +201,15 @@ const BUSINESS_UNITS: { value: BusinessUnit; label: string }[] = [
   { value: 'concretera',   label: 'Concretera'   },
   { value: 'logistica',    label: 'Logística'    },
   { value: 'transporteria', label: 'Transportería' },
+  { value: 'vinos',        label: 'Vinos'        },
   { value: 'global',       label: 'Global'       },
 ];
+
+const isCasaTahonaBranch = (branch: Branch) => {
+  const name = String(branch.name ?? '').trim().toUpperCase();
+  const code = String(branch.code ?? '').trim().toUpperCase();
+  return name.includes('CASA TAHONA') || code === 'VIN-01';
+};
 
 const inputCls =
   'w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-500/10';
@@ -231,17 +260,20 @@ const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void; label
 // ─── Access checkboxes shared between modals ──────────────────────────────────
 
 const AccessSection: React.FC<{
+  roleKey: string;
   branches: Branch[];
   branchIds: number[];
   businessUnits: BusinessUnit[];
   onToggleBranch: (id: number) => void;
   onToggleUnit: (u: BusinessUnit) => void;
-}> = ({ branches, branchIds, businessUnits, onToggleBranch, onToggleUnit }) => {
+}> = ({ roleKey, branches, branchIds, businessUnits, onToggleBranch, onToggleUnit }) => {
   const isBranchDisabled = (b: Branch) => {
+    if (roleKey === 'vinos_admin') return !isCasaTahonaBranch(b);
     return false;
   };
 
   const isUnitDisabled = (u: BusinessUnit) => {
+    if (roleKey === 'vinos_admin') return u !== 'vinos';
     return false;
   };
 
@@ -439,6 +471,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 
         {/* Accesos */}
         <AccessSection
+          roleKey={form.role_key}
           branches={branches}
           branchIds={form.branch_ids}
           businessUnits={form.business_units}
@@ -761,6 +794,10 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
     setFormModal(prev => {
       if (!prev) return prev;
       const next = { ...prev.form, ...updates };
+      const casaTahonaBranchIds = branches
+        .filter((branch) => branch.dbId !== undefined && isCasaTahonaBranch(branch))
+        .map((branch) => Number(branch.dbId));
+
       if ('role_key' in updates && updates.role_key !== prev.form.role_key) {
         const roleKey  = updates.role_key ?? '';
         const roleInfo = ROLE_OPTIONS.find(r => r.value === roleKey);
@@ -768,6 +805,9 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
           const allDbIds = branches.filter(b => b.dbId !== undefined).map(b => Number(b.dbId));
           next.branch_ids    = allDbIds;
           next.business_units = BUSINESS_UNITS.map(u => u.value);
+        } else if (roleKey === 'vinos_admin') {
+          next.branch_ids = casaTahonaBranchIds;
+          next.business_units = ['vinos'];
         } else {
           if (roleInfo && roleInfo.suggestedUnits.length > 0) {
             next.business_units = [...roleInfo.suggestedUnits];
@@ -780,6 +820,10 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
 
   const toggleFormBranch = (id: number) => {
     if (!formModal) return;
+    if (formModal.form.role_key === 'vinos_admin') {
+      const targetBranch = branches.find((branch) => Number(branch.dbId) === id);
+      if (!targetBranch || !isCasaTahonaBranch(targetBranch)) return;
+    }
     const next = formModal.form.branch_ids.includes(id)
       ? formModal.form.branch_ids.filter(b => b !== id)
       : [...formModal.form.branch_ids, id];
@@ -788,6 +832,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
 
   const toggleFormUnit = (unit: BusinessUnit) => {
     if (!formModal) return;
+    if (formModal.form.role_key === 'vinos_admin' && unit !== 'vinos') return;
     const next = formModal.form.business_units.includes(unit)
       ? formModal.form.business_units.filter(u => u !== unit)
       : [...formModal.form.business_units, unit];
@@ -809,6 +854,15 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
     setSaving(true);
     try {
       const userId = form.id ?? crypto.randomUUID();
+      const casaTahonaBranchIds = branches
+        .filter((branch) => branch.dbId !== undefined && isCasaTahonaBranch(branch))
+        .map((branch) => Number(branch.dbId));
+      const normalizedBranchIds = form.role_key === 'vinos_admin'
+        ? casaTahonaBranchIds
+        : form.branch_ids;
+      const normalizedBusinessUnits = form.role_key === 'vinos_admin'
+        ? (['vinos'] as BusinessUnit[])
+        : form.business_units;
 
       const resolvedEmail = form.email.trim() || `${form.username.trim()}@lopar.com`;
 
@@ -820,7 +874,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
           full_name: form.full_name.trim(),
           role_key: form.role_key,
           active: form.active,
-          default_branch_id: form.branch_ids[0] ?? null,
+          default_branch_id: normalizedBranchIds[0] ?? null,
           session_minutes: SESSION_MINUTES,
         });
         if (insertErr) throw insertErr;
@@ -834,7 +888,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
           full_name: form.full_name.trim(),
           role_key: form.role_key,
           active: form.active,
-          default_branch_id: form.branch_ids[0] ?? null,
+          default_branch_id: normalizedBranchIds[0] ?? null,
           session_minutes: SESSION_MINUTES,
         }).eq('id', userId);
         if (updateErr) throw updateErr;
@@ -842,18 +896,18 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
 
       // Re-sync branch access
       await supabase.from('app_user_branch_access').delete().eq('user_id', userId);
-      if (form.branch_ids.length > 0) {
+      if (normalizedBranchIds.length > 0) {
         const { error: brErr } = await supabase.from('app_user_branch_access').insert(
-          form.branch_ids.map(branch_id => ({ user_id: userId, branch_id }))
+          normalizedBranchIds.map(branch_id => ({ user_id: userId, branch_id }))
         );
         if (brErr) throw brErr;
       }
 
       // Re-sync business unit access
       await supabase.from('app_user_business_unit_access').delete().eq('user_id', userId);
-      if (form.business_units.length > 0) {
+      if (normalizedBusinessUnits.length > 0) {
         const { error: buErr } = await supabase.from('app_user_business_unit_access').insert(
-          form.business_units.map(business_unit => ({ user_id: userId, business_unit }))
+          normalizedBusinessUnits.map(business_unit => ({ user_id: userId, business_unit }))
         );
         if (buErr) throw buErr;
       }
@@ -862,7 +916,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
       await supabase.from('app_user_permissions').delete().eq('user_id', userId);
       const defaultPerms = Array.from(new Set([
         ...(ROLE_DEFAULT_PERMISSIONS[form.role_key] ?? []),
-        ...collectPermissionsForBusinessUnits(form.business_units),
+        ...collectPermissionsForBusinessUnits(normalizedBusinessUnits),
       ]));
       if (defaultPerms.length > 0) {
         const { error: permErr } = await supabase.from('app_user_permissions').insert(
