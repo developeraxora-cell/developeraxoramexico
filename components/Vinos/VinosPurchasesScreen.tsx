@@ -7,7 +7,8 @@ import { formatCurrency } from '../../services/currency';
 import { vinosPurchasesService, type PurchaseRow, type PurchaseWithItems, type CartItem } from '../../services/vinos/purchases.service';
 import { vinosCustomersService } from '../../services/vinos/customers.service';
 import { vinosProductsService, type ProductWithStock } from '../../services/vinos/products.service';
-import { vinosCatalogService, type Supplier, type Uom } from '../../services/vinos/catalog.service';
+import { vinosCatalogService, type Category, type Supplier, type Uom } from '../../services/vinos/catalog.service';
+import VinosProductModal, { type VinosProductModalSavedPayload } from './VinosProductModal';
 
 interface Props {
   selectedBranchId: string;
@@ -15,19 +16,12 @@ interface Props {
   currentUser: User;
 }
 
-interface ProductUomOption {
-  product_uom_id: string;
-  uom_id: string;
-  factor_to_base: number;
-  uom_name: string;
-  uom_symbol: string | null;
-}
-
 interface ProductWithUoms extends ProductWithStock {
   product_uoms?: { id: string; uom_id: string; factor_to_base: number; uom: Uom }[];
 }
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
+const isNumericSearch = (value: string) => /^\d+$/.test(value.trim());
 
 const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) => {
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
@@ -42,6 +36,8 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [products, setProducts] = useState<ProductWithUoms[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [uoms, setUoms] = useState<Uom[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [supplierId, setSupplierId] = useState('');
   const [reference, setReference] = useState('');
@@ -67,6 +63,10 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
   const [newSupplierEmail, setNewSupplierEmail] = useState('');
   const [newSupplierRfc, setNewSupplierRfc] = useState('');
 
+  // product modal
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [productInitialValues, setProductInitialValues] = useState<{ barcode?: string; name?: string }>({});
+
   // ── branch id ────────────────────────────────────────────
   useEffect(() => {
     vinosCustomersService.getBranchId(selectedBranchId).then(setBranchDbId);
@@ -87,9 +87,11 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
   // ── load catálogo al abrir modal nueva compra ───────────
   const loadModalData = async () => {
     try {
-      const [list, sups] = await Promise.all([
+      const [list, sups, cats, units] = await Promise.all([
         vinosProductsService.listWithStock(branchDbId ?? undefined),
         vinosCatalogService.listSuppliers(),
+        vinosCatalogService.listCategories(),
+        vinosCatalogService.listUoms(),
       ]);
       const puRows = await vinosProductsService.listAllProductUoms(list.map(p => p.id));
       const byProduct: Record<string, ProductWithUoms['product_uoms']> = {};
@@ -100,6 +102,8 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
       const prods = list.map(p => ({ ...p, product_uoms: byProduct[p.id] ?? [] })) as ProductWithUoms[];
       setProducts(prods);
       setSuppliers(sups);
+      setCategories(cats);
+      setUoms(units);
     } catch (e) { console.error(e); }
   };
 
@@ -132,7 +136,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
   }, [products, productSearch]);
 
   // ── carrito ─────────────────────────────────────────────
-  const addProductToCart = (p: ProductWithUoms) => {
+  const addProductToCart = (p: ProductWithUoms, costPerUnit = 0) => {
     // por defecto unidad base (factor 1 en product_uoms, o usar uom_id del producto)
     const baseOption = p.product_uoms?.find(pu => Number(pu.factor_to_base) === 1) ?? p.product_uoms?.[0];
     if (!baseOption) {
@@ -144,12 +148,49 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
       product_uom_id: baseOption.id,
       factor_to_base: Number(baseOption.factor_to_base),
       qty: 1,
-      cost_per_unit: 0,
+      cost_per_unit: costPerUnit,
       product_name: p.name,
       product_sku: p.sku,
       uom_name: baseOption.uom?.name ?? '',
     }]);
     setProductSearch('');
+  };
+
+  const openNewProductFromSearch = () => {
+    const query = productSearch.trim();
+    if (!query) return;
+    if (!branchDbId) {
+      setFormError('Sucursal no encontrada. Selecciona una sucursal antes de registrar productos.');
+      return;
+    }
+    setProductInitialValues(isNumericSearch(query) ? { barcode: query } : { name: query });
+    setProductModalOpen(true);
+  };
+
+  const closeProductModal = () => {
+    setProductModalOpen(false);
+    setProductInitialValues({});
+  };
+
+  const handleProductSaved = ({ product, productUoms }: VinosProductModalSavedPayload) => {
+    const selectedCategory = categories.find(category => category.id === product.category_id) ?? null;
+    const selectedUom = uoms.find(uom => uom.id === product.uom_id) ?? null;
+    const productWithUoms: ProductWithUoms = {
+      ...product,
+      category: selectedCategory ? { id: selectedCategory.id, name: selectedCategory.name } : null,
+      uom: selectedUom ? { id: selectedUom.id, name: selectedUom.name, symbol: selectedUom.symbol } : null,
+      total_stock: 0,
+      product_uoms: productUoms.map(row => ({
+        id: row.id,
+        uom_id: row.uom_id,
+        factor_to_base: Number(row.factor_to_base) || 1,
+        uom: row.uom as Uom,
+      })),
+    };
+    setProducts(prev => [...prev.filter(existing => existing.id !== product.id), productWithUoms]
+      .sort((a, b) => a.name.localeCompare(b.name)));
+    addProductToCart(productWithUoms);
+    closeProductModal();
   };
 
   const updateCartItem = (idx: number, patch: Partial<CartItem>) =>
@@ -396,7 +437,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
                   value={productSearch}
                   onChange={e => setProductSearch(e.target.value)}
                 />
-                {productSearch && filteredProducts.length > 0 && (
+                {productSearch.trim() && (
                   <div className="absolute z-10 mt-1 w-full max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
                     {filteredProducts.map(p => (
                       <button
@@ -413,6 +454,21 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
                         <Plus size={14} className="text-orange-500"/>
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      onClick={openNewProductFromSearch}
+                      className="flex w-full items-center gap-3 border-t border-emerald-100 bg-emerald-50 px-4 py-3 text-left text-sm hover:bg-emerald-100"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white">
+                        <Plus size={15} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-black uppercase tracking-wide text-emerald-800">Registrar producto</p>
+                        <p className="truncate text-[10px] font-mono text-emerald-700">
+                          {isNumericSearch(productSearch) ? 'Código' : 'Nombre'}: {productSearch.trim()}
+                        </p>
+                      </div>
+                    </button>
                   </div>
                 )}
               </div>
@@ -694,6 +750,16 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
           </div>
         </div>
       )}
+
+      <VinosProductModal
+        isOpen={productModalOpen}
+        branchDbId={branchDbId}
+        categories={categories}
+        uoms={uoms}
+        initialValues={productInitialValues}
+        onClose={closeProductModal}
+        onSaved={handleProductSaved}
+      />
 
       {/* ─── MODAL NUEVO PROVEEDOR ──────────────────────── */}
       {supplierModalOpen && (

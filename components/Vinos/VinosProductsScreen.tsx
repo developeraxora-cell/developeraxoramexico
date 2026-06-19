@@ -1,60 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Plus, Search, Pencil, Trash2, Package, TrendingUp, AlertTriangle, X, Loader2, Settings, RefreshCw, Check, ChevronDown, Save,
+  Plus, Search, Pencil, Trash2, Package, TrendingUp, AlertTriangle, X, Settings, RefreshCw, Check, ChevronDown, Save,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
-import { vinosProductsService, type ProductWithStock, type CreateProductInput, type ProductUomEquivalence } from '../../services/vinos/products.service';
+import { vinosProductsService, type ProductWithStock } from '../../services/vinos/products.service';
 import { vinosCatalogService, type Category, type Uom } from '../../services/vinos/catalog.service';
 import { vinosCustomersService } from '../../services/vinos/customers.service';
+import VinosProductModal from './VinosProductModal';
 
 interface Props {
   selectedBranchId: string;
   branches: Branch[];
   currentUser: User;
 }
-
-interface FormState {
-  name: string;
-  category_id: string;
-  uom_id: string;
-  is_divisible: boolean;
-  barcode: string;
-  price_retail: string;
-  price_mid_wholesale: string;
-  price_wholesale: string;
-  min_stock: string;
-  image_url: string;
-}
-
-interface EquivalenceRow {
-  uom_id: string;
-  factor_to_base: string;
-  price_retail: string;
-  price_mid_wholesale: string;
-  price_wholesale: string;
-}
-
-const emptyForm = (): FormState => ({
-  name: '',
-  category_id: '',
-  uom_id: '',
-  is_divisible: false,
-  barcode: '',
-  price_retail: '',
-  price_mid_wholesale: '',
-  price_wholesale: '',
-  min_stock: '0',
-  image_url: '',
-});
-
-const emptyEquivalence = (): EquivalenceRow => ({
-  uom_id: '',
-  factor_to_base: '',
-  price_retail: '',
-  price_mid_wholesale: '',
-  price_wholesale: '',
-});
 
 const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
   const [products, setProducts] = useState<ProductWithStock[]>([]);
@@ -69,10 +28,6 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
   // modal producto
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<ProductWithStock | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm());
-  const [equivalences, setEquivalences] = useState<EquivalenceRow[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState('');
 
   // delete
   const [deleteTarget, setDeleteTarget] = useState<ProductWithStock | null>(null);
@@ -83,12 +38,6 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newUomName, setNewUomName] = useState('');
   const [newUomSymbol, setNewUomSymbol] = useState('');
-
-  // inline create from form
-  const [showInlineCategory, setShowInlineCategory] = useState(false);
-  const [inlineCategoryName, setInlineCategoryName] = useState('');
-  const [showInlineUom, setShowInlineUom] = useState(false);
-  const [inlineUomName, setInlineUomName] = useState('');
 
   // ── branch id ────────────────────────────────────────────
   useEffect(() => {
@@ -148,173 +97,15 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
   // ── modal helpers ────────────────────────────────────────
   const openCreate = () => {
     setEditTarget(null);
-    setForm(emptyForm());
-    setEquivalences([]);
-    setFormError('');
-    setShowInlineCategory(false);
-    setShowInlineUom(false);
     setModalOpen(true);
   };
 
-  const openEdit = async (p: ProductWithStock) => {
+  const openEdit = (p: ProductWithStock) => {
     setEditTarget(p);
-    setForm({
-      name: p.name,
-      category_id: p.category_id ?? '',
-      uom_id: p.uom_id ?? '',
-      is_divisible: p.is_divisible ?? false,
-      barcode: p.barcode ?? '',
-      price_retail: String(p.price_retail),
-      price_mid_wholesale: String(p.price_mid_wholesale),
-      price_wholesale: String(p.price_wholesale),
-      min_stock: String(p.min_stock),
-      image_url: p.image_url ?? '',
-    });
-    setEquivalences([]);
-    setFormError('');
-    setShowInlineCategory(false);
-    setShowInlineUom(false);
     setModalOpen(true);
-    try {
-      const eqs = await vinosProductsService.listEquivalences(p.id);
-      const mapped = eqs.map(e => ({
-        uom_id: e.uom_id,
-        factor_to_base: String(e.factor_to_base),
-        price_retail: String(e.price_retail),
-        price_mid_wholesale: String(e.price_mid_wholesale),
-        price_wholesale: String(e.price_wholesale),
-      }));
-      // Si no existe row base (producto viejo), generar una con los precios actuales del producto
-      const hasBase = mapped.some(m => Number(m.factor_to_base) === 1 && m.uom_id === (p.uom_id ?? ''));
-      if (!hasBase && p.uom_id) {
-        mapped.unshift({
-          uom_id: p.uom_id,
-          factor_to_base: '1',
-          price_retail: String(p.price_retail ?? ''),
-          price_mid_wholesale: String(p.price_mid_wholesale ?? ''),
-          price_wholesale: String(p.price_wholesale ?? ''),
-        });
-      }
-      setEquivalences(mapped);
-    } catch (e) { console.error(e); }
   };
 
   const closeModal = () => { setModalOpen(false); setEditTarget(null); };
-
-  // ── equivalencias helpers ────────────────────────────────
-  const addEquivalence = () => setEquivalences(prev => [...prev, emptyEquivalence()]);
-  const removeEquivalence = (idx: number) => setEquivalences(prev => prev.filter((_, i) => i !== idx));
-  const updateEquivalence = (idx: number, patch: Partial<EquivalenceRow>) =>
-    setEquivalences(prev => prev.map((row, i) => i === idx ? { ...row, ...patch } : row));
-
-  // Mantener una row base (factor 1, uom = uom_id del producto) sincronizada
-  useEffect(() => {
-    if (!form.uom_id) return;
-    setEquivalences(prev => {
-      const baseIdx = prev.findIndex(e => Number(e.factor_to_base) === 1);
-      if (baseIdx >= 0) {
-        // Actualizar uom de la row base si cambió
-        if (prev[baseIdx].uom_id !== form.uom_id) {
-          const copy = [...prev];
-          copy[baseIdx] = { ...copy[baseIdx], uom_id: form.uom_id, factor_to_base: '1' };
-          return copy;
-        }
-        return prev;
-      }
-      // No existe → crearla al inicio
-      return [{
-        uom_id: form.uom_id,
-        factor_to_base: '1',
-        price_retail: '',
-        price_mid_wholesale: '',
-        price_wholesale: '',
-      }, ...prev];
-    });
-  }, [form.uom_id]);
-
-  // ── inline catalog ───────────────────────────────────────
-  const addInlineCategory = async () => {
-    const n = inlineCategoryName.trim();
-    if (!n) return;
-    try {
-      const cat = await vinosCatalogService.createCategory({ name: n, sort_order: categories.length });
-      setCategories(prev => [...prev, cat]);
-      setForm(f => ({ ...f, category_id: cat.id }));
-      setInlineCategoryName('');
-      setShowInlineCategory(false);
-    } catch (e) { setFormError(e instanceof Error ? e.message : 'Error al crear categoría.'); }
-  };
-
-  const addInlineUom = async () => {
-    const n = inlineUomName.trim();
-    if (!n) return;
-    try {
-      const u = await vinosCatalogService.createUom({ name: n, sort_order: uoms.length });
-      setUoms(prev => [...prev, u]);
-      setForm(f => ({ ...f, uom_id: u.id }));
-      setInlineUomName('');
-      setShowInlineUom(false);
-    } catch (e) { setFormError(e instanceof Error ? e.message : 'Error al crear unidad.'); }
-  };
-
-  // ── save ─────────────────────────────────────────────────
-  const handleSave = async () => {
-    if (!form.name.trim()) { setFormError('El nombre es obligatorio.'); return; }
-    if (!branchDbId) { setFormError('Sucursal no encontrada en DB vinos.'); return; }
-    if (!form.uom_id) { setFormError('Selecciona la unidad de medida base.'); return; }
-
-    // Validar equivalencias
-    for (const eq of equivalences) {
-      if (!eq.uom_id) { setFormError('Cada equivalencia debe tener unidad de medida.'); return; }
-      if (!Number(eq.factor_to_base)) { setFormError('Cada equivalencia debe tener factor mayor a 0.'); return; }
-    }
-
-    // Precios base = row con factor 1 cuya uom = form.uom_id
-    const baseRow = equivalences.find(e => Number(e.factor_to_base) === 1 && e.uom_id === form.uom_id);
-    if (!baseRow) { setFormError('Falta la fila de la unidad base en equivalencias.'); return; }
-
-    setSaving(true);
-    setFormError('');
-    try {
-      const payload: CreateProductInput = {
-        name: form.name,
-        category_id: form.category_id || null,
-        uom_id: form.uom_id || null,
-        is_divisible: form.is_divisible,
-        barcode: form.barcode || null,
-        price_retail: Number(baseRow.price_retail) || 0,
-        price_mid_wholesale: Number(baseRow.price_mid_wholesale) || 0,
-        price_wholesale: Number(baseRow.price_wholesale) || 0,
-        min_stock: Number(form.min_stock) || 0,
-        image_url: form.image_url || null,
-      };
-
-      let productId: string;
-      if (editTarget) {
-        await vinosProductsService.update(editTarget.id, payload);
-        productId = editTarget.id;
-      } else {
-        const created = await vinosProductsService.create(payload, branchDbId);
-        productId = created.id;
-      }
-
-      // Guardar equivalencias (reemplaza todas)
-      await vinosProductsService.setEquivalences(productId, equivalences.map(eq => ({
-        uom_id: eq.uom_id,
-        factor_to_base: Number(eq.factor_to_base) || 1,
-        price_retail: Number(eq.price_retail) || 0,
-        price_mid_wholesale: Number(eq.price_mid_wholesale) || 0,
-        price_wholesale: Number(eq.price_wholesale) || 0,
-      })));
-
-      await load();
-      closeModal();
-    } catch (e: unknown) {
-      setFormError(e instanceof Error ? e.message : 'Error al guardar.');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -563,221 +354,18 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
         )}
       </div>
 
-      {/* ─── MODAL CREAR / EDITAR PRODUCTO ─────────────────── */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-4xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-100 px-8 py-5">
-              <div>
-                <h2 className="text-lg font-black uppercase tracking-tight text-slate-900">
-                  {editTarget ? 'Editar producto' : 'Nuevo producto'}
-                </h2>
-                <p className="mt-0.5 text-[11px] font-bold text-slate-400">
-                  El stock se carga vía Compras. SKU se genera automáticamente.
-                </p>
-              </div>
-              <button onClick={closeModal} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="flex-1 space-y-6 overflow-y-auto px-8 py-6">
-
-              {/* Datos básicos */}
-              <section>
-                <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Datos del producto</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="">
-                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Código de barras</label>
-                    <input
-                      className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-mono outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-                      value={form.barcode}
-                      onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))}
-                      placeholder="Opcional"
-                    />
-                  </div>
-                                  {/* Stock mínimo */}
-                <div className="">
-                  <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Stock mínimo (alerta)</label>
-                  <input type="number" min="0"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-                    value={form.min_stock}
-                    onChange={e => setForm(f => ({ ...f, min_stock: e.target.value }))}
-                  />
-                </div>
-                  <div className="md:col-span-2">
-                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Nombre *</label>
-                    <input
-                      className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-                      value={form.name}
-                      onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                      placeholder="Casa Madero Cabernet 750ml"
-                    />
-                  </div>
-
-                  {/* Categoría */}
-                  <div>
-                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Categoría</label>
-                    <select
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-                      value={form.category_id}
-                      onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
-                    >
-                      <option value="">Sin categoría</option>
-                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
-
-                  {/* Unidad base + is_divisible */}
-                  <div>
-                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Unidad base</label>
-                    <select
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-                      value={form.uom_id}
-                      onChange={e => setForm(f => ({ ...f, uom_id: e.target.value }))}
-                    >
-                      <option value="">Sin unidad</option>
-                      {uoms.map(u => <option key={u.id} value={u.id}>{u.name}{u.symbol ? ` (${u.symbol})` : ''}</option>)}
-                    </select>
-                    <label className="mt-2 flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="h-3.5 w-3.5 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
-                        checked={form.is_divisible}
-                        onChange={e => setForm(f => ({ ...f, is_divisible: e.target.checked }))}
-                      />
-                      <span className="text-[11px] font-bold text-slate-600">Permite fraccionar (decimales)</span>
-                    </label>
-                  </div>
-                </div>
-              </section>
-
-              {/* Equivalencias de unidades de medida */}
-              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Equivalencias en unidades de medida</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      Define otras unidades de venta (caja, lote, etc.). El factor indica cuántas unidades base equivalen a 1 de la unidad indicada.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addEquivalence}
-                    className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-700"
-                  >
-                    <Plus size={12}/> Agregar
-                  </button>
-                </div>
-
-                {equivalences.length === 0 ? (
-                  <p className="py-4 text-center text-xs text-slate-400">
-                    Selecciona primero la unidad base. Se creará la primera fila automáticamente.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {/* Encabezados */}
-                    <div className="hidden md:grid grid-cols-[1fr_100px_100px_100px_100px_32px] gap-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">
-                      <span>Unidad</span>
-                      <span>Factor</span>
-                      <span>Menudeo</span>
-                      <span>M. Mayoreo</span>
-                      <span>Mayoreo</span>
-                      <span></span>
-                    </div>
-                    {equivalences.map((eq, idx) => {
-                      const isBase = Number(eq.factor_to_base) === 1 && eq.uom_id === form.uom_id;
-                      return (
-                        <div key={idx} className={`grid grid-cols-2 md:grid-cols-[1fr_100px_100px_100px_100px_32px] gap-2 rounded-xl border p-2 ${isBase ? 'border-orange-300 bg-orange-50' : 'border-slate-200 bg-white'}`}>
-                          {isBase ? (
-                            <div className="flex items-center gap-2 px-2 py-1.5">
-                              <span className="rounded-md bg-orange-200 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-orange-800">Base</span>
-                              <span className="text-xs font-bold text-slate-700 truncate">
-                                {uoms.find(u => u.id === eq.uom_id)?.name ?? '—'}
-                              </span>
-                            </div>
-                          ) : (
-                            <select
-                              className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400"
-                              value={eq.uom_id}
-                              onChange={e => updateEquivalence(idx, { uom_id: e.target.value })}
-                            >
-                              <option value="">Selecciona unidad</option>
-                              {uoms.filter(u => u.id !== form.uom_id).map(u => (
-                                <option key={u.id} value={u.id}>{u.name}{u.symbol ? ` (${u.symbol})` : ''}</option>
-                              ))}
-                            </select>
-                          )}
-                          <input
-                            type="number" min="0" step="0.0001"
-                            disabled={isBase}
-                            className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400 disabled:bg-slate-100 disabled:text-slate-500"
-                            placeholder="ej: 12"
-                            value={eq.factor_to_base}
-                            onChange={e => updateEquivalence(idx, { factor_to_base: e.target.value })}
-                          />
-                          <input
-                            type="number" min="0" step="0.01"
-                            className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400"
-                            placeholder="Menudeo"
-                            value={eq.price_retail}
-                            onChange={e => updateEquivalence(idx, { price_retail: e.target.value })}
-                          />
-                          <input
-                            type="number" min="0" step="0.01"
-                            className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400"
-                            placeholder="M.May."
-                            value={eq.price_mid_wholesale}
-                            onChange={e => updateEquivalence(idx, { price_mid_wholesale: e.target.value })}
-                          />
-                          <input
-                            type="number" min="0" step="0.01"
-                            className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400"
-                            placeholder="Mayoreo"
-                            value={eq.price_wholesale}
-                            onChange={e => updateEquivalence(idx, { price_wholesale: e.target.value })}
-                          />
-                          {isBase ? (
-                            <span className="flex items-center justify-center text-slate-300" title="No se puede eliminar la unidad base">
-                              <Trash2 size={14}/>
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => removeEquivalence(idx)}
-                              className="flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"
-                            >
-                              <Trash2 size={14}/>
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-
-              {formError && (
-                <p className="rounded-xl bg-red-50 px-4 py-2 text-xs font-bold text-red-600">{formError}</p>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-3 border-t border-slate-100 px-8 py-5 bg-slate-50/50">
-              <button onClick={closeModal} className="rounded-2xl border border-slate-200 bg-white px-6 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100">
-                Cancelar
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex items-center gap-2 rounded-2xl bg-orange-600 px-6 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-50"
-              >
-                {saving && <Loader2 size={14} className="animate-spin" />}
-                {saving ? 'Guardando…' : editTarget ? 'Guardar cambios' : 'Crear producto'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <VinosProductModal
+        isOpen={modalOpen}
+        branchDbId={branchDbId}
+        categories={categories}
+        uoms={uoms}
+        editTarget={editTarget}
+        onClose={closeModal}
+        onSaved={async () => {
+          await load();
+          closeModal();
+        }}
+      />
 
       {/* ─── CONFIRMAR ELIMINAR ──────────────────────────── */}
       {deleteTarget && (
