@@ -1,4 +1,4 @@
-import { PDFDocument, PDFPage, PDFFont, rgb } from 'pdf-lib';
+import { PDFDocument, PDFFont, rgb } from 'pdf-lib';
 import { formatCurrency } from '../currency';
 
 export interface VinosSalePdfInput {
@@ -15,6 +15,7 @@ export interface VinosSalePdfInput {
   items: Array<{
     name: string;
     presentation: string;
+    priceType?: string | null;
     qty: number;
     unitPrice: number;
     subtotal: number;
@@ -23,6 +24,11 @@ export interface VinosSalePdfInput {
   discount: number;
   total: number;
   discountCode?: string | null;   // código de cupón/promoción aplicado
+}
+
+interface GenerateVinosSaleTicketOptions {
+  mode?: 'download' | 'open' | 'print';
+  targetWindow?: Window | null;
 }
 
 // Reemplazar caracteres no soportados por WinAnsi (Helvetica)
@@ -54,141 +60,208 @@ const statusLabel = (input: VinosSalePdfInput): string => {
   return 'LIQUIDADO';
 };
 
-export const generateVinosSaleTicket = async (input: VinosSalePdfInput) => {
+const priceTierLabel = (value?: string | null): string => {
+  const key = String(value ?? '').toUpperCase();
+  if (key === 'MAYOREO') return 'MAYOREO';
+  if (key === 'MEDIO_MAYOREO') return 'MEDIO MAYOREO';
+  if (key === 'MENUDEO') return 'MENUDEO';
+  return '';
+};
+
+export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options: GenerateVinosSaleTicketOptions = {}) => {
   const pdfDoc = await PDFDocument.create();
   const fontRegular = await pdfDoc.embedFont('Helvetica');
   const fontBold = await pdfDoc.embedFont('Helvetica-Bold');
-  const pageSize: [number, number] = [595.28, 841.89];
-  const [width, height] = pageSize;
+  const width = 226.77; // 80 mm thermal paper
+  const marginX = 10;
+  const contentWidth = width - marginX * 2;
+  const lineGap = 10;
 
-  const marginX = 30;
-  const outerY = 75;
-  const outerTop = height - 70;
-  const outerHeight = outerTop - outerY;
-  const infoTop = height - 105;
-  const tableTop = infoTop - 144;
-  const tableWidth = width - marginX * 2;
-  const colRatios = [0.36, 0.2, 0.14, 0.15, 0.15];
-  const colXs = colRatios.reduce<number[]>((acc, ratio) => {
-    const prev = acc[acc.length - 1];
-    acc.push(prev + tableWidth * ratio);
-    return acc;
-  }, [marginX]);
-
-  const drawCellText = (page: PDFPage, text: string, col: number, y: number, size: number, font: PDFFont, color = rgb(0, 0, 0)) => {
-    const xStart = colXs[col];
-    const xEnd = colXs[col + 1];
-    const colWidth = xEnd - xStart;
-    const available = colWidth - 6;
-    let safe = text ?? '';
-    while (safe.length > 0 && font.widthOfTextAtSize(safe, size) > available) {
-      safe = `${safe.slice(0, -1)}`;
-    }
-    if (safe !== text && safe.length > 3) safe = `${safe.slice(0, -3)}...`;
-    const textWidth = font.widthOfTextAtSize(safe, size);
-    const textX = xStart + Math.max(3, (colWidth - textWidth) / 2);
-    page.drawText(safe, { x: textX, y, size, font, color });
+  const wrapText = (text: string, maxWidth: number, font: PDFFont, size: number) => {
+    const safeText = sanitize(text).replace(/\s+/g, ' ').trim();
+    if (!safeText) return [''];
+    const lines: string[] = [];
+    let current = '';
+    safeText.split(' ').forEach((word) => {
+      const candidate = current ? `${current} ${word}` : word;
+      if (font.widthOfTextAtSize(candidate, size) <= maxWidth) {
+        current = candidate;
+        return;
+      }
+      if (current) lines.push(current);
+      if (font.widthOfTextAtSize(word, size) <= maxWidth) {
+        current = word;
+        return;
+      }
+      let chunk = '';
+      word.split('').forEach((char) => {
+        const next = `${chunk}${char}`;
+        if (font.widthOfTextAtSize(next, size) <= maxWidth) {
+          chunk = next;
+        } else {
+          if (chunk) lines.push(chunk);
+          chunk = char;
+        }
+      });
+      current = chunk;
+    });
+    if (current) lines.push(current);
+    return lines;
   };
 
-  const itemsPerPage = 24;
-  const pages = Array.from(
-    { length: Math.max(1, Math.ceil(input.items.length / itemsPerPage)) },
-    (_, idx) => input.items.slice(idx * itemsPerPage, (idx + 1) * itemsPerPage),
-  );
-
-  pages.forEach((pageItems, pageIndex) => {
-    const page = pdfDoc.addPage(pageSize);
-
-    page.drawRectangle({
-      x: marginX,
-      y: outerY,
-      width: width - marginX * 2,
-      height: outerHeight,
-      borderWidth: 1,
-      borderColor: rgb(0, 0, 0),
-    });
-
-    const title = sanitize(`VINOS ${(input.branchName || 'CASA TAHONA').toUpperCase()}`);
-    const titleSize = 14;
-    const titleWidth = fontBold.widthOfTextAtSize(title, titleSize);
-    page.drawText(title, {
-      x: (width - titleWidth) / 2,
-      y: height - 42,
-      size: titleSize,
-      font: fontBold,
-    });
-
-    const rightInfoX = width - marginX - 155;
-    const status = statusLabel(input);
-    page.drawText(sanitize(`FECHA:  ${formatLocalDateTime(input.createdAt)}`), { x: marginX + 10, y: infoTop, size: 10, font: fontBold });
-    page.drawText(sanitize(`CLIENTE:  ${(input.customerName || 'PUBLICO GENERAL').toUpperCase()}`), { x: marginX + 10, y: infoTop - 24, size: 10, font: fontBold });
-    page.drawText(sanitize(status), { x: marginX + 10, y: infoTop - 48, size: 10, font: fontBold });
-    page.drawText(sanitize(`OBSERVACION:  ${(input.saleNotes?.trim() || '-').toUpperCase()}`), { x: marginX + 10, y: infoTop - 72, size: 10, font: fontBold });
-    page.drawText('NOTA DE VENTA', { x: rightInfoX + 18, y: infoTop, size: 12, font: fontBold });
-    page.drawText(`V-${String(input.saleId).replace(/-/g, '').slice(0, 6).toUpperCase()}`, { x: rightInfoX + 60, y: infoTop - 24, size: 12, font: fontBold });
-    page.drawText(sanitize(`CAJERO:  ${(input.cashierName || '-').toUpperCase()}`), { x: rightInfoX - 42, y: infoTop - 48, size: 10, font: fontBold });
-
-    page.drawRectangle({ x: marginX, y: tableTop - 16, width: tableWidth, height: 16, color: rgb(0, 0, 0) });
-    ['PRODUCTO', 'PRESENTACION', 'CANTIDAD', 'PRECIO UNITARIO', 'SUBTOTAL'].forEach((header, idx) => {
-      drawCellText(page, header, idx, tableTop - 12, 8, fontBold, rgb(1, 1, 1));
-    });
-
-    let rowY = tableTop - 32;
-    pageItems.forEach((item) => {
-      const subtotal = Number(item.subtotal ?? (item.qty * item.unitPrice));
-      const rowHeight = 18;
-      page.drawRectangle({
-        x: marginX,
-        y: rowY - 2,
-        width: tableWidth,
-        height: rowHeight,
-        borderWidth: 0.5,
-        borderColor: rgb(0, 0, 0),
-      });
-      for (let c = 1; c < colXs.length - 1; c += 1) {
-        page.drawLine({
-          start: { x: colXs[c], y: rowY - 2 },
-          end: { x: colXs[c], y: rowY - 2 + rowHeight },
-          thickness: 0.5,
-          color: rgb(0, 0, 0),
-        });
-      }
-      drawCellText(page, sanitize(item.name.toUpperCase()), 0, rowY + 4, 8, fontBold);
-      drawCellText(page, sanitize(item.presentation.toUpperCase()), 1, rowY + 4, 8, fontBold);
-      drawCellText(page, Number(item.qty).toFixed(2), 2, rowY + 4, 8, fontBold);
-      drawCellText(page, formatCurrency(Number(item.unitPrice)), 3, rowY + 4, 8, fontBold);
-      drawCellText(page, formatCurrency(subtotal), 4, rowY + 4, 8, fontBold);
-      rowY -= rowHeight;
-    });
-
-    if (pageIndex === pages.length - 1) {
-      const discountAmt = Number(input.discount ?? 0);
-      if (discountAmt > 0) {
-        const sub = Number(input.subtotal ?? 0);
-        const pct = sub > 0 ? Math.round((discountAmt / sub) * 100) : 0;
-        const labelX = width - marginX - 250;
-        const valueX = width - marginX - 90;
-        let sy = 165;
-        const rightVal = (txt: string, y: number) => {
-          const w = fontBold.widthOfTextAtSize(txt, 11);
-          page.drawText(txt, { x: width - marginX - 10 - w, y, size: 11, font: fontBold });
-        };
-        page.drawText('SUBTOTAL:', { x: labelX, y: sy, size: 11, font: fontBold });
-        rightVal(formatCurrency(sub), sy);
-        sy -= 18;
-        page.drawText(sanitize(`DESCUENTO ${pct}%:`), { x: labelX, y: sy, size: 11, font: fontBold });
-        rightVal(`-${formatCurrency(discountAmt)}`, sy);
-      }
-      page.drawText(`TOTAL:  ${formatCurrency(input.total)}`, { x: width - marginX - 210, y: 108, size: 20, font: fontBold });
-    }
-
-    page.drawText(sanitize(`Casa Tahona - Vinos - ${input.branchName || ''}`.trim()), { x: marginX + 80, y: 64, size: 9, font: fontBold });
-    page.drawText(`Pagina ${pageIndex + 1} / ${pages.length}`, { x: width - marginX - 80, y: 64, size: 9, font: fontBold });
+  const lineBlocks = input.items.map((item) => {
+    const nameLines = wrapText((item.name || 'PRODUCTO').toUpperCase(), contentWidth, fontBold, 8);
+    const priceType = priceTierLabel(item.priceType);
+    const priceTypeLines = priceType ? wrapText(`PRECIO: ${priceType}`, contentWidth, fontBold, 7) : [];
+    const presentationLines = wrapText((item.presentation || '-').toUpperCase(), contentWidth, fontRegular, 7);
+    return {
+      item,
+      nameLines,
+      priceTypeLines,
+      presentationLines,
+      height: (nameLines.length * 10) + (priceTypeLines.length * 9) + (presentationLines.length * 9) + 20,
+    };
   });
+
+  const notesLines = input.saleNotes?.trim()
+    ? wrapText(`OBS: ${input.saleNotes.trim().toUpperCase()}`, contentWidth, fontRegular, 7)
+    : [];
+  const customerLines = wrapText(`CLIENTE: ${(input.customerName || 'PUBLICO GENERAL').toUpperCase()}`, contentWidth, fontRegular, 7);
+  const footerLines = wrapText('GRACIAS POR SU COMPRA', contentWidth, fontBold, 8);
+  const itemsHeight = lineBlocks.reduce((sum, block) => sum + block.height, 0);
+  const dynamicHeight =
+    176 +
+    (customerLines.length * lineGap) +
+    (notesLines.length * lineGap) +
+    itemsHeight +
+    (Number(input.discount ?? 0) > 0 ? 14 : 0) +
+    (Number(input.walletUsed ?? 0) > 0 ? 14 : 0) +
+    (Number(input.creditUsed ?? 0) > 0 ? 14 : 0) +
+    (input.discountCode ? 12 : 0) +
+    (footerLines.length * lineGap);
+  const height = Math.max(320, Math.min(14000, dynamicHeight));
+  const page = pdfDoc.addPage([width, height]);
+  let y = height - 14;
+
+  const drawCentered = (text: string, size: number, font: PDFFont) => {
+    const safe = sanitize(text);
+    const textWidth = font.widthOfTextAtSize(safe, size);
+    page.drawText(safe, { x: Math.max(marginX, (width - textWidth) / 2), y, size, font });
+    y -= size + 4;
+  };
+
+  const drawLine = (text: string, size = 7, font: PDFFont = fontRegular) => {
+    page.drawText(sanitize(text), { x: marginX, y, size, font });
+    y -= lineGap;
+  };
+
+  const drawWrapped = (lines: string[], size = 7, font: PDFFont = fontRegular) => {
+    lines.forEach((line) => drawLine(line, size, font));
+  };
+
+  const drawDivider = () => {
+    page.drawLine({
+      start: { x: marginX, y: y + 3 },
+      end: { x: width - marginX, y: y + 3 },
+      thickness: 0.5,
+      color: rgb(0, 0, 0),
+    });
+    y -= 8;
+  };
+
+  const drawAmountRow = (label: string, amount: string, size = 8, font: PDFFont = fontBold) => {
+    const safeLabel = sanitize(label);
+    const safeAmount = sanitize(amount);
+    page.drawText(safeLabel, { x: marginX, y, size, font });
+    const amountWidth = font.widthOfTextAtSize(safeAmount, size);
+    page.drawText(safeAmount, { x: width - marginX - amountWidth, y, size, font });
+    y -= size + 5;
+  };
+
+  drawCentered('CASA TAHONA', 12, fontBold);
+  drawCentered('NOTA DE VENTA', 9, fontBold);
+  drawCentered(`V-${String(input.saleId).replace(/-/g, '').slice(0, 6).toUpperCase()}`, 10, fontBold);
+  drawDivider();
+
+  drawLine(`FECHA: ${formatLocalDateTime(input.createdAt)}`, 7, fontRegular);
+  drawLine(`CAJERO: ${(input.cashierName || '-').toUpperCase()}`, 7, fontRegular);
+  drawWrapped(customerLines, 7, fontRegular);
+  drawLine(`ESTATUS: ${statusLabel(input)}`, 7, fontBold);
+  if (notesLines.length > 0) drawWrapped(notesLines, 7, fontRegular);
+  drawDivider();
+
+  drawLine('PRODUCTOS', 8, fontBold);
+  drawDivider();
+  lineBlocks.forEach(({ item, nameLines, priceTypeLines, presentationLines }) => {
+    const qty = Number(item.qty ?? 0);
+    const unitPrice = Number(item.unitPrice ?? 0);
+    const subtotal = Number(item.subtotal ?? qty * unitPrice);
+    drawWrapped(nameLines, 8, fontBold);
+    if (priceTypeLines.length > 0) drawWrapped(priceTypeLines, 7, fontBold);
+    drawWrapped(presentationLines, 7, fontRegular);
+    drawAmountRow(`${qty.toFixed(2)} x ${formatCurrency(unitPrice)}`, formatCurrency(subtotal), 7, fontRegular);
+    y -= 3;
+  });
+  drawDivider();
+
+  const discountAmt = Number(input.discount ?? 0);
+  const walletUsed = Number(input.walletUsed ?? 0);
+  const creditUsed = Number(input.creditUsed ?? 0);
+  drawAmountRow('SUBTOTAL', formatCurrency(Number(input.subtotal ?? 0)), 8, fontBold);
+  if (discountAmt > 0) drawAmountRow('DESCUENTO', `-${formatCurrency(discountAmt)}`, 8, fontBold);
+  if (walletUsed > 0) drawAmountRow('SALDO A FAVOR', `-${formatCurrency(walletUsed)}`, 8, fontBold);
+  if (creditUsed > 0) drawAmountRow('CREDITO', formatCurrency(creditUsed), 8, fontBold);
+  drawDivider();
+  drawAmountRow('TOTAL', formatCurrency(Number(input.total ?? 0)), 12, fontBold);
+  if (input.discountCode) drawLine(`CODIGO: ${String(input.discountCode).toUpperCase()}`, 7, fontRegular);
+  drawDivider();
+  drawCentered('CONSERVE ESTE COMPROBANTE', 7, fontRegular);
+  footerLines.forEach((line) => drawCentered(line, 8, fontBold));
 
   const pdfBytes = await pdfDoc.save();
   const blob = new Blob([pdfBytes], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
+  if (options.mode === 'open' || options.mode === 'print') {
+    const target = options.targetWindow && !options.targetWindow.closed
+      ? options.targetWindow
+      : window.open('', '_blank');
+    if (target) {
+      if (options.mode === 'print') {
+        target.document.open();
+        target.document.write(`<!doctype html>
+<html>
+  <head>
+    <title>Nota de venta</title>
+    <style>
+      html, body { margin: 0; height: 100%; font-family: Arial, sans-serif; }
+      iframe { border: 0; width: 100%; height: 100%; }
+    </style>
+  </head>
+  <body>
+    <iframe id="pdfFrame" src="${url}"></iframe>
+    <script>
+      const frame = document.getElementById('pdfFrame');
+      function printPdf() {
+        try {
+          frame.contentWindow.focus();
+          frame.contentWindow.print();
+        } catch (error) {
+          window.print();
+        }
+      }
+      frame.addEventListener('load', () => setTimeout(printPdf, 500));
+    <\/script>
+  </body>
+</html>`);
+        target.document.close();
+      } else {
+        target.location.href = url;
+      }
+      target.focus();
+      setTimeout(() => URL.revokeObjectURL(url), 120_000);
+      return;
+    }
+  }
   const a = document.createElement('a');
   a.href = url;
   a.download = `venta-V-${String(input.saleId).replace(/-/g, '').slice(0, 6).toUpperCase()}.pdf`;

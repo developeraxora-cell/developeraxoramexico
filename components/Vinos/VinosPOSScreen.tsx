@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
 import {
   Search, Trash2, User as UserIcon, CreditCard, Banknote, Gift, Tag, Receipt, X, Loader2, Plus, Minus, Wallet, Eye, FileText, Pencil,
 } from 'lucide-react';
@@ -8,7 +9,7 @@ import { vinosProductsService, type ProductWithStock } from '../../services/vino
 import { vinosCustomersService, type VinosCustomer } from '../../services/vinos/customers.service';
 import { vinosSalesService, type SaleCartItem, type PaymentMethod, type PriceTier } from '../../services/vinos/sales.service';
 import { supabaseVinos } from '../../services/vinosClient';
-import { generateVinosSaleTicket } from '../../services/vinos/saleTicketPdf';
+import { generateVinosSaleTicket, type VinosSalePdfInput } from '../../services/vinos/saleTicketPdf';
 import { logVinosAudit } from '../../services/audit/audit.service';
 import Toast from '../common/Toast';
 
@@ -45,6 +46,7 @@ const PRICE_TIER_LABEL: Record<PriceTier, string> = {
 };
 
 const STOCK_EPSILON = 0.000001;
+const wait = (ms: number) => new Promise<void>(resolve => window.setTimeout(resolve, ms));
 
 const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branches }) => {
   const [products, setProducts] = useState<ProductFull[]>([]);
@@ -82,6 +84,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const [walletAmount, setWalletAmount] = useState('0');
 
   const [charging, setCharging] = useState(false);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   // checkout modal
@@ -535,6 +538,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         return {
           name: product?.name ?? 'PRODUCTO',
           presentation: `${uomInner?.name ?? '—'} (x${Number(r.factor_used).toFixed(2)})`,
+          priceType: r.price_type,
           qty: Number(r.qty),
           unitPrice: Number(r.unit_price),
           subtotal: Number(r.line_total ?? r.qty * r.unit_price),
@@ -590,7 +594,27 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       setFeedback({ type: 'error', msg: `Crédito insuficiente. Disponible: ${formatCurrency(creditAvailable)}` });
       return;
     }
-    setCharging(true);
+    flushSync(() => {
+      setPrintModalOpen(true);
+      setCharging(true);
+    });
+    await wait(900);
+    const saleDocumentWindow = window.open('', '_blank');
+    if (saleDocumentWindow) {
+      saleDocumentWindow.document.title = 'Nota de venta';
+      saleDocumentWindow.blur();
+      window.focus();
+    }
+    const ticketItems = cart.map(item => ({
+      name: item.product_name ?? 'PRODUCTO',
+      presentation: `${item.uom_name ?? '—'} (x${Number(item.factor_to_base || 1).toFixed(2)})`,
+      priceType: item.price_type,
+      qty: Number(item.qty),
+      unitPrice: Number(item.unit_price),
+      subtotal: Number(item.qty) * Number(item.unit_price),
+    }));
+    const branchName = branches.find(b => b.id === selectedBranchId)?.name ?? 'CASA TAHONA';
+    const notesForTicket = saleNotes.trim() || null;
     try {
       const saleId = await vinosSalesService.create({
         branch_id: branchDbId,
@@ -609,10 +633,27 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         created_by: currentUser.id,
         items: cart,
       });
+      const ticketInput: VinosSalePdfInput = {
+        saleId,
+        createdAt: new Date().toISOString(),
+        branchName,
+        customerName: selectedCustomer?.name ?? 'PUBLICO GENERAL',
+        customerAddress: '',
+        cashierName: currentUser.name,
+        paymentMethod,
+        walletUsed: walletUsedActual,
+        creditUsed: isCredito ? totalAfterWallet : 0,
+        saleNotes: notesForTicket,
+        items: ticketItems,
+        subtotal,
+        discount: couponDiscount,
+        total,
+        discountCode: couponDiscount > 0 ? couponCode.trim().toUpperCase() : null,
+      };
 
       logVinosAudit({
         branch_id: selectedBranchId,
-        branch_name: branches.find(b => b.id === selectedBranchId)?.name ?? null,
+        branch_name: branchName,
         user_id: currentUser.id,
         user_name: currentUser.name,
         action_type: 'VENTA',
@@ -621,12 +662,23 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         description: `Venta ${formatCurrency(total)} · ${paymentMethod} · ${cart.length} producto(s)`,
         new_data: { payment_method: paymentMethod, total, customer_id: customerId, items_count: cart.length, wallet_used: walletUsedActual, credit_used: isCredito ? totalAfterWallet : 0, coupon_code: !appliedPromoId && couponDiscount > 0 ? couponCode.toUpperCase() : null, promotion_code: appliedPromoId ? couponCode.toUpperCase() : null, notes: saleNotes || null },
       });
-      setFeedback({ type: 'success', msg: '✓ Venta registrada' });
+      let documentOpened = true;
+      try {
+        await generateVinosSaleTicket(ticketInput, { mode: 'print', targetWindow: saleDocumentWindow });
+      } catch (pdfError) {
+        console.error(pdfError);
+        documentOpened = false;
+        if (saleDocumentWindow && !saleDocumentWindow.closed) saleDocumentWindow.close();
+        setFeedback({ type: 'error', msg: 'Venta registrada, pero no se pudo abrir el documento.' });
+      }
+      if (documentOpened) setFeedback({ type: 'success', msg: '✓ Venta registrada' });
       clearCart();
       await load();
     } catch (e: unknown) {
+      if (saleDocumentWindow && !saleDocumentWindow.closed) saleDocumentWindow.close();
       setFeedback({ type: 'error', msg: e instanceof Error ? e.message : 'Error al cobrar.' });
     } finally {
+      setPrintModalOpen(false);
       setCharging(false);
     }
   };
@@ -1552,6 +1604,20 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 {deletingSale ? 'Eliminando…' : 'Eliminar venta'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {printModalOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-2xl">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
+              <Loader2 size={28} className="animate-spin" />
+            </div>
+            <h3 className="mt-4 text-base font-black uppercase tracking-tight text-slate-900">Generando documento</h3>
+            <p className="mt-2 text-sm font-semibold text-slate-500">
+              La nota de venta se abrirá para imprimir en unos segundos.
+            </p>
           </div>
         </div>
       )}

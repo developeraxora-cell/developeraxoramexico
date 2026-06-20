@@ -859,6 +859,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
         return {
           name: product?.name ?? 'PRODUCTO',
           presentation: `${uomInner?.name ?? '-'} (x${Number(r.factor_used).toFixed(2)})`,
+          priceType: r.price_type,
           qty: Number(r.qty),
           unitPrice: Number(r.unit_price),
           subtotal: Number(r.line_total ?? r.qty * r.unit_price),
