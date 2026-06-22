@@ -72,9 +72,10 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
   const pdfDoc = await PDFDocument.create();
   const fontRegular = await pdfDoc.embedFont('Helvetica');
   const fontBold = await pdfDoc.embedFont('Helvetica-Bold');
-  const width = 226.77; // 80 mm thermal paper
-  const marginX = 10;
-  const contentWidth = width - marginX * 2;
+  const width = 212.6; // 75 mm thermal paper
+  const marginLeft = 5;
+  const marginRight = 12;
+  const contentWidth = width - marginLeft - marginRight;
   const lineGap = 10;
 
   const wrapText = (text: string, maxWidth: number, font: PDFFont, size: number) => {
@@ -146,12 +147,12 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
   const drawCentered = (text: string, size: number, font: PDFFont) => {
     const safe = sanitize(text);
     const textWidth = font.widthOfTextAtSize(safe, size);
-    page.drawText(safe, { x: Math.max(marginX, (width - textWidth) / 2), y, size, font });
+    page.drawText(safe, { x: Math.max(marginLeft, marginLeft + (contentWidth - textWidth) / 2), y, size, font });
     y -= size + 4;
   };
 
   const drawLine = (text: string, size = 7, font: PDFFont = fontRegular) => {
-    page.drawText(sanitize(text), { x: marginX, y, size, font });
+    page.drawText(sanitize(text), { x: marginLeft, y, size, font });
     y -= lineGap;
   };
 
@@ -161,8 +162,8 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
 
   const drawDivider = () => {
     page.drawLine({
-      start: { x: marginX, y: y + 3 },
-      end: { x: width - marginX, y: y + 3 },
+      start: { x: marginLeft, y: y + 3 },
+      end: { x: width - marginRight, y: y + 3 },
       thickness: 0.5,
       color: rgb(0, 0, 0),
     });
@@ -172,9 +173,9 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
   const drawAmountRow = (label: string, amount: string, size = 8, font: PDFFont = fontBold) => {
     const safeLabel = sanitize(label);
     const safeAmount = sanitize(amount);
-    page.drawText(safeLabel, { x: marginX, y, size, font });
+    page.drawText(safeLabel, { x: marginLeft, y, size, font });
     const amountWidth = font.widthOfTextAtSize(safeAmount, size);
-    page.drawText(safeAmount, { x: width - marginX - amountWidth, y, size, font });
+    page.drawText(safeAmount, { x: width - marginRight - amountWidth, y, size, font });
     y -= size + 5;
   };
 
