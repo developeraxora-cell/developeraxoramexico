@@ -1,10 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Plus, Search, Pencil, Trash2, Package, TrendingUp, AlertTriangle, X, Settings, RefreshCw, Check, ChevronDown, Save,
+  Plus, Search, Pencil, Trash2, Package, TrendingUp, AlertTriangle, X, Settings, RefreshCw, Check, ChevronDown, Save, BarChart3, Loader2,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
-import { vinosProductsService, type ProductWithStock } from '../../services/vinos/products.service';
+import {
+  vinosProductsService,
+  type ProductWithStock,
+  type ProductInsights,
+} from '../../services/vinos/products.service';
 import { vinosCatalogService, type Category, type Uom } from '../../services/vinos/catalog.service';
 import { vinosCustomersService } from '../../services/vinos/customers.service';
 import VinosProductModal from './VinosProductModal';
@@ -15,7 +19,13 @@ interface Props {
   currentUser: User;
 }
 
-const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
+const PRICE_TIER_LABEL: Record<string, string> = {
+  MENUDEO: 'Menudeo',
+  MEDIO_MAYOREO: 'Medio mayoreo',
+  MAYOREO: 'Mayoreo',
+};
+
+const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, currentUser }) => {
   const [products, setProducts] = useState<ProductWithStock[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [uoms, setUoms] = useState<Uom[]>([]);
@@ -28,6 +38,13 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
   // modal producto
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<ProductWithStock | null>(null);
+
+  // modal estadísticas
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyTarget, setHistoryTarget] = useState<ProductWithStock | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState('');
+  const [historyData, setHistoryData] = useState<ProductInsights | null>(null);
 
   // delete
   const [deleteTarget, setDeleteTarget] = useState<ProductWithStock | null>(null);
@@ -43,6 +60,11 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
   useEffect(() => {
     vinosCustomersService.getBranchId(selectedBranchId).then(setBranchDbId);
   }, [selectedBranchId]);
+
+  const branchName = useMemo(
+    () => branches.find((branch) => branch.id === selectedBranchId)?.name ?? null,
+    [branches, selectedBranchId],
+  );
 
   // ── load all ─────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -103,6 +125,29 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
   const openEdit = (p: ProductWithStock) => {
     setEditTarget(p);
     setModalOpen(true);
+  };
+
+  const openHistory = async (p: ProductWithStock) => {
+    setHistoryTarget(p);
+    setHistoryOpen(true);
+    setHistoryLoading(true);
+    setHistoryError('');
+    setHistoryData(null);
+    try {
+      const data = await vinosProductsService.getProductInsights(p.id, branchDbId ?? undefined);
+      setHistoryData(data);
+    } catch (e) {
+      setHistoryError(e instanceof Error ? e.message : 'No se pudo cargar el historial del producto.');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const closeHistory = () => {
+    setHistoryOpen(false);
+    setHistoryTarget(null);
+    setHistoryData(null);
+    setHistoryError('');
   };
 
   const closeModal = () => { setModalOpen(false); setEditTarget(null); };
@@ -305,7 +350,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
-                  {['Producto','Categoría','Unidad','Stock','Menudeo','M. Mayoreo','Mayoreo',''].map(h => (
+                  {['Producto','Categoría','Unidad','Stock','Últ. compra','Menudeo','M. Mayoreo','Mayoreo',''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
                   ))}
                 </tr>
@@ -336,11 +381,17 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
                           {p.total_stock}
                         </span>
                       </td>
+                      <td className="px-4 py-3 text-xs font-bold text-slate-800">
+                        {p.last_purchase_cost != null ? formatCurrency(p.last_purchase_cost) : '—'}
+                      </td>
                       <td className="px-4 py-3 text-xs font-bold text-slate-800">{formatCurrency(p.price_retail)}</td>
                       <td className="px-4 py-3 text-xs font-bold text-slate-800">{formatCurrency(p.price_mid_wholesale)}</td>
                       <td className="px-4 py-3 text-xs font-bold text-slate-800">{formatCurrency(p.price_wholesale)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
+                          <button onClick={() => openHistory(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600" title="Ver estadísticas">
+                            <BarChart3 size={14}/>
+                          </button>
                           <button onClick={() => openEdit(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Editar"><Pencil size={14}/></button>
                           <button onClick={() => setDeleteTarget(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
                         </div>
@@ -357,6 +408,9 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
       <VinosProductModal
         isOpen={modalOpen}
         branchDbId={branchDbId}
+        branchId={selectedBranchId}
+        branchName={branchName}
+        currentUser={currentUser}
         categories={categories}
         uoms={uoms}
         editTarget={editTarget}
@@ -366,6 +420,108 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId }) => {
           closeModal();
         }}
       />
+
+      {historyOpen && historyTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-5xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <h2 className="text-base font-black uppercase tracking-tight text-slate-900">Estadísticas del producto</h2>
+                <p className="text-[10px] font-bold text-slate-400">{historyTarget.name} · {historyTarget.sku}</p>
+              </div>
+              <button onClick={closeHistory} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={18}/></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              {historyLoading ? (
+                <div className="py-20 text-center">
+                  <Loader2 size={28} className="mx-auto animate-spin text-orange-500" />
+                  <p className="mt-3 text-sm font-bold text-slate-400">Cargando historial…</p>
+                </div>
+              ) : historyError ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{historyError}</div>
+              ) : historyData ? (
+                <>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Último costo compra</p>
+                      <p className="mt-1 text-xl font-black text-slate-900">
+                        {historyData.last_purchase_cost != null ? formatCurrency(historyData.last_purchase_cost) : '—'}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ingresos</p>
+                      <p className="mt-1 text-xl font-black text-green-600">{formatCurrency(historyData.purchased_total)}</p>
+                      <p className="text-[10px] font-bold text-slate-400">{historyData.purchased_qty} unidades</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Salidas</p>
+                      <p className="mt-1 text-xl font-black text-orange-600">{formatCurrency(historyData.sold_total)}</p>
+                      <p className="text-[10px] font-bold text-slate-400">{historyData.sold_qty} unidades</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ganancia estimada</p>
+                      <p className="mt-1 text-xl font-black text-blue-600">{formatCurrency(historyData.estimated_profit)}</p>
+                      <p className="text-[10px] font-bold text-slate-400">Usando el último costo compra</p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50">
+                        <tr className="border-b border-slate-200">
+                          {['Fecha', 'Estado', 'Cantidad', 'Precio', 'Total', 'Tipo', 'Ganancia', 'Detalle'].map((h) => (
+                            <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {historyData.history.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-400">Sin movimientos para este producto.</td>
+                          </tr>
+                        ) : historyData.history.map((row) => {
+                          const badgeClass =
+                            row.status === 'INGRESO' ? 'bg-green-100 text-green-700'
+                              : row.status === 'SALIDA' ? 'bg-orange-100 text-orange-700'
+                                : 'bg-blue-100 text-blue-700';
+                          return (
+                            <tr key={row.id} className="hover:bg-slate-50">
+                              <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{new Date(row.created_at).toLocaleString('es-MX')}</td>
+                              <td className="px-4 py-3">
+                                <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black ${badgeClass}`}>{row.status}</span>
+                              </td>
+                              <td className="px-4 py-3 text-sm font-bold text-slate-900">
+                                {row.qty != null ? row.qty : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-bold text-slate-900">
+                                {row.unit_price != null ? formatCurrency(row.unit_price) : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-bold text-slate-900">
+                                {row.subtotal != null ? formatCurrency(row.subtotal) : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-xs text-slate-600">
+                                {row.price_type ? PRICE_TIER_LABEL[row.price_type] ?? row.price_type : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-black text-blue-600">
+                                {row.profit != null ? formatCurrency(row.profit) : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-xs text-slate-600">
+                                <p className="font-bold text-slate-800">{row.source}</p>
+                                {row.detail && <p className="mt-0.5 text-[10px] text-slate-400">{row.detail}</p>}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── CONFIRMAR ELIMINAR ──────────────────────────── */}
       {deleteTarget && (

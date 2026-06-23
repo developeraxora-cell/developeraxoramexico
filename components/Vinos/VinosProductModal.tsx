@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, Plus, Trash2, X } from 'lucide-react';
+import type { User } from '../../types';
 import {
   vinosProductsService,
   type CreateProductInput,
@@ -7,6 +8,7 @@ import {
   type ProductWithStock,
   type VinosProduct,
 } from '../../services/vinos/products.service';
+import { logVinosAudit } from '../../services/audit/audit.service';
 import type { Category, Uom } from '../../services/vinos/catalog.service';
 
 interface FormState {
@@ -46,6 +48,9 @@ export interface VinosProductModalSavedPayload {
 interface Props {
   isOpen: boolean;
   branchDbId: number | null;
+  branchId: string;
+  branchName?: string | null;
+  currentUser: User;
   categories: Category[];
   uoms: Uom[];
   editTarget?: ProductWithStock | null;
@@ -78,6 +83,9 @@ const emptyEquivalence = (): EquivalenceRow => ({
 const VinosProductModal: React.FC<Props> = ({
   isOpen,
   branchDbId,
+  branchId,
+  branchName = null,
+  currentUser,
   categories,
   uoms,
   editTarget = null,
@@ -207,6 +215,23 @@ const VinosProductModal: React.FC<Props> = ({
       })));
 
       const productUoms = await vinosProductsService.listAllProductUoms([product.id]);
+      logVinosAudit({
+        branch_id: branchId,
+        branch_name: branchName,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: editTarget ? 'ACTUALIZAR' : 'CREAR',
+        entity_type: 'producto',
+        entity_id: String(product.id),
+        description: editTarget ? `Producto actualizado: ${product.name} [${product.id}]` : `Producto creado: ${product.name} [${product.id}]`,
+        previous_data: editTarget ? {
+          product: editTarget,
+        } : null,
+        new_data: {
+          product,
+          equivalences_count: productUoms.length,
+        },
+      });
       await onSaved({ product, productUoms: productUoms as VinosProductUomRow[] });
     } catch (e: unknown) {
       setFormError(e instanceof Error ? e.message : 'Error al guardar.');

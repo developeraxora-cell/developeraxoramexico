@@ -43,7 +43,7 @@ const parseMoneyInput = (value: string) => {
   return Number(normalized.replace(',', '.')) || 0;
 };
 
-const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) => {
+const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, currentUser }) => {
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -651,7 +651,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
                             />
                           </div>
                           <div>
-                            <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Costo unit.</label>
+                            <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Costo compra</label>
                             <input
                               className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-orange-400"
                               type="text"
@@ -783,6 +783,9 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
       <VinosProductModal
         isOpen={productModalOpen}
         branchDbId={branchDbId}
+        branchId={selectedBranchId}
+        branchName={branches.find(b => b.id === selectedBranchId)?.name ?? null}
+        currentUser={currentUser}
         categories={categories}
         uoms={uoms}
         initialValues={productInitialValues}

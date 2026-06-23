@@ -350,7 +350,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
                   <tr>
                     <th className="text-left px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Producto</th>
                     <th className="text-center px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Cant.</th>
-                    <th className="text-right px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Costo unit.</th>
+                    <th className="text-right px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Costo compra</th>
                     <th className="text-right px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Subtotal</th>
                     <th className="px-3 py-2.5" />
                   </tr>
