@@ -11,6 +11,8 @@ export interface VinosSalePdfInput {
   paymentMethod: 'EFECTIVO' | 'CREDITO' | 'CORTESIA';
   walletUsed?: number;
   creditUsed?: number;
+  cashReceived?: number;
+  cashChange?: number;
   saleNotes?: string | null;
   items: Array<{
     name: string;
@@ -138,6 +140,7 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
     (Number(input.discount ?? 0) > 0 ? 14 : 0) +
     (Number(input.walletUsed ?? 0) > 0 ? 14 : 0) +
     (Number(input.creditUsed ?? 0) > 0 ? 14 : 0) +
+    (input.paymentMethod === 'EFECTIVO' && Number(input.cashReceived ?? 0) > 0 ? 28 : 0) +
     (input.discountCode ? 12 : 0) +
     (footerLines.length * lineGap);
   const height = Math.max(320, Math.min(14000, dynamicHeight));
@@ -214,6 +217,12 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
   if (creditUsed > 0) drawAmountRow('CREDITO', formatCurrency(creditUsed), 8, fontBold);
   drawDivider();
   drawAmountRow('TOTAL', formatCurrency(Number(input.total ?? 0)), 12, fontBold);
+  if (input.paymentMethod === 'EFECTIVO' && Number(input.cashReceived ?? 0) > 0) {
+    const cashReceived = Number(input.cashReceived ?? 0);
+    const cashChange = Number(input.cashChange ?? Math.max(0, cashReceived - Number(input.total ?? 0)));
+    drawAmountRow('PAGO CON', formatCurrency(cashReceived), 8, fontBold);
+    drawAmountRow('CAMBIO', formatCurrency(cashChange), 8, fontBold);
+  }
   if (input.discountCode) drawLine(`CODIGO: ${String(input.discountCode).toUpperCase()}`, 7, fontRegular);
   drawDivider();
   drawCentered('CONSERVE ESTE COMPROBANTE', 7, fontRegular);

@@ -380,11 +380,11 @@ export const vinosCustomerMgmtService = {
     }));
   },
 
-  async listCashSales(customerId: string): Promise<Array<{ id: string; created_at: string; total: number; payment_method: string; notes: string | null }>> {
+  async listCashSales(customerId: string): Promise<Array<{ id: string; created_at: string; total: number; payment_method: string; cash_received: number; notes: string | null }>> {
     if (!isVinosConfigured) return [];
     const { data, error } = await supabaseVinos
       .from('sales')
-      .select('id, created_at, total, payment_method, notes')
+      .select('id, created_at, total, payment_method, cash_received, notes')
       .eq('customer_id', customerId)
       .neq('payment_method', 'CREDITO')
       .is('deleted_at', null)

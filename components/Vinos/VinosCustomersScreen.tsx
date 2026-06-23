@@ -72,6 +72,9 @@ const normalizeCustomerType = (label: string) =>
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
 
+const getCashChange = (cashReceived: number, saleTotal: number) =>
+  Math.max(0, Number(cashReceived || 0) - Number(saleTotal || 0));
+
 // ─── países (prefijo telefónico) ─────────────────────────────────────────────
 
 interface Country { code: string; dial: string; name: string; flag: string; }
@@ -296,7 +299,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
   const [creditNotes, setCreditNotes] = useState<CreditSaleSummary[]>([]);
 
   // Ventas efectivo
-  const [cashSales, setCashSales] = useState<Array<{ id: string; created_at: string; total: number; payment_method: string; notes: string | null }>>([]);
+  const [cashSales, setCashSales] = useState<Array<{ id: string; created_at: string; total: number; payment_method: string; cash_received: number; notes: string | null }>>([]);
 
   // Registrar abono
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -874,6 +877,8 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
         paymentMethod: sale.payment_method,
         walletUsed: Number(sale.wallet_used ?? 0),
         creditUsed: Number(sale.credit_used ?? 0),
+        cashReceived: Number(sale.cash_received ?? 0),
+        cashChange: sale.payment_method === 'EFECTIVO' ? getCashChange(Number(sale.cash_received ?? 0), Number(sale.total ?? 0)) : 0,
         saleNotes: sale.notes,
         items: mappedItems,
         subtotal: Number(sale.subtotal),
@@ -1967,7 +1972,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
                         <table className="w-full text-sm">
                           <thead className="bg-slate-900 text-white">
-                            <tr>{['Folio','Fecha','Método','Total','Notas','Acción'].map(h => (
+                            <tr>{['Folio','Fecha','Método','Total','Pago','Notas','Acción'].map(h => (
                               <th key={h} className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest">{h}</th>
                             ))}</tr>
                           </thead>
@@ -1978,6 +1983,14 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                                 <td className="px-4 py-2 text-xs text-slate-600">{new Date(s.created_at).toLocaleString('es-MX')}</td>
                                 <td className="px-4 py-2"><span className="rounded-md bg-green-100 px-2 py-0.5 text-[10px] font-black text-green-700">{s.payment_method}</span></td>
                                 <td className="px-4 py-2 text-sm font-bold text-slate-900">{formatCurrency(s.total)}</td>
+                                <td className="px-4 py-2 text-xs text-slate-600">
+                                  {s.payment_method === 'EFECTIVO' && Number(s.cash_received ?? 0) > 0 ? (
+                                    <>
+                                      <p><span className="font-bold">Pagó:</span> {formatCurrency(Number(s.cash_received ?? 0))}</p>
+                                      <p><span className="font-bold">Vuelto:</span> {formatCurrency(getCashChange(Number(s.cash_received ?? 0), Number(s.total ?? 0)))}</p>
+                                    </>
+                                  ) : '—'}
+                                </td>
                                 <td className="px-4 py-2 text-xs text-slate-500 italic truncate max-w-[180px]">{s.notes ?? '—'}</td>
                                 <td className="px-4 py-2">
                                   <button onClick={() => printSale(s.id)} title="Imprimir" className="rounded-md border border-slate-200 p-1.5 text-blue-500 hover:bg-blue-50"><FileText size={13}/></button>

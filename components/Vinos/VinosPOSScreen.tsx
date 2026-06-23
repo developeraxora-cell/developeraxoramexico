@@ -47,6 +47,8 @@ const PRICE_TIER_LABEL: Record<PriceTier, string> = {
 
 const STOCK_EPSILON = 0.000001;
 const wait = (ms: number) => new Promise<void>(resolve => window.setTimeout(resolve, ms));
+const getCashChange = (cashReceivedValue: number, saleTotal: number) =>
+  Math.max(0, Number(cashReceivedValue || 0) - Number(saleTotal || 0));
 
 const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branches }) => {
   const [products, setProducts] = useState<ProductFull[]>([]);
@@ -199,7 +201,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const creditAvailable = Math.max(0, (selectedCustomer?.credit_limit ?? 0) - customerDebt);
   const total = isCortesia ? 0 : totalAfterWallet;
   const cashReceivedNum = Number(cashReceived) || 0;
-  const change = isEfectivo && cashReceivedNum > 0 ? Math.max(0, cashReceivedNum - total) : 0;
+  const change = isEfectivo && cashReceivedNum > 0 ? getCashChange(cashReceivedNum, total) : 0;
+  const cashPaymentInvalid = isEfectivo && total > 0 && cashReceivedNum < total;
 
   // ── add product modal helpers ──────────────────────────
   const openAddProduct = (p: ProductFull) => {
@@ -555,6 +558,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         paymentMethod: s.payment_method,
         walletUsed: Number(s.wallet_used ?? 0),
         creditUsed: Number(s.credit_used ?? 0),
+        cashReceived: Number(s.cash_received ?? 0),
+        cashChange: s.payment_method === 'EFECTIVO' ? getCashChange(Number(s.cash_received ?? 0), Number(s.total ?? 0)) : 0,
         saleNotes: s.notes,
         items,
         subtotal: Number(s.subtotal),
@@ -589,6 +594,10 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const handleCharge = async () => {
     if (!branchDbId) { setFeedback({ type: 'error', msg: 'Sucursal no encontrada.' }); return; }
     if (cart.length === 0) { setFeedback({ type: 'error', msg: 'Carrito vacío.' }); return; }
+    if (cashPaymentInvalid) {
+      setFeedback({ type: 'error', msg: 'El monto recibido debe cubrir el total de la venta.' });
+      return;
+    }
     if (isCredito && !customerId) { setFeedback({ type: 'error', msg: 'Crédito requiere cliente seleccionado.' }); return; }
     if (isCredito && totalAfterWallet > creditAvailable) {
       setFeedback({ type: 'error', msg: `Crédito insuficiente. Disponible: ${formatCurrency(creditAvailable)}` });
@@ -628,7 +637,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         promotion_code: appliedPromoId ? couponCode.trim().toUpperCase() : null,
         wallet_used: walletUsedActual,
         credit_used: isCredito ? totalAfterWallet : 0,
-        cash_received: 0,
+        cash_received: isEfectivo ? cashReceivedNum : 0,
         notes: saleNotes.trim() || null,
         created_by: currentUser.id,
         items: cart,
@@ -643,6 +652,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         paymentMethod,
         walletUsed: walletUsedActual,
         creditUsed: isCredito ? totalAfterWallet : 0,
+        cashReceived: isEfectivo ? cashReceivedNum : 0,
+        cashChange: isEfectivo ? change : 0,
         saleNotes: notesForTicket,
         items: ticketItems,
         subtotal,
@@ -660,7 +671,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         entity_type: 'venta',
         entity_id: saleId,
         description: `Venta ${formatCurrency(total)} · ${paymentMethod} · ${cart.length} producto(s)`,
-        new_data: { payment_method: paymentMethod, total, customer_id: customerId, items_count: cart.length, wallet_used: walletUsedActual, credit_used: isCredito ? totalAfterWallet : 0, coupon_code: !appliedPromoId && couponDiscount > 0 ? couponCode.toUpperCase() : null, promotion_code: appliedPromoId ? couponCode.toUpperCase() : null, notes: saleNotes || null },
+        new_data: { payment_method: paymentMethod, total, customer_id: customerId, items_count: cart.length, wallet_used: walletUsedActual, credit_used: isCredito ? totalAfterWallet : 0, cash_received: isEfectivo ? cashReceivedNum : 0, cash_change: isEfectivo ? change : 0, coupon_code: !appliedPromoId && couponDiscount > 0 ? couponCode.toUpperCase() : null, promotion_code: appliedPromoId ? couponCode.toUpperCase() : null, notes: saleNotes || null },
       });
       let documentOpened = true;
       try {
@@ -1099,6 +1110,38 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 )}
               </section>
 
+              {/* Efectivo recibido */}
+              {isEfectivo && total > 0 && (
+                <section className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Monto recibido</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-base font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    placeholder="Ej. 100.00"
+                    value={cashReceived}
+                    onChange={e => setCashReceived(e.target.value)}
+                  />
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-xl bg-white px-3 py-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total</p>
+                      <p className="mt-1 font-black text-slate-900">{formatCurrency(total)}</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vuelto</p>
+                      <p className={`mt-1 font-black ${cashPaymentInvalid ? 'text-red-500' : 'text-green-600'}`}>{formatCurrency(change)}</p>
+                    </div>
+                  </div>
+                  {cashPaymentInvalid && (
+                    <p className="mt-2 text-[11px] font-bold text-red-500">
+                      El monto recibido debe ser mayor o igual al total.
+                    </p>
+                  )}
+                </section>
+              )}
+
               {/* Notas */}
               <section>
                 <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observaciones de la venta</label>
@@ -1128,7 +1171,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               </button>
               <button
                 onClick={handleCharge}
-                disabled={charging || cart.length === 0 || (isCredito && (!selectedCustomer || totalAfterWallet > creditAvailable))}
+                disabled={charging || cart.length === 0 || cashPaymentInvalid || (isCredito && (!selectedCustomer || totalAfterWallet > creditAvailable))}
                 className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
               >
                 {charging && <Loader2 size={14} className="animate-spin"/>}
@@ -1200,6 +1243,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     {pagedSales.map(s => {
                       const itemCount = ((s as unknown as { items?: { id: string }[] }).items ?? []).length;
                       const typeInfo = getSaleTypeInfo(s);
+                      const saleCashReceived = Number(s.cash_received ?? 0);
+                      const saleCashChange = getCashChange(saleCashReceived, Number(s.total ?? 0));
                       return (
                         <tr key={s.id} className="hover:bg-orange-50/30 border-l-4" style={{ borderLeftColor: typeInfo.color }}>
                           <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{new Date(s.created_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}</td>
@@ -1210,7 +1255,14 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                           <td className="px-4 py-3 text-center">
                             <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-[10px] font-black text-blue-700">{itemCount}</span>
                           </td>
-                          <td className="px-4 py-3 text-sm font-black text-slate-900 whitespace-nowrap">{formatCurrency(s.total)}</td>
+                          <td className="px-4 py-3 text-sm font-black text-slate-900 whitespace-nowrap">
+                            <div>{formatCurrency(s.total)}</div>
+                            {s.payment_method === 'EFECTIVO' && saleCashReceived > 0 && (
+                              <div className="mt-0.5 text-[10px] font-bold text-slate-500">
+                                Pagó {formatCurrency(saleCashReceived)} · Vuelto {formatCurrency(saleCashChange)}
+                              </div>
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-xs text-slate-500 italic truncate max-w-[200px]">{s.notes ?? '—'}</td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
@@ -1421,6 +1473,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 {Number(saleDetailRow.wallet_used) > 0 && <div className="flex justify-between text-purple-600"><span>Saldo aplicado</span><span>-{formatCurrency(saleDetailRow.wallet_used)}</span></div>}
                 {Number(saleDetailRow.credit_used) > 0 && <div className="flex justify-between text-red-600"><span>Crédito aplicado</span><span>{formatCurrency(saleDetailRow.credit_used)}</span></div>}
                 <div className="flex justify-between border-t border-slate-200 pt-1 text-base font-black text-slate-900"><span>Total</span><span className="text-orange-600">{formatCurrency(saleDetailRow.total)}</span></div>
+                {saleDetailRow.payment_method === 'EFECTIVO' && Number(saleDetailRow.cash_received ?? 0) > 0 && (
+                  <>
+                    <div className="flex justify-between text-slate-500"><span>Pagó con</span><span>{formatCurrency(Number(saleDetailRow.cash_received ?? 0))}</span></div>
+                    <div className="flex justify-between font-bold text-green-600"><span>Vuelto</span><span>{formatCurrency(getCashChange(Number(saleDetailRow.cash_received ?? 0), Number(saleDetailRow.total ?? 0)))}</span></div>
+                  </>
+                )}
               </div>
               {saleDetailRow.notes && <p className="text-xs italic text-slate-500">Notas: {saleDetailRow.notes}</p>}
             </div>

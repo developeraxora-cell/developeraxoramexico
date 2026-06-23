@@ -20,8 +20,28 @@ interface ProductWithUoms extends ProductWithStock {
   product_uoms?: { id: string; uom_id: string; factor_to_base: number; uom: Uom }[];
 }
 
+interface PurchaseCartItem extends CartItem {
+  cost_per_unit_input: string;
+}
+
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const isNumericSearch = (value: string) => /^\d+$/.test(value.trim());
+const normalizeMoneyInput = (value: string) => {
+  const cleaned = value.replace(/[^\d.,]/g, '').replace(/\./g, ',');
+  if (!cleaned) return '';
+  const [intPartRaw, ...rest] = cleaned.split(',');
+  const hasDecimal = rest.length > 0;
+  const intPart = intPartRaw.replace(/^0+(?=\d)/, '');
+  if (!hasDecimal) return intPart || (cleaned.startsWith('0') ? '0' : '');
+  const decimalPart = rest.join('').replace(/,/g, '').slice(0, 2);
+  const normalizedInt = intPart || '0';
+  return `${normalizedInt},${decimalPart}`;
+};
+const parseMoneyInput = (value: string) => {
+  const normalized = normalizeMoneyInput(value);
+  if (!normalized) return 0;
+  return Number(normalized.replace(',', '.')) || 0;
+};
 
 const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) => {
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
@@ -44,7 +64,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
   const [purchaseDate, setPurchaseDate] = useState(todayISO());
   const [isCredit, setIsCredit] = useState(false);
   const [notes, setNotes] = useState('');
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<PurchaseCartItem[]>([]);
   const [productSearch, setProductSearch] = useState('');
 
   // detail modal
@@ -136,7 +156,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
   }, [products, productSearch]);
 
   // ── carrito ─────────────────────────────────────────────
-  const addProductToCart = (p: ProductWithUoms, costPerUnit = 0) => {
+  const addProductToCart = (p: ProductWithUoms, costPerUnit = '') => {
     // por defecto unidad base (factor 1 en product_uoms, o usar uom_id del producto)
     const baseOption = p.product_uoms?.find(pu => Number(pu.factor_to_base) === 1) ?? p.product_uoms?.[0];
     if (!baseOption) {
@@ -148,7 +168,8 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
       product_uom_id: baseOption.id,
       factor_to_base: Number(baseOption.factor_to_base),
       qty: 1,
-      cost_per_unit: costPerUnit,
+      cost_per_unit: parseMoneyInput(String(costPerUnit)),
+      cost_per_unit_input: normalizeMoneyInput(String(costPerUnit)),
       product_name: p.name,
       product_sku: p.sku,
       uom_name: baseOption.uom?.name ?? '',
@@ -189,12 +210,19 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
     };
     setProducts(prev => [...prev.filter(existing => existing.id !== product.id), productWithUoms]
       .sort((a, b) => a.name.localeCompare(b.name)));
-    addProductToCart(productWithUoms);
+    addProductToCart(productWithUoms, '');
     closeProductModal();
   };
 
-  const updateCartItem = (idx: number, patch: Partial<CartItem>) =>
-    setCart(prev => prev.map((row, i) => i === idx ? { ...row, ...patch } : row));
+  const updateCartItem = (idx: number, patch: Partial<PurchaseCartItem>) =>
+    setCart(prev => prev.map((row, i) => {
+      if (i !== idx) return row;
+      const next = { ...row, ...patch };
+      if (Object.prototype.hasOwnProperty.call(patch, 'cost_per_unit_input')) {
+        next.cost_per_unit = parseMoneyInput(String(next.cost_per_unit_input ?? ''));
+      }
+      return next;
+    }));
 
   const removeCartItem = (idx: number) =>
     setCart(prev => prev.filter((_, i) => i !== idx));
@@ -581,7 +609,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
                 <div className="space-y-3">
                   {cart.map((it, idx) => {
                     const product = products.find(p => p.id === it.product_id);
-                    const subtotal = Number(it.qty) * Number(it.cost_per_unit);
+    const subtotal = Number(it.qty) * Number(it.cost_per_unit);
                     return (
                       <div key={idx} className="rounded-2xl border border-slate-200 bg-slate-50/40 p-3 space-y-2">
                         <div className="flex items-start justify-between gap-2">
@@ -625,10 +653,11 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
                           <div>
                             <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Costo unit.</label>
                             <input
-                              type="number" min="0" step="0.01"
                               className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-orange-400"
-                              value={it.cost_per_unit}
-                              onChange={e => updateCartItem(idx, { cost_per_unit: Number(e.target.value) })}
+                              type="text"
+                              inputMode="decimal"
+                              value={it.cost_per_unit_input}
+                              onChange={e => updateCartItem(idx, { cost_per_unit_input: normalizeMoneyInput(e.target.value) })}
                               placeholder="0.00"
                             />
                           </div>
@@ -709,7 +738,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUser }
                           <td className="py-2 text-slate-700">{it.product?.name ?? '—'}</td>
                           <td className="py-2 text-slate-600">{it.uom?.name ?? '—'}</td>
                           <td className="py-2 text-right text-slate-700">{it.qty}</td>
-                          <td className="py-2 text-right text-slate-700">{formatCurrency(it.cost_per_unit)}</td>
+                          <td className="py-2 text-right text-slate-700">{formatCurrency(Number(it.cost_per_unit))}</td>
                           <td className="py-2 text-right font-bold text-slate-900">{formatCurrency(it.subtotal)}</td>
                         </tr>
                       ))}
