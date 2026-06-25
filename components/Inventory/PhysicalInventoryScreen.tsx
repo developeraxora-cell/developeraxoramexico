@@ -47,6 +47,32 @@ interface PhysicalInventoryReportRow {
   observation: string | null;
 }
 
+const toFiniteNumber = (value: number) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const calculateProductReliability = (systemQty: number, physicalQty: number) => {
+  const system = toFiniteNumber(systemQty);
+  const physical = toFiniteNumber(physicalQty);
+
+  if (system === 0) return physical === 0 ? 100 : 0;
+
+  const imbalancePercent = (Math.abs(physical - system) / Math.abs(system)) * 100;
+  return Math.min(100, Math.max(0, 100 - imbalancePercent));
+};
+
+const calculateRingReliability = (rows: PhysicalInventoryReportRow[]) => {
+  const ringItems = rows.filter((item) => normalize(item.product_name).includes('anillo'));
+  if (ringItems.length === 0) return 0;
+
+  const totalReliability = ringItems.reduce((acc, item) => (
+    acc + calculateProductReliability(item.system_qty, item.physical_qty)
+  ), 0);
+
+  return totalReliability / ringItems.length;
+};
+
 const buildReportRowsFromItems = (rows: PhysicalInventoryItem[]): PhysicalInventoryReportRow[] =>
   rows.map((item) => ({
     product_name: item.product_name,
@@ -62,10 +88,7 @@ const buildSummaryFromRows = (rows: PhysicalInventoryReportRow[]) => {
   const exact = rows.filter((item) => Number(item.difference_qty) === 0).length;
   const missing = rows.filter((item) => Number(item.difference_qty) < 0).length;
   const surplus = rows.filter((item) => Number(item.difference_qty) > 0).length;
-  const ringItems = rows.filter((item) => normalize(item.product_name).includes('anillo'));
-  const ringSystem = ringItems.reduce((acc, item) => acc + Number(item.system_qty || 0), 0);
-  const ringPhysical = ringItems.reduce((acc, item) => acc + Number(item.physical_qty || 0), 0);
-  const reliability = ringSystem > 0 ? (ringPhysical / ringSystem) * 100 : 0;
+  const reliability = calculateRingReliability(rows);
   return { total, exact, missing, surplus, reliability };
 };
 
@@ -154,10 +177,7 @@ const PhysicalInventoryScreen: React.FC<PhysicalInventoryScreenProps> = ({ selec
     const exact = rows.filter((item) => Number(item.difference_qty) === 0).length;
     const missing = rows.filter((item) => Number(item.difference_qty) < 0).length;
     const surplus = rows.filter((item) => Number(item.difference_qty) > 0).length;
-    const ringItems = rows.filter((item) => normalize(item.product_name).includes('anillo'));
-    const ringSystem = ringItems.reduce((acc, item) => acc + Number(item.system_qty || 0), 0);
-    const ringPhysical = ringItems.reduce((acc, item) => acc + Number(item.physical_qty || 0), 0);
-    const reliability = ringSystem > 0 ? (ringPhysical / ringSystem) * 100 : 0;
+    const reliability = calculateRingReliability(rows);
     return { total, exact, missing, surplus, reliability };
   }, [reportRows]);
 
