@@ -90,7 +90,7 @@ export interface StockAdjustmentResult {
 
 export interface ProductMovementRow {
   id: string;
-  movement_type: 'PURCHASE' | 'SALE' | 'ADJUSTMENT';
+  movement_type: 'PURCHASE' | 'SALE' | 'ADJUSTMENT' | 'PRODUCTION';
   created_at: string;
   reference: string | null;
   notes: string | null;
@@ -105,6 +105,7 @@ export interface ProductMovementRow {
 export interface ProductMovementSummary {
   purchased_qty_base: number;
   sold_qty_base: number;
+  production_delta_qty_base: number;
   purchased_total: number;
   sold_total: number;
   manual_delta_qty_base: number;
@@ -492,6 +493,7 @@ export const catalogService = {
         summary: {
           purchased_qty_base: 0,
           sold_qty_base: 0,
+          production_delta_qty_base: 0,
           purchased_total: 0,
           sold_total: 0,
           manual_delta_qty_base: 0,
@@ -545,9 +547,46 @@ export const catalogService = {
       throw adjustmentsError;
     }
 
+    const { data: productionData, error: productionError } = await supabase
+      .from('production_items')
+      .select(`
+        id,
+        production_id,
+        product_id,
+        product_name,
+        movement,
+        qty,
+        pareas,
+        peso,
+        created_at,
+        production_orders!inner (
+          id,
+          branch_id,
+          production_date,
+          responsible,
+          producer,
+          observation,
+          created_by,
+          created_at
+        )
+      `)
+      .eq('product_id', productId)
+      .eq('production_orders.branch_id', branchId)
+      .order('created_at', { ascending: false })
+      .limit(safeLimit);
+
+    if (productionError) {
+      const code = String(productionError.code ?? '');
+      if (code === '42P01') {
+        throw new Error('Faltan las tablas de producción en la base de datos. Ejecute el script SQL de migración.');
+      }
+      throw productionError;
+    }
+
     const summary: ProductMovementSummary = {
       purchased_qty_base: 0,
       sold_qty_base: 0,
+      production_delta_qty_base: 0,
       purchased_total: 0,
       sold_total: 0,
       manual_delta_qty_base: 0,
@@ -611,7 +650,39 @@ export const catalogService = {
       };
     });
 
-    const rows = [...transactionRows, ...adjustmentRows]
+    const productionRows: ProductMovementRow[] = (productionData ?? []).map((row: any) => {
+      const order = row.production_orders;
+      const qty = Number(row.qty ?? 0);
+      const isOutput = String(row.movement ?? '').toUpperCase() === 'SALIDA';
+      const signedQty = isOutput ? -qty : qty;
+      summary.production_delta_qty_base += signedQty;
+
+      const detailNotes = [
+        order?.producer ? `Productor: ${order.producer}` : null,
+        order?.responsible ? `Responsable: ${order.responsible}` : null,
+        row.pareas !== null && row.pareas !== undefined ? `Pareas: ${row.pareas}` : null,
+        row.peso !== null && row.peso !== undefined ? `Peso: ${row.peso}` : null,
+        order?.observation ? order.observation : null,
+      ]
+        .filter(Boolean)
+        .join(' | ');
+
+      return {
+        id: `PROD-${row.id}`,
+        movement_type: 'PRODUCTION',
+        created_at: String(row.created_at ?? order?.created_at ?? ''),
+        reference: `Producción #${order?.id ?? row.production_id}${isOutput ? ' - Salida' : ' - Entrada'}`,
+        notes: detailNotes || null,
+        created_by: (order?.responsible as string | null) ?? (order?.created_by as string | null) ?? null,
+        qty_base: signedQty,
+        unit_price: null,
+        total_amount: 0,
+        stock_before: null,
+        stock_after: null,
+      };
+    });
+
+    const rows = [...transactionRows, ...adjustmentRows, ...productionRows]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, safeLimit);
 

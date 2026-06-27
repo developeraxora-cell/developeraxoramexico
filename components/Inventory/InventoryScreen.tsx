@@ -905,7 +905,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
 
               {!isHistoryLoading && historyData && (
                 <>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                       <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Stock actual</p>
                       <p className="text-lg font-black text-slate-900 mt-1">
@@ -922,6 +922,33 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                       <p className="text-[10px] font-black uppercase text-red-600 tracking-wider">Vendido</p>
                       <p className="text-lg font-black text-red-700 mt-1">
                         {formatQty(historyData.summary.sold_qty_base)}
+                      </p>
+                    </div>
+                    <div
+                      className={`rounded-2xl border p-3 ${
+                        Number(historyData.summary.production_delta_qty_base ?? 0) < 0
+                          ? 'border-red-100 bg-red-50'
+                          : 'border-sky-100 bg-sky-50'
+                      }`}
+                    >
+                      <p
+                        className={`text-[10px] font-black uppercase tracking-wider ${
+                          Number(historyData.summary.production_delta_qty_base ?? 0) < 0
+                            ? 'text-red-600'
+                            : 'text-sky-600'
+                        }`}
+                      >
+                        Producción
+                      </p>
+                      <p
+                        className={`text-lg font-black mt-1 ${
+                          Number(historyData.summary.production_delta_qty_base ?? 0) < 0
+                            ? 'text-red-700'
+                            : 'text-sky-700'
+                        }`}
+                      >
+                        {Number(historyData.summary.production_delta_qty_base ?? 0) > 0 ? '+' : ''}
+                        {formatQty(Number(historyData.summary.production_delta_qty_base ?? 0))}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-slate-200 bg-white p-3">
@@ -971,14 +998,18 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                                     ? 'bg-emerald-100 text-emerald-700'
                                     : row.movement_type === 'SALE'
                                       ? 'bg-red-100 text-red-700'
-                                      : 'bg-amber-100 text-amber-700'
+                                      : row.movement_type === 'PRODUCTION'
+                                        ? 'bg-sky-100 text-sky-700'
+                                        : 'bg-amber-100 text-amber-700'
                                 }`}
                               >
                                 {row.movement_type === 'PURCHASE'
                                   ? 'Compra'
                                   : row.movement_type === 'SALE'
                                     ? 'Venta'
-                                    : 'Ajuste'}
+                                    : row.movement_type === 'PRODUCTION'
+                                      ? 'Producción'
+                                      : 'Ajuste'}
                               </span>
                             </td>
                             <td className="p-3 text-xs font-semibold text-slate-700">
