@@ -1,4 +1,5 @@
 export const TAB_PATHS: Record<string, string> = {
+  'executive-dashboard':      '/gerencial/dashboard',
   'pos':                      '/materiales/ventas',
   'purchases':                '/materiales/compras',
   'inventory':                '/materiales/productos',

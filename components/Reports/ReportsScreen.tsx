@@ -17,6 +17,7 @@ import { supabase } from '../../services/supabaseClient';
 import { catalogService } from '../../services/inventory/catalog.service';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { Branch } from '../../types';
+import ManagerInsightsPanel, { ManagerInsight } from '../common/ManagerInsightsPanel';
 
 interface ReportsScreenProps {
   selectedBranchId: string;
@@ -56,8 +57,13 @@ interface TransactionRow {
   purchase_date?: string | null;
   reference?: string | null;
   notes?: string | null;
+  created_by?: string | null;
   nombre_cliente?: string | null;
   is_credit?: boolean | null;
+  payment_type?: string | null;
+  credit_amount?: number | null;
+  cash_amount?: number | null;
+  wallet_amount?: number | null;
   suppliers?: { name?: string | null } | null;
 }
 
@@ -66,10 +72,57 @@ interface ItemRow {
   product_id: number;
   qty: number;
   unit_price: number | null;
+  line_total?: number | null;
+}
+
+interface SalesExportRow {
+  id: number;
+  fecha: string;
+  cliente: string;
+  formaPago: string;
+  monto: number;
+  cantidades: number;
+  responsable: string;
+  notaVenta: string;
+}
+
+interface PurchasesExportRow {
+  id: number;
+  fechaRegistro: string;
+  monto: number;
+  proveedor: string;
+  credito: string;
+  responsable: string;
+  cantidadProductos: number;
+  fechaCompra: string;
+}
+
+interface CreditNoteRow {
+  folio?: string | null;
+  due_date?: string | null;
+  balance?: number | null;
+  total?: number | null;
+  credit_customers?: { name?: string | null } | null;
 }
 
 const formatQty = (value: number) =>
   formatNumber(value || 0, undefined, { maximumFractionDigits: 2 });
+
+const lineAmount = (item: ItemRow) =>
+  Number(item.line_total ?? (Number(item.qty || 0) * Number(item.unit_price || 0)));
+
+const paymentLabel = (tx: TransactionRow) => {
+  const raw = String(tx.payment_type ?? '').trim().toUpperCase();
+  const creditAmount = Number(tx.credit_amount ?? 0);
+  const cashAmount = Number(tx.cash_amount ?? 0);
+  const walletAmount = Number(tx.wallet_amount ?? 0);
+  if (raw === 'HIBRIDA' || [creditAmount, cashAmount, walletAmount].filter((value) => value > 0).length > 1) return 'Híbrida';
+  if (raw === 'CREDITO' || raw === 'CRÉDITO' || tx.is_credit || creditAmount > 0) return 'Crédito';
+  if (raw === 'BILLETERA' || walletAmount > 0) return 'Billetera';
+  if (raw === 'TARJETA') return 'Tarjeta';
+  if (raw === 'SIN COSTO' || raw === 'SIN_COSTO') return 'Sin costo';
+  return 'Efectivo';
+};
 
 const normalizeISO = (value: string) => (value.endsWith('Z') ? value : `${value}Z`);
 
@@ -116,7 +169,7 @@ const downloadCsv = (filename: string, headers: string[], rows: (string | number
     }
     return raw;
   };
-  const csv = [headers, ...rows].map((row) => row.map(escape).join(',')).join('\n');
+  const csv = '\uFEFF' + [headers, ...rows].map((row) => row.map(escape).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -127,7 +180,7 @@ const downloadCsv = (filename: string, headers: string[], rows: (string | number
 
 const cardBaseClass = 'rounded-3xl border border-slate-200 bg-white shadow-sm';
 
-const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branches, businessUnit }) => {
+const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branches, businessUnit = 'materiales' }) => {
   const branchId = useMemo(() => {
     const match = branches.find((b) => b.id === selectedBranchId);
     if (match?.dbId !== undefined) return String(match.dbId);
@@ -163,6 +216,9 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
   const [stockTable, setStockTable] = useState<Array<{ name: string; stock: number; min: number; status: string }>>([]);
   const [salesTable, setSalesTable] = useState<Array<{ id: number; date: string; customer: string; items: number; total: number }>>([]);
   const [purchasesTable, setPurchasesTable] = useState<Array<{ id: number; date: string; supplier: string; items: number; total: number; credit: boolean }>>([]);
+  const [salesExportRows, setSalesExportRows] = useState<SalesExportRow[]>([]);
+  const [purchasesExportRows, setPurchasesExportRows] = useState<PurchasesExportRow[]>([]);
+  const [managerInsights, setManagerInsights] = useState<ManagerInsight[]>([]);
   const [stockVisibleCount, setStockVisibleCount] = useState(4);
   const [salesVisibleCount, setSalesVisibleCount] = useState(4);
   const [purchasesVisibleCount, setPurchasesVisibleCount] = useState(4);
@@ -245,7 +301,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
 
       let txQuery = supabase
         .from('inventory_transactions')
-        .select('id, type, created_at, purchase_date, reference, notes, nombre_cliente, is_credit, suppliers ( name )')
+        .select('id, type, created_at, purchase_date, reference, notes, created_by, nombre_cliente, is_credit, payment_type, credit_amount, cash_amount, wallet_amount, suppliers ( name )')
         .eq('branch_id', branchId)
         .eq('is_deleted', false)
         .gte('created_at', rangeStart.toISOString())
@@ -254,18 +310,32 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
 
       if (businessUnit) txQuery = txQuery.eq('business_unit', businessUnit);
 
-      const { data: transactions, error: txError } = await txQuery;
+      let creditQuery = supabase
+        .from('credit_notes')
+        .select('folio, due_date, balance, total, credit_customers ( name )')
+        .eq('branch_id', branchId)
+        .gt('balance', 0)
+        .order('due_date', { ascending: true });
+
+      if (businessUnit) creditQuery = creditQuery.eq('business_unit', businessUnit);
+
+      const [
+        { data: transactions, error: txError },
+        { data: creditNotes, error: creditError },
+      ] = await Promise.all([txQuery, creditQuery]);
 
       if (txError) throw txError;
+      if (creditError) throw creditError;
 
       const txList: TransactionRow[] = (transactions ?? []) as TransactionRow[];
+      const creditRows = (creditNotes ?? []) as CreditNoteRow[];
       const txIds = txList.map((tx) => tx.id);
 
       let items: ItemRow[] = [];
       if (txIds.length > 0) {
         const { data: itemsData, error: itemsError } = await supabase
           .from('inventory_transaction_items')
-          .select('transaction_id, product_id, qty, unit_price')
+          .select('transaction_id, product_id, qty, unit_price, line_total')
           .in('transaction_id', txIds);
         if (itemsError) throw itemsError;
         items = (itemsData ?? []) as ItemRow[];
@@ -294,7 +364,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
 
       const txTotals = txList.reduce<Record<number, number>>((acc, tx) => {
         const txItems = (itemsByTx[tx.id] ?? []).filter((item) => matchesFilters(item.product_id));
-        acc[tx.id] = txItems.reduce((sum, item) => sum + Number(item.qty) * Number(item.unit_price || 0), 0);
+        acc[tx.id] = txItems.reduce((sum, item) => sum + lineAmount(item), 0);
         return acc;
       }, {} as Record<number, number>);
 
@@ -319,7 +389,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
         const key = String(item.product_id);
         const current = acc[key] ?? { qty: 0, total: 0 };
         current.qty += Number(item.qty);
-        current.total += Number(item.qty) * Number(item.unit_price || 0);
+        current.total += lineAmount(item);
         acc[key] = current;
         return acc;
       }, {} as Record<string, { qty: number; total: number }>);
@@ -386,6 +456,13 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
             unitLabel,
           };
         });
+      const criticalStockRows = stockCandidates
+        .filter((row) => row.status === 'critical')
+        .sort((a, b) => {
+          const aGap = a.min - a.stock;
+          const bGap = b.min - b.stock;
+          return bGap - aGap;
+        });
 
       const stockCandidatesByName = stockCandidates.reduce<Record<string, (typeof stockCandidates)[number]>>((acc, row) => {
         acc[row.name] = row;
@@ -442,7 +519,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
         : sortBySimilarity(soldStockRows.length > 0 ? soldStockRows : fallbackStockRows))
         .slice(0, 10);
 
-      const criticalCount = stockRows.filter((row) => row.status === 'critical').length;
+      const criticalCount = criticalStockRows.length;
 
       const salesTableRows = salesTx.map((tx) => ({
         id: tx.id,
@@ -463,6 +540,119 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
         credit: Boolean(tx.is_credit),
       }));
 
+      const salesExportData = salesTx.map((tx) => {
+        const txItems = (itemsByTx[tx.id] ?? []).filter((item) => matchesFilters(item.product_id));
+        return {
+          id: tx.id,
+          fecha: new Date(normalizeISO(tx.created_at)).toLocaleString(),
+          cliente: tx.nombre_cliente ?? 'Mostrador',
+          formaPago: paymentLabel(tx),
+          monto: txTotals[tx.id] ?? 0,
+          cantidades: txItems.reduce((sum, item) => sum + Number(item.qty ?? 0), 0),
+          responsable: tx.created_by || '—',
+          notaVenta: tx.reference || tx.notes || `Venta #${tx.id}`,
+        };
+      });
+
+      const purchasesExportData = purchaseTx.map((tx) => {
+        const txItems = (itemsByTx[tx.id] ?? []).filter((item) => matchesFilters(item.product_id));
+        return {
+          id: tx.id,
+          fechaRegistro: new Date(normalizeISO(tx.created_at)).toLocaleString(),
+          monto: txTotals[tx.id] ?? 0,
+          proveedor: tx.suppliers?.name ?? '—',
+          credito: tx.is_credit ? 'Sí' : 'No',
+          responsable: tx.created_by || '—',
+          cantidadProductos: txItems.reduce((sum, item) => sum + Number(item.qty ?? 0), 0),
+          fechaCompra: tx.purchase_date ? parseLocalDateInput(tx.purchase_date).toLocaleDateString() : '—',
+        };
+      });
+
+      const today = toLocalDateInputValue(new Date());
+      const overdueRows = creditRows.filter((row) => Number(row.balance ?? 0) > 0 && row.due_date && row.due_date < today);
+      const overdueTotal = overdueRows.reduce((sum, row) => sum + Number(row.balance ?? 0), 0);
+      const topDebt = [...overdueRows].sort((a, b) => Number(b.balance ?? 0) - Number(a.balance ?? 0))[0];
+      const topCriticalProduct = topList.find((item) => stockCandidatesByName[item.name]?.status === 'critical');
+      const topProductShare = salesTotal > 0 && topList[0] ? topList[0].total / salesTotal : 0;
+      const lowRotationWithStock = lowList
+        .map((item) => ({ ...item, stock: stockCandidatesByName[item.name]?.stock ?? 0 }))
+        .filter((item) => item.stock > 0)
+        .sort((a, b) => b.stock - a.stock)[0];
+      const generatedInsights: ManagerInsight[] = [];
+
+      if (overdueTotal > 0) {
+        generatedInsights.push({
+          id: 'cartera-vencida',
+          priority: overdueTotal >= salesTotal * 0.25 || overdueRows.length >= 5 ? 'alta' : 'media',
+          kind: 'risk',
+          title: 'Cartera vencida activa',
+          metric: formatCurrency(overdueTotal),
+          description: `${overdueRows.length} nota${overdueRows.length === 1 ? '' : 's'} vencida${overdueRows.length === 1 ? '' : 's'} fuera del periodo de pago.`,
+          action: topDebt
+            ? `Priorizar cobranza a ${topDebt.credit_customers?.name ?? 'cliente sin nombre'} por ${formatCurrency(Number(topDebt.balance ?? 0))}.`
+            : 'Revisar antigüedad de saldos antes de liberar más crédito.',
+        });
+      }
+
+      if (topCriticalProduct) {
+        const stock = stockCandidatesByName[topCriticalProduct.name];
+        generatedInsights.push({
+          id: 'top-producto-stock',
+          priority: 'alta',
+          kind: 'risk',
+          title: 'Producto fuerte en riesgo de desabasto',
+          metric: topCriticalProduct.name,
+          description: `Vendió ${formatQty(topCriticalProduct.qty)} en el periodo y está en ${formatQty(stock.stock)} contra mínimo ${formatQty(stock.min)}.`,
+          action: 'Revisar compra inmediata o transferir inventario antes de perder ventas.',
+        });
+      } else if (criticalStockRows.length > 0) {
+        generatedInsights.push({
+          id: 'stock-critico',
+          priority: 'media',
+          kind: 'risk',
+          title: 'Inventario crítico detectado',
+          metric: `${criticalStockRows.length} productos`,
+          description: `${criticalStockRows[0].name} es el caso más presionado: ${formatQty(criticalStockRows[0].stock)} contra mínimo ${formatQty(criticalStockRows[0].min)}.`,
+          action: 'Cruzar estos productos con ventas recientes para ordenar por impacto comercial.',
+        });
+      }
+
+      if (topProductShare >= 0.35 && topList[0]) {
+        generatedInsights.push({
+          id: 'concentracion-ventas',
+          priority: 'media',
+          kind: 'opportunity',
+          title: 'Alta concentración en producto líder',
+          metric: `${Math.round(topProductShare * 100)}%`,
+          description: `${topList[0].name} concentra una parte relevante de la venta del periodo.`,
+          action: 'Proteger disponibilidad y revisar margen/precio de ese producto antes de impulsar promociones.',
+        });
+      }
+
+      if (purchasesTotal > salesTotal * 1.25 && purchasesTotal > 0) {
+        generatedInsights.push({
+          id: 'compras-vs-ventas',
+          priority: salesTotal === 0 ? 'alta' : 'media',
+          kind: 'risk',
+          title: 'Compras por encima de ventas',
+          metric: formatCurrency(purchasesTotal - salesTotal),
+          description: 'Las compras superan la venta del periodo. Puede ser abastecimiento planeado o presión de flujo.',
+          action: 'Validar que las compras correspondan a productos de alta rotación o pedidos comprometidos.',
+        });
+      }
+
+      if (lowRotationWithStock) {
+        generatedInsights.push({
+          id: 'baja-rotacion-stock',
+          priority: 'baja',
+          kind: 'opportunity',
+          title: 'Inventario con baja rotación',
+          metric: lowRotationWithStock.name,
+          description: `Solo movió ${formatQty(lowRotationWithStock.qty)} y conserva ${formatQty(lowRotationWithStock.stock)} en stock.`,
+          action: 'Considerar paquete, promoción o sustitución en ventas antes de comprar más.',
+        });
+      }
+
       setKpis({
         salesTotal,
         salesCount,
@@ -479,6 +669,9 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
       setStockTable(stockRows);
       setSalesTable(salesTableRows.slice(0, 8));
       setPurchasesTable(purchasesTableRows.slice(0, 8));
+      setSalesExportRows(salesExportData);
+      setPurchasesExportRows(purchasesExportData);
+      setManagerInsights(generatedInsights.slice(0, 6));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo cargar reportes.';
       setError(message);
@@ -517,16 +710,34 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
   const downloadSalesCsv = () => {
     downloadCsv(
       `ventas-${startDate}-${endDate}.csv`,
-      ['ID', 'Fecha', 'Cliente', 'Items', 'Total'],
-      salesTable.map((row) => [row.id, row.date, row.customer, row.items, row.total])
+      ['ID', 'Fecha', 'Cliente', 'A crédito o efectivo', 'Monto', 'Cantidades', 'Empleado responsable', 'Nota de venta'],
+      salesExportRows.map((row) => [
+        row.id,
+        row.fecha,
+        row.cliente,
+        row.formaPago,
+        row.monto,
+        row.cantidades,
+        row.responsable,
+        row.notaVenta,
+      ])
     );
   };
 
   const downloadPurchasesCsv = () => {
     downloadCsv(
       `compras-${startDate}-${endDate}.csv`,
-      ['ID', 'Fecha', 'Proveedor', 'Items', 'Total', 'Crédito'],
-      purchasesTable.map((row) => [row.id, row.date, row.supplier, row.items, row.total, row.credit ? 'Sí' : 'No'])
+      ['ID', 'Fecha de registro', 'Monto', 'Proveedor', 'A crédito', 'Responsable de compra', 'Cantidad de productos', 'Fecha de compra'],
+      purchasesExportRows.map((row) => [
+        row.id,
+        row.fechaRegistro,
+        row.monto,
+        row.proveedor,
+        row.credito,
+        row.responsable,
+        row.cantidadProductos,
+        row.fechaCompra,
+      ])
     );
   };
 
@@ -614,26 +825,33 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <button
                 onClick={downloadSalesCsv}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
               >
-                <Download size={14} /> Exportar ventas CSV
+                <Download size={14} /> Descargar ventas
               </button>
               <button
                 onClick={downloadPurchasesCsv}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
               >
-                <Download size={14} /> Exportar compras CSV
+                <Download size={14} /> Descargar compras
               </button>
             </div>
+
           </div>
         </section>
 
         {error && (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>
         )}
+
+        <ManagerInsightsPanel
+          insights={managerInsights}
+          isLoading={isLoading}
+          subtitle="Materiales: señales gerenciales sobre ventas, compras, inventario y cartera."
+        />
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
           {[

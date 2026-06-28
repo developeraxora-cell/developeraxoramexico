@@ -1133,10 +1133,11 @@ ORDER BY s.qty_base ASC, p.name ASC`;
     let gotText = false;
 
     try {
+      const resolvedBranchId = await resolveBranchId(branchId);
       const runAgent = isOpenAIProviderEnabled ? runOpenAIAgent : runOllamaAgent;
       const finalText = await runAgent(
         {
-          ctx: { businessUnit, branchCode: branchId, branchName, lastSql: lastSqlRef.current || undefined },
+          ctx: { businessUnit, branchCode: branchId, branchName, branchId: resolvedBranchId, lastSql: lastSqlRef.current || undefined },
           onStatus: (label) => setStatusLabel(label),
           onQuery: (info) => {
             setDebugQueries((prev) => [...prev, info]);

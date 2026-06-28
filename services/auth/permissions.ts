@@ -1,5 +1,8 @@
 import { BusinessUnit, Role, User } from '../../types';
 
+const ENABLE_EXECUTIVE_DASHBOARD =
+  (import.meta.env.VITE_ENABLE_EXECUTIVE_DASHBOARD as string | undefined)?.toLowerCase() === 'true';
+
 export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'export' | 'admin';
 
 export interface TabPermission {
@@ -9,6 +12,7 @@ export interface TabPermission {
 }
 
 export const TAB_PERMISSIONS: Record<string, TabPermission> = {
+  'executive-dashboard': { businessUnit: 'global', moduleKey: 'dashboard' },
   pos: { businessUnit: 'materiales', moduleKey: 'sales' },
   purchases: { businessUnit: 'materiales', moduleKey: 'purchases' },
   inventory: { businessUnit: 'materiales', moduleKey: 'products' },
@@ -89,6 +93,15 @@ export const userCanAccess = (
 };
 
 export const userCanAccessTab = (user: User | null | undefined, tabId: string) => {
+  if (tabId === 'executive-dashboard') {
+    if (!ENABLE_EXECUTIVE_DASHBOARD) return false;
+    if (!user || !user.active) return false;
+    if (user.role === Role.SOCIO || isFullAccessRole(user.role)) return true;
+    return (
+      userCanAccess(user, 'materiales', 'reports') ||
+      userCanAccess(user, 'concretera', 'reports')
+    );
+  }
   const permission = TAB_PERMISSIONS[tabId];
   if (!permission) return false;
   return userCanAccess(user, permission.businessUnit, permission.moduleKey, permission.action ?? 'view');

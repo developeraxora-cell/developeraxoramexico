@@ -27,6 +27,7 @@ import VinosPurchasesScreen from './components/Vinos/VinosPurchasesScreen';
 import VinosAuditScreen from './components/Vinos/VinosAuditScreen';
 import VinosReportsScreen from './components/Vinos/VinosReportsScreen';
 import VinosCampaignsScreen from './components/Vinos/VinosCampaignsScreen';
+import ExecutiveDashboardScreen from './components/Executive/ExecutiveDashboardScreen';
 import {
   dieselTanksService,
   vehiclesService,
@@ -47,6 +48,7 @@ import { tabToPath, pathToTab } from './services/auth/routes';
 const SESSION_TOKEN_KEY = 'lopar_session_token';
 
 const APP_TAB_ORDER = [
+  'executive-dashboard',
   'pos',
   'purchases',
   'inventory',
@@ -461,6 +463,8 @@ const App: React.FC = () => {
     }
 
     switch (activeTab) {
+      case 'executive-dashboard':
+        return <ExecutiveDashboardScreen selectedBranchId={selectedBranchId} branches={activeBranches} />;
       case 'pos':
         return <POSScreen key="pos-materiales" products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'purchases':
@@ -536,7 +540,7 @@ const App: React.FC = () => {
       case 'diesel':
         return <DieselScreen tanks={tanks} setTanks={setTanks} vehicles={vehicles} setVehicles={setVehicles} drivers={drivers} setDrivers={setDrivers} logs={dieselLogs} setLogs={setDieselLogs} currentUser={currentUser} selectedBranchId={selectedBranchId} branches={activeBranches} />;
       case 'reports':
-        return <ReportsScreen key="reports-materiales" selectedBranchId={selectedBranchId} branches={activeBranches} />;
+        return <ReportsScreen key="reports-materiales" selectedBranchId={selectedBranchId} branches={activeBranches} businessUnit="materiales" />;
       case 'transport-pos':
         return <POSScreen key="pos-transporteria" products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} businessUnit="transporteria" />;
       case 'transport-purchases':

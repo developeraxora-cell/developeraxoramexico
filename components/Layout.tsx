@@ -75,6 +75,14 @@ const Layout: React.FC<LayoutProps> = ({
 
   const navigation: NavGroup[] = [
     {
+      id: 'gerencial',
+      label: 'Gerencial',
+      icon: '📈',
+      items: [
+        { id: 'executive-dashboard', label: 'Dashboard Gerencial', icon: '📊' },
+      ]
+    },
+    {
       id: 'materiales',
       label: 'Materiales',
       icon: '🏗️',
@@ -249,6 +257,9 @@ const Layout: React.FC<LayoutProps> = ({
 
   const activeBranch = branches.find(b => b.id === selectedBranchId);
   const selectableBranches = branches.filter((branch) => userCanAccessBranch(currentUser, branch));
+  const assistantBusinessUnit = ['materiales', 'concretera', 'logistica', 'transporteria', 'vinos'].includes(String(currentGroup?.id))
+    ? String(currentGroup?.id)
+    : activeBranch?.businessUnit || 'materiales';
 
   useEffect(() => {
     if (!canUseAssistant && isAssistantOpen) {
@@ -635,7 +646,7 @@ const Layout: React.FC<LayoutProps> = ({
           branchName={activeBranch?.name}
           userName={currentUser?.name?.split(' ')[0]}
           userId={currentUser?.id}
-          businessUnit={currentGroup?.id || 'materiales'}
+          businessUnit={assistantBusinessUnit}
           branchId={selectedBranchId}
         />
       )}
