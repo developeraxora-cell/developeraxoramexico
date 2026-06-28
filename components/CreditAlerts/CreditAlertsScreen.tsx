@@ -150,6 +150,9 @@ const buildAlertRow = (customer: AlertCustomer, notes: AlertNote[], today: Date)
   };
 };
 
+const rowHasCreditActivity = (row: AlertRow) =>
+  row.debt > 0 || row.openNotesCount > 0 || row.alertType !== 'NINGUNO';
+
 const rowMatchesFilter = (row: AlertRow, filter: AlertFilter) => {
   switch (filter) {
     case 'VENCIDOS':
@@ -162,7 +165,7 @@ const rowMatchesFilter = (row: AlertRow, filter: AlertFilter) => {
       return !row.isOverLimit && row.isNearLimit;
     case 'TODOS':
     default:
-      return true;
+      return rowHasCreditActivity(row);
   }
 };
 
@@ -215,7 +218,7 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
     [module]
   );
 
-  const businessUnit = module === 'transporteria' ? 'transporteria' : undefined;
+  const businessUnit = module === 'transporteria' ? 'transporteria' : module === 'materiales' ? 'materiales' : undefined;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -348,7 +351,7 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
       POR_VENCER: alertRows.filter((row) => !row.hasOverdue && row.isNearDue).length,
       LIMITE_EXCEDIDO: alertRows.filter((row) => row.isOverLimit).length,
       LIMITE_PREVENTIVO: alertRows.filter((row) => !row.isOverLimit && row.isNearLimit).length,
-      TODOS: alertRows.length,
+      TODOS: alertRows.filter(rowHasCreditActivity).length,
     }),
     [alertRows]
   );
@@ -359,7 +362,7 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
       POR_VENCER: alertRows.filter((row) => !row.hasOverdue && row.isNearDue).reduce((acc, row) => acc + row.debt, 0),
       LIMITE_EXCEDIDO: alertRows.filter((row) => row.isOverLimit).reduce((acc, row) => acc + row.debt, 0),
       LIMITE_PREVENTIVO: alertRows.filter((row) => !row.isOverLimit && row.isNearLimit).reduce((acc, row) => acc + row.debt, 0),
-      TODOS: alertRows.reduce((acc, row) => acc + row.debt, 0),
+      TODOS: alertRows.filter(rowHasCreditActivity).reduce((acc, row) => acc + row.debt, 0),
     }),
     [alertRows]
   );
