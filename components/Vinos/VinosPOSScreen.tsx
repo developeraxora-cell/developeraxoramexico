@@ -848,6 +848,22 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
+            <button
+              onClick={openHistory}
+              className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+              title="Historial de ventas"
+            >
+              <Receipt size={14}/> Historial
+            </button>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="mr-auto flex items-center gap-2 text-xs font-bold text-slate-600">
+              <Clock size={14} className="text-orange-500" />
+              <span>
+                {cashSession ? `Caja abierta desde ${formatDateTime(cashSession.opened_at)}` : 'Caja sin iniciar'}
+              </span>
+            </div>
             {cashSession ? (
               <button
                 onClick={openCloseCashModal}
@@ -870,13 +886,6 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               title="Historial de caja"
             >
               <History size={14}/> Caja
-            </button>
-            <button
-              onClick={openHistory}
-              className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
-              title="Historial de ventas"
-            >
-              <Receipt size={14}/> Historial
             </button>
           </div>
         </div>
