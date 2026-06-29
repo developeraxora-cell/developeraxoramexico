@@ -619,29 +619,6 @@ const Layout: React.FC<LayoutProps> = ({
               </div>
               <div className="bg-green-100 p-2 rounded-lg text-green-600 animate-pulse" title="Ubicación editable">🌐</div>
             </div>
-            {canUseAssistant && (
-              <button
-                onClick={() => {
-                  setAssistantPrompt('');
-                  setAssistantAgent(undefined);
-                  setIsAssistantOpen(true);
-                }}
-                title="Asistente IA"
-                aria-label="Abrir asistente IA"
-                className="group relative flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-orange-400 shadow-lg shadow-slate-900/20 transition-all hover:bg-slate-800 hover:text-orange-300 hover:shadow-orange-500/20 md:h-11 md:w-11"
-              >
-                <span className="absolute right-1 top-1 h-2 w-2 animate-pulse rounded-full bg-orange-500 ring-2 ring-slate-900" />
-                <svg className="h-6 w-6 transition-transform group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 3.5V6" />
-                  <circle cx="12" cy="2.6" r="1" fill="currentColor" stroke="none" />
-                  <rect x="4" y="6" width="16" height="12" rx="3.5" />
-                  <path d="M2 11v3M22 11v3" />
-                  <circle cx="9" cy="12" r="1.3" fill="currentColor" stroke="none" />
-                  <circle cx="15" cy="12" r="1.3" fill="currentColor" stroke="none" />
-                  <path d="M9.5 15.2h5" />
-                </svg>
-              </button>
-            )}
           </div>
         </header>
 
