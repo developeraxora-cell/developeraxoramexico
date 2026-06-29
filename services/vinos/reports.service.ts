@@ -14,8 +14,49 @@ export interface ReportsKPIs {
   birthdays_this_month: Array<{ id: string; name: string; birthday: string; phone: string | null }>;
 }
 
+export interface ReportsDateRange {
+  startDate: string;
+  endDate: string;
+}
+
+const parseLocalDateInput = (value: string, endOfDay = false) => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(
+    year,
+    (month || 1) - 1,
+    day || 1,
+    endOfDay ? 23 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 999 : 0
+  );
+};
+
+const toLocalDateKey = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const resolveDateRange = (range: number | ReportsDateRange) => {
+  if (typeof range === 'number') {
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    const start = new Date(end);
+    start.setDate(end.getDate() - Math.max(1, range) + 1);
+    start.setHours(0, 0, 0, 0);
+    return { start, end };
+  }
+
+  return {
+    start: parseLocalDateInput(range.startDate),
+    end: parseLocalDateInput(range.endDate, true),
+  };
+};
+
 export const vinosReportsService = {
-  async getKPIs(branchId: number | null, days = 30): Promise<ReportsKPIs> {
+  async getKPIs(branchId: number | null, range: number | ReportsDateRange = 30): Promise<ReportsKPIs> {
     const empty: ReportsKPIs = {
       total_sales: 0, total_amount: 0, avg_ticket: 0, new_customers: 0,
       top_customers: [], top_products: [], sales_by_day: [],
@@ -25,15 +66,16 @@ export const vinosReportsService = {
     };
     if (!isVinosConfigured) return empty;
 
-    const fromDate = new Date();
-    fromDate.setDate(fromDate.getDate() - days);
+    const { start: fromDate, end: toDate } = resolveDateRange(range);
     const fromIso = fromDate.toISOString();
+    const toIso = toDate.toISOString();
 
     // 1. Ventas en rango
     let salesQ = supabaseVinos
       .from('sales')
       .select('id, customer_id, total, payment_method, wallet_used, created_at, customer:customers(name)')
       .gte('created_at', fromIso)
+      .lte('created_at', toIso)
       .is('deleted_at', null);
     if (branchId) salesQ = salesQ.eq('branch_id', branchId);
     const { data: salesData } = await salesQ;
@@ -54,16 +96,21 @@ export const vinosReportsService = {
       else payment_distribution.EFECTIVO += 1;
     });
 
-    // 4. Sales by day (último 7 días)
+    // 4. Sales by day
     const dayMap: Record<string, { amount: number; count: number }> = {};
-    const now = new Date();
-    for (let i = 6; i >= 0; i -= 1) {
-      const d = new Date(now); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0);
-      const key = d.toISOString().slice(0, 10);
+    const rangeDays = Math.max(1, Math.ceil((toDate.getTime() - fromDate.getTime()) / 86400000));
+    const chartStart = new Date(rangeDays <= 14 ? fromDate : toDate);
+    if (rangeDays > 14) chartStart.setDate(toDate.getDate() - 6);
+    chartStart.setHours(0, 0, 0, 0);
+    const chartEnd = new Date(toDate);
+    chartEnd.setHours(0, 0, 0, 0);
+
+    for (let d = new Date(chartStart); d <= chartEnd; d.setDate(d.getDate() + 1)) {
+      const key = toLocalDateKey(d);
       dayMap[key] = { amount: 0, count: 0 };
     }
     sales.forEach(s => {
-      const key = s.created_at.slice(0, 10);
+      const key = toLocalDateKey(new Date(s.created_at));
       if (dayMap[key]) {
         dayMap[key].amount += Number(s.total);
         dayMap[key].count += 1;

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Plus, Search, Pencil, Trash2, Package, TrendingUp, AlertTriangle, X, Settings, RefreshCw, Check, ChevronDown, Save, BarChart3, Loader2,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
@@ -11,6 +12,7 @@ import {
 } from '../../services/vinos/products.service';
 import { vinosCatalogService, type Category, type Uom } from '../../services/vinos/catalog.service';
 import { vinosCustomersService } from '../../services/vinos/customers.service';
+import { logVinosAudit } from '../../services/audit/audit.service';
 import VinosProductModal from './VinosProductModal';
 
 interface Props {
@@ -49,6 +51,13 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
   // delete
   const [deleteTarget, setDeleteTarget] = useState<ProductWithStock | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // stock manual
+  const [stockTarget, setStockTarget] = useState<ProductWithStock | null>(null);
+  const [stockValue, setStockValue] = useState('');
+  const [stockNote, setStockNote] = useState('');
+  const [stockSaving, setStockSaving] = useState(false);
+  const [stockError, setStockError] = useState('');
 
   // catalog manager
   const [catalogModalOpen, setCatalogModalOpen] = useState(false);
@@ -143,6 +152,21 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
     }
   };
 
+  const openStockAdjust = (p: ProductWithStock) => {
+    setStockTarget(p);
+    setStockValue(String(p.total_stock ?? 0));
+    setStockNote('');
+    setStockError('');
+  };
+
+  const closeStockAdjust = () => {
+    if (stockSaving) return;
+    setStockTarget(null);
+    setStockValue('');
+    setStockNote('');
+    setStockError('');
+  };
+
   const closeHistory = () => {
     setHistoryOpen(false);
     setHistoryTarget(null);
@@ -161,6 +185,70 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
       setDeleteTarget(null);
     } catch (e) { console.error(e); }
     finally { setDeleting(false); }
+  };
+
+  const handleStockAdjust = async () => {
+    if (!stockTarget) return;
+    const nextQty = Number(stockValue);
+    const note = stockNote.trim();
+
+    if (!branchDbId) {
+      setStockError('No se pudo identificar la sucursal activa.');
+      return;
+    }
+    if (!Number.isFinite(nextQty) || nextQty < 0) {
+      setStockError('Ingresa un stock válido mayor o igual a 0.');
+      return;
+    }
+    if (!note) {
+      setStockError('La observación es obligatoria para ajustar stock.');
+      return;
+    }
+
+    const previousQty = Number(stockTarget.total_stock ?? 0);
+    setStockSaving(true);
+    setStockError('');
+    try {
+      await vinosProductsService.adjustStock(stockTarget.id, branchDbId, nextQty, note);
+
+      logVinosAudit({
+        branch_id: selectedBranchId,
+        branch_name: branchName,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ACTUALIZAR',
+        entity_type: 'producto',
+        entity_id: String(stockTarget.id),
+        description: `Stock ajustado manualmente: ${stockTarget.name} de ${previousQty} a ${nextQty}`,
+        justification: note,
+        previous_data: {
+          product_id: stockTarget.id,
+          name: stockTarget.name,
+          stock: previousQty,
+        },
+        new_data: {
+          product_id: stockTarget.id,
+          name: stockTarget.name,
+          stock: nextQty,
+          observation: note,
+        },
+      });
+
+      setProducts(prev => prev.map(product => (
+        product.id === stockTarget.id ? { ...product, total_stock: nextQty } : product
+      )));
+      if (historyOpen && historyTarget?.id === stockTarget.id) {
+        void openHistory({ ...stockTarget, total_stock: nextQty });
+      }
+      await load();
+      setStockTarget(null);
+      setStockValue('');
+      setStockNote('');
+    } catch (e) {
+      setStockError(e instanceof Error ? e.message : 'No se pudo ajustar el stock.');
+    } finally {
+      setStockSaving(false);
+    }
   };
 
   // ── catalog manager actions ─────────────────────────────
@@ -392,6 +480,9 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                           <button onClick={() => openHistory(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600" title="Ver estadísticas">
                             <BarChart3 size={14}/>
                           </button>
+                          <button onClick={() => openStockAdjust(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600" title="Editar stock manual">
+                            <SlidersHorizontal size={14}/>
+                          </button>
                           <button onClick={() => openEdit(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Editar"><Pencil size={14}/></button>
                           <button onClick={() => setDeleteTarget(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
                         </div>
@@ -420,6 +511,65 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
           closeModal();
         }}
       />
+
+      {stockTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <h2 className="text-base font-black uppercase tracking-tight text-slate-900">Editar stock manual</h2>
+                <p className="text-[10px] font-bold text-slate-400">{stockTarget.name} · {stockTarget.sku}</p>
+              </div>
+              <button onClick={closeStockAdjust} disabled={stockSaving} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"><X size={18}/></button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stock actual</p>
+                  <p className="mt-1 text-2xl font-black text-slate-900">{stockTarget.total_stock}</p>
+                </div>
+                <label className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nuevo stock</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={stockValue}
+                    onChange={e => setStockValue(e.target.value)}
+                    className="mt-1 w-full bg-transparent text-2xl font-black text-slate-900 outline-none"
+                    autoFocus
+                  />
+                </label>
+              </div>
+
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observación obligatoria</span>
+                <textarea
+                  value={stockNote}
+                  onChange={e => setStockNote(e.target.value)}
+                  rows={4}
+                  placeholder="Ej. Conteo físico, merma, ajuste por captura incorrecta..."
+                  className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                />
+              </label>
+
+              {stockError && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{stockError}</div>
+              )}
+            </div>
+
+            <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
+              <button onClick={closeStockAdjust} disabled={stockSaving} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                Cancelar
+              </button>
+              <button onClick={handleStockAdjust} disabled={stockSaving} className="flex-1 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-50">
+                {stockSaving ? 'Guardando...' : 'Guardar ajuste'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {historyOpen && historyTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">

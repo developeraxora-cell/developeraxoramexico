@@ -446,18 +446,26 @@ export const vinosProductsService = {
 
     const updateRows = (auditRes.rows ?? [])
       .filter((row) => row.action_type === 'CREAR' || row.action_type === 'ACTUALIZAR')
-      .map((row) => ({
-        id: `AUD-${row.log_id}`,
-        status: 'ACTUALIZACION' as const,
-        created_at: row.timestamp,
-        qty: null,
-        unit_price: null,
-        subtotal: null,
-        price_type: null,
-        profit: null,
-        source: row.action_type === 'CREAR' ? 'Alta de catálogo' : 'Actualización de catálogo',
-        detail: row.description,
-      }) satisfies ProductHistoryRow);
+      .map((row) => {
+        const observation = row.observation ?? row.justification ?? null;
+        const description = row.description.replace(/\s\[[0-9a-f-]{36}\]/i, '');
+        return {
+          id: `AUD-${row.log_id}`,
+          status: 'ACTUALIZACION' as const,
+          created_at: row.timestamp,
+          qty: null,
+          unit_price: null,
+          subtotal: null,
+          price_type: null,
+          profit: null,
+          source: row.action_type === 'CREAR'
+            ? 'Alta de catálogo'
+            : row.description.toLowerCase().includes('stock ajustado')
+              ? 'Ajuste manual de stock'
+              : 'Actualización de catálogo',
+          detail: [description, observation ? `Obs: ${observation}` : null].filter(Boolean).join(' | ') || null,
+        } satisfies ProductHistoryRow;
+      });
 
     const sortedPurchaseRows = [...purchaseRows].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     const lastPurchaseCost = sortedPurchaseRows[0]?.unit_price ?? null;

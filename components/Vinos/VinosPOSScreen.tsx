@@ -2,12 +2,14 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 import {
   Search, Trash2, User as UserIcon, CreditCard, Banknote, Gift, Tag, Receipt, X, Loader2, Plus, Minus, Wallet, Eye, FileText, Pencil,
+  Clock, History, LockKeyhole, UnlockKeyhole,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
 import { vinosProductsService, type ProductWithStock } from '../../services/vinos/products.service';
 import { vinosCustomersService, type VinosCustomer } from '../../services/vinos/customers.service';
 import { vinosSalesService, type SaleCartItem, type PaymentMethod, type PriceTier } from '../../services/vinos/sales.service';
+import { vinosCashRegisterService, type CashRegisterSession, type CashRegisterSummary } from '../../services/vinos/cashRegister.service';
 import { supabaseVinos } from '../../services/vinosClient';
 import { generateVinosSaleTicket, type VinosSalePdfInput } from '../../services/vinos/saleTicketPdf';
 import { logVinosAudit } from '../../services/audit/audit.service';
@@ -49,12 +51,28 @@ const STOCK_EPSILON = 0.000001;
 const wait = (ms: number) => new Promise<void>(resolve => window.setTimeout(resolve, ms));
 const getCashChange = (cashReceivedValue: number, saleTotal: number) =>
   Math.max(0, Number(cashReceivedValue || 0) - Number(saleTotal || 0));
+const formatDateTime = (value: string | null | undefined) =>
+  value ? new Date(value).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 
 const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branches }) => {
   const [products, setProducts] = useState<ProductFull[]>([]);
   const [customers, setCustomers] = useState<VinosCustomer[]>([]);
   const [branchDbId, setBranchDbId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // caja
+  const [cashSession, setCashSession] = useState<CashRegisterSession | null>(null);
+  const [cashLoading, setCashLoading] = useState(false);
+  const [cashOpenModal, setCashOpenModal] = useState(false);
+  const [cashCloseModal, setCashCloseModal] = useState(false);
+  const [cashHistoryOpen, setCashHistoryOpen] = useState(false);
+  const [cashHistory, setCashHistory] = useState<CashRegisterSession[]>([]);
+  const [cashSummary, setCashSummary] = useState<CashRegisterSummary | null>(null);
+  const [openingCash, setOpeningCash] = useState('0');
+  const [openingObservations, setOpeningObservations] = useState('');
+  const [deliveredCash, setDeliveredCash] = useState('');
+  const [closingObservations, setClosingObservations] = useState('');
+  const [cashError, setCashError] = useState('');
 
   // catálogo
   const [search, setSearch] = useState('');
@@ -130,6 +148,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     vinosCustomersService.getBranchId(selectedBranchId).then(setBranchDbId);
   }, [selectedBranchId]);
 
+  const activeBranch = useMemo(
+    () => branches.find(b => b.id === selectedBranchId) ?? null,
+    [branches, selectedBranchId],
+  );
+
+  const branchName = activeBranch?.name ?? 'CASA TAHONA';
+
   // ── load catálogo + clientes ────────────────────────────
   const load = useCallback(async () => {
     setLoading(true);
@@ -163,6 +188,118 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   }, [branchDbId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadCashSession = useCallback(async () => {
+    if (!branchDbId) {
+      setCashSession(null);
+      return;
+    }
+    setCashLoading(true);
+    setCashError('');
+    try {
+      const session = await vinosCashRegisterService.getActive(branchDbId, currentUser.id);
+      setCashSession(session);
+    } catch (e) {
+      setCashError(e instanceof Error ? e.message : 'No se pudo cargar la caja.');
+    } finally {
+      setCashLoading(false);
+    }
+  }, [branchDbId, currentUser.id]);
+
+  useEffect(() => { loadCashSession(); }, [loadCashSession]);
+
+  const handleOpenCash = async () => {
+    if (!branchDbId) return;
+    const amount = Number(openingCash);
+    if (!Number.isFinite(amount) || amount < 0) {
+      setCashError('Ingresa un efectivo inicial válido.');
+      return;
+    }
+    setCashLoading(true);
+    setCashError('');
+    try {
+      const session = await vinosCashRegisterService.open({
+        branch_id: branchDbId,
+        branch_code: activeBranch?.code ?? selectedBranchId,
+        branch_name: branchName,
+        cashier_user_id: currentUser.id,
+        cashier_name: currentUser.name,
+        opening_cash: amount,
+        opening_observations: openingObservations,
+      });
+      setCashSession(session);
+      setCashOpenModal(false);
+      setOpeningCash('0');
+      setOpeningObservations('');
+      setFeedback({ type: 'success', msg: 'Caja iniciada.' });
+    } catch (e) {
+      setCashError(e instanceof Error ? e.message : 'No se pudo iniciar caja.');
+    } finally {
+      setCashLoading(false);
+    }
+  };
+
+  const openCloseCashModal = async () => {
+    if (!cashSession) return;
+    setCashCloseModal(true);
+    setCashError('');
+    setClosingObservations('');
+    setDeliveredCash('');
+    setCashSummary(null);
+    setCashLoading(true);
+    try {
+      const summary = await vinosCashRegisterService.previewClose(cashSession);
+      setCashSummary(summary);
+      setDeliveredCash(String(summary.expected_cash.toFixed(2)));
+    } catch (e) {
+      setCashError(e instanceof Error ? e.message : 'No se pudo calcular el corte.');
+    } finally {
+      setCashLoading(false);
+    }
+  };
+
+  const handleCloseCash = async () => {
+    if (!cashSession) return;
+    const delivered = Number(deliveredCash);
+    if (!Number.isFinite(delivered) || delivered < 0) {
+      setCashError('Ingresa el efectivo entregado.');
+      return;
+    }
+    setCashLoading(true);
+    setCashError('');
+    try {
+      await vinosCashRegisterService.close({
+        session: cashSession,
+        delivered_cash: delivered,
+        closing_observations: closingObservations,
+      });
+      setCashSession(null);
+      setCashCloseModal(false);
+      setCashSummary(null);
+      setDeliveredCash('');
+      setClosingObservations('');
+      setFeedback({ type: 'success', msg: 'Caja cerrada.' });
+    } catch (e) {
+      setCashError(e instanceof Error ? e.message : 'No se pudo cerrar caja.');
+    } finally {
+      setCashLoading(false);
+    }
+  };
+
+  const openCashHistory = async () => {
+    if (!branchDbId) return;
+    setCashHistoryOpen(true);
+    setCashLoading(true);
+    setCashError('');
+    try {
+      const rows = await vinosCashRegisterService.list(branchDbId);
+      setCashHistory(rows);
+    } catch (e) {
+      setCashError(e instanceof Error ? e.message : 'No se pudo cargar el historial de caja.');
+    } finally {
+      setCashLoading(false);
+    }
+  };
 
   // ── filtrados ───────────────────────────────────────────
   const filteredProducts = useMemo(() => {
@@ -711,6 +848,29 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
+            {cashSession ? (
+              <button
+                onClick={openCloseCashModal}
+                className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-emerald-700 hover:bg-emerald-100"
+                title={`Caja abierta desde ${formatDateTime(cashSession.opened_at)}`}
+              >
+                <LockKeyhole size={14}/> Cerrar caja
+              </button>
+            ) : (
+              <button
+                onClick={() => { setCashOpenModal(true); setCashError(''); }}
+                className="flex items-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-orange-700 hover:bg-orange-100"
+              >
+                <UnlockKeyhole size={14}/> Iniciar caja
+              </button>
+            )}
+            <button
+              onClick={openCashHistory}
+              className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+              title="Historial de caja"
+            >
+              <History size={14}/> Caja
+            </button>
             <button
               onClick={openHistory}
               className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
@@ -879,6 +1039,197 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           )}
         </div>
       </div>
+
+      {/* ─── MODAL INICIAR CAJA ───────────────────────── */}
+      {cashOpenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Iniciar caja</h3>
+                <p className="text-[11px] font-bold text-slate-400">{currentUser.name} · {branchName}</p>
+              </div>
+              <button onClick={() => setCashOpenModal(false)} disabled={cashLoading} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-40"><X size={18}/></button>
+            </div>
+            <div className="space-y-4 px-6 py-5">
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Efectivo inicial</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={openingCash}
+                  onChange={e => setOpeningCash(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-xl font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  autoFocus
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observaciones</span>
+                <textarea
+                  rows={3}
+                  value={openingObservations}
+                  onChange={e => setOpeningObservations(e.target.value)}
+                  placeholder="Opcional..."
+                  className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                />
+              </label>
+              {cashError && <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{cashError}</p>}
+            </div>
+            <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
+              <button onClick={() => setCashOpenModal(false)} disabled={cashLoading} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-40">Cancelar</button>
+              <button onClick={handleOpenCash} disabled={cashLoading} className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-40">
+                {cashLoading && <Loader2 size={14} className="animate-spin"/>}
+                Iniciar caja
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL CERRAR CAJA ────────────────────────── */}
+      {cashCloseModal && cashSession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-4xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Cerrar caja</h3>
+                <p className="text-[11px] font-bold text-slate-400">
+                  {cashSession.cashier_name} · Apertura {formatDateTime(cashSession.opened_at)}
+                </p>
+              </div>
+              <button onClick={() => setCashCloseModal(false)} disabled={cashLoading} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-40"><X size={18}/></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+              {cashLoading && !cashSummary ? (
+                <div className="py-16 text-center">
+                  <Loader2 size={28} className="mx-auto animate-spin text-orange-500" />
+                  <p className="mt-3 text-sm font-bold text-slate-400">Calculando corte...</p>
+                </div>
+              ) : cashSummary ? (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {[
+                      { label: 'Ventas efectivo', value: cashSummary.cash_sales_total, icon: Banknote, box: 'border-emerald-200 bg-emerald-50', iconBox: 'bg-emerald-100 text-emerald-700', valueClass: 'text-emerald-700' },
+                      { label: 'Cortesías', value: cashSummary.courtesy_total, icon: Gift, box: 'border-purple-200 bg-purple-50', iconBox: 'bg-purple-100 text-purple-700', valueClass: 'text-purple-700' },
+                      { label: 'Descuentos', value: cashSummary.discounts_total, icon: Tag, box: 'border-blue-200 bg-blue-50', iconBox: 'bg-blue-100 text-blue-700', valueClass: 'text-blue-700' },
+                      { label: 'Cancelaciones', value: cashSummary.cancellations_total, icon: Trash2, box: 'border-red-200 bg-red-50', iconBox: 'bg-red-100 text-red-700', valueClass: 'text-red-700' },
+                      { label: 'Total vendido', value: cashSummary.total_sold, icon: Receipt, box: 'border-orange-200 bg-orange-50', iconBox: 'bg-orange-100 text-orange-700', valueClass: 'text-orange-700' },
+                      { label: 'Efectivo esperado', value: cashSummary.expected_cash, icon: Wallet, box: 'border-slate-200 bg-slate-50', iconBox: 'bg-slate-200 text-slate-700', valueClass: 'text-slate-900' },
+                    ].map(row => (
+                      <div key={row.label} className={`rounded-2xl border p-4 ${row.box}`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{row.label}</p>
+                            <p className={`mt-1 text-xl font-black ${row.valueClass}`}>{formatCurrency(row.value)}</p>
+                          </div>
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${row.iconBox}`}>
+                            <row.icon size={18} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <label className="grid gap-3 md:grid-cols-[180px_1fr_auto] md:items-center">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Efectivo entregado</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={deliveredCash}
+                        onChange={e => setDeliveredCash(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-black text-slate-900 outline-none focus:border-orange-400"
+                      />
+                      <span className={`text-xs font-black ${Number(deliveredCash || 0) - cashSummary.expected_cash === 0 ? 'text-slate-500' : Number(deliveredCash || 0) - cashSummary.expected_cash > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        Dif. {formatCurrency(Number(deliveredCash || 0) - cashSummary.expected_cash)}
+                      </span>
+                    </label>
+                  </div>
+
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observaciones de cierre</span>
+                    <textarea
+                      rows={3}
+                      value={closingObservations}
+                      onChange={e => setClosingObservations(e.target.value)}
+                      placeholder="Opcional..."
+                      className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    />
+                  </label>
+                </>
+              ) : null}
+              {cashError && <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{cashError}</p>}
+            </div>
+
+            <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
+              <button onClick={() => setCashCloseModal(false)} disabled={cashLoading} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-40">Cancelar</button>
+              <button onClick={handleCloseCash} disabled={cashLoading || !cashSummary} className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-40">
+                {cashLoading && <Loader2 size={14} className="animate-spin"/>}
+                Cerrar caja
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL HISTORIAL CAJA ─────────────────────── */}
+      {cashHistoryOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-6xl rounded-xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+                  <Clock size={18}/>
+                </div>
+                <div>
+                  <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Historial de caja</h3>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{branchName}</p>
+                </div>
+              </div>
+              <button onClick={() => setCashHistoryOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X size={18}/></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {cashLoading ? (
+                <p className="py-16 text-center text-sm text-slate-400">Cargando...</p>
+              ) : cashHistory.length === 0 ? (
+                <p className="py-16 text-center text-sm text-slate-400">Sin cortes de caja registrados.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 z-10 bg-slate-100">
+                    <tr className="border-b border-slate-200">
+                      {['Cajera','Apertura','Cierre','Efectivo','Cortesías','Desc.','Cancel.','Total','Esperado','Obs.'].map(h => (
+                        <th key={h} className="px-3 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {cashHistory.map(row => (
+                      <tr key={row.id} className="hover:bg-orange-50/30">
+                        <td className="px-3 py-3 text-xs font-bold text-slate-800">{row.cashier_name}</td>
+                        <td className="px-3 py-3 text-xs text-slate-600 whitespace-nowrap">{formatDateTime(row.opened_at)}</td>
+                        <td className="px-3 py-3 text-xs text-slate-600 whitespace-nowrap">{formatDateTime(row.closed_at)}</td>
+                        <td className="px-3 py-3 text-xs font-bold text-slate-900">{formatCurrency(row.cash_sales_total)}</td>
+                        <td className="px-3 py-3 text-xs font-bold text-slate-900">{formatCurrency(row.courtesy_total)}</td>
+                        <td className="px-3 py-3 text-xs font-bold text-slate-900">{formatCurrency(row.discounts_total)}</td>
+                        <td className="px-3 py-3 text-xs font-bold text-slate-900">{row.cancellations_count} · {formatCurrency(row.cancellations_total)}</td>
+                        <td className="px-3 py-3 text-xs font-black text-slate-900">{formatCurrency(row.total_sold)}</td>
+                        <td className="px-3 py-3 text-xs font-black text-slate-900">{formatCurrency(row.expected_cash)}</td>
+                        <td className="px-3 py-3 text-xs text-slate-500 max-w-[220px]">
+                          <p className="truncate">{row.closing_observations || row.opening_observations || '—'}</p>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── MODAL ADD PRODUCT (uom + tier + qty) ───────── */}
       {addProductTarget && (
