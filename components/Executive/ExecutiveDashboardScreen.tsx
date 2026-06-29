@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, CalendarDays, DollarSign, PackageSearch, RefreshCw, Users } from 'lucide-react';
+import { Bot, CalendarDays, ClipboardList, DollarSign, PackageSearch, RefreshCw, Users } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { Branch } from '../../types';
@@ -8,16 +8,20 @@ import ManagerInsightsPanel, { ManagerInsight } from '../common/ManagerInsightsP
 interface ExecutiveDashboardScreenProps {
   selectedBranchId: string;
   branches: Branch[];
+  fixedUnit?: ExecutiveUnit;
 }
 
-type ExecutiveUnit = 'materiales' | 'concretera';
+type ExecutiveUnit = 'materiales' | 'concretera' | 'transporteria';
 type DatePreset = 'today' | '7d' | '30d' | 'month' | 'custom';
+type ActionPriority = 'alta' | 'media' | 'baja';
 
 interface TxRow {
   id: number;
   type: 'PURCHASE' | 'SALE' | 'ADJUST' | 'TRANSFER';
   created_at: string;
   nombre_cliente?: string | null;
+  created_by?: string | null;
+  supplier_id?: string | number | null;
   is_credit?: boolean | null;
   payment_type?: string | null;
   credit_amount?: number | null;
@@ -67,6 +71,52 @@ interface PeriodMetrics {
   creditSalesTotal: number;
   topProducts: Array<{ id: string; name: string; qty: number; total: number; margin: number }>;
   topCustomers: Array<{ name: string; total: number; tickets: number }>;
+  customers: Array<{ name: string; total: number; tickets: number }>;
+  salesMissingResponsible: number;
+  purchasesMissingSupplier: number;
+}
+
+interface CustomerDrop {
+  name: string;
+  previousTotal: number;
+  currentTotal: number;
+  changePct: number;
+}
+
+interface DataQualityIssue {
+  id: string;
+  label: string;
+  value: string;
+  severity: 'alta' | 'media' | 'baja';
+  description: string;
+}
+
+interface ActionRecommendation {
+  id: string;
+  title: string;
+  description: string;
+  priority: ActionPriority;
+  area: string;
+  suggestedOwner: string;
+}
+
+interface DashboardAssistantAgent {
+  id: string;
+  name: string;
+  subtitle: string;
+  tone: string;
+  focus: string[];
+}
+
+interface ManagerCard {
+  title: string;
+  icon: React.ElementType;
+  status: string;
+  tone: string;
+  summary: string;
+  actions: string[];
+  agent: DashboardAssistantAgent;
+  context?: string[];
 }
 
 interface DashboardData {
@@ -77,6 +127,8 @@ interface DashboardData {
   topDebtCustomer?: { name: string; balance: number };
   stockCritical: Array<{ id: string; name: string; stock: number; min: number; soldQty: number; soldTotal: number }>;
   stockLowRotation: Array<{ id: string; name: string; stock: number; min: number; soldQty: number }>;
+  customerDrops: CustomerDrop[];
+  dataQuality: DataQualityIssue[];
   insights: ManagerInsight[];
 }
 
@@ -93,6 +145,9 @@ const emptyMetrics = (): PeriodMetrics => ({
   creditSalesTotal: 0,
   topProducts: [],
   topCustomers: [],
+  customers: [],
+  salesMissingResponsible: 0,
+  purchasesMissingSupplier: 0,
 });
 
 const lineAmount = (item: ItemRow) =>
@@ -147,6 +202,7 @@ const pctChange = (current: number, previous: number) => {
 };
 
 const formatPct = (value: number) => `${value >= 0 ? '+' : ''}${formatNumber(value, undefined, { maximumFractionDigits: 1 })}%`;
+const formatAbsPct = (value: number) => `${formatNumber(Math.abs(value), undefined, { maximumFractionDigits: 1 })}%`;
 
 const unitConfig = {
   materiales: {
@@ -167,12 +223,24 @@ const unitConfig = {
     creditTable: 'concrete_credit_notes',
     creditCustomerRelation: 'concrete_credit_customers',
   },
+  transporteria: {
+    label: 'Transportería',
+    txTable: 'inventory_transactions',
+    itemTable: 'inventory_transaction_items',
+    productTable: 'products',
+    stockTable: 'inventory_stock',
+    creditTable: 'credit_notes',
+    creditCustomerRelation: 'credit_customers',
+  },
 } as const;
 
-const statusTone = (value: number) =>
-  value >= 0 ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : 'text-red-700 bg-red-50 border-red-100';
+const priorityTone: Record<ActionPriority, string> = {
+  alta: 'border-red-200 bg-red-50 text-red-700',
+  media: 'border-amber-200 bg-amber-50 text-amber-700',
+  baja: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+};
 
-const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ selectedBranchId, branches }) => {
+const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ selectedBranchId, branches, fixedUnit }) => {
   const branchId = useMemo(() => {
     const match = branches.find((b) => b.id === selectedBranchId);
     if (match?.dbId !== undefined) return String(match.dbId);
@@ -180,13 +248,17 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
   }, [branches, selectedBranchId]);
 
   const branchName = branches.find((b) => b.id === selectedBranchId)?.name ?? 'Sucursal activa';
-  const [unit, setUnit] = useState<ExecutiveUnit>('materiales');
+  const [unit, setUnit] = useState<ExecutiveUnit>(fixedUnit ?? 'materiales');
   const [datePreset, setDatePreset] = useState<DatePreset>('30d');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (fixedUnit) setUnit(fixedUnit);
+  }, [fixedUnit]);
 
   useEffect(() => {
     const today = new Date();
@@ -226,13 +298,13 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
     const cfg = unitConfig[selectedUnit];
     let txQuery = supabase
       .from(cfg.txTable)
-      .select('id, type, created_at, nombre_cliente, is_credit, payment_type, credit_amount')
+      .select('id, type, created_at, nombre_cliente, created_by, supplier_id, is_credit, payment_type, credit_amount')
       .eq('branch_id', branchId)
       .eq('is_deleted', false)
       .gte('created_at', from.toISOString())
       .lte('created_at', to.toISOString());
 
-    if (selectedUnit === 'materiales') txQuery = txQuery.eq('business_unit', selectedUnit);
+    if (selectedUnit !== 'concretera') txQuery = txQuery.eq('business_unit', selectedUnit);
 
     const { data: txData, error: txError } = await txQuery;
     if (txError) throw txError;
@@ -269,19 +341,25 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
     let missingCostSalesTotal = 0;
     let missingCostItems = 0;
     let creditSalesTotal = 0;
+    let salesMissingResponsible = 0;
+    let purchasesMissingSupplier = 0;
 
     txList.forEach((tx) => {
       const txItems = itemsByTx[tx.id] ?? [];
       const txTotal = txItems.reduce((sum, item) => sum + lineAmount(item), 0);
       if (tx.type === 'SALE') {
         salesTotal += txTotal;
+        if (!String(tx.created_by ?? '').trim()) salesMissingResponsible += 1;
         creditSalesTotal += creditAmountFromTx(tx, txTotal);
         const customer = tx.nombre_cliente?.trim() || 'Mostrador';
         if (!customerAgg[customer]) customerAgg[customer] = { total: 0, tickets: new Set<number>() };
         customerAgg[customer].total += txTotal;
         customerAgg[customer].tickets.add(tx.id);
       }
-      if (tx.type === 'PURCHASE') purchasesTotal += txTotal;
+      if (tx.type === 'PURCHASE') {
+        purchasesTotal += txTotal;
+        if (!tx.supplier_id) purchasesMissingSupplier += 1;
+      }
 
       if (tx.type !== 'SALE') return;
       txItems.forEach((item) => {
@@ -315,6 +393,9 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
       .map(([name, row]) => ({ name, total: row.total, tickets: row.tickets.size }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 8);
+    const customers = Object.entries(customerAgg)
+      .map(([name, row]) => ({ name, total: row.total, tickets: row.tickets.size }))
+      .sort((a, b) => b.total - a.total);
 
     return {
       salesTotal,
@@ -329,6 +410,9 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
       creditSalesTotal,
       topProducts,
       topCustomers,
+      customers,
+      salesMissingResponsible,
+      purchasesMissingSupplier,
     };
   }, [branchId]);
 
@@ -347,7 +431,7 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
         .from(cfg.productTable)
         .select('id, name, sku, purchase_price, min_stock, is_active')
         .eq('branch_id', branchId);
-      if (unit === 'materiales') {
+      if (unit !== 'concretera') {
         productQuery = supabase
           .from(cfg.productTable)
           .select('id, name, sku, purchase_price, min_stock, is_active, business_unit')
@@ -361,7 +445,7 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
         .select(creditSelect)
         .eq('branch_id', branchId)
         .gt('balance', 0);
-      if (unit === 'materiales') creditQuery = creditQuery.eq('business_unit', unit);
+      if (unit !== 'concretera') creditQuery = creditQuery.eq('business_unit', unit);
 
       const [
         { data: productData, error: productError },
@@ -413,6 +497,9 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
         .filter((row) => row.stock > 0 && row.soldQty <= 1)
         .sort((a, b) => b.stock - a.stock)
         .slice(0, 8);
+      const negativeStockCount = stockAnalysis.filter((row) => row.stock < 0).length;
+      const productsWithoutCost = products.filter((product) => Number(product.purchase_price ?? 0) <= 0).length;
+      const productsWithoutMinStock = products.filter((product) => Number(product.min_stock ?? 0) <= 0).length;
 
       const today = toLocalDateInputValue(new Date());
       const creditRows = (creditData ?? []) as CreditNoteRow[];
@@ -420,9 +507,9 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
       const overdueTotal = overdueRows.reduce((sum, row) => sum + Number(row.balance ?? 0), 0);
       const topDebt = [...overdueRows].sort((a, b) => Number(b.balance ?? 0) - Number(a.balance ?? 0))[0];
       const topDebtCustomer = topDebt ? {
-        name: unit === 'materiales'
-          ? topDebt.credit_customers?.name ?? 'Cliente sin nombre'
-          : topDebt.concrete_credit_customers?.name ?? 'Cliente sin nombre',
+        name: unit === 'concretera'
+          ? topDebt.concrete_credit_customers?.name ?? 'Cliente sin nombre'
+          : topDebt.credit_customers?.name ?? 'Cliente sin nombre',
         balance: Number(topDebt.balance ?? 0),
       } : undefined;
 
@@ -430,6 +517,63 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
       const purchaseChange = pctChange(current.purchasesTotal, previous.purchasesTotal);
       const topProductShare = current.salesTotal > 0 && current.topProducts[0] ? current.topProducts[0].total / current.salesTotal : 0;
       const topCustomerShare = current.salesTotal > 0 && current.topCustomers[0] ? current.topCustomers[0].total / current.salesTotal : 0;
+      const currentCustomerMap = current.customers.reduce<Record<string, { total: number; tickets: number }>>((acc, row) => {
+        acc[row.name] = row;
+        return acc;
+      }, {});
+      const customerDrops = previous.customers
+        .filter((row) => row.name !== 'Mostrador' && row.total >= 1000)
+        .map((row) => {
+          const currentRow = currentCustomerMap[row.name];
+          const currentTotal = currentRow?.total ?? 0;
+          return {
+            name: row.name,
+            previousTotal: row.total,
+            currentTotal,
+            changePct: pctChange(currentTotal, row.total),
+          };
+        })
+        .filter((row) => row.changePct <= -40)
+        .sort((a, b) => a.changePct - b.changePct)
+        .slice(0, 8);
+
+      const dataQuality: DataQualityIssue[] = [
+        {
+          id: 'productos-sin-costo',
+          label: 'Productos sin costo',
+          value: String(productsWithoutCost),
+          severity: productsWithoutCost > 20 ? 'alta' : productsWithoutCost > 0 ? 'media' : 'baja',
+          description: 'Afecta cualquier análisis futuro de rentabilidad.',
+        },
+        {
+          id: 'productos-sin-minimo',
+          label: 'Productos sin mínimo',
+          value: String(productsWithoutMinStock),
+          severity: productsWithoutMinStock > 20 ? 'media' : productsWithoutMinStock > 0 ? 'baja' : 'baja',
+          description: 'Limita las alertas preventivas de reabasto.',
+        },
+        {
+          id: 'stock-negativo',
+          label: 'Stock negativo',
+          value: String(negativeStockCount),
+          severity: negativeStockCount > 0 ? 'alta' : 'baja',
+          description: 'Puede indicar ventas sin existencia, ajustes pendientes o errores de captura.',
+        },
+        {
+          id: 'ventas-sin-responsable',
+          label: 'Ventas sin responsable',
+          value: String(current.salesMissingResponsible),
+          severity: current.salesMissingResponsible > 0 ? 'media' : 'baja',
+          description: 'Dificulta auditoría y seguimiento operativo.',
+        },
+        {
+          id: 'compras-sin-proveedor',
+          label: 'Compras sin proveedor',
+          value: String(current.purchasesMissingSupplier),
+          severity: current.purchasesMissingSupplier > 0 ? 'media' : 'baja',
+          description: 'Reduce trazabilidad de abastecimiento.',
+        },
+      ];
       const generatedInsights: ManagerInsight[] = [];
 
       if (salesChange <= -15) {
@@ -437,9 +581,9 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
           id: 'caida-ventas',
           priority: salesChange <= -30 ? 'alta' : 'media',
           kind: 'risk',
-          title: 'Caída de ventas contra periodo anterior',
-          metric: formatPct(salesChange),
-          description: `Ventas actuales ${formatCurrency(current.salesTotal)} vs ${formatCurrency(previous.salesTotal)} del periodo anterior.`,
+          title: 'Caída de ventas contra periodo previo',
+          metric: formatAbsPct(salesChange),
+          description: `Ventas actuales ${formatCurrency(current.salesTotal)} vs ${formatCurrency(previous.salesTotal)} del periodo previo equivalente.`,
           action: 'Revisar clientes principales, producto líder y días sin operación para ubicar la causa.',
         });
       }
@@ -491,7 +635,9 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
           kind: 'risk',
           title: 'Compras crecen más que ventas',
           metric: `Compras ${formatPct(purchaseChange)}`,
-          description: `Ventas cambiaron ${formatPct(salesChange)} en el mismo comparativo.`,
+          description: salesChange < 0
+            ? `Ventas bajaron ${formatAbsPct(salesChange)} en el mismo comparativo.`
+            : `Ventas cambiaron ${formatPct(salesChange)} en el mismo comparativo.`,
           action: 'Confirmar que el abastecimiento responda a pedidos reales o productos de alta rotación.',
         });
       }
@@ -520,6 +666,18 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
         });
       }
 
+      if (customerDrops.length > 0) {
+        generatedInsights.push({
+          id: 'clientes-en-caida',
+          priority: customerDrops[0].previousTotal >= current.salesTotal * 0.15 ? 'alta' : 'media',
+          kind: 'risk',
+          title: 'Cliente importante en caída',
+          metric: customerDrops[0].name,
+          description: `Pasó de ${formatCurrency(customerDrops[0].previousTotal)} a ${formatCurrency(customerDrops[0].currentTotal)}.`,
+          action: 'Contactar al cliente y revisar si hubo falta de producto, precio o atención.',
+        });
+      }
+
       setData({
         current,
         previous,
@@ -528,6 +686,8 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
         topDebtCustomer,
         stockCritical,
         stockLowRotation,
+        customerDrops,
+        dataQuality,
         insights: generatedInsights.slice(0, 8),
       });
     } catch (err) {
@@ -546,50 +706,313 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
   const previous = data?.previous ?? emptyMetrics();
   const salesChange = pctChange(current.salesTotal, previous.salesTotal);
   const purchaseChange = pctChange(current.purchasesTotal, previous.purchasesTotal);
-  const creditChange = pctChange(current.creditSalesTotal, previous.creditSalesTotal);
-  const creditShare = current.salesTotal > 0 ? (current.creditSalesTotal / current.salesTotal) * 100 : 0;
-  const cashSalesTotal = Math.max(0, current.salesTotal - current.creditSalesTotal);
-  const topProductName = current.topProducts[0]?.name ?? 'Sin ventas';
-  const topCustomerName = current.topCustomers[0]?.name ?? 'Sin clientes';
+  const selectedRangeDays = startDate && endDate
+    ? diffDaysInclusive(parseLocalDateInput(startDate), parseLocalDateInput(endDate, true))
+    : 0;
+  const previousPeriodLabel = selectedRangeDays <= 1
+    ? 'ayer'
+    : `los ${selectedRangeDays} días anteriores`;
+  const actionRecommendations: ActionRecommendation[] = [
+    ...(data?.overdueTotal
+      ? [{
+          id: 'cobranza-prioritaria',
+          title: 'Priorizar cobranza vencida',
+          description: data.topDebtCustomer
+            ? `Contactar a ${data.topDebtCustomer.name} por ${formatCurrency(data.topDebtCustomer.balance)} y revisar bloqueo de crédito.`
+            : `Atender ${data.overdueCount} notas vencidas por ${formatCurrency(data.overdueTotal)}.`,
+          priority: 'alta' as const,
+          area: 'Cobranza',
+          suggestedOwner: 'Administración',
+        }]
+      : []),
+    ...(data?.stockCritical?.length
+      ? [{
+          id: 'reabasto-critico',
+          title: 'Resolver inventario crítico',
+          description: `Revisar ${data.stockCritical[0].name}: stock ${formatNumber(data.stockCritical[0].stock)} contra mínimo ${formatNumber(data.stockCritical[0].min)}.`,
+          priority: data.stockCritical[0].soldQty > 0 ? 'alta' as const : 'media' as const,
+          area: 'Inventario',
+          suggestedOwner: 'Compras / Almacén',
+        }]
+      : []),
+    ...(data?.customerDrops?.length
+      ? [{
+          id: 'recuperar-cliente',
+          title: 'Recuperar cliente en caída',
+          description: `${data.customerDrops[0].name} bajó de ${formatCurrency(data.customerDrops[0].previousTotal)} a ${formatCurrency(data.customerDrops[0].currentTotal)}.`,
+          priority: 'media' as const,
+          area: 'Ventas',
+          suggestedOwner: 'Ventas',
+        }]
+      : []),
+    ...(current.purchasesTotal > current.salesTotal && current.purchasesTotal > 0
+      ? [{
+          id: 'validar-compras-vs-ventas',
+          title: 'Validar compras mayores a ventas',
+          description: `Compras superan ventas por ${formatCurrency(current.purchasesTotal - current.salesTotal)} en el periodo.`,
+          priority: current.purchasesTotal > current.salesTotal * 1.25 ? 'alta' as const : 'media' as const,
+          area: 'Compras',
+          suggestedOwner: 'Compras / Dirección',
+        }]
+      : []),
+    ...((data?.dataQuality ?? [])
+      .filter((issue) => issue.severity !== 'baja' && Number(issue.value) > 0)
+      .slice(0, 2)
+      .map((issue) => ({
+        id: `calidad-${issue.id}`,
+        title: `Corregir ${issue.label.toLowerCase()}`,
+        description: `${issue.value} caso(s). ${issue.description}`,
+        priority: issue.severity === 'alta' ? 'alta' as const : 'media' as const,
+        area: 'Datos',
+        suggestedOwner: 'Administración / Sistemas',
+      }))),
+  ].slice(0, 6);
 
-  const kpiCards = [
+  const morningHighlights = [
+    ...(salesChange <= -10
+      ? [`Las ventas bajaron ${formatAbsPct(salesChange)} contra ${previousPeriodLabel}.`]
+      : current.salesTotal > 0
+        ? [`Ventas del periodo: ${formatCurrency(current.salesTotal)} en ${current.salesCount} tickets.`]
+        : ['No hay ventas registradas en el periodo seleccionado.']),
+    ...(data?.customerDrops?.length
+      ? [`${data.customerDrops.length} cliente${data.customerDrops.length > 1 ? 's' : ''} relevante${data.customerDrops.length > 1 ? 's' : ''} bajaron fuerte su compra.`]
+      : []),
+    ...(data?.stockCritical?.length
+      ? [`${data.stockCritical.length} producto${data.stockCritical.length > 1 ? 's' : ''} en stock crítico.`]
+      : []),
+    ...(data?.overdueTotal
+      ? [`Cartera vencida: ${formatCurrency(data.overdueTotal)} en ${data.overdueCount} nota${data.overdueCount !== 1 ? 's' : ''}.`]
+      : []),
+    ...(current.purchasesTotal > current.salesTotal && current.purchasesTotal > 0
+      ? [`Compras superan ventas por ${formatCurrency(current.purchasesTotal - current.salesTotal)}.`]
+      : []),
+    ...((data?.dataQuality ?? [])
+      .filter((issue) => issue.severity !== 'baja' && Number(issue.value) > 0)
+      .slice(0, 2)
+      .map((issue) => `${issue.label}: ${issue.value} caso${Number(issue.value) === 1 ? '' : 's'} por corregir.`)),
+  ].slice(0, 7);
+
+  const generalExecutiveSummary = (() => {
+    const dataIssues = (data?.dataQuality ?? [])
+      .filter((issue) => issue.severity !== 'baja' && Number(issue.value) > 0)
+      .slice(0, 2)
+      .map((issue) => `${issue.label.toLowerCase()}: ${issue.value}`);
+    const commercialReading = salesChange <= -10
+      ? `tomando en cuenta lo que muestra el Gerente Comercial, tenemos que recuperar venta porque bajó ${formatAbsPct(salesChange)} contra ${previousPeriodLabel}${data?.customerDrops?.length ? ` y ${data.customerDrops.length} clientes importantes bajaron su compra` : ''}`
+      : `tomando en cuenta lo que muestra el Gerente Comercial, la venta actual es de ${formatCurrency(current.salesTotal)} en ${current.salesCount} tickets y conviene cuidar a los clientes principales`;
+    const financialReading = data?.overdueTotal
+      ? `desde el Gerente Financiero, la prioridad es cobrar ${formatCurrency(data.overdueTotal)} de cartera vencida${data.topDebtCustomer ? `, empezando por ${data.topDebtCustomer.name}` : ''}, para proteger flujo`
+      : 'desde el Gerente Financiero, no se detecta cartera vencida crítica con estos filtros, pero se debe mantener vigilancia de crédito';
+    const purchasingReading = data?.stockCritical?.length
+      ? `el Gerente de Compras indica que hay ${data.stockCritical.length} producto${data.stockCritical.length === 1 ? '' : 's'} con inventario crítico y hay que resolver reabasto o traspaso antes de comprometer pedidos nuevos`
+      : 'el Gerente de Compras no detecta inventario crítico, pero recomienda sostener compras alineadas a consumo real';
+    const productionReading = unit === 'materiales'
+      ? 'el Gerente de Producción sugiere completar la medición de tiempos muertos, desperdicio y eficiencia para saber dónde se pierde capacidad operativa'
+      : unit === 'concretera'
+        ? 'el Gerente de Producción sugiere registrar tiempos, retrasos, desperdicio y eficiencia de planta para ubicar pérdidas operativas'
+        : 'el Gerente de Producción sugiere medir rutas, tiempos de entrega, rendimiento y rechazos para controlar la operación';
+    const directionReading = current.purchasesTotal > current.salesTotal && current.purchasesTotal > 0
+      ? `además, como las compras superan ventas por ${formatCurrency(current.purchasesTotal - current.salesTotal)}, Dirección debe validar si ese dinero quedó en inventario sano o si está presionando el flujo`
+      : 'además, Dirección debe mantener compras, ventas e inventario alineados para no generar presión de flujo';
+    const qualityReading = dataIssues.length
+      ? `también hay datos que corregir (${dataIssues.join(', ')}), porque afectan la calidad del análisis gerencial`
+      : 'los datos principales no muestran alertas fuertes de calidad en este corte';
+
+    return `El análisis del módulo de ${unitConfig[unit].label} para ${branchName} muestra que tenemos ventas por ${formatCurrency(current.salesTotal)}, compras por ${formatCurrency(current.purchasesTotal)} y ${data?.overdueTotal ? `cartera vencida de ${formatCurrency(data.overdueTotal)}` : 'cartera vencida controlada'}; por lo tanto tenemos que mejorar en flujo, recuperación comercial, disponibilidad de inventario y disciplina operativa. ${commercialReading}; ${financialReading}; ${purchasingReading}; ${productionReading}; ${directionReading}; ${qualityReading}. Por consiguiente, ¿con qué quieres que empecemos?`;
+  })();
+
+  const managerCards: ManagerCard[] = [
     {
-      label: 'Ventas',
-      value: formatCurrency(current.salesTotal),
-      change: salesChange,
+      title: 'Gerente General',
+      icon: ClipboardList,
+      status: actionRecommendations.length > 0 ? `${actionRecommendations.length} prioridades` : 'Sin focos rojos',
+      tone: 'border-slate-200 bg-slate-50 text-slate-700',
+      summary: generalExecutiveSummary,
+      actions: [],
+      agent: {
+        id: 'general',
+        name: 'Gerente General',
+        subtitle: 'Director general digital',
+        tone: 'Integra todas las áreas, prioriza por impacto económico y pide decisiones concretas.',
+        focus: ['prioridades del día', 'impacto económico', 'riesgos cruzados', 'coordinación entre gerentes'],
+      },
+    },
+    {
+      title: 'Gerente Comercial',
+      icon: Users,
+      status: data?.customerDrops?.length ? `${data.customerDrops.length} clientes en caída` : `${current.topCustomers.length} clientes activos`,
+      tone: 'border-blue-200 bg-blue-50 text-blue-700',
+      summary: data?.customerDrops?.[0]
+        ? `Recuperar a ${data.customerDrops[0].name}; cayó ${formatAbsPct(data.customerDrops[0].changePct)}.`
+        : current.topCustomers[0]
+          ? `Cliente principal: ${current.topCustomers[0].name} con ${formatCurrency(current.topCustomers[0].total)}.`
+          : 'Sin clientes para analizar en el periodo.',
+      actions: [
+        ...(data?.customerDrops ?? []).slice(0, 3).map((customer) => `Llamar a ${customer.name}`),
+        ...(current.topCustomers[0] ? [`Cuidar relación con ${current.topCustomers[0].name}`] : []),
+      ].slice(0, 3),
+      agent: {
+        id: 'comercial',
+        name: 'Gerente Comercial',
+        subtitle: 'Ventas, clientes y oportunidades',
+        tone: 'Directo, orientado a recuperar clientes, aumentar ventas y convertir oportunidades en llamadas o visitas.',
+        focus: ['ventas', 'clientes', 'seguimiento comercial', 'retención', 'oportunidades'],
+      },
+    },
+    {
+      title: 'Gerente Financiero',
       icon: DollarSign,
-      help: `${current.salesCount} tickets`,
-      tone: 'from-slate-900 to-slate-800 text-white border-slate-800',
-      iconTone: 'bg-white/10 text-white',
+      status: data?.overdueTotal ? formatCurrency(data.overdueTotal) : 'Cartera controlada',
+      tone: 'border-red-200 bg-red-50 text-red-700',
+      summary: data?.topDebtCustomer
+        ? `Priorizar cobro a ${data.topDebtCustomer.name} por ${formatCurrency(data.topDebtCustomer.balance)}.`
+        : current.creditSalesTotal > 0
+          ? `Ventas a crédito del periodo: ${formatCurrency(current.creditSalesTotal)}.`
+          : 'No hay cartera vencida detectada.',
+      actions: [
+        ...(data?.topDebtCustomer ? [`Cobrar a ${data.topDebtCustomer.name}`] : []),
+        ...(current.creditSalesTotal > 0 ? ['Revisar ventas a crédito del periodo'] : []),
+        ...(current.purchasesTotal > current.salesTotal ? ['Validar presión de flujo por compras'] : []),
+      ].slice(0, 3),
+      agent: {
+        id: 'financiero',
+        name: 'Gerente Financiero',
+        subtitle: 'Flujo, cobranza y riesgo',
+        tone: 'Conservador, numérico y enfocado en proteger caja, cobrar primero lo vencido y evitar presión de flujo.',
+        focus: ['flujo', 'cartera vencida', 'crédito', 'cobranza', 'riesgo financiero'],
+      },
     },
     {
-      label: 'Compras',
-      value: formatCurrency(current.purchasesTotal),
-      change: purchaseChange,
+      title: 'Gerente de Compras',
       icon: PackageSearch,
-      help: 'Abastecimiento del periodo',
-      tone: 'from-orange-500 to-orange-600 text-white border-orange-500',
-      iconTone: 'bg-white/15 text-white',
+      status: data?.stockCritical?.length ? `${data.stockCritical.length} críticos` : 'Sin críticos',
+      tone: 'border-amber-200 bg-amber-50 text-amber-700',
+      summary: data?.stockCritical?.[0]
+        ? `Revisar ${data.stockCritical[0].name}: ${formatNumber(data.stockCritical[0].stock)} contra mínimo ${formatNumber(data.stockCritical[0].min)}.`
+        : current.topProducts[0]
+          ? `Producto líder: ${current.topProducts[0].name}.`
+          : 'Sin ventas suficientes para sugerir compra.',
+      actions: [
+        ...(data?.stockCritical ?? []).slice(0, 3).map((product) => `Reabasto/traspaso de ${product.name}`),
+        ...(current.purchasesTotal > current.salesTotal ? ['Auditar compras mayores a ventas'] : []),
+      ].slice(0, 3),
+      agent: {
+        id: 'compras',
+        name: 'Gerente de Compras',
+        subtitle: 'Inventario, consumo y proveedores',
+        tone: 'Práctico, evita compras impulsivas y prioriza reabasto por rotación, mínimos y urgencia real.',
+        focus: ['inventario', 'stock crítico', 'proveedores', 'reabasto', 'rotación'],
+      },
     },
     {
-      label: 'Ventas a crédito',
-      value: formatCurrency(current.creditSalesTotal),
-      change: creditChange,
+      title: 'Gerente de Producción',
       icon: CalendarDays,
-      help: `${formatNumber(creditShare, undefined, { maximumFractionDigits: 1 })}% de ventas`,
-      tone: 'from-blue-50 to-white text-slate-900 border-blue-100',
-      iconTone: 'bg-blue-100 text-blue-700',
-    },
-    {
-      label: 'Cartera vencida',
-      value: formatCurrency(data?.overdueTotal ?? 0),
-      change: 0,
-      icon: AlertTriangle,
-      help: `${data?.overdueCount ?? 0} notas vencidas`,
-      tone: 'from-red-50 to-white text-slate-900 border-red-100',
-      iconTone: 'bg-red-100 text-red-700',
+      status: 'Datos por ampliar',
+      tone: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+      summary: unit === 'materiales'
+        ? 'Puede usar producción registrada, pero aún falta medir tiempos muertos y desperdicio.'
+        : unit === 'concretera'
+          ? 'Para concretera falta registrar tiempos, retrasos, desperdicio y eficiencia de planta.'
+          : 'Para transportería falta registrar rutas, tiempos de entrega, rendimiento y rechazos operativos.',
+      actions: [
+        'Definir métricas de producción diaria',
+        'Registrar tiempos muertos y causas',
+        'Separar desperdicio, devolución y merma',
+      ],
+      agent: {
+        id: 'produccion',
+        name: 'Gerente de Producción',
+        subtitle: 'Operación, eficiencia y capacidad',
+        tone: 'Operativo, busca causas medibles, tiempos muertos, desperdicio, capacidad y acciones de mejora diaria.',
+        focus: ['producción', 'tiempos muertos', 'desperdicio', 'eficiencia', 'capacidad operativa'],
+      },
     },
   ];
+  const [generalManager, ...specializedManagers] = managerCards;
+
+  const analyzeWithAI = (source: { title: string; description: string; priority?: ActionPriority; area?: string; agent: DashboardAssistantAgent }) => {
+    const prompt = [
+      '[DASHBOARD_GERENCIAL]',
+      `Agente: ${source.agent.name}.`,
+      `Rol: ${source.agent.subtitle}.`,
+      `Analiza esta señal del Reporte Gerencial de ${unitConfig[unit].label} desde tu especialidad.`,
+      `Sucursal: ${branchName}.`,
+      `Periodo: ${startDate} a ${endDate}.`,
+      `Título: ${source.title}.`,
+      `Descripción: ${source.description}.`,
+      source.priority ? `Prioridad: ${source.priority}.` : '',
+      source.area ? `Área: ${source.area}.` : '',
+      'No consultes SQL ni muestres datos técnicos. Esta señal ya fue calculada por el reporte gerencial.',
+      `Respóndeme como ${source.agent.name}, con tu personalidad: ${source.agent.tone}`,
+    ].filter(Boolean).join('\n');
+    window.dispatchEvent(new CustomEvent('lopar:open-assistant', { detail: { prompt, agent: source.agent } }));
+  };
+
+  const renderManagerCard = (manager: ManagerCard, extraClass = '') => {
+    const Icon = manager.icon;
+    const isGeneral = manager.title === 'Gerente General';
+    return (
+      <div key={manager.title} className={`flex flex-col rounded-2xl border border-slate-200 bg-slate-50 p-4 ${extraClass}`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <div className={`rounded-xl border p-2 ${manager.tone}`}>
+                <Icon size={16} />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-slate-900">{manager.title}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{manager.status}</p>
+              </div>
+            </div>
+            <p className={`mt-3 font-semibold text-slate-600 ${
+              isGeneral ? 'text-base leading-8' : 'text-xs leading-5'
+            }`}>
+              {manager.summary}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => analyzeWithAI({
+              title: manager.title,
+              description: `${manager.summary} Acciones sugeridas: ${manager.actions.join('; ') || 'sin acciones críticas'}`,
+              area: manager.title,
+              priority: manager.title === 'Gerente General' ? 'alta' : 'media',
+              agent: manager.agent,
+            })}
+            className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-slate-300"
+          >
+            <Bot size={12} /> IA
+          </button>
+        </div>
+
+        {!isGeneral && manager.context?.length ? (
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Lectura por área</p>
+            <div className="mt-3 space-y-2">
+              {manager.context.map((item) => (
+                <p key={item} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold leading-5 text-slate-700">
+                  {item}
+                </p>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {manager.actions.length > 0 && (
+        <div className={`mt-3 space-y-1.5 ${isGeneral ? 'mt-auto pt-4' : ''}`}>
+          {isGeneral && manager.actions.length > 0 && (
+            <p className="pb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Prioridades directivas</p>
+          )}
+          {manager.actions.slice(0, isGeneral ? 5 : 3).map((action) => (
+            <p key={action} className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-700">
+              {action}
+            </p>
+          ))}
+        </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="h-full w-full overflow-y-auto px-3 py-4 sm:px-4 md:px-6 xl:px-8">
@@ -597,10 +1020,10 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
         <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:p-5 xl:p-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-orange-500">Dashboard Gerencial</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-orange-500">Reporte Gerencial</p>
               <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-900">Resumen ejecutivo del negocio</h2>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                {branchName}. Comparativo del periodo seleccionado contra el periodo anterior equivalente.
+                {branchName}. Comparativo del periodo seleccionado contra {previousPeriodLabel}.
               </p>
             </div>
             <button
@@ -611,23 +1034,25 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
             </button>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[220px_1fr] xl:grid-cols-[220px_1fr_1fr_1fr]">
-            <div className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Unidad</span>
-              <div className="grid grid-cols-2 rounded-2xl border border-slate-200 bg-slate-50 p-1">
-                {(['materiales', 'concretera'] as ExecutiveUnit[]).map((value) => (
-                  <button
-                    key={value}
-                    onClick={() => setUnit(value)}
-                    className={`rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-widest transition ${
-                      unit === value ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    {unitConfig[value].label}
-                  </button>
-                ))}
+          <div className={`mt-5 grid grid-cols-1 gap-3 ${fixedUnit ? 'lg:grid-cols-[1fr_1fr_1fr]' : 'lg:grid-cols-[220px_1fr] xl:grid-cols-[220px_1fr_1fr_1fr]'}`}>
+            {!fixedUnit && (
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Unidad</span>
+                <div className="grid grid-cols-3 rounded-2xl border border-slate-200 bg-slate-50 p-1">
+                  {(['materiales', 'concretera', 'transporteria'] as ExecutiveUnit[]).map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => setUnit(value)}
+                      className={`rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-widest transition ${
+                        unit === value ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      {unitConfig[value].label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
             <div className="space-y-1">
               <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Periodo</span>
               <div className="flex flex-wrap gap-2">
@@ -683,115 +1108,51 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>
         )}
 
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
-          {kpiCards.map((card) => {
-            const Icon = card.icon;
-            const TrendIcon = card.change >= 0 ? ArrowUpRight : ArrowDownRight;
-            return (
-              <article key={card.label} className={`min-h-[170px] rounded-[28px] border bg-gradient-to-br p-5 shadow-lg ${card.tone}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.24em] opacity-80">{card.label}</p>
-                    <p className="mt-4 break-words text-3xl font-black tracking-tight md:text-4xl">{card.value}</p>
-                  </div>
-                  <div className={`rounded-2xl p-3 ${card.iconTone}`}>
-                    <Icon size={18} />
-                  </div>
-                </div>
-                <div className="mt-5 flex items-center justify-between gap-3">
-                  <p className="text-xs font-semibold opacity-80">{card.help}</p>
-                  {card.label !== 'Cartera vencida' && !card.hideChange && (
-                    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-black ${statusTone(card.change)}`}>
-                      <TrendIcon size={12} /> {formatPct(card.change)}
-                    </span>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-        </section>
-
-        <ManagerInsightsPanel
-          insights={data?.insights ?? []}
-          isLoading={isLoading}
-          subtitle={`${unitConfig[unit].label}: riesgos, oportunidades y acciones sugeridas con comparativo vs periodo anterior.`}
-        />
-
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-4">
-          {[
-            { label: 'Ventas de contado', value: formatCurrency(cashSalesTotal), help: 'Venta no cubierta por crédito', icon: DollarSign },
-            { label: 'Stock crítico', value: String(data?.stockCritical.length ?? 0), help: 'Productos debajo del mínimo', icon: AlertTriangle },
-            { label: 'Producto líder', value: topProductName, help: current.topProducts[0] ? formatCurrency(current.topProducts[0].total) : 'Sin ventas', icon: PackageSearch },
-            { label: 'Cliente principal', value: topCustomerName, help: current.topCustomers[0] ? formatCurrency(current.topCustomers[0].total) : 'Sin clientes', icon: Users },
-          ].map((item) => {
-            const Icon = item.icon;
-            return (
-              <article key={item.label} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{item.label}</p>
-                    <p className="mt-3 line-clamp-2 break-words text-2xl font-black text-slate-900">{item.value}</p>
-                    <p className="mt-2 text-xs font-semibold text-slate-500">{item.help}</p>
-                  </div>
-                  <div className="rounded-2xl bg-slate-100 p-3 text-slate-600">
-                    <Icon size={18} />
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </section>
-
-        <section className="grid grid-cols-1 gap-4 2xl:grid-cols-3">
-          <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Productos clave</h3>
-            <div className="mt-4 space-y-3">
-              {current.topProducts.slice(0, 5).map((product, index) => (
-                <div key={product.id} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-slate-900">{index + 1}. {product.name}</p>
-                    <p className="text-xs font-semibold text-slate-500">{formatNumber(product.qty, undefined, { maximumFractionDigits: 2 })} vendidos</p>
-                  </div>
-                  <p className="text-sm font-black text-slate-900">{formatCurrency(product.total)}</p>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <article className="rounded-3xl border border-slate-200 bg-slate-900 p-5 text-white shadow-lg shadow-slate-900/15 md:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.3em] text-orange-300">Director General Digital</p>
+                <h3 className="mt-3 text-2xl font-black tracking-tight">Buenos días.</h3>
+                <p className="mt-2 text-sm font-semibold text-slate-300">
+                  Detecté estas situaciones importantes para {unitConfig[unit].label.toLowerCase()}.
+                </p>
+              </div>
+              <div className="rounded-2xl bg-white/10 p-3 text-orange-300">
+                <Bot size={20} />
+              </div>
+            </div>
+            <div className="mt-5 space-y-3">
+              {morningHighlights.map((item, index) => (
+                <div key={`${item}-${index}`} className="flex gap-3 rounded-2xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-500 text-xs font-black text-white">
+                    {index + 1}
+                  </span>
+                  <p className="text-sm font-semibold leading-6 text-slate-100">{item}</p>
                 </div>
               ))}
-              {current.topProducts.length === 0 && <p className="text-sm font-semibold text-slate-500">Sin ventas en el periodo.</p>}
+              {morningHighlights.length === 0 && (
+                <div className="rounded-2xl bg-white/8 px-4 py-3 text-sm font-semibold text-slate-100 ring-1 ring-white/10">
+                  No hay situaciones críticas con los filtros actuales.
+                </div>
+              )}
             </div>
           </article>
 
-          <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Clientes principales</h3>
-            <div className="mt-4 space-y-3">
-              {current.topCustomers.slice(0, 5).map((customer, index) => (
-                <div key={`${customer.name}-${index}`} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-slate-900">{index + 1}. {customer.name}</p>
-                    <p className="text-xs font-semibold text-slate-500">{customer.tickets} tickets</p>
-                  </div>
-                  <p className="text-sm font-black text-slate-900">{formatCurrency(customer.total)}</p>
-                </div>
-              ))}
-              {current.topCustomers.length === 0 && <p className="text-sm font-semibold text-slate-500">Sin clientes en el periodo.</p>}
-            </div>
-          </article>
+          {generalManager && renderManagerCard(generalManager, 'h-full bg-white p-5 shadow-sm md:p-6')}
+        </section>
 
-          <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Inventario crítico</h3>
-            <div className="mt-4 space-y-3">
-              {(data?.stockCritical ?? []).slice(0, 5).map((product, index) => (
-                <div key={product.id} className="rounded-2xl bg-slate-50 px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="truncate text-sm font-black text-slate-900">{index + 1}. {product.name}</p>
-                    <span className="rounded-full border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-black text-red-700">
-                      {formatNumber(product.stock)} / {formatNumber(product.min)}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs font-semibold text-slate-500">
-                    Venta periodo: {formatNumber(product.soldQty, undefined, { maximumFractionDigits: 2 })}
-                  </p>
-                </div>
-              ))}
-              {(data?.stockCritical.length ?? 0) === 0 && <p className="text-sm font-semibold text-slate-500">Sin stock crítico detectado.</p>}
+        <section>
+          <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Gerentes especializados</h3>
+                <p className="mt-1 text-xs font-semibold text-slate-500">Cada gerente observa una parte del negocio y propone acciones.</p>
+              </div>
+              <div className="rounded-2xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">{specializedManagers.length} gerentes</div>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-4">
+              {specializedManagers.map((manager) => renderManagerCard(manager, 'h-full'))}
             </div>
           </article>
         </section>

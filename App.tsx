@@ -56,6 +56,7 @@ const APP_TAB_ORDER = [
   'customers',
   'customer-alerts',
   'reports',
+  'materials-executive-dashboard',
   'audit-internal',
   'production',
   'branches',
@@ -66,6 +67,7 @@ const APP_TAB_ORDER = [
   'concrete-customers',
   'concrete-customer-alerts',
   'concrete-reports',
+  'concrete-executive-dashboard',
   'concrete-audit',
   'diesel',
   'transport-pos',
@@ -73,8 +75,9 @@ const APP_TAB_ORDER = [
   'transport-inventory',
   'transport-customers',
   'transport-customer-alerts',
-  'transport-audit',
   'transport-reports',
+  'transport-executive-dashboard',
+  'transport-audit',
   'vinos-pos',
   'vinos-purchases',
   'vinos-inventory',
@@ -465,6 +468,8 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'executive-dashboard':
         return <ExecutiveDashboardScreen selectedBranchId={selectedBranchId} branches={activeBranches} />;
+      case 'materials-executive-dashboard':
+        return <ExecutiveDashboardScreen selectedBranchId={selectedBranchId} branches={activeBranches} fixedUnit="materiales" />;
       case 'pos':
         return <POSScreen key="pos-materiales" products={products} conversions={conversions} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'purchases':
@@ -537,6 +542,8 @@ const App: React.FC = () => {
         return <ConcreteInventoryScreen selectedBranchId={selectedBranchId} currentUser={currentUser} branches={activeBranches} />;
       case 'concrete-reports':
         return <ConcreteReportsScreen selectedBranchId={selectedBranchId} branches={activeBranches} />;
+      case 'concrete-executive-dashboard':
+        return <ExecutiveDashboardScreen selectedBranchId={selectedBranchId} branches={activeBranches} fixedUnit="concretera" />;
       case 'diesel':
         return <DieselScreen tanks={tanks} setTanks={setTanks} vehicles={vehicles} setVehicles={setVehicles} drivers={drivers} setDrivers={setDrivers} logs={dieselLogs} setLogs={setDieselLogs} currentUser={currentUser} selectedBranchId={selectedBranchId} branches={activeBranches} />;
       case 'reports':
@@ -573,6 +580,8 @@ const App: React.FC = () => {
         );
       case 'transport-reports':
         return <ReportsScreen key="reports-transporteria" selectedBranchId={selectedBranchId} branches={activeBranches} businessUnit="transporteria" />;
+      case 'transport-executive-dashboard':
+        return <ExecutiveDashboardScreen selectedBranchId={selectedBranchId} branches={activeBranches} fixedUnit="transporteria" />;
       case 'vinos-customers':
         return <VinosCustomersScreen key="customers-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'vinos-inventory':

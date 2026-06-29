@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { runOllamaAgent, OllamaMessage, QueryDebug } from '../../services/ai/ollama.service';
 import { isOpenAIProviderEnabled, runOpenAIAgent } from '../../services/ai/openai.service';
 import { executeTool, resolveBranchId } from '../../services/ai/aiTools.service';
@@ -10,6 +10,7 @@ import {
   getConversation,
   deleteConversation,
   saveDraft,
+  loadDraft,
   clearDraft,
 } from '../../services/ai/chatHistory.service';
 
@@ -21,6 +22,16 @@ interface AssistantDrawerProps {
   userId?: string;
   businessUnit?: string;
   branchId?: string;
+  initialPrompt?: string;
+  agent?: AssistantAgent;
+}
+
+export interface AssistantAgent {
+  id: string;
+  name: string;
+  subtitle: string;
+  tone: string;
+  focus: string[];
 }
 
 const SparkIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
@@ -435,6 +446,168 @@ function buildGenericDataAnswer(rows: any[], input: { branchName?: string; busin
   ].filter(Boolean).join('\n');
 }
 
+const extractDashboardField = (text: string, label: string) => {
+  const match = text.match(new RegExp(`${label}:\\s*([^\\n]+)`, 'i'));
+  return match?.[1]?.trim().replace(/\.$/, '') || '';
+};
+
+const buildAgentInstruction = (agent?: AssistantAgent) => {
+  if (!agent) return '';
+  return [
+    `[INSTRUCCIONES INTERNAS DEL AGENTE: ${agent.name}]`,
+    `Actúa como ${agent.name}.`,
+    `Rol: ${agent.subtitle}.`,
+    `Personalidad: ${agent.tone}.`,
+    `Áreas de enfoque: ${agent.focus.join(', ')}.`,
+    'Responde siempre desde tu especialidad. No digas que eres un chatbot.',
+    'No intentes cubrir todas las áreas si no te corresponden; cuando algo sea de otra área, dilo y enfoca tu recomendación desde tu rol.',
+    'Usa lenguaje claro para un gerente no técnico, con diagnóstico, implicación y siguiente acción.',
+  ].join('\n');
+};
+
+function buildExecutiveDashboardFallback(text: string, agent?: AssistantAgent): string {
+  const title = extractDashboardField(text, 'Título') || 'Señal gerencial';
+  const description = extractDashboardField(text, 'Descripción') || 'El dashboard detectó una señal que requiere revisión.';
+  const priority = extractDashboardField(text, 'Prioridad') || 'media';
+  const area = extractDashboardField(text, 'Área') || 'Operación';
+  const branch = extractDashboardField(text, 'Sucursal') || 'Sucursal activa';
+  const period = extractDashboardField(text, 'Periodo') || 'periodo seleccionado';
+  const lower = `${title} ${description}`.toLowerCase();
+
+  let meaning = 'La señal indica una condición del negocio que puede afectar ventas, operación, cobranza o calidad de decisiones.';
+  let causes = ['Datos pendientes de actualizar.', 'Proceso operativo sin responsable claro.', 'Cambio real en el comportamiento del negocio.'];
+  let validations = ['Confirmar que los datos estén completos.', 'Revisar los registros que originan la señal.', 'Validar con el responsable del área si el comportamiento es esperado.'];
+  let plan = ['Asignar responsable hoy.', 'Corregir o confirmar los registros incompletos.', 'Definir una acción preventiva para evitar recurrencia.'];
+
+  if (lower.includes('sin costo') || lower.includes('costo')) {
+    meaning = 'Hay productos que no tienen costo de compra registrado. Sin ese dato, el sistema no puede calcular rentabilidad confiable.';
+    causes = ['Productos dados de alta sin capturar costo.', 'Compras registradas sin actualizar costo del producto.', 'Migración o carga inicial de catálogo incompleta.'];
+    validations = ['Listar productos sin costo y ordenar por los más vendidos.', 'Confirmar costo real con compras o proveedor.', 'Actualizar primero productos de alta rotación o alto importe.'];
+    plan = ['Hoy: corregir costos de los productos más vendidos o más caros.', 'Esta semana: completar costos de productos críticos.', 'Proceso: hacer obligatorio el costo al crear o comprar producto.'];
+  } else if (lower.includes('cartera') || lower.includes('cobranza') || lower.includes('vencida')) {
+    meaning = 'Hay dinero pendiente de cobro que ya pasó su fecha de vencimiento. Esto afecta flujo de efectivo y aumenta riesgo crediticio.';
+    causes = ['Seguimiento de cobranza insuficiente.', 'Crédito liberado sin control de vencimiento.', 'Pagos no registrados o notas no conciliadas.'];
+    validations = ['Confirmar si el saldo sigue abierto o falta registrar pagos.', 'Ordenar clientes por monto vencido y antigüedad.', 'Revisar si hay clientes con nuevas ventas pese a deuda vencida.'];
+    plan = ['Hoy: contactar los saldos vencidos más altos.', 'Definir promesa de pago y responsable por cliente.', 'Escalar clientes con deuda vencida relevante.'];
+  } else if (lower.includes('stock') || lower.includes('inventario') || lower.includes('desabasto')) {
+    meaning = 'El inventario está por debajo del nivel necesario y puede provocar pérdida de ventas.';
+    causes = ['Reabasto tardío.', 'Alta demanda reciente no cubierta.', 'Ajustes de inventario pendientes o stock mal capturado.'];
+    validations = ['Confirmar existencia física.', 'Revisar ventas recientes y pedidos próximos.', 'Validar si hay inventario en otra sucursal para transferir.'];
+    plan = ['Hoy: validar existencia física y necesidad de compra/traspaso.', 'Priorizar productos con ventas recientes.', 'Actualizar mínimo si la demanda cambió.'];
+  } else if (lower.includes('cliente') && lower.includes('caída')) {
+    meaning = 'Un cliente relevante redujo su consumo. Puede representar pérdida de relación, precio o disponibilidad.';
+    causes = ['El cliente compró con competencia.', 'Faltó producto, seguimiento o condiciones comerciales.', 'La obra/proyecto terminó o cambió su ritmo.'];
+    validations = ['Revisar última compra y vendedor responsable.', 'Confirmar si hubo faltantes o cambios de precio.', 'Contactar al cliente para conocer motivo real.'];
+    plan = ['Hoy: llamar al cliente y documentar motivo.', 'Preparar propuesta de recuperación si sigue activo.', 'Agendar seguimiento comercial en máximo 72 horas.'];
+  } else if (lower.includes('compras') && lower.includes('ventas')) {
+    meaning = 'Las compras del periodo superan las ventas. No significa pérdida automáticamente, pero sí puede presionar flujo si no quedó inventario útil.';
+    causes = ['Abastecimiento planeado para ventas futuras.', 'Compras de baja rotación o inventario excesivo.', 'Ventas del periodo más bajas de lo esperado.'];
+    validations = ['Separar compras por proveedor/producto.', 'Comparar compras contra productos más vendidos.', 'Identificar compras sin venta relacionada.'];
+    plan = ['Hoy: revisar las compras más grandes.', 'Confirmar si corresponden a pedidos comprometidos.', 'Pausar compras no críticas hasta aclarar rotación.'];
+  }
+
+  if (agent?.id === 'general') {
+    return [
+      `Soy el ${agent.name}. Para ${branch}, en ${period}, veo una señal de prioridad ${priority.toUpperCase()} en ${area}: **${title}**.`,
+      '',
+      `Mi lectura directiva: ${description} ${meaning} Esto debe ordenarse por impacto económico, responsable y fecha de atención.`,
+      '',
+      '**Qué haría primero**',
+      ...plan.map((item) => `- ${item}`),
+      '',
+      'Después pediría evidencia de avance antes de autorizar nuevas decisiones relacionadas.',
+    ].join('\n');
+  }
+
+  if (agent?.id === 'comercial') {
+    return [
+      `Soy el ${agent.name}. Esta señal en ${branch}, periodo ${period}, la veo desde ventas, clientes y recuperación comercial: **${title}**.`,
+      '',
+      `${description} ${meaning} Lo importante es saber si estamos perdiendo demanda por precio, atención, falta de producto o falta de seguimiento.`,
+      '',
+      '**Validaría hoy**',
+      ...validations.map((item) => `- ${item}`),
+      '',
+      '**Acción comercial inmediata**',
+      '- Llamar primero a los clientes o ventas con mayor impacto.',
+      '- Registrar causa real de la baja.',
+      '- Proponer una acción puntual de recuperación o retención.',
+    ].join('\n');
+  }
+
+  if (agent?.id === 'financiero') {
+    return [
+      `Soy el ${agent.name}. Esta señal en ${branch}, periodo ${period}, debe verse desde flujo, cobranza y riesgo financiero: **${title}**.`,
+      '',
+      `${description} ${meaning} Si no se atiende, puede afectar caja, crédito disponible y decisiones de compra.`,
+      '',
+      '**Validaría hoy**',
+      ...validations.map((item) => `- ${item}`),
+      '',
+      '**Plan financiero**',
+      '- Priorizar montos de mayor impacto.',
+      '- Confirmar pagos, saldos y vencimientos.',
+      '- Limitar decisiones que aumenten presión de flujo hasta resolverlo.',
+    ].join('\n');
+  }
+
+  if (agent?.id === 'compras') {
+    return [
+      `Soy el ${agent.name}. Esta señal en ${branch}, periodo ${period}, la reviso desde inventario, reabasto y proveedores: **${title}**.`,
+      '',
+      `${description} ${meaning} La decisión correcta no es comprar por impulso, sino confirmar rotación, mínimo, proveedor y urgencia real.`,
+      '',
+      '**Validaría hoy**',
+      ...validations.map((item) => `- ${item}`),
+      '',
+      '**Plan de compras**',
+      '- Separar productos críticos con venta reciente de productos sin rotación.',
+      '- Resolver primero reabasto o traspaso de productos que pueden frenar ventas.',
+      '- Confirmar proveedor, costo y tiempo de entrega antes de comprometer capital.',
+    ].join('\n');
+  }
+
+  if (agent?.id === 'produccion') {
+    return [
+      `Soy el ${agent.name}. Esta señal en ${branch}, periodo ${period}, debe conectarse con capacidad, tiempos, desperdicio y operación: **${title}**.`,
+      '',
+      `${description} ${meaning} Mi foco es detectar dónde se pierde eficiencia y qué dato falta para medirlo bien.`,
+      '',
+      '**Validaría hoy**',
+      ...validations.map((item) => `- ${item}`),
+      '',
+      '**Plan operativo**',
+      '- Identificar responsable y causa operacional.',
+      '- Registrar tiempo perdido, merma, devolución o restricción de capacidad.',
+      '- Convertirlo en una métrica diaria para saber si mejora o se repite.',
+    ].join('\n');
+  }
+
+  return [
+    `Sucursal: ${branch}`,
+    `Periodo: ${period}`,
+    `Área: ${area}`,
+    `Prioridad: ${priority.toUpperCase()}`,
+    '',
+    `**${title}**`,
+    '',
+    '**Qué significa**',
+    meaning,
+    '',
+    '**Por qué importa**',
+    description,
+    '',
+    '**Posibles causas**',
+    ...causes.map((item) => `- ${item}`),
+    '',
+    '**Qué validar hoy**',
+    ...validations.map((item) => `- ${item}`),
+    '',
+    '**Plan de acción de hoy**',
+    ...plan.map((item) => `- ${item}`),
+  ].join('\n');
+}
+
 function extractLowStockRows(text: string): Array<{ producto: string; stock: string; minimo: string }> {
   return text
     .split('\n')
@@ -555,7 +728,7 @@ const MessageContent: React.FC<{ text: string }> = ({ text }) => {
 };
 
 const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
-  isOpen, onClose, branchName, userName, userId = 'anon', businessUnit, branchId,
+  isOpen, onClose, branchName, userName, userId = 'anon', businessUnit, branchId, initialPrompt, agent,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -572,17 +745,83 @@ const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
   const conversationIdRef = useRef<string | null>(null);
+  const activeAgentIdRef = useRef<string | undefined>(agent?.id);
+  const activeDraftScopeRef = useRef('default');
+  const handledInitialPromptRef = useRef('');
   const lastSqlRef = useRef<string>('');
   const exportRowsRef = useRef<any[]>([]);
   messagesRef.current = messages;
   conversationIdRef.current = conversationId;
+  const draftScope = useMemo(
+    () => `${businessUnit || 'global'}_${branchId || 'branch'}_${agent?.id || 'assistant'}`,
+    [agent?.id, branchId, businessUnit]
+  );
 
   useEffect(() => {
     if (isOpen && view === 'chat') {
+      if (activeDraftScopeRef.current !== draftScope) {
+        saveDraft(userId, messagesRef.current, activeDraftScopeRef.current);
+        activeDraftScopeRef.current = draftScope;
+        activeAgentIdRef.current = agent?.id;
+        setMessages(loadDraft(userId, draftScope));
+        setConversationId(null);
+        setDebugQueries([]);
+        lastSqlRef.current = '';
+        exportRowsRef.current = [];
+      }
       const t = setTimeout(() => inputRef.current?.focus(), 350);
       return () => clearTimeout(t);
     }
-  }, [isOpen, view]);
+  }, [agent?.id, draftScope, isOpen, userId, view]);
+
+  useEffect(() => {
+    if (!isOpen || !initialPrompt?.trim()) return;
+    const prompt = initialPrompt.trim();
+    const promptKey = `${draftScope}:${prompt}`;
+    if (handledInitialPromptRef.current === promptKey) return;
+    handledInitialPromptRef.current = promptKey;
+    setView('chat');
+    if (activeDraftScopeRef.current !== draftScope) {
+      saveDraft(userId, messagesRef.current, activeDraftScopeRef.current);
+      activeDraftScopeRef.current = draftScope;
+      activeAgentIdRef.current = agent?.id;
+      setMessages(loadDraft(userId, draftScope));
+      setConversationId(null);
+      setDebugQueries([]);
+      lastSqlRef.current = '';
+      exportRowsRef.current = [];
+    }
+    if (prompt.includes('[DASHBOARD_GERENCIAL]')) {
+      const existing = loadDraft(userId, draftScope);
+      if (existing.length > 0) {
+        setMessages(existing);
+        setInput('');
+        setIsTyping(false);
+        setStatusLabel('');
+        return;
+      }
+      setMessages([
+        {
+          id: uid('a'),
+          role: 'assistant',
+          text: buildExecutiveDashboardFallback(prompt, agent),
+        },
+      ]);
+      setConversationId(null);
+      setDebugQueries([]);
+      setInput('');
+      setIsTyping(false);
+      setStatusLabel('');
+      return;
+    }
+    setInput(prompt);
+    const t = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(t);
+  }, [agent, agent?.id, draftScope, initialPrompt, isOpen, userId]);
+
+  useEffect(() => {
+    if (!isOpen) handledInitialPromptRef.current = '';
+  }, [isOpen]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -590,39 +829,54 @@ const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
 
   // Borrador en vivo en localStorage mientras se conversa
   useEffect(() => {
-    if (messages.length) saveDraft(userId, messages);
-  }, [messages, userId]);
+    if (messages.length) saveDraft(userId, messages, draftScope);
+  }, [draftScope, messages, userId]);
 
-  // Persistir en Supabase y reiniciar a un chat nuevo
-  const persistAndReset = useCallback(async () => {
+  // Persistir en Supabase. El cierre visual del drawer no destruye la sesión viva.
+  const persistCurrentConversation = useCallback(async () => {
     const current = messagesRef.current;
-    const hasUser = current.some((m) => m.role === 'user' && m.text.trim());
-    if (hasUser) {
+    const hasContent = current.some((m) => m.text.trim());
+    if (hasContent) {
       try {
-        await saveConversation({
+        const savedId = await saveConversation({
           id: conversationIdRef.current,
           userId,
           businessUnit,
           branchId,
           messages: current,
+          agentId: agent?.id,
+          agentName: agent?.name,
         });
+        if (savedId) setConversationId(savedId);
       } catch (e) {
         console.error('No se pudo guardar la conversación IA:', e);
       }
     }
-    clearDraft(userId);
+  }, [agent?.id, agent?.name, branchId, businessUnit, userId]);
+
+  const persistAndReset = useCallback(async () => {
+    await persistCurrentConversation();
+    clearDraft(userId, draftScope);
     lastSqlRef.current = '';
     exportRowsRef.current = [];
     setDebugQueries([]);
     setMessages([]);
     setConversationId(null);
     setView('chat');
-  }, [userId, businessUnit, branchId]);
+  }, [draftScope, persistCurrentConversation, userId]);
 
   const handleClose = useCallback(() => {
-    void persistAndReset();
     onClose();
-  }, [persistAndReset, onClose]);
+  }, [onClose]);
+
+  useEffect(() => {
+    const handleSaveSession = (event: Event) => {
+      const detail = (event as CustomEvent<{ promises?: Promise<unknown>[] }>).detail;
+      detail?.promises?.push(persistCurrentConversation());
+    };
+    window.addEventListener('lopar:assistant-save-session', handleSaveSession as EventListener);
+    return () => window.removeEventListener('lopar:assistant-save-session', handleSaveSession as EventListener);
+  }, [persistCurrentConversation]);
 
   // Cerrar con ESC
   useEffect(() => {
@@ -636,7 +890,7 @@ const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
     setView('history');
     setLoadingHistory(true);
     try {
-      setHistory(await listConversations(userId, businessUnit));
+      setHistory(await listConversations(userId, businessUnit, agent?.id));
     } catch (e) {
       console.error('No se pudo cargar el historial IA:', e);
       setHistory([]);
@@ -648,9 +902,17 @@ const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
   const loadConversation = async (meta: ConversationMeta) => {
     // Guarda lo que haya en el chat actual antes de reemplazarlo
     const current = messagesRef.current;
-    if (current.some((m) => m.role === 'user' && m.text.trim())) {
+    if (current.some((m) => m.text.trim())) {
       try {
-        await saveConversation({ id: conversationIdRef.current, userId, businessUnit, branchId, messages: current });
+        await saveConversation({
+          id: conversationIdRef.current,
+          userId,
+          businessUnit,
+          branchId,
+          messages: current,
+          agentId: agent?.id,
+          agentName: agent?.name,
+        });
       } catch (e) { console.error(e); }
     }
     try {
@@ -680,12 +942,20 @@ const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
 
   const startNewChat = async () => {
     const current = messagesRef.current;
-    if (current.some((m) => m.role === 'user' && m.text.trim())) {
+    if (current.some((m) => m.text.trim())) {
       try {
-        await saveConversation({ id: conversationIdRef.current, userId, businessUnit, branchId, messages: current });
+        await saveConversation({
+          id: conversationIdRef.current,
+          userId,
+          businessUnit,
+          branchId,
+          messages: current,
+          agentId: agent?.id,
+          agentName: agent?.name,
+        });
       } catch (e) { console.error(e); }
     }
-    clearDraft(userId);
+    clearDraft(userId, draftScope);
     lastSqlRef.current = '';
     exportRowsRef.current = [];
     setDebugQueries([]);
@@ -738,6 +1008,20 @@ const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
       setIsTyping(false);
       setStatusLabel('');
     };
+
+    if (text.includes('[DASHBOARD_GERENCIAL]')) {
+      setMessages([
+        ...baseline,
+        {
+          id: uid('a'),
+          role: 'assistant',
+          text: buildExecutiveDashboardFallback(text, agent),
+        },
+      ]);
+      setIsTyping(false);
+      setStatusLabel('');
+      return;
+    }
 
     if (isDebtCustomersRequest(text) && !shouldPrepareDownload) {
       try {
@@ -1123,11 +1407,15 @@ ORDER BY s.qty_base ASC, p.name ASC`;
       }
     }
 
-    // Contexto completo de la conversación para Ollama
-    const wireHistory: OllamaMessage[] = baseline.map((m) => ({
-      role: m.role,
-      content: m.text,
-    }));
+    // Contexto completo de la conversación para el modelo, con personalidad del agente activa.
+    const agentInstruction = buildAgentInstruction(agent);
+    const wireHistory: OllamaMessage[] = [
+      ...(agentInstruction ? [{ role: 'user' as const, content: agentInstruction }] : []),
+      ...baseline.map((m) => ({
+        role: m.role,
+        content: m.text,
+      })),
+    ];
 
     const assistantId = uid('a');
     let gotText = false;
@@ -1305,12 +1593,12 @@ ORDER BY s.qty_base ASC, p.name ASC`;
               </div>
               <div>
                 <h2 className="text-base font-black uppercase tracking-tight text-white">
-                  {view === 'history' ? 'Historial' : 'Asistente IA'}
+                  {view === 'history' ? 'Historial' : agent?.name ?? 'Asistente IA'}
                 </h2>
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-400" />
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                    {branchName || 'En línea'}
+                    {agent?.subtitle || branchName || 'En línea'}
                   </p>
                 </div>
               </div>
@@ -1419,10 +1707,12 @@ ORDER BY s.qty_base ASC, p.name ASC`;
                     <SparkIcon className="h-8 w-8" />
                   </div>
                   <h3 className="text-lg font-black uppercase tracking-tight text-slate-900">
-                    Hola{userName ? `, ${userName}` : ''} 👋
+                    {agent ? agent.name : `Hola${userName ? `, ${userName}` : ''} 👋`}
                   </h3>
                   <p className="mt-1.5 text-sm font-medium text-slate-500">
-                    Pregúntame sobre ventas, inventario, clientes o flota. Estoy aquí para ayudarte.
+                    {agent
+                      ? `${agent.subtitle}. ${agent.tone}`
+                      : 'Pregúntame sobre ventas, inventario, clientes o flota. Estoy aquí para ayudarte.'}
                   </p>
                   <div className="mt-6 flex w-full flex-col gap-2">
                     {QUICK_PROMPTS.map((p) => (

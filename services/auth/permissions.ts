@@ -20,6 +20,7 @@ export const TAB_PERMISSIONS: Record<string, TabPermission> = {
   customers: { businessUnit: 'materiales', moduleKey: 'customers' },
   'customer-alerts': { businessUnit: 'materiales', moduleKey: 'alerts' },
   reports: { businessUnit: 'materiales', moduleKey: 'reports' },
+  'materials-executive-dashboard': { businessUnit: 'materiales', moduleKey: 'reports' },
   audit: { businessUnit: 'materiales', moduleKey: 'audit' },
   'audit-internal': { businessUnit: 'materiales', moduleKey: 'audit' },
   production: { businessUnit: 'materiales', moduleKey: 'production' },
@@ -32,6 +33,7 @@ export const TAB_PERMISSIONS: Record<string, TabPermission> = {
   'concrete-customers': { businessUnit: 'concretera', moduleKey: 'customers' },
   'concrete-customer-alerts': { businessUnit: 'concretera', moduleKey: 'alerts' },
   'concrete-reports': { businessUnit: 'concretera', moduleKey: 'reports' },
+  'concrete-executive-dashboard': { businessUnit: 'concretera', moduleKey: 'reports' },
   'concrete-audit': { businessUnit: 'concretera', moduleKey: 'audit' },
   'concrete-audit-internal': { businessUnit: 'concretera', moduleKey: 'audit' },
   'concrete-production': { businessUnit: 'concretera', moduleKey: 'production' },
@@ -45,6 +47,7 @@ export const TAB_PERMISSIONS: Record<string, TabPermission> = {
   'transport-customer-alerts':  { businessUnit: 'transporteria', moduleKey: 'alerts' },
   'transport-audit':            { businessUnit: 'transporteria', moduleKey: 'audit' },
   'transport-reports':          { businessUnit: 'transporteria', moduleKey: 'reports' },
+  'transport-executive-dashboard': { businessUnit: 'transporteria', moduleKey: 'reports' },
 
   'vinos-customers':            { businessUnit: 'vinos', moduleKey: 'customers' },
   'vinos-inventory':            { businessUnit: 'vinos', moduleKey: 'products' },
@@ -57,6 +60,9 @@ export const TAB_PERMISSIONS: Record<string, TabPermission> = {
 
 export const isFullAccessRole = (role?: Role | string | null) =>
   role === Role.ADMIN || role === Role.SUPERADMIN;
+
+const canUseExecutiveReport = (user: User | null | undefined) =>
+  Boolean(user?.active && (user.role === Role.SUPERADMIN || user.role === Role.SOCIO));
 
 export const buildPermissionKey = (businessUnit: BusinessUnit, moduleKey: string, action: PermissionAction = 'view') =>
   `${businessUnit}.${moduleKey}.${action}`;
@@ -95,12 +101,14 @@ export const userCanAccess = (
 export const userCanAccessTab = (user: User | null | undefined, tabId: string) => {
   if (tabId === 'executive-dashboard') {
     if (!ENABLE_EXECUTIVE_DASHBOARD) return false;
-    if (!user || !user.active) return false;
-    if (user.role === Role.SOCIO || isFullAccessRole(user.role)) return true;
-    return (
-      userCanAccess(user, 'materiales', 'reports') ||
-      userCanAccess(user, 'concretera', 'reports')
-    );
+    return canUseExecutiveReport(user);
+  }
+  if (
+    tabId === 'materials-executive-dashboard' ||
+    tabId === 'concrete-executive-dashboard' ||
+    tabId === 'transport-executive-dashboard'
+  ) {
+    return canUseExecutiveReport(user);
   }
   const permission = TAB_PERMISSIONS[tabId];
   if (!permission) return false;

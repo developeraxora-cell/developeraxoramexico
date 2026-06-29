@@ -2,14 +2,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { User, Branch, Role } from '../types';
 import { userCanAccessBranch, userCanAccessTab } from '../services/auth/permissions';
-import AssistantDrawer from './common/AssistantDrawer';
+import AssistantDrawer, { AssistantAgent } from './common/AssistantDrawer';
 
 interface LayoutProps {
   children: React.ReactNode;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   currentUser: User;
-  onLogout: () => void;
+  onLogout: () => void | Promise<void>;
   selectedBranchId: string;
   setSelectedBranchId: (id: string) => void;
   branches: Branch[];
@@ -66,6 +66,8 @@ const Layout: React.FC<LayoutProps> = ({
   const [collapsedFlyout, setCollapsedFlyout] = useState<CollapsedFlyoutState | null>(null);
   const [pinnedFlyoutGroupId, setPinnedFlyoutGroupId] = useState<string | null>(null);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [assistantPrompt, setAssistantPrompt] = useState('');
+  const [assistantAgent, setAssistantAgent] = useState<AssistantAgent | undefined>(undefined);
   const hasInitializedSidebar = useRef(false);
   const lastSidebarUserId = useRef<string | null>(null);
   const hasProcessedInitialTab = useRef(false);
@@ -73,13 +75,20 @@ const Layout: React.FC<LayoutProps> = ({
   const flyoutRef = useRef<HTMLDivElement | null>(null);
   const canUseAssistant = currentUser?.role === Role.SOCIO || currentUser?.role === Role.SUPERADMIN;
 
+  const handleLogout = async () => {
+    const promises: Promise<unknown>[] = [];
+    window.dispatchEvent(new CustomEvent('lopar:assistant-save-session', { detail: { promises } }));
+    if (promises.length > 0) await Promise.allSettled(promises);
+    await onLogout();
+  };
+
   const navigation: NavGroup[] = [
     {
       id: 'gerencial',
       label: 'Gerencial',
       icon: '📈',
       items: [
-        { id: 'executive-dashboard', label: 'Dashboard Gerencial', icon: '📊' },
+        { id: 'executive-dashboard', label: 'Reporte Gerencial', icon: '📊' },
       ]
     },
     {
@@ -94,6 +103,7 @@ const Layout: React.FC<LayoutProps> = ({
         { id: 'customers', label: 'Clientes / Crédito', icon: '👥' },
         { id: 'customer-alerts', label: 'Alertas clientes', icon: '🚨' },
         { id: 'reports', label: 'Reportes', icon: '📊' },
+        { id: 'materials-executive-dashboard', label: 'Reporte Gerencial', icon: '📈' },
         { id: 'audit-internal', label: 'Auditoria', icon: '📋' },
         { id: 'production', label: 'Produccion', icon: '🏭' },
         { id: 'branches', label: 'Sucursales', icon: '🏢' },
@@ -111,6 +121,7 @@ const Layout: React.FC<LayoutProps> = ({
         { id: 'concrete-customers', label: 'Clientes / Crédito', icon: '👥' },
         { id: 'concrete-customer-alerts', label: 'Alertas clientes', icon: '🚨' },
         { id: 'concrete-reports', label: 'Reportes', icon: '📊' },
+        { id: 'concrete-executive-dashboard', label: 'Reporte Gerencial', icon: '📈' },
         { id: 'concrete-audit', label: 'Auditorias', icon: '📋' },
       ]
     },
@@ -133,6 +144,7 @@ const Layout: React.FC<LayoutProps> = ({
         { id: 'transport-customers', label: 'Clientes / Crédito', icon: '👥' },
         { id: 'transport-customer-alerts', label: 'Alertas clientes', icon: '🚨' },
         { id: 'transport-reports', label: 'Reportes', icon: '📊' },
+        { id: 'transport-executive-dashboard', label: 'Reporte Gerencial', icon: '📈' },
         { id: 'transport-audit', label: 'Auditorías', icon: '📋' },
       ]
     },
@@ -266,6 +278,17 @@ const Layout: React.FC<LayoutProps> = ({
       setIsAssistantOpen(false);
     }
   }, [canUseAssistant, isAssistantOpen]);
+
+  useEffect(() => {
+    const handleOpenAssistant = (event: Event) => {
+      const detail = (event as CustomEvent<{ prompt?: string; agent?: AssistantAgent }>).detail;
+      setAssistantPrompt(detail?.prompt ?? '');
+      setAssistantAgent(detail?.agent);
+      setIsAssistantOpen(true);
+    };
+    window.addEventListener('lopar:open-assistant', handleOpenAssistant as EventListener);
+    return () => window.removeEventListener('lopar:open-assistant', handleOpenAssistant as EventListener);
+  }, []);
 
   useEffect(() => {
     if (!pinnedFlyoutGroupId) return;
@@ -456,7 +479,7 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
 
           <button
-            onClick={onLogout}
+            onClick={() => void handleLogout()}
             title="Cerrar sesion"
             className={`w-full bg-slate-800 hover:bg-red-500/10 hover:text-red-500 transition-all rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 border border-transparent hover:border-red-500/20 ${
               isSidebarCollapsed ? 'px-0 py-4' : 'py-4'
@@ -598,7 +621,11 @@ const Layout: React.FC<LayoutProps> = ({
             </div>
             {canUseAssistant && (
               <button
-                onClick={() => setIsAssistantOpen(true)}
+                onClick={() => {
+                  setAssistantPrompt('');
+                  setAssistantAgent(undefined);
+                  setIsAssistantOpen(true);
+                }}
                 title="Asistente IA"
                 aria-label="Abrir asistente IA"
                 className="group relative flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-orange-400 shadow-lg shadow-slate-900/20 transition-all hover:bg-slate-800 hover:text-orange-300 hover:shadow-orange-500/20 md:h-11 md:w-11"
@@ -648,6 +675,8 @@ const Layout: React.FC<LayoutProps> = ({
           userId={currentUser?.id}
           businessUnit={assistantBusinessUnit}
           branchId={selectedBranchId}
+          initialPrompt={assistantPrompt}
+          agent={assistantAgent}
         />
       )}
     </div>

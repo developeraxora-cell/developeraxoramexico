@@ -1,5 +1,5 @@
 export const TAB_PATHS: Record<string, string> = {
-  'executive-dashboard':      '/gerencial/dashboard',
+  'executive-dashboard':      '/gerencial/reporte',
   'pos':                      '/materiales/ventas',
   'purchases':                '/materiales/compras',
   'inventory':                '/materiales/productos',
@@ -7,6 +7,7 @@ export const TAB_PATHS: Record<string, string> = {
   'customers':                '/materiales/clientes',
   'customer-alerts':          '/materiales/alertas',
   'reports':                  '/materiales/reportes',
+  'materials-executive-dashboard': '/materiales/reporte-gerencial',
   'audit-internal':           '/materiales/auditorias',
   'production':               '/materiales/produccion',
   'branches':                 '/sucursales',
@@ -17,6 +18,7 @@ export const TAB_PATHS: Record<string, string> = {
   'concrete-customers':       '/concretera/clientes',
   'concrete-customer-alerts': '/concretera/alertas',
   'concrete-reports':         '/concretera/reportes',
+  'concrete-executive-dashboard': '/concretera/reporte-gerencial',
   'concrete-audit':           '/concretera/auditorias',
   'diesel':                   '/logistica/diesel',
   'transport-pos':             '/transporteria/ventas',
@@ -26,6 +28,7 @@ export const TAB_PATHS: Record<string, string> = {
   'transport-customer-alerts': '/transporteria/alertas',
   'transport-audit':           '/transporteria/auditorias',
   'transport-reports':         '/transporteria/reportes',
+  'transport-executive-dashboard': '/transporteria/reporte-gerencial',
 
   'vinos-customers':           '/vinos/clientes',
   'vinos-inventory':           '/vinos/productos',

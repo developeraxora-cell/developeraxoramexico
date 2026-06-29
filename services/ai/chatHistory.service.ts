@@ -29,6 +29,8 @@ export interface SaveConversationInput {
   businessUnit?: string | null;
   branchId?: string | null;
   messages: ChatMessage[];
+  agentId?: string | null;
+  agentName?: string | null;
 }
 
 const DRAFT_PREFIX = 'lopar_ai_draft_';
@@ -37,32 +39,32 @@ const DRAFT_PREFIX = 'lopar_ai_draft_';
 // Borrador en localStorage
 // ---------------------------------------------------------------------------
 
-const draftKey = (userId: string) => `${DRAFT_PREFIX}${userId || 'anon'}`;
+const draftKey = (userId: string, scope = 'default') => `${DRAFT_PREFIX}${userId || 'anon'}_${scope}`;
 
-export function saveDraft(userId: string, messages: ChatMessage[]): void {
+export function saveDraft(userId: string, messages: ChatMessage[], scope = 'default'): void {
   try {
     if (!messages.length) {
-      localStorage.removeItem(draftKey(userId));
+      localStorage.removeItem(draftKey(userId, scope));
       return;
     }
-    localStorage.setItem(draftKey(userId), JSON.stringify(messages));
+    localStorage.setItem(draftKey(userId, scope), JSON.stringify(messages));
   } catch {
     /* almacenamiento lleno o bloqueado: se ignora */
   }
 }
 
-export function loadDraft(userId: string): ChatMessage[] {
+export function loadDraft(userId: string, scope = 'default'): ChatMessage[] {
   try {
-    const raw = localStorage.getItem(draftKey(userId));
+    const raw = localStorage.getItem(draftKey(userId, scope));
     return raw ? (JSON.parse(raw) as ChatMessage[]) : [];
   } catch {
     return [];
   }
 }
 
-export function clearDraft(userId: string): void {
+export function clearDraft(userId: string, scope = 'default'): void {
   try {
-    localStorage.removeItem(draftKey(userId));
+    localStorage.removeItem(draftKey(userId, scope));
   } catch {
     /* noop */
   }
@@ -74,7 +76,8 @@ export function clearDraft(userId: string): void {
 
 function buildTitle(messages: ChatMessage[]): string {
   const firstUser = messages.find((m) => m.role === 'user');
-  const text = (firstUser?.text ?? 'Conversación').trim().replace(/\s+/g, ' ');
+  const firstAssistant = messages.find((m) => m.role === 'assistant');
+  const text = (firstUser?.text ?? firstAssistant?.text ?? 'Conversación').trim().replace(/\s+/g, ' ');
   return text.length > 60 ? `${text.slice(0, 57)}…` : text;
 }
 
@@ -86,12 +89,16 @@ export async function saveConversation(input: SaveConversationInput): Promise<st
   const meaningful = input.messages.filter((m) => m.text.trim().length);
   if (!isSupabaseConfigured || meaningful.length === 0) return input.id ?? null;
 
-  const payload = JSON.stringify(input.messages);
+  const payload = JSON.stringify({
+    agentId: input.agentId ?? null,
+    agentName: input.agentName ?? null,
+    messages: input.messages,
+  });
   const row = {
     user_id: input.userId,
     business_unit: input.businessUnit ?? null,
     branch_id: input.branchId ?? null,
-    title: buildTitle(input.messages),
+    title: input.agentName ? `${input.agentName}: ${buildTitle(input.messages)}` : buildTitle(input.messages),
     payload,
     message_count: input.messages.length,
   };
@@ -115,24 +122,36 @@ export async function saveConversation(input: SaveConversationInput): Promise<st
 export async function listConversations(
   userId: string,
   businessUnit?: string | null,
+  agentId?: string | null,
 ): Promise<ConversationMeta[]> {
   if (!isSupabaseConfigured) return [];
   let query = supabase
     .from('ai_chat_histories')
-    .select('id, title, message_count, updated_at')
+    .select('id, title, message_count, updated_at, payload')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
-    .limit(50);
+    .limit(100);
   if (businessUnit) query = query.eq('business_unit', businessUnit);
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []).map((r: any) => ({
-    id: r.id,
-    title: r.title ?? 'Conversación',
-    messageCount: r.message_count ?? 0,
-    updatedAt: r.updated_at,
-  }));
+  return (data ?? [])
+    .filter((r: any) => {
+      if (!agentId) return true;
+      try {
+        const payload = JSON.parse(r.payload ?? 'null');
+        return payload?.agentId === agentId;
+      } catch {
+        return false;
+      }
+    })
+    .slice(0, 50)
+    .map((r: any) => ({
+      id: r.id,
+      title: r.title ?? 'Conversación',
+      messageCount: r.message_count ?? 0,
+      updatedAt: r.updated_at,
+    }));
 }
 
 /** Carga los mensajes de una conversación (parsea el STRING JSON). */
@@ -145,7 +164,8 @@ export async function getConversation(id: string): Promise<ChatMessage[]> {
     .single();
   if (error) throw error;
   try {
-    return JSON.parse(data?.payload ?? '[]') as ChatMessage[];
+    const parsed = JSON.parse(data?.payload ?? '[]');
+    return Array.isArray(parsed) ? parsed as ChatMessage[] : (parsed?.messages ?? []) as ChatMessage[];
   } catch {
     return [];
   }
