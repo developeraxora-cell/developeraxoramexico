@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 import {
   Search, Trash2, User as UserIcon, CreditCard, Banknote, Gift, Tag, Receipt, X, Loader2, Plus, Minus, Wallet, Eye, FileText, Pencil,
-  Clock, History, LockKeyhole, UnlockKeyhole,
+  Clock, History, LockKeyhole, UnlockKeyhole, Store, ShieldCheck, Coins, ArrowRight, CheckCircle2,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
@@ -12,6 +12,7 @@ import { vinosSalesService, type SaleCartItem, type PaymentMethod, type PriceTie
 import { vinosCashRegisterService, type CashRegisterSession, type CashRegisterSummary } from '../../services/vinos/cashRegister.service';
 import { supabaseVinos } from '../../services/vinosClient';
 import { generateVinosSaleTicket, type VinosSalePdfInput } from '../../services/vinos/saleTicketPdf';
+import { generateVinosCashRegisterReceipt } from '../../services/vinos/cashRegisterReceiptPdf';
 import { logVinosAudit } from '../../services/audit/audit.service';
 import Toast from '../common/Toast';
 
@@ -62,7 +63,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   // caja
   const [cashSession, setCashSession] = useState<CashRegisterSession | null>(null);
+  const [cashSessionReady, setCashSessionReady] = useState(false);
   const [cashLoading, setCashLoading] = useState(false);
+  const [cashStartPromptOpen, setCashStartPromptOpen] = useState(false);
   const [cashOpenModal, setCashOpenModal] = useState(false);
   const [cashCloseModal, setCashCloseModal] = useState(false);
   const [cashHistoryOpen, setCashHistoryOpen] = useState(false);
@@ -197,21 +200,36 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const loadCashSession = useCallback(async () => {
     if (!branchDbId) {
       setCashSession(null);
+      setCashSessionReady(false);
       return;
     }
+    setCashSessionReady(false);
     setCashLoading(true);
     setCashError('');
     try {
       const session = await vinosCashRegisterService.getActive(branchDbId, currentUser.id);
       setCashSession(session);
+      if (session) setCashStartPromptOpen(false);
     } catch (e) {
       setCashError(e instanceof Error ? e.message : 'No se pudo cargar la caja.');
     } finally {
       setCashLoading(false);
+      setCashSessionReady(true);
     }
   }, [branchDbId, currentUser.id]);
 
   useEffect(() => { loadCashSession(); }, [loadCashSession]);
+
+  useEffect(() => {
+    if (!cashSessionReady || !branchDbId || cashSession || cashOpenModal || cashCloseModal) return;
+    setCashStartPromptOpen(true);
+  }, [branchDbId, cashCloseModal, cashOpenModal, cashSession, cashSessionReady]);
+
+  const openCashOpeningForm = () => {
+    setCashStartPromptOpen(false);
+    setCashOpenModal(true);
+    setCashError('');
+  };
 
   const handleOpenCash = async () => {
     if (!branchDbId) return;
@@ -233,6 +251,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         opening_observations: openingObservations,
       });
       setCashSession(session);
+      setCashStartPromptOpen(false);
       setCashOpenModal(false);
       setOpeningCash('0');
       setOpeningObservations('');
@@ -270,21 +289,40 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       setCashError('Ingresa el efectivo entregado.');
       return;
     }
+    const cashDocumentWindow = window.open('', '_blank');
+    if (cashDocumentWindow) {
+      cashDocumentWindow.document.title = 'Corte de caja';
+      cashDocumentWindow.blur();
+      window.focus();
+    }
     setCashLoading(true);
     setCashError('');
     try {
-      await vinosCashRegisterService.close({
+      const closedSession = await vinosCashRegisterService.close({
         session: cashSession,
         delivered_cash: delivered,
         closing_observations: closingObservations,
       });
+      let documentOpened = true;
+      try {
+        await generateVinosCashRegisterReceipt({
+          session: closedSession,
+          branchName,
+        }, { mode: 'print', targetWindow: cashDocumentWindow });
+      } catch (pdfError) {
+        console.error(pdfError);
+        documentOpened = false;
+        if (cashDocumentWindow && !cashDocumentWindow.closed) cashDocumentWindow.close();
+        setFeedback({ type: 'error', msg: 'Caja cerrada, pero no se pudo imprimir el corte.' });
+      }
       setCashSession(null);
       setCashCloseModal(false);
       setCashSummary(null);
       setDeliveredCash('');
       setClosingObservations('');
-      setFeedback({ type: 'success', msg: 'Caja cerrada.' });
+      if (documentOpened) setFeedback({ type: 'success', msg: 'Caja cerrada. Imprimiendo corte...' });
     } catch (e) {
+      if (cashDocumentWindow && !cashDocumentWindow.closed) cashDocumentWindow.close();
       setCashError(e instanceof Error ? e.message : 'No se pudo cerrar caja.');
     } finally {
       setCashLoading(false);
@@ -932,7 +970,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               </button>
             ) : (
               <button
-                onClick={() => { setCashOpenModal(true); setCashError(''); }}
+                onClick={openCashOpeningForm}
                 className="flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-orange-700 hover:bg-orange-100"
               >
                 <UnlockKeyhole size={14}/> Iniciar caja
@@ -1121,6 +1159,73 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         </div>
       </div>
 
+      {/* ─── MODAL BLOQUEANTE INICIAR CAJA ────────────── */}
+      {cashStartPromptOpen && !cashSession && !cashOpenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-md">
+          <div className="relative w-full max-w-3xl overflow-hidden rounded-3xl border border-orange-200 bg-white shadow-2xl">
+            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-orange-500 via-emerald-500 to-blue-500" />
+            <div className="grid gap-0 md:grid-cols-[1fr_280px]">
+              <div className="px-7 py-8 sm:px-10 sm:py-10">
+                <div className="mb-6 flex items-center gap-3">
+                  <div className="relative">
+                    <div className="absolute inset-0 animate-ping rounded-2xl bg-orange-300 opacity-30" />
+                    <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-600 text-white shadow-lg shadow-orange-600/25">
+                      <Store size={27} />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-orange-600">Casa Tahona</p>
+                    <p className="text-sm font-bold text-slate-500">{branchName}</p>
+                  </div>
+                </div>
+
+                <h2 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Iniciar Caja</h2>
+                <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-slate-500">
+                  Para comenzar a vender, primero registra la apertura de caja de {currentUser.name}.
+                </p>
+
+                <div className="mt-7 grid gap-3 sm:grid-cols-3">
+                  {[
+                    { icon: Coins, label: 'Monto inicial', text: 'Efectivo con el que inicia el turno.', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+                    { icon: ShieldCheck, label: 'Control de corte', text: 'Las ventas quedan ligadas a esta cajera.', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+                    { icon: CheckCircle2, label: 'Historial', text: 'El cierre quedará guardado para auditoría.', color: 'bg-orange-50 text-orange-700 border-orange-200' },
+                  ].map(item => (
+                    <div key={item.label} className={`rounded-2xl border p-4 ${item.color}`}>
+                      <item.icon size={21} />
+                      <p className="mt-3 text-xs font-black uppercase tracking-wider">{item.label}</p>
+                      <p className="mt-1 text-[11px] font-semibold leading-4 opacity-80">{item.text}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={openCashOpeningForm}
+                  className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 px-5 py-4 text-sm font-black uppercase tracking-wider text-white shadow-xl shadow-orange-600/20 transition hover:bg-orange-500 sm:w-auto"
+                >
+                  Continuar <ArrowRight size={18} />
+                </button>
+              </div>
+
+              <div className="hidden border-l border-slate-100 bg-slate-50 p-6 md:flex md:flex-col md:justify-between">
+                <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cajera</p>
+                  <p className="mt-1 text-lg font-black text-slate-950">{currentUser.name}</p>
+                  <div className="mt-5 rounded-2xl border border-dashed border-orange-200 bg-orange-50 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-orange-600">Pendiente</p>
+                    <p className="mt-1 text-sm font-bold text-orange-800">Capturar efectivo inicial</p>
+                  </div>
+                </div>
+                <div className="rounded-3xl bg-slate-900 p-5 text-white shadow-lg">
+                  <Clock size={22} className="text-orange-300" />
+                  <p className="mt-4 text-xs font-black uppercase tracking-widest text-slate-300">Turno sin caja activa</p>
+                  <p className="mt-2 text-2xl font-black">Listo para abrir</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── MODAL INICIAR CAJA ───────────────────────── */}
       {cashOpenModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
@@ -1130,11 +1235,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Iniciar caja</h3>
                 <p className="text-[11px] font-bold text-slate-400">{currentUser.name} · {branchName}</p>
               </div>
-              <button onClick={() => setCashOpenModal(false)} disabled={cashLoading} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-40"><X size={18}/></button>
+              <button onClick={() => { setCashOpenModal(false); if (!cashSession) setCashStartPromptOpen(true); }} disabled={cashLoading} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-40"><X size={18}/></button>
             </div>
             <div className="space-y-4 px-6 py-5">
               <label className="block">
-                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Efectivo inicial</span>
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Monto inicial</span>
                 <input
                   type="number"
                   min="0"
@@ -1146,7 +1251,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 />
               </label>
               <label className="block">
-                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observaciones</span>
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Descripción opcional</span>
                 <textarea
                   rows={3}
                   value={openingObservations}
@@ -1158,7 +1263,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               {cashError && <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{cashError}</p>}
             </div>
             <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
-              <button onClick={() => setCashOpenModal(false)} disabled={cashLoading} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-40">Cancelar</button>
+              <button onClick={() => { setCashOpenModal(false); if (!cashSession) setCashStartPromptOpen(true); }} disabled={cashLoading} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-40">Regresar</button>
               <button onClick={handleOpenCash} disabled={cashLoading} className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-40">
                 {cashLoading && <Loader2 size={14} className="animate-spin"/>}
                 Iniciar caja
