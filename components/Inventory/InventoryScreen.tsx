@@ -98,7 +98,13 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
 
   const formatDateTime = useCallback((value: string) => {
     if (!value) return '—';
-    const date = new Date(value);
+    const cleanValue = String(value).trim();
+    const normalizedValue = /[zZ]$/.test(cleanValue) || /[+-]\d{2}:?\d{2}$/.test(cleanValue)
+      ? cleanValue
+      : cleanValue.includes('T')
+        ? `${cleanValue}Z`
+        : cleanValue;
+    const date = new Date(normalizedValue);
     if (Number.isNaN(date.getTime())) return '—';
     return date.toLocaleString();
   }, []);
@@ -967,6 +973,9 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
 
                   <div className="overflow-x-auto border border-slate-200 rounded-2xl">
                     <table className="w-full min-w-[950px] border-collapse">
+                      <caption className="bg-slate-50 px-3 py-2 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">
+                        Movimientos recientes
+                      </caption>
                       <thead>
                         <tr className="bg-slate-900 text-white">
                           <th className="p-3 text-[10px] font-black uppercase tracking-wider text-left">Fecha</th>
@@ -975,8 +984,8 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                           <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Cantidad</th>
                           <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Unitario</th>
                           <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Total</th>
-                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Stock antes</th>
-                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Stock después</th>
+                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Saldo antes</th>
+                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Saldo después</th>
                           <th className="p-3 text-[10px] font-black uppercase tracking-wider text-left">Usuario</th>
                         </tr>
                       </thead>

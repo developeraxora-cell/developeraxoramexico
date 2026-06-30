@@ -116,6 +116,18 @@ export interface ProductMovementHistory {
   rows: ProductMovementRow[];
 }
 
+const normalizeSupabaseTimestamp = (value: string) => {
+  const cleanValue = String(value ?? '').trim();
+  if (!cleanValue) return '';
+  if (/[zZ]$/.test(cleanValue) || /[+-]\d{2}:?\d{2}$/.test(cleanValue)) return cleanValue;
+  return cleanValue.includes('T') ? `${cleanValue}Z` : cleanValue;
+};
+
+const getMovementTime = (value: string) => {
+  const timestamp = new Date(normalizeSupabaseTimestamp(value)).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
+
 export const catalogService = {
   async listUoms() {
     const { data, error } = await supabase
@@ -503,6 +515,17 @@ export const catalogService = {
     }
 
     const safeLimit = Math.max(10, Math.min(limit, 400));
+    const candidateLimit = Math.min(safeLimit * 3, 1000);
+
+    const { data: currentStockData, error: currentStockError } = await supabase
+      .from('inventory_stock')
+      .select('qty_base')
+      .eq('branch_id', branchId)
+      .eq('product_id', productId)
+      .maybeSingle();
+
+    if (currentStockError) throw currentStockError;
+    const currentStock = Number(currentStockData?.qty_base ?? 0);
 
     const { data: txItems, error: txItemsError } = await supabase
       .from('inventory_transaction_items')
@@ -527,7 +550,7 @@ export const catalogService = {
       .eq('inventory_transactions.is_deleted', false)
       .in('inventory_transactions.type', ['PURCHASE', 'SALE'])
       .order('created_at', { ascending: false, foreignTable: 'inventory_transactions' })
-      .limit(safeLimit);
+      .limit(candidateLimit);
 
     if (txItemsError) throw txItemsError;
 
@@ -537,7 +560,7 @@ export const catalogService = {
       .eq('branch_id', branchId)
       .eq('product_id', productId)
       .order('created_at', { ascending: false })
-      .limit(safeLimit);
+      .limit(candidateLimit);
 
     if (adjustmentsError) {
       const code = String(adjustmentsError.code ?? '');
@@ -573,7 +596,7 @@ export const catalogService = {
       .eq('product_id', productId)
       .eq('production_orders.branch_id', branchId)
       .order('created_at', { ascending: false })
-      .limit(safeLimit);
+      .limit(candidateLimit);
 
     if (productionError) {
       const code = String(productionError.code ?? '');
@@ -682,9 +705,24 @@ export const catalogService = {
       };
     });
 
-    const rows = [...transactionRows, ...adjustmentRows, ...productionRows]
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    const rowsDesc = [...transactionRows, ...adjustmentRows, ...productionRows]
+      .sort((a, b) => getMovementTime(b.created_at) - getMovementTime(a.created_at))
       .slice(0, safeLimit);
+
+    let runningStock = currentStock;
+    const rowsWithBalanceDesc = rowsDesc.map((row) => {
+      const stockAfter = runningStock;
+      const stockBefore = stockAfter - Number(row.qty_base ?? 0);
+      runningStock = stockBefore;
+
+      return {
+        ...row,
+        stock_before: stockBefore,
+        stock_after: stockAfter,
+      };
+    });
+
+    const rows = rowsWithBalanceDesc;
 
     return {
       summary,
