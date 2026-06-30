@@ -54,6 +54,13 @@ const getCashChange = (cashReceivedValue: number, saleTotal: number) =>
   Math.max(0, Number(cashReceivedValue || 0) - Number(saleTotal || 0));
 const formatDateTime = (value: string | null | undefined) =>
   value ? new Date(value).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+const paymentMethodLabel = (value: PaymentMethod) => {
+  if (value === 'EFECTIVO') return '💵 Efectivo';
+  if (value === 'CREDITO') return '💳 Crédito';
+  if (value === 'TRANSFERENCIA') return '↗ Transf.';
+  if (value === 'TARJETA') return '💳 Tarje.';
+  return '🎁 Sin costo';
+};
 
 const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branches }) => {
   const [products, setProducts] = useState<ProductFull[]>([]);
@@ -1097,10 +1104,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           {/* Método de pago */}
           <div>
             <p className="mb-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400">Método de pago</p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-5 gap-1.5">
               {([
                 { v: 'EFECTIVO', label: 'Efectivo',  icon: Banknote,   disabled: false },
                 { v: 'CREDITO',  label: 'Crédito',   icon: CreditCard, disabled: !selectedCustomer },
+                { v: 'TRANSFERENCIA', label: 'Transf.', icon: FileText, disabled: false },
+                { v: 'TARJETA', label: 'Tarje.', icon: CreditCard, disabled: false },
               ] as const).map(p => {
                 const active = paymentMethod === p.v;
                 return (
@@ -1109,13 +1118,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     onClick={() => !p.disabled && setPaymentMethod(p.v)}
                     disabled={p.disabled}
                     title={p.disabled ? 'Selecciona un cliente primero' : ''}
-                    className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-1.5 transition-colors ${
+                    className={`flex min-h-[45px] flex-col items-center justify-center gap-1 rounded-xl border px-1 py-1.5 transition-colors ${
                       p.disabled ? 'border-slate-100 bg-slate-50 opacity-40 cursor-not-allowed' :
                       active ? 'border-orange-500 bg-orange-50' : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
                     <p.icon size={14} className={active && !p.disabled ? 'text-orange-700' : 'text-slate-500'} />
-                    <span className={`text-[9px] font-black ${active && !p.disabled ? 'text-orange-700' : 'text-slate-600'}`}>{p.label}</span>
+                    <span className={`text-center text-[8px] font-black leading-3 ${active && !p.disabled ? 'text-orange-700' : 'text-slate-600'}`}>{p.label}</span>
                   </button>
                 );
               })}
@@ -1127,12 +1136,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   setManualDiscountError('');
                   setManualDiscountOpen(true);
                 }}
-                className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-1.5 transition-colors ${
+                className={`flex min-h-[45px] flex-col items-center justify-center gap-1 rounded-xl border px-1 py-1.5 transition-colors ${
                   manualDiscountApplied ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'
                 }`}
               >
                 <Tag size={14} className={manualDiscountApplied ? 'text-blue-700' : 'text-slate-500'} />
-                <span className={`text-[9px] font-black ${manualDiscountApplied ? 'text-blue-700' : 'text-slate-600'}`}>Aplicar descuento</span>
+                <span className={`text-center text-[7px] font-black leading-3 ${manualDiscountApplied ? 'text-blue-700' : 'text-slate-600'}`}>Aplicar descuento</span>
               </button>
             </div>
             {!selectedCustomer && (
@@ -1263,6 +1272,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {[
                       { label: 'Ventas efectivo', value: cashSummary.cash_sales_total, icon: Banknote, box: 'border-emerald-200 bg-emerald-50', iconBox: 'bg-emerald-100 text-emerald-700', valueClass: 'text-emerald-700' },
+                      { label: 'Ventas tarjeta', value: cashSummary.card_sales_total, icon: CreditCard, box: 'border-indigo-200 bg-indigo-50', iconBox: 'bg-indigo-100 text-indigo-700', valueClass: 'text-indigo-700' },
+                      { label: 'Transferencias', value: cashSummary.transfer_sales_total, icon: FileText, box: 'border-cyan-200 bg-cyan-50', iconBox: 'bg-cyan-100 text-cyan-700', valueClass: 'text-cyan-700' },
                       { label: 'Cortesías', value: cashSummary.courtesy_total, icon: Gift, box: 'border-purple-200 bg-purple-50', iconBox: 'bg-purple-100 text-purple-700', valueClass: 'text-purple-700' },
                       { label: 'Descuentos', value: cashSummary.discounts_total, icon: Tag, box: 'border-blue-200 bg-blue-50', iconBox: 'bg-blue-100 text-blue-700', valueClass: 'text-blue-700' },
                       { label: 'Cancelaciones', value: cashSummary.cancellations_total, icon: Trash2, box: 'border-red-200 bg-red-50', iconBox: 'bg-red-100 text-red-700', valueClass: 'text-red-700' },
@@ -1352,7 +1363,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 z-10 bg-slate-100">
                     <tr className="border-b border-slate-200">
-                      {['Cajera','Apertura','Cierre','Efectivo','Cortesías','Desc.','Cancel.','Total','Esperado','Obs.'].map(h => (
+                      {['Cajera','Apertura','Cierre','Efectivo','Tarjeta','Transf.','Cortesías','Desc.','Cancel.','Total','Esperado','Obs.'].map(h => (
                         <th key={h} className="px-3 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">{h}</th>
                       ))}
                     </tr>
@@ -1364,6 +1375,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                         <td className="px-3 py-3 text-xs text-slate-600 whitespace-nowrap">{formatDateTime(row.opened_at)}</td>
                         <td className="px-3 py-3 text-xs text-slate-600 whitespace-nowrap">{formatDateTime(row.closed_at)}</td>
                         <td className="px-3 py-3 text-xs font-bold text-slate-900">{formatCurrency(row.cash_sales_total)}</td>
+                        <td className="px-3 py-3 text-xs font-bold text-slate-900">{formatCurrency(row.card_sales_total)}</td>
+                        <td className="px-3 py-3 text-xs font-bold text-slate-900">{formatCurrency(row.transfer_sales_total)}</td>
                         <td className="px-3 py-3 text-xs font-bold text-slate-900">{formatCurrency(row.courtesy_total)}</td>
                         <td className="px-3 py-3 text-xs font-bold text-slate-900">{formatCurrency(row.discounts_total)}</td>
                         <td className="px-3 py-3 text-xs font-bold text-slate-900">{row.cancellations_count} · {formatCurrency(row.cancellations_total)}</td>
@@ -1674,7 +1687,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               <section className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Método seleccionado</p>
                 <p className="mt-1 text-sm font-black text-slate-900">
-                  {paymentMethod === 'EFECTIVO' ? '💵 Efectivo' : paymentMethod === 'CREDITO' ? '💳 Crédito' : '💵 Efectivo'}
+                  {paymentMethodLabel(paymentMethod)}
                 </p>
                 {isCredito && selectedCustomer && (
                   <div className="mt-2 rounded-xl bg-blue-50 px-3 py-2 text-[11px] text-blue-700">

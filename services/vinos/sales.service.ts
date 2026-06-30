@@ -1,7 +1,7 @@
 import { supabaseVinos, isVinosConfigured } from '../vinosClient';
 
 export type PriceTier = 'MENUDEO' | 'MEDIO_MAYOREO' | 'MAYOREO';
-export type PaymentMethod = 'EFECTIVO' | 'CREDITO' | 'CORTESIA';
+export type PaymentMethod = 'EFECTIVO' | 'CREDITO' | 'TRANSFERENCIA' | 'TARJETA' | 'CORTESIA';
 
 export interface SaleCartItem {
   product_id: string;
@@ -161,7 +161,7 @@ export const vinosSalesService = {
     if (loadErr || !sale) throw new Error('Venta no encontrada.');
 
     const total = Number(sale.total);
-    const oldType = sale.payment_method as 'EFECTIVO' | 'CREDITO' | 'CORTESIA';
+    const oldType = sale.payment_method as PaymentMethod;
     const oldCreditUsed = Number(sale.credit_used ?? 0);
     const oldWalletUsed = Number(sale.wallet_used ?? 0);
 

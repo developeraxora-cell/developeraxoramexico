@@ -8,7 +8,7 @@ export interface VinosSalePdfInput {
   customerName: string;
   customerAddress?: string;
   cashierName: string;
-  paymentMethod: 'EFECTIVO' | 'CREDITO' | 'CORTESIA';
+  paymentMethod: 'EFECTIVO' | 'CREDITO' | 'TRANSFERENCIA' | 'TARJETA' | 'CORTESIA';
   walletUsed?: number;
   creditUsed?: number;
   cashReceived?: number;
@@ -58,6 +58,8 @@ const formatLocalDateTime = (value: string) => {
 const statusLabel = (input: VinosSalePdfInput): string => {
   if (Number(input.walletUsed ?? 0) > 0 && Number(input.walletUsed) >= Number(input.total)) return 'SALDO A FAVOR';
   if (input.paymentMethod === 'CREDITO') return 'CREDITO';
+  if (input.paymentMethod === 'TRANSFERENCIA') return 'TRANSFERENCIA';
+  if (input.paymentMethod === 'TARJETA') return 'TARJETA';
   if (input.paymentMethod === 'CORTESIA') return 'SIN COSTO';
   return 'LIQUIDADO';
 };

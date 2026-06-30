@@ -88,6 +88,8 @@ export const generateVinosCashRegisterReceipt = async (
   const rows = [
     ['EFECTIVO INICIAL', formatCurrency(Number(session.opening_cash ?? 0))],
     ['VENTAS EFECTIVO', formatCurrency(Number(session.cash_sales_total ?? 0))],
+    ['VENTAS TARJETA', formatCurrency(Number(session.card_sales_total ?? 0))],
+    ['TRANSFERENCIAS', formatCurrency(Number(session.transfer_sales_total ?? 0))],
     ['CORTESIAS', formatCurrency(Number(session.courtesy_total ?? 0))],
     ['DESCUENTOS', `-${formatCurrency(Number(session.discounts_total ?? 0))}`],
     ['CANCELACIONES', `${Number(session.cancellations_count ?? 0)} - ${formatCurrency(Number(session.cancellations_total ?? 0))}`],
