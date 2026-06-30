@@ -78,6 +78,16 @@ $$;
 
 grant execute on function public.close_expired_cash_register_sessions(bigint) to anon, authenticated;
 
+-- Opcional recomendado en Supabase si tienen pg_cron habilitado:
+-- Programa el cierre todos los dias a las 05:59 UTC, que corresponde a las
+-- 23:59 del dia anterior en America/Mexico_City.
+--
+-- select cron.schedule(
+--   'close-expired-cash-register-sessions',
+--   '59 5 * * *',
+--   $$select public.close_expired_cash_register_sessions();$$
+-- );
+
 
 create or replace function public.create_vinos_sale_atomic(p_sale jsonb, p_items jsonb)
 returns uuid
