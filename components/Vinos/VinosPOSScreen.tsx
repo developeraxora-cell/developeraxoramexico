@@ -13,6 +13,7 @@ import { vinosCashRegisterService, type CashRegisterSession, type CashRegisterSu
 import { supabaseVinos } from '../../services/vinosClient';
 import { generateVinosSaleTicket, type VinosSalePdfInput } from '../../services/vinos/saleTicketPdf';
 import { generateVinosCashRegisterReceipt } from '../../services/vinos/cashRegisterReceiptPdf';
+import { openVinosCashDrawer } from '../../services/printing/qzTrayCashDrawer';
 import { logVinosAudit } from '../../services/audit/audit.service';
 import Toast from '../common/Toast';
 
@@ -49,11 +50,20 @@ const PRICE_TIER_LABEL: Record<PriceTier, string> = {
 };
 
 const STOCK_EPSILON = 0.000001;
+const CASH_HISTORY_PAGE_SIZE = 5;
 const wait = (ms: number) => new Promise<void>(resolve => window.setTimeout(resolve, ms));
 const getCashChange = (cashReceivedValue: number, saleTotal: number) =>
   Math.max(0, Number(cashReceivedValue || 0) - Number(saleTotal || 0));
 const formatDateTime = (value: string | null | undefined) =>
   value ? new Date(value).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+const formatDateInputValue = (value: string | null | undefined) => {
+  if (!value) return '';
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 const normalizeCustomerName = (value: string) =>
   value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
 const isPublicGeneralCustomer = (customer: VinosCustomer) =>
@@ -74,6 +84,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const [cashCloseModal, setCashCloseModal] = useState(false);
   const [cashHistoryOpen, setCashHistoryOpen] = useState(false);
   const [cashHistory, setCashHistory] = useState<CashRegisterSession[]>([]);
+  const [cashHistoryCashierSearch, setCashHistoryCashierSearch] = useState('');
+  const [cashHistoryOpenDate, setCashHistoryOpenDate] = useState('');
+  const [cashHistoryPage, setCashHistoryPage] = useState(1);
   const [cashSummary, setCashSummary] = useState<CashRegisterSummary | null>(null);
   const [openingCash, setOpeningCash] = useState('0');
   const [openingObservations, setOpeningObservations] = useState('');
@@ -340,6 +353,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const openCashHistory = async () => {
     if (!branchDbId) return;
     setCashHistoryOpen(true);
+    setCashHistoryCashierSearch('');
+    setCashHistoryOpenDate('');
+    setCashHistoryPage(1);
     setCashLoading(true);
     setCashError('');
     try {
@@ -372,6 +388,26 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       (c.email ?? '').toLowerCase().includes(q)
     );
   }, [customers, customerSearch]);
+
+  const filteredCashHistory = useMemo(() => {
+    const cashierQuery = cashHistoryCashierSearch.trim().toLowerCase();
+
+    return cashHistory.filter(row => {
+      const matchesCashier = !cashierQuery || row.cashier_name.toLowerCase().includes(cashierQuery);
+      const matchesOpenDate = !cashHistoryOpenDate || formatDateInputValue(row.opened_at) === cashHistoryOpenDate;
+
+      return matchesCashier && matchesOpenDate;
+    });
+  }, [cashHistory, cashHistoryCashierSearch, cashHistoryOpenDate]);
+
+  const cashHistoryTotalPages = Math.max(1, Math.ceil(filteredCashHistory.length / CASH_HISTORY_PAGE_SIZE));
+  const cashHistoryCurrentPage = Math.min(cashHistoryPage, cashHistoryTotalPages);
+  const cashHistoryStartIndex = (cashHistoryCurrentPage - 1) * CASH_HISTORY_PAGE_SIZE;
+  const pagedCashHistory = filteredCashHistory.slice(cashHistoryStartIndex, cashHistoryStartIndex + CASH_HISTORY_PAGE_SIZE);
+
+  useEffect(() => {
+    setCashHistoryPage(1);
+  }, [cashHistoryCashierSearch, cashHistoryOpenDate]);
 
   const publicGeneralCustomer = useMemo(() => customers.find(isPublicGeneralCustomer) ?? null, [customers]);
   const selectedCustomer = useMemo(() => customers.find(c => c.id === customerId) ?? null, [customers, customerId]);
@@ -928,6 +964,15 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           notes: notesForSale,
         },
       });
+      let cashDrawerWarning = '';
+      if (isEfectivo) {
+        try {
+          await openVinosCashDrawer();
+        } catch (drawerError) {
+          console.error(drawerError);
+          cashDrawerWarning = ' · Cajón no abrió; revisa QZ Tray';
+        }
+      }
       let documentOpened = true;
       try {
         await generateVinosSaleTicket(ticketInput, { mode: 'print', targetWindow: saleDocumentWindow });
@@ -937,7 +982,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         if (saleDocumentWindow && !saleDocumentWindow.closed) saleDocumentWindow.close();
         setFeedback({ type: 'error', msg: 'Venta registrada, pero no se pudo abrir el documento.' });
       }
-      if (documentOpened) setFeedback({ type: 'success', msg: '✓ Venta registrada' });
+      if (documentOpened) setFeedback({ type: 'success', msg: `✓ Venta registrada${cashDrawerWarning}` });
       clearCart();
       await load();
     } catch (e: unknown) {
@@ -1319,11 +1364,44 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               <button onClick={() => setCashHistoryOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X size={18}/></button>
             </div>
 
+            <div className="border-b border-slate-100 bg-slate-50/70 px-6 py-4">
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-xs font-bold text-slate-700 outline-none placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    placeholder="Buscar por nombre de cajera..."
+                    value={cashHistoryCashierSearch}
+                    onChange={(e) => setCashHistoryCashierSearch(e.target.value)}
+                  />
+                </div>
+                <input
+                  type="date"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  value={cashHistoryOpenDate}
+                  onChange={(e) => setCashHistoryOpenDate(e.target.value)}
+                />
+                {(cashHistoryCashierSearch || cashHistoryOpenDate) && (
+                  <button
+                    onClick={() => {
+                      setCashHistoryCashierSearch('');
+                      setCashHistoryOpenDate('');
+                    }}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="flex-1 overflow-y-auto">
               {cashLoading ? (
                 <p className="py-16 text-center text-sm text-slate-400">Cargando...</p>
               ) : cashHistory.length === 0 ? (
                 <p className="py-16 text-center text-sm text-slate-400">Sin cortes de caja registrados.</p>
+              ) : filteredCashHistory.length === 0 ? (
+                <p className="py-16 text-center text-sm text-slate-400">Sin resultados para los filtros seleccionados.</p>
               ) : (
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 z-10 bg-slate-100">
@@ -1334,7 +1412,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {cashHistory.map(row => (
+                    {pagedCashHistory.map(row => (
                       <tr key={row.id} className="hover:bg-orange-50/30">
                         <td className="px-3 py-3 text-xs font-bold text-slate-800">{row.cashier_name}</td>
                         <td className="px-3 py-3 text-xs text-slate-600 whitespace-nowrap">{formatDateTime(row.opened_at)}</td>
@@ -1356,6 +1434,33 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 </table>
               )}
             </div>
+
+            {!cashLoading && filteredCashHistory.length > 0 && (
+              <div className="flex flex-col gap-3 border-t border-slate-200 bg-white px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-[11px] font-bold text-slate-500">
+                  Mostrando {cashHistoryStartIndex + 1}-{Math.min(cashHistoryStartIndex + CASH_HISTORY_PAGE_SIZE, filteredCashHistory.length)} de {filteredCashHistory.length} registros
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCashHistoryPage(page => Math.max(1, page - 1))}
+                    disabled={cashHistoryCurrentPage <= 1}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Anterior
+                  </button>
+                  <span className="min-w-20 text-center text-[11px] font-black text-slate-700">
+                    {cashHistoryCurrentPage} / {cashHistoryTotalPages}
+                  </span>
+                  <button
+                    onClick={() => setCashHistoryPage(page => Math.min(cashHistoryTotalPages, page + 1))}
+                    disabled={cashHistoryCurrentPage >= cashHistoryTotalPages}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
