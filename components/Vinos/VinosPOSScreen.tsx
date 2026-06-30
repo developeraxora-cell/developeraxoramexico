@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 import {
   Search, Trash2, User as UserIcon, CreditCard, Banknote, Gift, Tag, Receipt, X, Loader2, Plus, Minus, Wallet, Eye, FileText, Pencil,
-  Clock, History, LockKeyhole, UnlockKeyhole, Store, ShieldCheck, Coins, ArrowRight, CheckCircle2,
+  Clock, History, LockKeyhole, UnlockKeyhole, Store, ArrowRight,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
@@ -929,7 +929,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   // ── render ──────────────────────────────────────────────
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-3 h-[calc(100vh-168px)]">
+    <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-3 h-[calc(100vh-168px)]">
 
       {/* ─── Catálogo ──────────────────────────────────── */}
       <div className="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -1161,67 +1161,32 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
       {/* ─── MODAL BLOQUEANTE INICIAR CAJA ────────────── */}
       {cashStartPromptOpen && !cashSession && !cashOpenModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-md">
-          <div className="relative w-full max-w-3xl overflow-hidden rounded-3xl border border-orange-200 bg-white shadow-2xl">
-            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-orange-500 via-emerald-500 to-blue-500" />
-            <div className="grid gap-0 md:grid-cols-[1fr_280px]">
-              <div className="px-7 py-8 sm:px-10 sm:py-10">
-                <div className="mb-6 flex items-center gap-3">
-                  <div className="relative">
-                    <div className="absolute inset-0 animate-ping rounded-2xl bg-orange-300 opacity-30" />
-                    <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-600 text-white shadow-lg shadow-orange-600/25">
-                      <Store size={27} />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-orange-600">Casa Tahona</p>
-                    <p className="text-sm font-bold text-slate-500">{branchName}</p>
-                  </div>
+        <div className="absolute inset-0 z-40 flex items-center justify-center rounded-2xl bg-slate-950/70 p-4 backdrop-blur-md">
+          <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-orange-100 bg-white p-8 shadow-2xl sm:p-10">
+            <div className="mb-6 flex items-center gap-3">
+              <div className="relative">
+                <div className="absolute inset-0 animate-ping rounded-2xl bg-orange-300 opacity-30" />
+                <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-600 text-white shadow-lg shadow-orange-600/25">
+                  <Store size={29} />
                 </div>
-
-                <h2 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Iniciar Caja</h2>
-                <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-slate-500">
-                  Para comenzar a vender, primero registra la apertura de caja de {currentUser.name}.
-                </p>
-
-                <div className="mt-7 grid gap-3 sm:grid-cols-3">
-                  {[
-                    { icon: Coins, label: 'Monto inicial', text: 'Efectivo con el que inicia el turno.', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-                    { icon: ShieldCheck, label: 'Control de corte', text: 'Las ventas quedan ligadas a esta cajera.', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-                    { icon: CheckCircle2, label: 'Historial', text: 'El cierre quedará guardado para auditoría.', color: 'bg-orange-50 text-orange-700 border-orange-200' },
-                  ].map(item => (
-                    <div key={item.label} className={`rounded-2xl border p-4 ${item.color}`}>
-                      <item.icon size={21} />
-                      <p className="mt-3 text-xs font-black uppercase tracking-wider">{item.label}</p>
-                      <p className="mt-1 text-[11px] font-semibold leading-4 opacity-80">{item.text}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={openCashOpeningForm}
-                  className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 px-5 py-4 text-sm font-black uppercase tracking-wider text-white shadow-xl shadow-orange-600/20 transition hover:bg-orange-500 sm:w-auto"
-                >
-                  Continuar <ArrowRight size={18} />
-                </button>
               </div>
-
-              <div className="hidden border-l border-slate-100 bg-slate-50 p-6 md:flex md:flex-col md:justify-between">
-                <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cajera</p>
-                  <p className="mt-1 text-lg font-black text-slate-950">{currentUser.name}</p>
-                  <div className="mt-5 rounded-2xl border border-dashed border-orange-200 bg-orange-50 p-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-orange-600">Pendiente</p>
-                    <p className="mt-1 text-sm font-bold text-orange-800">Capturar efectivo inicial</p>
-                  </div>
-                </div>
-                <div className="rounded-3xl bg-slate-900 p-5 text-white shadow-lg">
-                  <Clock size={22} className="text-orange-300" />
-                  <p className="mt-4 text-xs font-black uppercase tracking-widest text-slate-300">Turno sin caja activa</p>
-                  <p className="mt-2 text-2xl font-black">Listo para abrir</p>
-                </div>
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-orange-600">Casa Tahona</p>
+                <p className="text-sm font-bold text-slate-600">{branchName}</p>
               </div>
             </div>
+
+            <h2 className="text-4xl font-black tracking-tight text-slate-950">Iniciar Caja</h2>
+            <p className="mt-4 max-w-lg text-sm font-semibold leading-6 text-slate-500">
+              Para comenzar a vender, primero registra la apertura de caja de {currentUser.name}.
+            </p>
+
+            <button
+              onClick={openCashOpeningForm}
+              className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 px-5 py-4 text-sm font-black uppercase tracking-wider text-white shadow-xl shadow-orange-600/20 transition hover:bg-orange-500"
+            >
+              Continuar <ArrowRight size={18} />
+            </button>
           </div>
         </div>
       )}
