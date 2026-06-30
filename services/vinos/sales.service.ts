@@ -82,6 +82,15 @@ export interface SaleRow {
 
 const STOCK_EPSILON = 0.000001;
 
+const isMissingAtomicSaleRpc = (error: unknown) => {
+  const err = error as { code?: string; message?: string; details?: string } | null;
+  const text = `${err?.code ?? ''} ${err?.message ?? ''} ${err?.details ?? ''}`.toLowerCase();
+  return (
+    text.includes('create_vinos_sale_atomic') &&
+    (text.includes('schema cache') || text.includes('function') || text.includes('does not exist') || text.includes('not found'))
+  );
+};
+
 export const vinosSalesService = {
 
   async list(branchId?: number, opts?: { search?: string; from?: string; to?: string; customerId?: string }): Promise<SaleRow[]> {
@@ -313,31 +322,51 @@ export const vinosSalesService = {
     input.items.forEach(it => { tierCount[it.price_type] = (tierCount[it.price_type] || 0) + 1; });
     const dominantTier = (Object.keys(tierCount) as PriceTier[]).reduce((a, b) => tierCount[a] >= tierCount[b] ? a : b);
 
+    const salePayload = {
+      branch_id: input.branch_id,
+      customer_id: input.customer_id ?? null,
+      payment_method: input.payment_method,
+      price_type: dominantTier,
+      subtotal: input.subtotal,
+      discount_amount: input.discount_amount,
+      total: input.total,
+      coupon_code: input.coupon_code ?? null,
+      promotion_id: input.promotion_id ?? null,
+      promotion_code: input.promotion_code ?? null,
+      wallet_used: input.wallet_used ?? 0,
+      credit_used: input.credit_used ?? 0,
+      cash_received: input.cash_received ?? 0,
+      notes: input.notes ?? null,
+      delivery_address: input.delivery_address ?? null,
+      created_by: input.created_by,
+    };
+
+    const itemsPayload = input.items.map(it => ({
+      product_id: it.product_id,
+      product_uom_id: it.product_uom_id || null,
+      qty: it.qty,
+      factor_used: it.factor_to_base || 1,
+      qty_base: Number(it.qty) * Number(it.factor_to_base || 1),
+      price_type: it.price_type,
+      unit_price: it.unit_price,
+      line_total: Number(it.qty) * Number(it.unit_price),
+    }));
+
+    const { data: atomicSaleId, error: atomicSaleError } = await supabaseVinos.rpc('create_vinos_sale_atomic', {
+      p_sale: salePayload,
+      p_items: itemsPayload,
+    });
+    if (!atomicSaleError) return atomicSaleId as string;
+    if (!isMissingAtomicSaleRpc(atomicSaleError)) throw atomicSaleError;
+
     const { data: sale, error: sErr } = await supabaseVinos
       .from('sales')
-      .insert({
-        branch_id: input.branch_id,
-        customer_id: input.customer_id ?? null,
-        payment_method: input.payment_method,
-        price_type: dominantTier,
-        subtotal: input.subtotal,
-        discount_amount: input.discount_amount,
-        total: input.total,
-        coupon_code: input.coupon_code ?? null,
-        promotion_id: input.promotion_id ?? null,
-        promotion_code: input.promotion_code ?? null,
-        wallet_used: input.wallet_used ?? 0,
-        credit_used: input.credit_used ?? 0,
-        cash_received: input.cash_received ?? 0,
-        notes: input.notes ?? null,
-        delivery_address: input.delivery_address ?? null,
-        created_by: input.created_by,
-      })
+      .insert(salePayload)
       .select('id')
       .single();
     if (sErr) throw sErr;
 
-    const itemsPayload = input.items.map(it => ({
+    const legacyItemsPayload = input.items.map(it => ({
       sale_id: sale.id,
       product_id: it.product_id,
       product_uom_id: it.product_uom_id || null,
@@ -349,7 +378,7 @@ export const vinosSalesService = {
       line_total: Number(it.qty) * Number(it.unit_price),
     }));
 
-    const { error: iErr } = await supabaseVinos.from('sale_items').insert(itemsPayload);
+    const { error: iErr } = await supabaseVinos.from('sale_items').insert(legacyItemsPayload);
     if (iErr) throw iErr;
 
     // Wallet usage

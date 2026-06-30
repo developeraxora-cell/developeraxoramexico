@@ -49,6 +49,45 @@ interface SaleForCashRegister {
   deleted_at: string | null;
 }
 
+const MEXICO_TZ = 'America/Mexico_City';
+const MEXICO_UTC_OFFSET = '-06:00';
+
+const getMexicoDateParts = (value: string | Date) => {
+  const date = typeof value === 'string' ? new Date(value) : value;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: MEXICO_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  return {
+    year: parts.find(part => part.type === 'year')?.value ?? '1970',
+    month: parts.find(part => part.type === 'month')?.value ?? '01',
+    day: parts.find(part => part.type === 'day')?.value ?? '01',
+  };
+};
+
+const getMexicoDayCloseDate = (openedAt: string) => {
+  const { year, month, day } = getMexicoDateParts(openedAt);
+  return new Date(`${year}-${month}-${day}T23:59:59${MEXICO_UTC_OFFSET}`);
+};
+
+const getAutoCloseObservation = (previous?: string | null) => {
+  const autoNote = 'Cierre automático a las 23:59 hora de México.';
+  const trimmed = previous?.trim();
+  return trimmed ? `${trimmed} | ${autoNote}` : autoNote;
+};
+
+const isMissingCloseExpiredRpc = (error: unknown) => {
+  const err = error as { code?: string; message?: string; details?: string } | null;
+  const text = `${err?.code ?? ''} ${err?.message ?? ''} ${err?.details ?? ''}`.toLowerCase();
+  return (
+    text.includes('close_expired_cash_register_sessions') &&
+    (text.includes('schema cache') || text.includes('function') || text.includes('does not exist') || text.includes('not found'))
+  );
+};
+
 const emptySummary = (openingCash = 0): CashRegisterSummary => ({
   cash_sales_total: 0,
   card_sales_total: 0,
@@ -95,8 +134,65 @@ const calculateSummary = (sales: SaleForCashRegister[], openingCash: number): Ca
 };
 
 export const vinosCashRegisterService = {
+  async closeExpired(branchId?: number): Promise<CashRegisterSession[]> {
+    if (!isVinosConfigured) return [];
+
+    const { error: rpcError } = await supabaseVinos.rpc('close_expired_cash_register_sessions', {
+      p_branch_id: branchId ?? null,
+    });
+    if (!rpcError) return [];
+    if (!isMissingCloseExpiredRpc(rpcError)) throw rpcError;
+
+    let query = supabaseVinos
+      .from('cash_register_sessions')
+      .select('*')
+      .is('closed_at', null);
+    if (branchId) query = query.eq('branch_id', branchId);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const now = Date.now();
+    const closedSessions: CashRegisterSession[] = [];
+
+    for (const session of ((data ?? []) as CashRegisterSession[])) {
+      const closeDate = getMexicoDayCloseDate(session.opened_at);
+      if (closeDate.getTime() > now) continue;
+
+      const summary = await this.previewClose(session, closeDate);
+      const { data: closed, error: closeError } = await supabaseVinos
+        .from('cash_register_sessions')
+        .update({
+          closed_at: closeDate.toISOString(),
+          cash_sales_total: summary.cash_sales_total,
+          card_sales_total: summary.card_sales_total,
+          transfer_sales_total: summary.transfer_sales_total,
+          credit_sales_total: summary.credit_sales_total,
+          courtesy_total: summary.courtesy_total,
+          discounts_total: summary.discounts_total,
+          cancellations_total: summary.cancellations_total,
+          cancellations_count: summary.cancellations_count,
+          total_sold: summary.total_sold,
+          expected_cash: summary.expected_cash,
+          delivered_cash: summary.expected_cash,
+          cash_difference: 0,
+          closing_observations: getAutoCloseObservation(session.closing_observations),
+          updated_at: closeDate.toISOString(),
+        })
+        .eq('id', session.id)
+        .is('closed_at', null)
+        .select()
+        .maybeSingle();
+      if (closeError) throw closeError;
+      if (closed) closedSessions.push(closed as CashRegisterSession);
+    }
+
+    return closedSessions;
+  },
+
   async getActive(branchId: number, cashierUserId: string): Promise<CashRegisterSession | null> {
     if (!isVinosConfigured) return null;
+    await this.closeExpired(branchId);
     const { data, error } = await supabaseVinos
       .from('cash_register_sessions')
       .select('*')
@@ -112,6 +208,7 @@ export const vinosCashRegisterService = {
 
   async list(branchId: number, cashierUserId?: string): Promise<CashRegisterSession[]> {
     if (!isVinosConfigured) return [];
+    await this.closeExpired(branchId);
     let query = supabaseVinos
       .from('cash_register_sessions')
       .select('*')
@@ -134,6 +231,7 @@ export const vinosCashRegisterService = {
     opening_observations?: string | null;
   }): Promise<CashRegisterSession> {
     if (!isVinosConfigured) throw new Error('DB vinos no configurada');
+    await this.closeExpired(input.branch_id);
     const current = await this.getActive(input.branch_id, input.cashier_user_id);
     if (current) throw new Error('Ya existe una caja abierta para esta cajera.');
 
@@ -162,6 +260,7 @@ export const vinosCashRegisterService = {
       .from('sales')
       .select('payment_method, subtotal, discount_amount, total, deleted_at')
       .eq('branch_id', session.branch_id)
+      .eq('created_by', session.cashier_user_id)
       .gte('created_at', session.opened_at)
       .lte('created_at', closedAt.toISOString());
     if (error) throw error;
