@@ -54,13 +54,10 @@ const getCashChange = (cashReceivedValue: number, saleTotal: number) =>
   Math.max(0, Number(cashReceivedValue || 0) - Number(saleTotal || 0));
 const formatDateTime = (value: string | null | undefined) =>
   value ? new Date(value).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '—';
-const paymentMethodLabel = (value: PaymentMethod) => {
-  if (value === 'EFECTIVO') return '💵 Efectivo';
-  if (value === 'CREDITO') return '💳 Crédito';
-  if (value === 'TRANSFERENCIA') return '↗ Transf.';
-  if (value === 'TARJETA') return '💳 Tarje.';
-  return '🎁 Sin costo';
-};
+const normalizeCustomerName = (value: string) =>
+  value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+const isPublicGeneralCustomer = (customer: VinosCustomer) =>
+  normalizeCustomerName(customer.name) === 'publico general';
 
 const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branches }) => {
   const [products, setProducts] = useState<ProductFull[]>([]);
@@ -198,6 +195,10 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       });
       setProducts(prods.map(p => ({ ...p, product_uoms: byProduct[p.id] ?? [] })) as ProductFull[]);
       setCustomers(custs);
+      const publicGeneral = custs.find(isPublicGeneralCustomer);
+      if (publicGeneral) {
+        setCustomerId(prev => prev || publicGeneral.id);
+      }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [branchDbId]);
@@ -372,10 +373,15 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     );
   }, [customers, customerSearch]);
 
+  const publicGeneralCustomer = useMemo(() => customers.find(isPublicGeneralCustomer) ?? null, [customers]);
   const selectedCustomer = useMemo(() => customers.find(c => c.id === customerId) ?? null, [customers, customerId]);
 
   // ── totales ─────────────────────────────────────────────
   const subtotal = useMemo(() => cart.reduce((s, it) => s + Number(it.qty) * Number(it.unit_price), 0), [cart]);
+  const manualDiscountPercentNumber = Number(manualDiscountPercent);
+  const manualDiscountJustificationText = manualDiscountJustification.trim();
+  const manualDiscountPercentValid = Number.isFinite(manualDiscountPercentNumber) && manualDiscountPercentNumber > 0 && manualDiscountPercentNumber <= 100;
+  const manualDiscountJustificationValid = manualDiscountJustificationText.length >= 5;
   const manualDiscountAmount = manualDiscountApplied ? Math.min(subtotal, (subtotal * manualDiscountApplied.percent) / 100) : 0;
   const activeDiscount = manualDiscountApplied ? manualDiscountAmount : couponDiscount;
   const discountLabel = manualDiscountApplied ? `Descuento manual ${manualDiscountApplied.percent}%` : 'Cupón';
@@ -509,9 +515,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   const clearCart = () => {
     setCart([]);
-    setCustomerId('');
+    setCustomerId(publicGeneralCustomer?.id ?? '');
     setUseCoupon(false); setCouponCode(''); setCouponDiscount(0); setCouponMsg(''); setAppliedPromoId(null);
-    setManualDiscountApplied(null); setManualDiscountPercent(''); setManualDiscountJustification(''); setManualDiscountError('');
+    setManualDiscountOpen(false); setManualDiscountPercent(''); setManualDiscountJustification(''); setManualDiscountError(''); setManualDiscountApplied(null);
     setUseWallet(false); setWalletAmount('0');
     setCashReceived('');
     setPaymentMethod('EFECTIVO');
@@ -520,29 +526,38 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   };
 
   const removeManualDiscount = () => {
-    setManualDiscountApplied(null);
+    setManualDiscountOpen(false);
     setManualDiscountPercent('');
     setManualDiscountJustification('');
     setManualDiscountError('');
+    setManualDiscountApplied(null);
   };
 
-  const applyManualDiscount = () => {
-    const percent = Number(manualDiscountPercent);
-    const justification = manualDiscountJustification.trim();
-    if (!Number.isFinite(percent) || percent <= 0 || percent > 100) {
-      setManualDiscountError('Ingresa un porcentaje entre 1 y 100.');
-      return;
-    }
-    if (!justification) {
-      setManualDiscountError('La justificación es obligatoria.');
-      return;
-    }
+  const openManualDiscountModal = () => {
     setUseCoupon(false);
     setCouponCode('');
     setCouponDiscount(0);
     setCouponMsg('');
     setAppliedPromoId(null);
-    setManualDiscountApplied({ percent, justification });
+    setManualDiscountPercent(manualDiscountApplied ? String(manualDiscountApplied.percent) : '');
+    setManualDiscountJustification(manualDiscountApplied?.justification ?? '');
+    setManualDiscountError('');
+    setManualDiscountOpen(true);
+  };
+
+  const confirmManualDiscount = () => {
+    if (!manualDiscountPercentValid) {
+      setManualDiscountError('Ingresa un porcentaje mayor a 0 y menor o igual a 100.');
+      return;
+    }
+    if (!manualDiscountJustificationValid) {
+      setManualDiscountError('La justificación debe tener al menos 5 caracteres.');
+      return;
+    }
+    setManualDiscountApplied({
+      percent: manualDiscountPercentNumber,
+      justification: manualDiscountJustificationText,
+    });
     setManualDiscountOpen(false);
     setManualDiscountError('');
   };
@@ -936,7 +951,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   // ── render ──────────────────────────────────────────────
   return (
-    <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-3 h-[calc(100vh-168px)]">
+    <div className="relative grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_460px] xl:grid-cols-[minmax(0,1fr)_500px] gap-3 h-[calc(100vh-168px)]">
 
       {/* ─── Catálogo ──────────────────────────────────── */}
       <div className="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -1030,20 +1045,23 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           <p className="mb-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400">Cliente</p>
           {selectedCustomer ? (
             <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-600 text-sm font-black text-white">
-                {selectedCustomer.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="truncate text-xs font-bold text-slate-900">{selectedCustomer.name}</p>
-                <p className="text-[9px] text-slate-500">
-                  {selectedCustomer.wallet_enabled ? `Saldo: ${formatCurrency(walletAvailable)}` : ''}
-                  {selectedCustomer.credit_limit > 0 ? ` · Crédito: ${formatCurrency(creditAvailable)}` : ''}
-                </p>
-              </div>
-              <button onClick={openCustomerDetail} className="rounded-lg p-1.5 text-slate-500 hover:bg-orange-100 hover:text-orange-700" title="Gestionar cliente">
-                <UserIcon size={14}/>
+              <button
+                onClick={() => setCustomerSelectorOpen(true)}
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left"
+                title="Cambiar cliente"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-600 text-sm font-black text-white">
+                  {selectedCustomer.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-bold text-slate-900">{selectedCustomer.name}</p>
+                  <p className="text-[9px] text-slate-500">
+                    {selectedCustomer.wallet_enabled ? `Saldo: ${formatCurrency(walletAvailable)}` : ''}
+                    {selectedCustomer.credit_limit > 0 ? ` · Crédito: ${formatCurrency(creditAvailable)}` : ''}
+                  </p>
+                </div>
               </button>
-              <button onClick={() => { setCustomerId(''); setUseWallet(false); }} className="rounded-lg p-1 text-slate-400 hover:text-red-500" title="Quitar">
+              <button onClick={() => { setCustomerId(publicGeneralCustomer?.id ?? ''); setUseWallet(false); }} className="rounded-lg p-1 text-slate-400 hover:text-red-500" title="Quitar">
                 <X size={14}/>
               </button>
             </div>
@@ -1071,84 +1089,31 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           ) : (
             <div className="space-y-1.5">
               {cart.map((it, idx) => (
-                <div key={idx} className="space-y-1.5 rounded-xl border border-slate-200 p-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
+                <div key={idx} className="flex items-center gap-3 rounded-xl border border-slate-200 p-2.5">
+                  <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-bold text-slate-900">{it.product_name}</p>
                       <p className="text-[9px] text-slate-400">{it.uom_name} · {PRICE_TIER_LABEL[it.price_type]}</p>
-                    </div>
-                    <button onClick={() => removeCartItem(idx)} className="text-slate-400 hover:text-red-500"><Trash2 size={14}/></button>
                   </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1 rounded-xl border border-slate-200 p-1">
+                  <div className="flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 p-1">
                       <button onClick={() => updateCartItem(idx, { qty: Math.max(0.01, it.qty - 1) })} className="rounded-lg p-1 hover:bg-slate-100"><Minus size={12}/></button>
                       <input
                         type="number" min="0" step="0.01"
-                        className="w-12 bg-transparent text-center text-xs font-black outline-none"
+                        className="w-10 bg-transparent text-center text-xs font-black outline-none"
                         value={it.qty}
                         onChange={e => updateCartItem(idx, { qty: Number(e.target.value) || 0 })}
                       />
                       <button onClick={() => updateCartItem(idx, { qty: it.qty + 1 })} className="rounded-lg p-1 hover:bg-slate-100"><Plus size={12}/></button>
-                    </div>
-                    <p className="text-xs font-black text-slate-900">{formatCurrency(it.qty * it.unit_price)}</p>
                   </div>
+                  <p className="shrink-0 text-right text-xs font-black text-slate-900">{formatCurrency(it.qty * it.unit_price)}</p>
+                  <button onClick={() => removeCartItem(idx)} className="shrink-0 text-slate-400 hover:text-red-500"><Trash2 size={14}/></button>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Footer: método pago + subtotal + cobrar */}
+        {/* Footer: subtotal + cobrar */}
         <div className="space-y-2.5 border-t border-slate-100 bg-slate-50/50 p-3">
-
-          {/* Método de pago */}
-          <div>
-            <p className="mb-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400">Método de pago</p>
-            <div className="grid grid-cols-5 gap-1.5">
-              {([
-                { v: 'EFECTIVO', label: 'Efectivo',  icon: Banknote,   disabled: false },
-                { v: 'CREDITO',  label: 'Crédito',   icon: CreditCard, disabled: !selectedCustomer },
-                { v: 'TRANSFERENCIA', label: 'Transf.', icon: FileText, disabled: false },
-                { v: 'TARJETA', label: 'Tarje.', icon: CreditCard, disabled: false },
-              ] as const).map(p => {
-                const active = paymentMethod === p.v;
-                return (
-                  <button
-                    key={p.v}
-                    onClick={() => !p.disabled && setPaymentMethod(p.v)}
-                    disabled={p.disabled}
-                    title={p.disabled ? 'Selecciona un cliente primero' : ''}
-                    className={`flex min-h-[45px] flex-col items-center justify-center gap-1 rounded-xl border px-1 py-1.5 transition-colors ${
-                      p.disabled ? 'border-slate-100 bg-slate-50 opacity-40 cursor-not-allowed' :
-                      active ? 'border-orange-500 bg-orange-50' : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <p.icon size={14} className={active && !p.disabled ? 'text-orange-700' : 'text-slate-500'} />
-                    <span className={`text-center text-[8px] font-black leading-3 ${active && !p.disabled ? 'text-orange-700' : 'text-slate-600'}`}>{p.label}</span>
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                onClick={() => {
-                  setManualDiscountPercent(manualDiscountApplied ? String(manualDiscountApplied.percent) : '');
-                  setManualDiscountJustification(manualDiscountApplied?.justification ?? '');
-                  setManualDiscountError('');
-                  setManualDiscountOpen(true);
-                }}
-                className={`flex min-h-[45px] flex-col items-center justify-center gap-1 rounded-xl border px-1 py-1.5 transition-colors ${
-                  manualDiscountApplied ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
-              >
-                <Tag size={14} className={manualDiscountApplied ? 'text-blue-700' : 'text-slate-500'} />
-                <span className={`text-center text-[7px] font-black leading-3 ${manualDiscountApplied ? 'text-blue-700' : 'text-slate-600'}`}>Aplicar descuento</span>
-              </button>
-            </div>
-            {!selectedCustomer && (
-              <p className="mt-1.5 text-[10px] text-slate-400">Crédito requiere cliente seleccionado.</p>
-            )}
-          </div>
-
           <div className="flex items-baseline justify-between border-t border-slate-200 pt-2.5">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Subtotal</span>
             <span className="text-xl font-black text-orange-600">{formatCurrency(subtotal)}</span>
@@ -1395,65 +1360,6 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         </div>
       )}
 
-      {/* ─── MODAL DESCUENTO MANUAL ───────────────────── */}
-      {manualDiscountOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <div>
-                <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Aplicar descuento</h3>
-                <p className="text-[11px] font-bold text-slate-400">Sobre el subtotal de la compra</p>
-              </div>
-              <button onClick={() => setManualDiscountOpen(false)} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={18}/></button>
-            </div>
-            <div className="space-y-4 px-6 py-5">
-              <label className="block">
-                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Porcentaje de descuento</span>
-                <div className="flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100">
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    step="0.01"
-                    value={manualDiscountPercent}
-                    onChange={e => setManualDiscountPercent(e.target.value)}
-                    className="w-full bg-transparent text-xl font-black text-slate-900 outline-none"
-                    autoFocus
-                  />
-                  <span className="text-sm font-black text-slate-400">%</span>
-                </div>
-                {Number(manualDiscountPercent) > 0 && (
-                  <p className="mt-1 text-right text-xs font-bold text-blue-700">
-                    Descuento: {formatCurrency(Math.min(subtotal, (subtotal * Number(manualDiscountPercent || 0)) / 100))}
-                  </p>
-                )}
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Justificación obligatoria</span>
-                <textarea
-                  rows={4}
-                  value={manualDiscountJustification}
-                  onChange={e => setManualDiscountJustification(e.target.value)}
-                  placeholder="Ej. Promoción autorizada, ajuste por cliente frecuente..."
-                  className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-                />
-              </label>
-              {manualDiscountError && (
-                <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{manualDiscountError}</p>
-              )}
-            </div>
-            <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
-              <button onClick={() => setManualDiscountOpen(false)} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">
-                Cancelar
-              </button>
-              <button onClick={applyManualDiscount} className="flex-[2] rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500">
-                Aplicar descuento
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ─── MODAL ADD PRODUCT (uom + tier + qty) ───────── */}
       {addProductTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
@@ -1585,7 +1491,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       {/* ─── MODAL CHECKOUT ────────────────────────────── */}
       {checkoutOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col">
+          <div className="w-full max-w-5xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
                 <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Finalizar venta</h3>
@@ -1597,10 +1503,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               <button onClick={() => setCheckoutOpen(false)} disabled={charging} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-40"><X size={18}/></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+            <div className="grid flex-1 grid-cols-1 items-start gap-4 overflow-y-auto px-6 py-5 lg:grid-cols-2">
+              <section className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
 
               {/* Cupón */}
-              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <div>
                 <label className="flex items-center justify-between cursor-pointer">
                   <div className="flex items-center gap-2">
                     <Gift size={14} className="text-orange-500"/>
@@ -1636,28 +1543,79 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     </>
                   )
                 )}
-              </section>
+              </div>
 
-              {manualDiscountApplied && (
-                <section className="rounded-2xl border border-blue-200 bg-blue-50 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-black text-blue-800">Descuento manual aplicado</p>
-                      <p className="mt-0.5 text-xs font-bold text-blue-700">
-                        {manualDiscountApplied.percent}% · -{formatCurrency(manualDiscountAmount)}
-                      </p>
-                      <p className="mt-1 text-[10px] font-semibold text-blue-600">{manualDiscountApplied.justification}</p>
-                    </div>
-                    <button onClick={removeManualDiscount} className="rounded-lg p-1 text-blue-700 hover:bg-blue-100 hover:text-red-500" title="Quitar descuento">
-                      <X size={13}/>
-                    </button>
+              {/* Descuento manual */}
+              <div className="border-t border-slate-200 pt-4">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Tag size={14} className="text-orange-500"/>
+                    <span className="text-sm font-bold text-slate-700">¿Aplicar descuento?</span>
                   </div>
-                </section>
-              )}
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                    checked={Boolean(manualDiscountApplied)}
+                    onChange={e => {
+                      if (e.target.checked) openManualDiscountModal();
+                      else removeManualDiscount();
+                    }}
+                  />
+                </label>
+                {manualDiscountApplied && (
+                  <div className="mt-2 flex items-center justify-between rounded-xl bg-green-50 px-3 py-2 text-xs">
+                    <span className="font-bold text-green-700">
+                      {manualDiscountApplied.percent}% · -{formatCurrency(manualDiscountAmount)}
+                    </span>
+                    <button onClick={openManualDiscountModal} className="text-green-700 hover:text-orange-600">Editar</button>
+                  </div>
+                )}
+              </div>
+
+              {/* Método de pago */}
+              <div className="border-t border-slate-200 pt-4">
+                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Método de pago</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {([
+                    { v: 'EFECTIVO', label: 'Efectivo',  icon: Banknote,   disabled: false },
+                    { v: 'CREDITO',  label: 'Crédito',   icon: CreditCard, disabled: !selectedCustomer },
+                    { v: 'TRANSFERENCIA', label: 'Transf.', icon: FileText, disabled: false },
+                    { v: 'TARJETA', label: 'Tarje.', icon: CreditCard, disabled: false },
+                  ] as const).map(p => {
+                    const active = paymentMethod === p.v;
+                    return (
+                      <button
+                        key={p.v}
+                        onClick={() => {
+                          if (p.disabled) return;
+                          setPaymentMethod(p.v);
+                        }}
+                        disabled={p.disabled}
+                        title={p.disabled ? 'Selecciona un cliente primero' : ''}
+                        className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 transition-colors ${
+                          p.disabled ? 'border-slate-100 bg-slate-50 opacity-40 cursor-not-allowed' :
+                          active ? 'border-orange-500 bg-orange-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        <p.icon size={15} className={active && !p.disabled ? 'text-orange-700' : 'text-slate-500'} />
+                        <span className={`text-center text-[10px] font-black leading-3 ${active && !p.disabled ? 'text-orange-700' : 'text-slate-600'}`}>{p.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {!selectedCustomer && (
+                  <p className="mt-2 text-[10px] text-slate-400">Crédito requiere cliente seleccionado.</p>
+                )}
+                {isCredito && selectedCustomer && (
+                  <div className="mt-2 rounded-xl bg-blue-50 px-3 py-2 text-[11px] text-blue-700">
+                    Se descontará <strong>{formatCurrency(totalAfterWallet)}</strong> del crédito de <strong>{selectedCustomer.name}</strong> (disponible: {formatCurrency(creditAvailable)}).
+                  </div>
+                )}
+              </div>
 
               {/* Saldo a favor */}
               {selectedCustomer?.wallet_enabled && walletAvailable > 0 && (
-                <section className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div className="border-t border-slate-200 pt-4">
                   <label className="flex items-center justify-between cursor-pointer">
                     <div className="flex items-center gap-2">
                       <Wallet size={14} className="text-blue-500"/>
@@ -1680,24 +1638,26 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                       placeholder="Monto a usar"
                     />
                   )}
-                </section>
+                </div>
               )}
 
-              {/* Método de pago (info solo) */}
-              <section className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Método seleccionado</p>
-                <p className="mt-1 text-sm font-black text-slate-900">
-                  {paymentMethodLabel(paymentMethod)}
-                </p>
-                {isCredito && selectedCustomer && (
-                  <div className="mt-2 rounded-xl bg-blue-50 px-3 py-2 text-[11px] text-blue-700">
-                    Se descontará <strong>{formatCurrency(totalAfterWallet)}</strong> del crédito de <strong>{selectedCustomer.name}</strong> (disponible: {formatCurrency(creditAvailable)}).
-                  </div>
-                )}
+              {/* Notas */}
+              <div className="border-t border-slate-200 pt-4">
+                <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observaciones de la venta</label>
+                <textarea
+                  rows={3}
+                  className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  placeholder="Opcional…"
+                  value={saleNotes}
+                  onChange={e => setSaleNotes(e.target.value)}
+                />
+              </div>
               </section>
 
+              <div className="space-y-4">
+
               {/* Efectivo recibido */}
-              {isEfectivo && total > 0 && (
+              {isEfectivo && total > 0 ? (
                 <section className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Monto recibido</label>
                   <input
@@ -1726,19 +1686,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     </p>
                   )}
                 </section>
-              )}
-
-              {/* Notas */}
-              <section>
-                <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observaciones de la venta</label>
-                <textarea
-                  rows={2}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 resize-none"
-                  placeholder="Opcional…"
-                  value={saleNotes}
-                  onChange={e => setSaleNotes(e.target.value)}
-                />
-              </section>
+              ) : null}
 
               {/* Resumen */}
               <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-1.5 text-xs">
@@ -1749,6 +1697,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   <span>Total</span><span className="text-orange-600">{formatCurrency(total)}</span>
                 </div>
               </section>
+              </div>
             </div>
 
             <div className="flex gap-2 border-t border-slate-100 px-6 py-4 bg-slate-50/50">
@@ -1762,6 +1711,69 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               >
                 {charging && <Loader2 size={14} className="animate-spin"/>}
                 {charging ? 'Procesando…' : `Confirmar venta ${formatCurrency(total)}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL DESCUENTO MANUAL ───────────────────── */}
+      {manualDiscountOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Confirmar descuento</h3>
+                <p className="text-[11px] font-bold text-slate-400">Porcentaje y justificación</p>
+              </div>
+              <button onClick={() => setManualDiscountOpen(false)} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={18}/></button>
+            </div>
+
+            <div className="px-6 py-5">
+              <section className="space-y-4">
+                <label className="block">
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Porcentaje de descuento</span>
+                  <div className="flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100">
+                    <input
+                      type="number"
+                      min="0.01"
+                      max="100"
+                      step="0.01"
+                      value={manualDiscountPercent}
+                      onChange={e => { setManualDiscountPercent(e.target.value); setManualDiscountError(''); }}
+                      className="w-full bg-transparent text-xl font-black text-slate-900 outline-none"
+                      autoFocus
+                    />
+                    <span className="text-sm font-black text-slate-400">%</span>
+                  </div>
+                </label>
+
+                <label className="block">
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Justificación obligatoria</span>
+                  <textarea
+                    rows={4}
+                    value={manualDiscountJustification}
+                    onChange={e => { setManualDiscountJustification(e.target.value); setManualDiscountError(''); }}
+                    placeholder="Ej. Promoción autorizada..."
+                    className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  />
+                  <p className={`mt-1 text-[10px] font-bold ${manualDiscountJustificationValid ? 'text-slate-600' : 'text-slate-400'}`}>
+                    Mínimo 5 caracteres.
+                  </p>
+                </label>
+              </section>
+            </div>
+
+            {manualDiscountError && (
+              <p className="mx-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{manualDiscountError}</p>
+            )}
+
+            <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
+              <button onClick={() => setManualDiscountOpen(false)} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">
+                Cancelar
+              </button>
+              <button onClick={confirmManualDiscount} className="flex-[2] rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500">
+                Confirmar descuento
               </button>
             </div>
           </div>
