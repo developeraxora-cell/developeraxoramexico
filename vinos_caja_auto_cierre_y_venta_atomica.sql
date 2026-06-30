@@ -43,7 +43,7 @@ begin
     into summary
     from public.sales s
     where s.branch_id = session_row.branch_id
-      and s.created_by = session_row.cashier_user_id
+      and s.created_by::text = session_row.cashier_user_id
       and s.created_at >= session_row.opened_at
       and s.created_at <= close_at;
 
@@ -184,7 +184,7 @@ begin
     coalesce((p_sale->>'cash_received')::numeric, 0),
     nullif(p_sale->>'notes', ''),
     nullif(p_sale->>'delivery_address', ''),
-    nullif(p_sale->>'created_by', '')
+    nullif(p_sale->>'created_by', '')::uuid
   )
   returning id into v_sale_id;
 
@@ -257,7 +257,7 @@ begin
       'USO',
       v_sale_id,
       'Uso en venta ' || v_sale_id::text,
-      nullif(p_sale->>'created_by', '')
+      nullif(p_sale->>'created_by', '')::uuid
     );
 
     update public.customers
