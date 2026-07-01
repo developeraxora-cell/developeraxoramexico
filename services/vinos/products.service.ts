@@ -36,6 +36,8 @@ export interface ProductUomEquivalence {
   uom?: { id: string; name: string; symbol: string | null } | null;
 }
 
+type ProductUomEquivalenceInput = Omit<ProductUomEquivalence, 'product_id' | 'uom'>;
+
 export interface ProductWithStock extends VinosProduct {
   total_stock: number;
   last_purchase_cost: number | null;
@@ -210,21 +212,83 @@ export const vinosProductsService = {
     return (data ?? []) as ProductUomEquivalence[];
   },
 
-  async setEquivalences(productId: string, rows: Omit<ProductUomEquivalence, 'id' | 'product_id' | 'uom'>[]): Promise<void> {
+  async setEquivalences(productId: string, rows: ProductUomEquivalenceInput[]): Promise<void> {
     if (!isVinosConfigured) throw new Error('DB vinos no configurada');
-    // Borrar todas las existentes
-    await supabaseVinos.from('product_uoms').delete().eq('product_id', productId);
-    if (rows.length === 0) return;
-    const payload = rows.map(r => ({
-      product_id: productId,
+    const normalizedRows = rows.map(r => ({
+      id: r.id,
       uom_id: r.uom_id,
-      factor_to_base: r.factor_to_base,
-      price_retail: r.price_retail,
-      price_mid_wholesale: r.price_mid_wholesale,
-      price_wholesale: r.price_wholesale,
+      factor_to_base: Number(r.factor_to_base) || 1,
+      price_retail: Number(r.price_retail) || 0,
+      price_mid_wholesale: Number(r.price_mid_wholesale) || 0,
+      price_wholesale: Number(r.price_wholesale) || 0,
     }));
-    const { error } = await supabaseVinos.from('product_uoms').insert(payload);
-    if (error) throw error;
+
+    const seenUoms = new Set<string>();
+    for (const row of normalizedRows) {
+      if (seenUoms.has(row.uom_id)) {
+        throw new Error('No puedes registrar la misma unidad de medida dos veces en el producto.');
+      }
+      seenUoms.add(row.uom_id);
+    }
+
+    const { data: existingRows, error: existingError } = await supabaseVinos
+      .from('product_uoms')
+      .select('id,uom_id')
+      .eq('product_id', productId);
+    if (existingError) throw existingError;
+
+    const existing = (existingRows ?? []) as Array<{ id: string; uom_id: string }>;
+    const existingById = new Map(existing.map(row => [row.id, row]));
+    const existingByUom = new Map(existing.map(row => [row.uom_id, row]));
+    const keptIds = new Set<string>();
+
+    for (const row of normalizedRows) {
+      const matched = row.id ? existingById.get(row.id) : existingByUom.get(row.uom_id);
+      const duplicateTarget = existingByUom.get(row.uom_id);
+      if (matched && duplicateTarget && duplicateTarget.id !== matched.id) {
+        throw new Error('Ya existe una equivalencia registrada con esa unidad de medida.');
+      }
+
+      const payload = {
+        product_id: productId,
+        uom_id: row.uom_id,
+        factor_to_base: row.factor_to_base,
+        price_retail: row.price_retail,
+        price_mid_wholesale: row.price_mid_wholesale,
+        price_wholesale: row.price_wholesale,
+      };
+
+      if (matched) {
+        const { error } = await supabaseVinos
+          .from('product_uoms')
+          .update(payload)
+          .eq('id', matched.id);
+        if (error) throw error;
+        keptIds.add(matched.id);
+      } else {
+        const { data: inserted, error } = await supabaseVinos
+          .from('product_uoms')
+          .insert(payload)
+          .select('id')
+          .single();
+        if (error) throw error;
+        if (inserted?.id) keptIds.add(inserted.id);
+      }
+    }
+
+    const rowsToDelete = existing.filter(row => !keptIds.has(row.id));
+    for (const row of rowsToDelete) {
+      const { error } = await supabaseVinos
+        .from('product_uoms')
+        .delete()
+        .eq('id', row.id);
+      if (error) {
+        if (error.code === '23503') {
+          throw new Error('No se puede eliminar una unidad de medida que ya tiene compras o ventas registradas.');
+        }
+        throw error;
+      }
+    }
   },
 
   async update(id: string, input: UpdateProductInput): Promise<VinosProduct> {

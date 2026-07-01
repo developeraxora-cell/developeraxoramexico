@@ -25,6 +25,7 @@ interface FormState {
 }
 
 interface EquivalenceRow {
+  id?: string;
   uom_id: string;
   factor_to_base: string;
   price_retail: string;
@@ -120,6 +121,7 @@ const VinosProductModal: React.FC<Props> = ({
       vinosProductsService.listEquivalences(editTarget.id)
         .then((eqs) => {
           const mapped = eqs.map(e => ({
+            id: e.id,
             uom_id: e.uom_id,
             factor_to_base: String(e.factor_to_base),
             price_retail: String(e.price_retail),
@@ -207,6 +209,7 @@ const VinosProductModal: React.FC<Props> = ({
         : await vinosProductsService.create(payload, branchDbId as number);
 
       await vinosProductsService.setEquivalences(product.id, equivalences.map(eq => ({
+        id: eq.id,
         uom_id: eq.uom_id,
         factor_to_base: Number(eq.factor_to_base) || 1,
         price_retail: Number(eq.price_retail) || 0,
