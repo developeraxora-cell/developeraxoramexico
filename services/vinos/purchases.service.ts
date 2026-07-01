@@ -58,6 +58,14 @@ export interface CreatePurchaseInput {
   items: CartItem[];
 }
 
+export interface UpdatePurchaseMetadataInput {
+  supplier_id?: string | null;
+  reference?: string | null;
+  purchase_date: string;
+  notes?: string | null;
+  is_credit: boolean;
+}
+
 export const vinosPurchasesService = {
 
   async list(branchId?: number, opts?: { search?: string; from?: string; to?: string; supplierId?: string }): Promise<PurchaseRow[]> {
@@ -158,6 +166,22 @@ export const vinosPurchasesService = {
       .from('purchases')
       .update({ deleted_at: new Date().toISOString(), delete_note: deleteNote })
       .eq('id', id);
+    if (error) throw error;
+  },
+
+  async updateMetadata(id: string, input: UpdatePurchaseMetadataInput): Promise<void> {
+    if (!isVinosConfigured) throw new Error('DB vinos no configurada');
+    const { error } = await supabaseVinos
+      .from('purchases')
+      .update({
+        supplier_id: input.supplier_id ?? null,
+        reference: input.reference?.trim() || null,
+        purchase_date: input.purchase_date,
+        notes: input.notes?.trim() || null,
+        is_credit: input.is_credit,
+      })
+      .eq('id', id)
+      .is('deleted_at', null);
     if (error) throw error;
   },
 };

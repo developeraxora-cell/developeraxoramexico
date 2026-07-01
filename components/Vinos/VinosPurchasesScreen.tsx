@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Plus, Search, Trash2, Calendar, Truck, FileText, ArrowDownToLine, X, Loader2, Eye, RefreshCw,
+  Plus, Search, Trash2, Calendar, Truck, FileText, ArrowDownToLine, X, Loader2, Eye, RefreshCw, Pencil,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
@@ -23,6 +23,14 @@ interface ProductWithUoms extends ProductWithStock {
 interface PurchaseCartItem extends CartItem {
   qty_input: string;
   cost_per_unit_input: string;
+}
+
+interface PurchaseEditForm {
+  supplier_id: string;
+  purchase_date: string;
+  is_credit: boolean;
+  reference: string;
+  notes: string;
 }
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -84,6 +92,18 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
   const [detailOpen, setDetailOpen] = useState(false);
   const [detail, setDetail] = useState<PurchaseWithItems | null>(null);
 
+  // edit modal
+  const [editTarget, setEditTarget] = useState<PurchaseRow | null>(null);
+  const [editForm, setEditForm] = useState<PurchaseEditForm>({
+    supplier_id: '',
+    purchase_date: todayISO(),
+    is_credit: false,
+    reference: '',
+    notes: '',
+  });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+
   // delete modal
   const [deleteTarget, setDeleteTarget] = useState<PurchaseRow | null>(null);
   const [deleteNote, setDeleteNote] = useState('');
@@ -95,6 +115,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
   const [newSupplierPhone, setNewSupplierPhone] = useState('');
   const [newSupplierEmail, setNewSupplierEmail] = useState('');
   const [newSupplierRfc, setNewSupplierRfc] = useState('');
+  const [supplierModalContext, setSupplierModalContext] = useState<'newPurchase' | 'editPurchase'>('newPurchase');
 
   // product modal
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -117,12 +138,18 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
 
   useEffect(() => { load(); }, [load]);
 
+  const loadSuppliers = async () => {
+    const sups = await vinosCatalogService.listSuppliers();
+    setSuppliers(sups);
+    return sups;
+  };
+
   // ── load catálogo al abrir modal nueva compra ───────────
   const loadModalData = async () => {
     try {
       const [list, sups, cats, units] = await Promise.all([
         vinosProductsService.listWithStock(branchDbId ?? undefined),
-        vinosCatalogService.listSuppliers(),
+        loadSuppliers(),
         vinosCatalogService.listCategories(),
         vinosCatalogService.listUoms(),
       ]);
@@ -316,6 +343,50 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
     } catch (e) { console.error(e); }
   };
 
+  // ── edit metadata ───────────────────────────────────────
+  const openEdit = async (p: PurchaseRow) => {
+    setEditTarget(p);
+    setEditError('');
+    setEditForm({
+      supplier_id: p.supplier_id ?? '',
+      purchase_date: p.purchase_date || todayISO(),
+      is_credit: Boolean(p.is_credit),
+      reference: p.reference ?? '',
+      notes: p.notes ?? '',
+    });
+    if (suppliers.length === 0) {
+      try { await loadSuppliers(); } catch (e) { console.error(e); }
+    }
+  };
+
+  const closeEdit = () => {
+    setEditTarget(null);
+    setEditError('');
+    setEditSaving(false);
+  };
+
+  const handleEditSave = async () => {
+    if (!editTarget) return;
+    if (!editForm.purchase_date) { setEditError('Selecciona la fecha de compra.'); return; }
+    setEditSaving(true);
+    setEditError('');
+    try {
+      await vinosPurchasesService.updateMetadata(editTarget.id, {
+        supplier_id: editForm.supplier_id || null,
+        purchase_date: editForm.purchase_date,
+        is_credit: editForm.is_credit,
+        reference: editForm.reference,
+        notes: editForm.notes,
+      });
+      await load();
+      closeEdit();
+    } catch (e: unknown) {
+      setEditError(e instanceof Error ? e.message : 'Error al guardar.');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   // ── delete ──────────────────────────────────────────────
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -344,7 +415,11 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
         notes: null,
       });
       setSuppliers(prev => [...prev, s]);
-      setSupplierId(s.id);
+      if (supplierModalContext === 'editPurchase') {
+        setEditForm(prev => ({ ...prev, supplier_id: s.id }));
+      } else {
+        setSupplierId(s.id);
+      }
       setNewSupplierName(''); setNewSupplierPhone(''); setNewSupplierEmail(''); setNewSupplierRfc('');
       setSupplierModalOpen(false);
     } catch (e) { console.error(e); }
@@ -462,6 +537,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <button onClick={() => openDetail(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Ver detalle"><Eye size={14}/></button>
+                          <button onClick={() => openEdit(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-orange-50 hover:text-orange-500" title="Editar datos"><Pencil size={14}/></button>
                           <button onClick={() => { setDeleteTarget(p); setDeleteNote(''); }} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
                         </div>
                       </td>
@@ -541,7 +617,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   <label className="text-[11px] font-black uppercase tracking-widest text-slate-500">Proveedor</label>
                   <button
                     type="button"
-                    onClick={() => setSupplierModalOpen(true)}
+                    onClick={() => { setSupplierModalContext('newPurchase'); setSupplierModalOpen(true); }}
                     className="text-[10px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-600"
                   >
                     + Nuevo proveedor
@@ -726,6 +802,116 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   {saving ? 'Guardando…' : 'Registrar entrada'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL EDITAR COMPRA ────────────────────────── */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <h2 className="text-base font-black uppercase tracking-tight text-slate-900">Editar compra</h2>
+                <p className="mt-0.5 text-[11px] font-bold text-slate-400">Casa Tahona</p>
+              </div>
+              <button
+                onClick={closeEdit}
+                disabled={editSaving}
+                className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+              >
+                <X size={18}/>
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50/40 px-6 py-5">
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Proveedor y fecha</h3>
+
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <label className="text-[11px] font-black uppercase tracking-widest text-slate-500">Proveedor</label>
+                    <button
+                      type="button"
+                      onClick={() => { setSupplierModalContext('editPurchase'); setSupplierModalOpen(true); }}
+                      className="text-[10px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-600"
+                    >
+                      + Nuevo proveedor
+                    </button>
+                  </div>
+                  <select
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:bg-white"
+                    value={editForm.supplier_id}
+                    onChange={e => setEditForm(prev => ({ ...prev, supplier_id: e.target.value }))}
+                  >
+                    <option value="">Seleccionar proveedor</option>
+                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Fecha de compra</label>
+                    <input
+                      type="date"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:bg-white"
+                      value={editForm.purchase_date}
+                      onChange={e => setEditForm(prev => ({ ...prev, purchase_date: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Compra a crédito</label>
+                    <select
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:bg-white"
+                      value={editForm.is_credit ? 'si' : 'no'}
+                      onChange={e => setEditForm(prev => ({ ...prev, is_credit: e.target.value === 'si' }))}
+                    >
+                      <option value="no">No</option>
+                      <option value="si">Sí</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Referencia y notas</h3>
+                <input
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:bg-white"
+                  placeholder="Referencia (Factura, Remisión, etc.)"
+                  value={editForm.reference}
+                  onChange={e => setEditForm(prev => ({ ...prev, reference: e.target.value }))}
+                />
+                <textarea
+                  rows={3}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:bg-white resize-none"
+                  placeholder="Notas"
+                  value={editForm.notes}
+                  onChange={e => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                />
+              </div>
+
+              {editError && (
+                <p className="rounded-xl bg-red-50 px-4 py-2 text-xs font-bold text-red-600">{editError}</p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-100 bg-white px-6 py-4">
+              <button
+                onClick={closeEdit}
+                disabled={editSaving}
+                className="rounded-2xl border border-slate-200 bg-white px-6 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleEditSave}
+                disabled={editSaving}
+                className="flex items-center gap-2 rounded-2xl bg-orange-600 px-6 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-50"
+              >
+                {editSaving && <Loader2 size={14} className="animate-spin"/>}
+                {editSaving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
             </div>
           </div>
         </div>
