@@ -28,6 +28,7 @@ export interface PurchaseRow {
   deleted_at: string | null;
   delete_note: string | null;
   supplier?: { id: string; name: string } | null;
+  items?: Array<{ id: string; product?: { id: string; name: string } | null }>;
 }
 
 export interface PurchaseWithItems extends PurchaseRow {
@@ -63,7 +64,7 @@ export const vinosPurchasesService = {
     if (!isVinosConfigured) return [];
     let query = supabaseVinos
       .from('purchases')
-      .select('*, supplier:suppliers(id,name)')
+      .select('*, supplier:suppliers(id,name), items:purchase_items(id, product:products(id,name))')
       .is('deleted_at', null)
       .order('purchase_date', { ascending: false })
       .order('created_at', { ascending: false });
@@ -79,6 +80,7 @@ export const vinosPurchasesService = {
       rows = rows.filter(r =>
         (r.reference ?? '').toLowerCase().includes(q) ||
         (r.supplier?.name ?? '').toLowerCase().includes(q) ||
+        (r.items ?? []).some(item => (item.product?.name ?? '').toLowerCase().includes(q)) ||
         String(r.total).includes(q)
       );
     }

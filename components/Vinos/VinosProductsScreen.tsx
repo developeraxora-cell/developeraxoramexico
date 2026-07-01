@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Plus, Search, Pencil, Trash2, Package, TrendingUp, AlertTriangle, X, Settings, RefreshCw, Check, ChevronDown, Save, BarChart3, Loader2,
-  SlidersHorizontal,
+  DollarSign, SlidersHorizontal,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
@@ -58,6 +58,13 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
   const [stockNote, setStockNote] = useState('');
   const [stockSaving, setStockSaving] = useState(false);
   const [stockError, setStockError] = useState('');
+
+  // precio compra
+  const [purchaseCostTarget, setPurchaseCostTarget] = useState<ProductWithStock | null>(null);
+  const [purchaseCostValue, setPurchaseCostValue] = useState('');
+  const [purchaseCostNote, setPurchaseCostNote] = useState('');
+  const [purchaseCostSaving, setPurchaseCostSaving] = useState(false);
+  const [purchaseCostError, setPurchaseCostError] = useState('');
 
   // catalog manager
   const [catalogModalOpen, setCatalogModalOpen] = useState(false);
@@ -159,12 +166,27 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
     setStockError('');
   };
 
+  const openPurchaseCostAdjust = (p: ProductWithStock) => {
+    setPurchaseCostTarget(p);
+    setPurchaseCostValue(p.last_purchase_cost != null ? String(p.last_purchase_cost) : '');
+    setPurchaseCostNote('');
+    setPurchaseCostError('');
+  };
+
   const closeStockAdjust = () => {
     if (stockSaving) return;
     setStockTarget(null);
     setStockValue('');
     setStockNote('');
     setStockError('');
+  };
+
+  const closePurchaseCostAdjust = () => {
+    if (purchaseCostSaving) return;
+    setPurchaseCostTarget(null);
+    setPurchaseCostValue('');
+    setPurchaseCostNote('');
+    setPurchaseCostError('');
   };
 
   const closeHistory = () => {
@@ -248,6 +270,70 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
       setStockError(e instanceof Error ? e.message : 'No se pudo ajustar el stock.');
     } finally {
       setStockSaving(false);
+    }
+  };
+
+  const handlePurchaseCostAdjust = async () => {
+    if (!purchaseCostTarget) return;
+    const nextCost = Number(purchaseCostValue);
+    const note = purchaseCostNote.trim();
+
+    if (!branchDbId) {
+      setPurchaseCostError('No se pudo identificar la sucursal activa.');
+      return;
+    }
+    if (!Number.isFinite(nextCost) || nextCost < 0) {
+      setPurchaseCostError('Ingresa un precio de compra válido mayor o igual a 0.');
+      return;
+    }
+    if (!note) {
+      setPurchaseCostError('La observación es obligatoria para editar el precio de compra.');
+      return;
+    }
+
+    const previousCost = purchaseCostTarget.last_purchase_cost;
+    setPurchaseCostSaving(true);
+    setPurchaseCostError('');
+    try {
+      await vinosProductsService.updateLastPurchaseCost(purchaseCostTarget.id, branchDbId, nextCost);
+
+      logVinosAudit({
+        branch_id: selectedBranchId,
+        branch_name: branchName,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ACTUALIZAR',
+        entity_type: 'producto',
+        entity_id: String(purchaseCostTarget.id),
+        description: `Precio compra actualizado: ${purchaseCostTarget.name} de ${previousCost ?? 'sin registro'} a ${nextCost}`,
+        justification: note,
+        previous_data: {
+          product_id: purchaseCostTarget.id,
+          name: purchaseCostTarget.name,
+          last_purchase_cost: previousCost,
+        },
+        new_data: {
+          product_id: purchaseCostTarget.id,
+          name: purchaseCostTarget.name,
+          last_purchase_cost: nextCost,
+          observation: note,
+        },
+      });
+
+      setProducts(prev => prev.map(product => (
+        product.id === purchaseCostTarget.id ? { ...product, last_purchase_cost: nextCost } : product
+      )));
+      if (historyOpen && historyTarget?.id === purchaseCostTarget.id) {
+        void openHistory({ ...purchaseCostTarget, last_purchase_cost: nextCost });
+      }
+      await load();
+      setPurchaseCostTarget(null);
+      setPurchaseCostValue('');
+      setPurchaseCostNote('');
+    } catch (e) {
+      setPurchaseCostError(e instanceof Error ? e.message : 'No se pudo editar el precio de compra.');
+    } finally {
+      setPurchaseCostSaving(false);
     }
   };
 
@@ -483,6 +569,9 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                           <button onClick={() => openStockAdjust(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600" title="Editar stock manual">
                             <SlidersHorizontal size={14}/>
                           </button>
+                          <button onClick={() => openPurchaseCostAdjust(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-orange-50 hover:text-orange-600" title="Editar precio compra">
+                            <DollarSign size={14}/>
+                          </button>
                           <button onClick={() => openEdit(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Editar"><Pencil size={14}/></button>
                           <button onClick={() => setDeleteTarget(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
                         </div>
@@ -565,6 +654,67 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
               </button>
               <button onClick={handleStockAdjust} disabled={stockSaving} className="flex-1 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-50">
                 {stockSaving ? 'Guardando...' : 'Guardar ajuste'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {purchaseCostTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <h2 className="text-base font-black uppercase tracking-tight text-slate-900">Editar precio compra</h2>
+                <p className="text-[10px] font-bold text-slate-400">{purchaseCostTarget.name} · {purchaseCostTarget.sku}</p>
+              </div>
+              <button onClick={closePurchaseCostAdjust} disabled={purchaseCostSaving} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"><X size={18}/></button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Precio actual</p>
+                  <p className="mt-1 text-xl font-black text-slate-900">
+                    {purchaseCostTarget.last_purchase_cost != null ? formatCurrency(purchaseCostTarget.last_purchase_cost) : '—'}
+                  </p>
+                </div>
+                <label className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nuevo precio</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={purchaseCostValue}
+                    onChange={e => setPurchaseCostValue(e.target.value)}
+                    className="mt-1 w-full bg-transparent text-2xl font-black text-slate-900 outline-none"
+                    autoFocus
+                  />
+                </label>
+              </div>
+
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observación obligatoria</span>
+                <textarea
+                  value={purchaseCostNote}
+                  onChange={e => setPurchaseCostNote(e.target.value)}
+                  rows={4}
+                  placeholder="Ej. Corrección de costo capturado, actualización por factura..."
+                  className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                />
+              </label>
+
+              {purchaseCostError && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{purchaseCostError}</div>
+              )}
+            </div>
+
+            <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
+              <button onClick={closePurchaseCostAdjust} disabled={purchaseCostSaving} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                Cancelar
+              </button>
+              <button onClick={handlePurchaseCostAdjust} disabled={purchaseCostSaving} className="flex-1 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-50">
+                {purchaseCostSaving ? 'Guardando...' : 'Guardar precio'}
               </button>
             </div>
           </div>

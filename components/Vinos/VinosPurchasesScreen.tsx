@@ -42,6 +42,12 @@ const parseMoneyInput = (value: string) => {
   if (!normalized) return 0;
   return Number(normalized.replace(',', '.')) || 0;
 };
+const getPurchaseProductNames = (purchase: PurchaseRow) => {
+  const names = (purchase.items ?? [])
+    .map(item => item.product?.name?.trim())
+    .filter((name): name is string => Boolean(name));
+  return Array.from(new Set(names));
+};
 
 const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, currentUser }) => {
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
@@ -418,27 +424,39 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
-                  {['Folio','Fecha','Proveedor','Notas','Total',''].map(h => (
+                  {['Folio','Fecha','Proveedor','Productos','Notas','Total',''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {purchases.map(p => (
-                  <tr key={p.id} className="hover:bg-slate-50 border-l-4" style={{ borderLeftColor: p.is_credit ? '#ef4444' : '#22c55e' }}>
-                    <td className="px-4 py-3 text-xs font-mono text-slate-700">{p.reference ?? <span className="text-slate-400">—</span>}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{p.purchase_date}</td>
-                    <td className="px-4 py-3 text-xs text-slate-700">{p.supplier?.name ?? <span className="text-slate-400">—</span>}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500 truncate max-w-[200px]">{p.notes ?? '—'}</td>
-                    <td className="px-4 py-3 text-sm font-black text-slate-900">{formatCurrency(p.total)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => openDetail(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Ver detalle"><Eye size={14}/></button>
-                        <button onClick={() => { setDeleteTarget(p); setDeleteNote(''); }} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {purchases.map(p => {
+                  const productNames = getPurchaseProductNames(p);
+                  return (
+                    <tr key={p.id} className="hover:bg-slate-50 border-l-4" style={{ borderLeftColor: p.is_credit ? '#ef4444' : '#22c55e' }}>
+                      <td className="px-4 py-3 text-xs font-mono text-slate-700">{p.reference ?? <span className="text-slate-400">—</span>}</td>
+                      <td className="px-4 py-3 text-xs text-slate-600">{p.purchase_date}</td>
+                      <td className="px-4 py-3 text-xs text-slate-700">{p.supplier?.name ?? <span className="text-slate-400">—</span>}</td>
+                      <td className="px-4 py-3 text-xs font-bold text-slate-700">
+                        {productNames.length > 0 ? (
+                          <span className="block max-w-[320px] truncate" title={productNames.join(', ')}>
+                            {productNames.join(', ')}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-500 truncate max-w-[200px]">{p.notes ?? '—'}</td>
+                      <td className="px-4 py-3 text-sm font-black text-slate-900">{formatCurrency(p.total)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => openDetail(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Ver detalle"><Eye size={14}/></button>
+                          <button onClick={() => { setDeleteTarget(p); setDeleteNote(''); }} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

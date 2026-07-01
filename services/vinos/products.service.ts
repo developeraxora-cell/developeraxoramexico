@@ -242,6 +242,64 @@ export const vinosProductsService = {
     return data as VinosProduct;
   },
 
+  async updateLastPurchaseCost(productId: string, branchId: number, newCost: number): Promise<void> {
+    if (!isVinosConfigured) throw new Error('DB vinos no configurada');
+    if (!Number.isFinite(newCost) || newCost < 0) throw new Error('Costo inválido.');
+
+    const { data, error } = await supabaseVinos
+      .from('purchases')
+      .select('id,total,purchase_date,created_at,branch_id,items:purchase_items(id,product_id,qty,cost_per_unit,subtotal)')
+      .eq('branch_id', branchId)
+      .is('deleted_at', null)
+      .order('purchase_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1000);
+    if (error) throw error;
+
+    type PurchaseCostRow = {
+      id: string;
+      total: number;
+      items: Array<{ id: string; product_id: string; qty: number; cost_per_unit: number; subtotal: number }> | { id: string; product_id: string; qty: number; cost_per_unit: number; subtotal: number } | null;
+    };
+
+    let targetPurchase: PurchaseCostRow | null = null;
+    let targetItem: { id: string; product_id: string; qty: number; cost_per_unit: number; subtotal: number } | null = null;
+
+    for (const purchase of (data ?? []) as PurchaseCostRow[]) {
+      const items = Array.isArray(purchase.items) ? purchase.items : purchase.items ? [purchase.items] : [];
+      const item = items.find((row) => row.product_id === productId);
+      if (item) {
+        targetPurchase = purchase;
+        targetItem = item;
+        break;
+      }
+    }
+
+    if (!targetPurchase || !targetItem) {
+      throw new Error('Este producto todavía no tiene una compra registrada para editar su precio de compra.');
+    }
+
+    const qty = Number(targetItem.qty ?? 0);
+    const previousSubtotal = Number(targetItem.subtotal ?? qty * Number(targetItem.cost_per_unit ?? 0));
+    const nextSubtotal = qty * newCost;
+    const nextTotal = Math.max(0, Number(targetPurchase.total ?? 0) - previousSubtotal + nextSubtotal);
+
+    const { error: itemError } = await supabaseVinos
+      .from('purchase_items')
+      .update({
+        cost_per_unit: newCost,
+        subtotal: nextSubtotal,
+      })
+      .eq('id', targetItem.id);
+    if (itemError) throw itemError;
+
+    const { error: purchaseError } = await supabaseVinos
+      .from('purchases')
+      .update({ total: nextTotal })
+      .eq('id', targetPurchase.id);
+    if (purchaseError) throw purchaseError;
+  },
+
   async deactivate(id: string): Promise<void> {
     const { error } = await supabaseVinos
       .from('products')
