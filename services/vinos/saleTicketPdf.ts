@@ -133,6 +133,12 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
     ? wrapText(`OBS: ${input.saleNotes.trim().toUpperCase()}`, contentWidth, fontRegular, 7)
     : [];
   const customerLines = wrapText(`CLIENTE: ${(input.customerName || 'PUBLICO GENERAL').toUpperCase()}`, contentWidth, fontRegular, 7);
+  const footerNoticeLines = wrapText(
+    'Favor de verificar su mercancía al momento de la entrega. Después de salir del establecimiento no se aceptan devoluciones',
+    contentWidth,
+    fontRegular,
+    7,
+  );
   const footerLines = wrapText('GRACIAS POR SU COMPRA', contentWidth, fontBold, 8);
   const itemsHeight = lineBlocks.reduce((sum, block) => sum + block.height, 0);
   const dynamicHeight =
@@ -146,6 +152,7 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
     (Number(input.bankCommission ?? 0) > 0 ? 28 : 0) +
     (input.paymentMethod === 'EFECTIVO' && Number(input.cashReceived ?? 0) > 0 ? 28 : 0) +
     (input.discountCode ? 12 : 0) +
+    (footerNoticeLines.length * lineGap) +
     (footerLines.length * lineGap);
   const height = Math.max(320, Math.min(14000, dynamicHeight));
   const page = pdfDoc.addPage([width, height]);
@@ -235,6 +242,9 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
   if (input.discountCode) drawLine(`CODIGO: ${String(input.discountCode).toUpperCase()}`, 7, fontRegular);
   drawDivider();
   drawCentered('CONSERVE ESTE COMPROBANTE', 7, fontRegular);
+  y -= 2;
+  footerNoticeLines.forEach((line) => drawCentered(line, 7, fontRegular));
+  y -= 2;
   footerLines.forEach((line) => drawCentered(line, 8, fontBold));
 
   const pdfBytes = await pdfDoc.save();
