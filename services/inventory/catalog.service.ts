@@ -499,7 +499,7 @@ export const catalogService = {
     } as StockAdjustmentResult;
   },
 
-  async getProductMovementHistory(branchId: string, productId: string, limit = 120) {
+  async getProductMovementHistory(branchId: string, productId: string) {
     if (!branchId || !productId) {
       return {
         summary: {
@@ -514,8 +514,7 @@ export const catalogService = {
       } as ProductMovementHistory;
     }
 
-    const safeLimit = Math.max(10, Math.min(limit, 400));
-    const candidateLimit = Math.min(safeLimit * 3, 1000);
+    const pageSize = 1000;
 
     const { data: currentStockData, error: currentStockError } = await supabase
       .from('inventory_stock')
@@ -527,83 +526,101 @@ export const catalogService = {
     if (currentStockError) throw currentStockError;
     const currentStock = Number(currentStockData?.qty_base ?? 0);
 
-    const { data: txItems, error: txItemsError } = await supabase
-      .from('inventory_transaction_items')
-      .select(`
-        id,
-        qty,
-        qty_base,
-        unit_price,
-        inventory_transactions!inner (
+    const txItems: any[] = [];
+    for (let from = 0; ; from += pageSize) {
+      const to = from + pageSize - 1;
+      const { data, error } = await supabase
+        .from('inventory_transaction_items')
+        .select(`
           id,
-          type,
-          is_deleted,
-          branch_id,
-          reference,
-          notes,
-          created_by,
-          created_at
-        )
-      `)
-      .eq('product_id', productId)
-      .eq('inventory_transactions.branch_id', branchId)
-      .eq('inventory_transactions.is_deleted', false)
-      .in('inventory_transactions.type', ['PURCHASE', 'SALE'])
-      .order('created_at', { ascending: false, foreignTable: 'inventory_transactions' })
-      .limit(candidateLimit);
+          qty,
+          qty_base,
+          unit_price,
+          inventory_transactions!inner (
+            id,
+            type,
+            is_deleted,
+            branch_id,
+            reference,
+            notes,
+            created_by,
+            created_at
+          )
+        `)
+        .eq('product_id', productId)
+        .eq('inventory_transactions.branch_id', branchId)
+        .eq('inventory_transactions.is_deleted', false)
+        .in('inventory_transactions.type', ['PURCHASE', 'SALE'])
+        .order('id', { ascending: false })
+        .range(from, to);
 
-    if (txItemsError) throw txItemsError;
-
-    const { data: adjustmentsData, error: adjustmentsError } = await supabase
-      .from('inventory_stock_adjustments')
-      .select('id, previous_qty_base, new_qty_base, delta_qty_base, reason, notes, created_by, created_at')
-      .eq('branch_id', branchId)
-      .eq('product_id', productId)
-      .order('created_at', { ascending: false })
-      .limit(candidateLimit);
-
-    if (adjustmentsError) {
-      const code = String(adjustmentsError.code ?? '');
-      if (code === '42P01') {
-        throw new Error('Falta la tabla inventory_stock_adjustments en la base de datos. Ejecute el script SQL de migración.');
-      }
-      throw adjustmentsError;
+      if (error) throw error;
+      txItems.push(...(data ?? []));
+      if (!data || data.length < pageSize) break;
     }
 
-    const { data: productionData, error: productionError } = await supabase
-      .from('production_items')
-      .select(`
-        id,
-        production_id,
-        product_id,
-        product_name,
-        movement,
-        qty,
-        pareas,
-        peso,
-        created_at,
-        production_orders!inner (
-          id,
-          branch_id,
-          production_date,
-          responsible,
-          producer,
-          observation,
-          created_by,
-          created_at
-        )
-      `)
-      .eq('product_id', productId)
-      .eq('production_orders.branch_id', branchId)
-      .order('created_at', { ascending: false })
-      .limit(candidateLimit);
+    const adjustmentsData: any[] = [];
+    for (let from = 0; ; from += pageSize) {
+      const to = from + pageSize - 1;
+      const { data, error } = await supabase
+        .from('inventory_stock_adjustments')
+        .select('id, previous_qty_base, new_qty_base, delta_qty_base, reason, notes, created_by, created_at')
+        .eq('branch_id', branchId)
+        .eq('product_id', productId)
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
-    if (productionError) {
-      const code = String(productionError.code ?? '');
-      if (code === '42P01') {
-        throw new Error('Faltan las tablas de producción en la base de datos. Ejecute el script SQL de migración.');
+      if (error) {
+        const code = String(error.code ?? '');
+        if (code === '42P01') {
+          throw new Error('Falta la tabla inventory_stock_adjustments en la base de datos. Ejecute el script SQL de migración.');
+        }
+        throw error;
       }
-      throw productionError;
+      adjustmentsData.push(...(data ?? []));
+      if (!data || data.length < pageSize) break;
+    }
+
+    const productionData: any[] = [];
+    for (let from = 0; ; from += pageSize) {
+      const to = from + pageSize - 1;
+      const { data, error } = await supabase
+        .from('production_items')
+        .select(`
+          id,
+          production_id,
+          product_id,
+          product_name,
+          movement,
+          qty,
+          pareas,
+          peso,
+          created_at,
+          production_orders!inner (
+            id,
+            branch_id,
+            production_date,
+            responsible,
+            producer,
+            observation,
+            created_by,
+            created_at
+          )
+        `)
+        .eq('product_id', productId)
+        .eq('production_orders.branch_id', branchId)
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (error) {
+        const code = String(error.code ?? '');
+        if (code === '42P01') {
+          throw new Error('Faltan las tablas de producción en la base de datos. Ejecute el script SQL de migración.');
+        }
+        throw error;
+      }
+      productionData.push(...(data ?? []));
+      if (!data || data.length < pageSize) break;
     }
 
     const summary: ProductMovementSummary = {
@@ -623,6 +640,9 @@ export const catalogService = {
         ? null
         : Number(row.unit_price);
       const totalAmount = Number(row.qty ?? 0) * Number(row.unit_price ?? 0);
+      const transactionId = transaction?.id != null ? String(transaction.id) : '';
+      const rawReference = String(transaction?.reference ?? '').trim();
+      const reference = rawReference || (txType === 'SALE' && transactionId ? `Nota de venta #${transactionId}` : null);
 
       if (txType === 'PURCHASE') {
         summary.purchased_qty_base += qtyBase;
@@ -636,7 +656,7 @@ export const catalogService = {
         id: `TX-${row.id}`,
         movement_type: txType,
         created_at: String(transaction?.created_at ?? ''),
-        reference: (transaction?.reference as string | null) ?? null,
+        reference,
         notes: (transaction?.notes as string | null) ?? null,
         created_by: (transaction?.created_by as string | null) ?? null,
         qty_base: txType === 'SALE' ? -qtyBase : qtyBase,
@@ -706,8 +726,7 @@ export const catalogService = {
     });
 
     const rowsDesc = [...transactionRows, ...adjustmentRows, ...productionRows]
-      .sort((a, b) => getMovementTime(b.created_at) - getMovementTime(a.created_at))
-      .slice(0, safeLimit);
+      .sort((a, b) => getMovementTime(b.created_at) - getMovementTime(a.created_at));
 
     let runningStock = currentStock;
     const rowsWithBalanceDesc = rowsDesc.map((row) => {

@@ -427,7 +427,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     setIsHistoryLoading(true);
     setError(null);
     try {
-      const movementHistory = await catalogService.getProductMovementHistory(branchId, product.id, 120);
+      const movementHistory = await catalogService.getProductMovementHistory(branchId, product.id);
       setHistoryData(movementHistory);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo cargar el historial del producto.';
