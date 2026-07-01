@@ -444,9 +444,16 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const cashReceivedNum = Number(cashReceived) || 0;
   const change = isEfectivo && cashReceivedNum > 0 ? getCashChange(cashReceivedNum, total) : 0;
   const cashPaymentInvalid = isEfectivo && total > 0 && cashReceivedNum < total;
+  const isCashRegisterOpen = Boolean(cashSession);
+  const shouldShowCashStartGate = cashSessionReady && !isCashRegisterOpen && !cashOpenModal;
 
   // ── add product modal helpers ──────────────────────────
   const openAddProduct = (p: ProductFull) => {
+    if (!isCashRegisterOpen) {
+      setCashStartPromptOpen(true);
+      setFeedback({ type: 'error', msg: 'Primero debes iniciar caja para vender.' });
+      return;
+    }
     if (p.product_uoms.length === 0) {
       setFeedback({ type: 'error', msg: 'Este producto no tiene unidades configuradas.' });
       return;
@@ -511,6 +518,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   const handleAddToCart = () => {
     if (!addProductTarget) return;
+    if (!isCashRegisterOpen) {
+      setAddProductTarget(null);
+      setCashStartPromptOpen(true);
+      setFeedback({ type: 'error', msg: 'Primero debes iniciar caja para vender.' });
+      return;
+    }
     const pu = addProductTarget.product_uoms.find(u => u.id === stepUomId);
     if (!pu) return;
     const qty = Number(stepQty);
@@ -880,6 +893,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   // ── cobrar ─────────────────────────────────────────────
   const handleCharge = async () => {
+    if (!isCashRegisterOpen) {
+      setCheckoutOpen(false);
+      setCashStartPromptOpen(true);
+      setFeedback({ type: 'error', msg: 'Primero debes iniciar caja para cobrar.' });
+      return;
+    }
     if (!branchDbId) { setFeedback({ type: 'error', msg: 'Sucursal no encontrada.' }); return; }
     if (cart.length === 0) { setFeedback({ type: 'error', msg: 'Carrito vacío.' }); return; }
     if (cashPaymentInvalid) {
@@ -1025,10 +1044,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input
-                className="w-full rounded-xl border border-slate-200 py-2 pl-8 pr-3 text-xs outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-                placeholder="Buscar producto por nombre, SKU o código…"
+                className="w-full rounded-xl border border-slate-200 py-2 pl-8 pr-3 text-xs outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                placeholder={isCashRegisterOpen ? 'Buscar producto por nombre, SKU o código…' : 'Inicia caja para ver el catálogo'}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
+                disabled={!isCashRegisterOpen}
               />
             </div>
             <button
@@ -1074,7 +1094,26 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         </div>
 
         <div className="flex-1 overflow-y-auto p-3">
-          {loading ? (
+          {!isCashRegisterOpen ? (
+            <div className="flex min-h-full items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-orange-50/40 px-6 py-16 text-center">
+              <div className="max-w-sm">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-600 text-white shadow-lg shadow-orange-600/20">
+                  <Store size={28} />
+                </div>
+                <p className="mt-5 text-[11px] font-black uppercase tracking-[0.24em] text-orange-600">Caja requerida</p>
+                <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Inicia caja para ver productos</h2>
+                <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+                  El catálogo y la venta permanecen bloqueados hasta registrar la apertura de caja.
+                </p>
+                <button
+                  onClick={openCashOpeningForm}
+                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-orange-600/20 hover:bg-orange-500"
+                >
+                  <UnlockKeyhole size={15} /> Iniciar caja
+                </button>
+              </div>
+            </div>
+          ) : loading ? (
             <div className="py-20 text-center text-sm font-bold text-slate-400">Cargando catálogo…</div>
           ) : filteredProducts.length === 0 ? (
             <div className="py-20 text-center">
@@ -1185,7 +1224,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           </div>
           <button
             onClick={() => setCheckoutOpen(true)}
-            disabled={cart.length === 0}
+            disabled={cart.length === 0 || !isCashRegisterOpen}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
           >
             Continuar a cobro
@@ -1199,7 +1238,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       </div>
 
       {/* ─── MODAL BLOQUEANTE INICIAR CAJA ────────────── */}
-      {cashStartPromptOpen && !cashSession && !cashOpenModal && (
+      {shouldShowCashStartGate && (
         <div className="absolute inset-0 z-40 flex items-center justify-center rounded-2xl bg-slate-950/70 p-4 backdrop-blur-md">
           <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-orange-100 bg-white p-8 shadow-2xl sm:p-10">
             <div className="mb-6 flex items-center gap-3">
