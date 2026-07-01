@@ -669,7 +669,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                             />
                           </div>
                           <div>
-                            <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Costo compra</label>
+                            <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Precio compra</label>
                             <input
                               className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-orange-400"
                               type="text"
@@ -746,7 +746,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                         <th className="py-2 text-left">Producto</th>
                         <th className="py-2 text-left">Unidad</th>
                         <th className="py-2 text-right">Cant.</th>
-                        <th className="py-2 text-right">Costo</th>
+                        <th className="py-2 text-right">Prec. Compra</th>
                         <th className="py-2 text-right">Subtotal</th>
                       </tr>
                     </thead>
