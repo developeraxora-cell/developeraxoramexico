@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  TrendingUp, DollarSign, ShoppingBag, Users, Award,
-  AlertTriangle, Cake, Trophy, Star, BarChart3, PieChart, RefreshCw,
+  TrendingUp, DollarSign, ShoppingBag,
+  AlertTriangle, Star, BarChart3, RefreshCw,
+  Package, TrendingDown, Clock, Activity,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
@@ -16,29 +17,32 @@ interface Props {
   currentUser: User;
 }
 
-const LOYALTY_COLORS: Record<string, string> = {
-  BRONCE: 'bg-amber-400',
-  PLATA:  'bg-slate-400',
-  ORO:    'bg-yellow-400',
-  BLACK:  'bg-slate-900',
-};
-
-const PAYMENT_COLORS: Record<string, string> = {
-  EFECTIVO: 'bg-green-500',
-  CREDITO:  'bg-red-500',
-  CORTESIA: 'bg-slate-400',
-  SALDO:    'bg-purple-500',
-};
-
 const EMPTY_REPORTS_DATA: ReportsKPIs = {
   total_sales: 0,
   total_amount: 0,
   avg_ticket: 0,
+  gross_profit: 0,
+  profit_margin: 0,
+  inventory_value: 0,
   new_customers: 0,
   top_customers: [],
   top_products: [],
+  top_profit_products: [],
+  loss_products: [],
+  low_stock_products: [],
   sales_by_day: [],
-  payment_distribution: { EFECTIVO: 0, CREDITO: 0, CORTESIA: 0, SALDO: 0 },
+  sales_by_weekday: [],
+  sales_by_hour: [],
+  best_hours: [],
+  slow_hours: [],
+  sales_periods: {
+    today: { sales: 0, amount: 0 },
+    week: { sales: 0, amount: 0 },
+    month: { sales: 0, amount: 0 },
+    year: { sales: 0, amount: 0 },
+  },
+  profit_periods: { today: 0, week: 0, month: 0, year: 0 },
+  payment_distribution: { EFECTIVO: 0, TARJETA: 0, TRANSFERENCIA: 0, CREDITO: 0, CORTESIA: 0, SALDO: 0 },
   loyalty_distribution: { BRONCE: 0, PLATA: 0, ORO: 0, BLACK: 0 },
   at_risk_customers: [],
   birthdays_this_month: [],
@@ -121,6 +125,184 @@ const toLocalDateInputValue = (value: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const formatHourRange = (hour: number) => {
+  const start = String(hour).padStart(2, '0');
+  const end = String((hour + 1) % 24).padStart(2, '0');
+  return `${start}:00-${end}:00`;
+};
+
+const createSmoothPath = (points: Array<{ x: number; y: number }>) => {
+  if (points.length === 0) return '';
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+  let path = `M ${points[0].x} ${points[0].y}`;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const p0 = points[index - 1] ?? points[index];
+    const p1 = points[index];
+    const p2 = points[index + 1];
+    const p3 = points[index + 2] ?? p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    path += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+  }
+  return path;
+};
+
+const WeekdayAreaChart: React.FC<{
+  rows: ReportsKPIs['sales_by_weekday'];
+}> = ({ rows }) => {
+  const width = 640;
+  const height = 260;
+  const padding = { top: 30, right: 28, bottom: 44, left: 42 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const baseY = padding.top + chartHeight;
+  const maxCount = Math.max(1, ...rows.map(row => Number(row.count ?? 0)));
+  const xFor = (index: number) => padding.left + (chartWidth * index) / Math.max(1, rows.length - 1);
+  const countPoints = rows.map((row, index) => ({
+    x: xFor(index),
+    y: baseY - (Number(row.count ?? 0) / maxCount) * chartHeight,
+  }));
+  const countLine = createSmoothPath(countPoints);
+  const countArea = `${countLine} L ${countPoints[countPoints.length - 1]?.x ?? padding.left} ${baseY} L ${padding.left} ${baseY} Z`;
+
+  return (
+    <div className="space-y-3">
+      <div className="h-72 w-full overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-slate-50">
+        <svg viewBox={`0 0 ${width} ${height}`} className="h-full w-full" role="img" aria-label="Ventas por día de la semana">
+          <defs>
+            <linearGradient id="weekdaySalesArea" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#f97316" stopOpacity="0.5" />
+              <stop offset="65%" stopColor="#fdba74" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#fff7ed" stopOpacity="0" />
+            </linearGradient>
+            <filter id="weekdayLineShadow" x="-10%" y="-10%" width="120%" height="130%">
+              <feDropShadow dx="0" dy="5" stdDeviation="5" floodColor="#f97316" floodOpacity="0.18" />
+            </filter>
+          </defs>
+
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+            const y = padding.top + chartHeight * ratio;
+            const value = Math.round(maxCount * (1 - ratio));
+            return (
+              <g key={ratio}>
+                <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 6" />
+                <text x={padding.left - 10} y={y + 4} textAnchor="end" fontSize="10" fontWeight="700" fill="#94a3b8">
+                  {value}
+                </text>
+              </g>
+            );
+          })}
+
+          <line x1={padding.left} x2={width - padding.right} y1={baseY} y2={baseY} stroke="#cbd5e1" strokeWidth="1.4" />
+          <path d={countArea} fill="url(#weekdaySalesArea)" />
+          <path d={countLine} fill="none" stroke="#f97316" strokeWidth="4" strokeLinecap="round" filter="url(#weekdayLineShadow)" />
+
+          {rows.map((row, index) => {
+            const point = countPoints[index];
+            const isPeak = Number(row.count ?? 0) === maxCount && maxCount > 0;
+            return (
+              <g key={row.day}>
+                <line x1={point.x} x2={point.x} y1={point.y + 7} y2={baseY} stroke="#fed7aa" strokeWidth="1" strokeDasharray="3 5" opacity="0.8" />
+                <circle cx={point.x} cy={point.y} r={isPeak ? 6 : 5} fill="#ffffff" stroke={isPeak ? '#ea580c' : '#f97316'} strokeWidth="3" />
+                <text x={point.x} y={Math.max(14, point.y - 12)} textAnchor="middle" fontSize={isPeak ? '13' : '11'} fontWeight="900" fill={isPeak ? '#ea580c' : '#0f172a'}>
+                  {row.count}
+                </text>
+                <text x={point.x} y={height - 18} textAnchor="middle" fontSize="11" fontWeight="900" fill="#475569">
+                  {row.day.slice(0, 3)}
+                </text>
+                <text x={point.x} y={height - 5} textAnchor="middle" fontSize="9" fontWeight="700" fill="#94a3b8">
+                  ventas
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+      <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-orange-500" /> Cantidad de ventas</span>
+        <span className="text-slate-400">Agrupado por día de semana</span>
+      </div>
+    </div>
+  );
+};
+
+const HourlyHistogram: React.FC<{
+  rows: ReportsKPIs['sales_by_hour'];
+}> = ({ rows }) => {
+  const width = 720;
+  const height = 260;
+  const padding = { top: 24, right: 18, bottom: 38, left: 38 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const baseY = padding.top + chartHeight;
+  const maxCount = Math.max(1, ...rows.map(row => Number(row.count ?? 0)));
+  const barGap = 6;
+  const barWidth = Math.max(8, (chartWidth - barGap * (rows.length - 1)) / rows.length);
+
+  return (
+    <div className="h-72 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-full w-full" role="img" aria-label="Histograma de ventas por horario">
+        <defs>
+          <linearGradient id="hourlyBarGradient" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#f97316" />
+            <stop offset="100%" stopColor="#fb923c" />
+          </linearGradient>
+        </defs>
+
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+          const y = padding.top + chartHeight * ratio;
+          const value = Math.round(maxCount * (1 - ratio));
+          return (
+            <g key={ratio}>
+              <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke="#e2e8f0" strokeWidth="1" />
+              <text x={padding.left - 10} y={y + 4} textAnchor="end" fontSize="10" fontWeight="700" fill="#94a3b8">
+                {value}
+              </text>
+            </g>
+          );
+        })}
+
+        <line x1={padding.left} x2={width - padding.right} y1={baseY} y2={baseY} stroke="#cbd5e1" strokeWidth="1.4" />
+
+        {rows.map((row, index) => {
+          const count = Number(row.count ?? 0);
+          const barHeight = count > 0 ? Math.max(8, (count / maxCount) * chartHeight) : 2;
+          const x = padding.left + index * (barWidth + barGap);
+          const y = baseY - barHeight;
+          const isPeak = count === maxCount && count > 0;
+
+          return (
+            <g key={row.hour}>
+              {count > 0 && (
+                <text x={x + barWidth / 2} y={y - 7} textAnchor="middle" fontSize="11" fontWeight="900" fill={isPeak ? '#ea580c' : '#334155'}>
+                  {count}
+                </text>
+              )}
+              <rect
+                x={x}
+                y={y}
+                width={barWidth}
+                height={barHeight}
+                rx="5"
+                fill={count > 0 ? 'url(#hourlyBarGradient)' : '#e2e8f0'}
+                opacity={count > 0 ? 1 : 0.75}
+              />
+              {(row.hour % 2 === 0 || count > 0) && (
+                <text x={x + barWidth / 2} y={height - 14} textAnchor="middle" fontSize="10" fontWeight="800" fill="#64748b">
+                  {String(row.hour).padStart(2, '0')}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+};
+
 const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId }) => {
   const [period, setPeriod] = useState<DatePreset>('30d');
   const [startDate, setStartDate] = useState('');
@@ -168,9 +350,14 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId }) => {
 
   const reportData = data ?? EMPTY_REPORTS_DATA;
   const isLoadingView = loading || !data;
-  const maxSalesDay = Math.max(1, ...reportData.sales_by_day.map(d => d.amount));
-  const totalLoyalty = Object.values(reportData.loyalty_distribution).reduce((s, v) => s + v, 0);
-  const totalPayment = Object.values(reportData.payment_distribution).reduce((s, v) => s + v, 0);
+  const maxSalesHour = Math.max(1, ...reportData.sales_by_hour.map(d => d.count));
+  const hasHourlySales = reportData.sales_by_hour.some(row => row.count > 0);
+  const periodRows = [
+    { label: 'Hoy', sales: reportData.sales_periods.today.sales, amount: reportData.sales_periods.today.amount, profit: reportData.profit_periods.today },
+    { label: 'Semana', sales: reportData.sales_periods.week.sales, amount: reportData.sales_periods.week.amount, profit: reportData.profit_periods.week },
+    { label: 'Mes', sales: reportData.sales_periods.month.sales, amount: reportData.sales_periods.month.amount, profit: reportData.profit_periods.month },
+    { label: 'Año', sales: reportData.sales_periods.year.sales, amount: reportData.sales_periods.year.amount, profit: reportData.profit_periods.year },
+  ];
 
   return (
     <div className="space-y-6">
@@ -239,169 +426,70 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId }) => {
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <KpiCard label="Total ventas" value={reportData.total_sales} icon={ShoppingBag} loading={isLoadingView} />
             <KpiCard label="Ingresos" value={formatCurrency(reportData.total_amount)} icon={DollarSign} loading={isLoadingView} />
+            <KpiCard label="Utilidad estimada" value={formatCurrency(reportData.gross_profit)} icon={TrendingUp} loading={isLoadingView} />
+            <KpiCard label="Margen utilidad" value={`${reportData.profit_margin.toFixed(1)}%`} icon={Activity} loading={isLoadingView} />
+            <KpiCard label="Valor inventario" value={formatCurrency(reportData.inventory_value)} icon={Package} loading={isLoadingView} />
+            <KpiCard label="Poco inventario" value={reportData.low_stock_products.length} icon={AlertTriangle} loading={isLoadingView} />
             <KpiCard label="Ticket promedio" value={formatCurrency(reportData.avg_ticket)} icon={TrendingUp} loading={isLoadingView} />
-            <KpiCard label="Clientes nuevos" value={reportData.new_customers} icon={Users} loading={isLoadingView} />
           </div>
 
-          {/* Gráficas */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Ventas por día */}
-            <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-                <div className="flex items-center gap-2">
-                  <BarChart3 size={16} className="text-slate-500" />
-                  <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Ventas del periodo</h3>
-                </div>
-              </div>
-              <div className="p-5">
-                {isLoadingView ? (
-                  <LoadingChartBars />
-                ) : (
-                  <div className="flex items-end justify-between gap-2 h-48">
-                  {reportData.sales_by_day.map((d, i) => {
-                    const hPercent = (d.amount / maxSalesDay) * 100;
-                    const dayLabel = ['D','L','M','M','J','V','S'][new Date(d.day).getDay()];
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
-                        <span className="text-[10px] font-bold text-slate-500">{formatCurrency(d.amount)}</span>
-                        <div className="w-full rounded-t-xl bg-gradient-to-t from-orange-500 to-orange-300 transition-all" style={{ height: `${Math.max(2, hPercent)}%` }} title={`${d.count} ventas`} />
-                        <span className="text-[10px] font-bold text-slate-400">{dayLabel}</span>
-                      </div>
-                    );
-                  })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Distribución lealtad */}
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
-                <PieChart size={16} className="text-slate-500" />
-                <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Niveles de lealtad</h3>
-              </div>
-              <div className="p-5 space-y-3">
-                {isLoadingView ? (
-                  <>
-                    {[0, 1, 2, 3].map((item) => (
-                      <div key={item} className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <SkeletonBlock className="h-3 w-16" />
-                          <SkeletonBlock className="h-3 w-12" />
-                        </div>
-                        <SkeletonBlock className="h-2 w-full rounded-full" />
-                      </div>
-                    ))}
-                  </>
-                ) : (['BRONCE', 'PLATA', 'ORO', 'BLACK'] as const).map(level => {
-                  const count = reportData.loyalty_distribution[level];
-                  const pct = totalLoyalty > 0 ? (count / totalLoyalty) * 100 : 0;
-                  return (
-                    <div key={level}>
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-bold text-slate-700">{level}</span>
-                        <span className="text-slate-400">{count} ({pct.toFixed(0)}%)</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                        <div className={`h-full ${LOYALTY_COLORS[level]}`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Paneles inferiores */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-
-            {/* Distribución método pago */}
-            <PanelCard title="Métodos de pago" icon={DollarSign}>
-              {isLoadingView ? (
-                <LoadingRows />
-              ) : totalPayment === 0 ? (
-                <EmptyMini icon={DollarSign} text="Sin ventas en periodo"/>
-              ) : (
-                <div className="space-y-3">
-                  {(['EFECTIVO', 'CREDITO', 'SALDO', 'CORTESIA'] as const).map(type => {
-                    const count = reportData.payment_distribution[type];
-                    const pct = totalPayment > 0 ? (count / totalPayment) * 100 : 0;
-                    return (
-                      <div key={type}>
-                        <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="font-bold text-slate-700">{type}</span>
-                          <span className="text-slate-400">{count} ({pct.toFixed(0)}%)</span>
-                        </div>
-                        <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                          <div className={`h-full ${PAYMENT_COLORS[type]}`} style={{ width: `${pct}%` }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </PanelCard>
-
-            {/* Clientes en riesgo */}
-            <PanelCard title="Clientes en riesgo" icon={AlertTriangle}>
-              {isLoadingView ? (
-                <LoadingRows />
-              ) : reportData.at_risk_customers.length === 0 ? (
-                <EmptyMini icon={AlertTriangle} text="Sin clientes en riesgo"/>
-              ) : (
-                <ul className="space-y-2">
-                  {reportData.at_risk_customers.map(c => (
-                    <li key={c.id} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-xs">
-                      <span className="font-bold text-slate-800 truncate">{c.name}</span>
-                      <span className={`rounded-md px-2 py-0.5 text-[9px] font-black ${c.status === 'PERDIDO' ? 'bg-red-100 text-red-700' : c.status === 'EN_RIESGO' ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                        {c.status}
+          <PanelCard title="Ventas y utilidad por periodo" icon={BarChart3}>
+            {isLoadingView ? (
+              <LoadingRows />
+            ) : (
+              <div className="grid gap-3 md:grid-cols-4">
+                {periodRows.map(row => (
+                  <div key={row.label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{row.label}</p>
+                    <p className="mt-1 text-lg font-black text-slate-900">{formatCurrency(row.amount)}</p>
+                    <div className="mt-2 flex items-center justify-between text-[11px] font-bold">
+                      <span className="text-slate-500">{row.sales} ventas</span>
+                      <span className={row.profit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                        {formatCurrency(row.profit)}
                       </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </PanelCard>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </PanelCard>
 
-            {/* Cumpleaños del mes */}
-            <PanelCard title="Cumpleaños del mes" icon={Cake}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <PanelCard title="Días de la semana con más ventas" icon={BarChart3}>
               {isLoadingView ? (
-                <LoadingRows />
-              ) : reportData.birthdays_this_month.length === 0 ? (
-                <EmptyMini icon={Cake} text="Sin cumpleaños este mes"/>
+                <LoadingChartBars />
               ) : (
-                <ul className="space-y-2">
-                  {reportData.birthdays_this_month.map(c => (
-                    <li key={c.id} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-xs">
-                      <span className="font-bold text-slate-800 truncate">{c.name}</span>
-                      <span className="text-slate-500">{c.birthday.slice(5, 10)}</span>
-                    </li>
-                  ))}
-                </ul>
+                <WeekdayAreaChart rows={reportData.sales_by_weekday} />
               )}
             </PanelCard>
 
-            {/* Top clientes */}
-            <PanelCard title="Top clientes (ingresos)" icon={Trophy}>
+            <PanelCard title="Ventas por horario" icon={Clock}>
               {isLoadingView ? (
-                <LoadingRows />
-              ) : reportData.top_customers.length === 0 ? (
-                <EmptyMini icon={Users} text="Sin datos de ventas"/>
+                <LoadingChartBars />
+              ) : !hasHourlySales ? (
+                <EmptyMini icon={Clock} text="Sin ventas por horario"/>
               ) : (
-                <ul className="space-y-2">
-                  {reportData.top_customers.map((c, i) => (
-                    <li key={c.customer_id} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-100 text-[10px] font-black text-orange-600">{i + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-800 truncate">{c.name}</p>
-                        <p className="text-[10px] text-slate-400">{c.count} compras</p>
-                      </div>
-                      <span className="font-black text-slate-900">{formatCurrency(c.total)}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-4">
+                  <HourlyHistogram rows={reportData.sales_by_hour} />
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {[...reportData.sales_by_hour]
+                      .filter(row => row.count > 0)
+                      .sort((a, b) => b.count - a.count)
+                      .slice(0, 6)
+                      .map(row => (
+                        <div key={row.hour} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+                          <span className="font-bold text-slate-700">{formatHourRange(row.hour)}</span>
+                          <span className="font-black text-orange-600">{row.count} ventas</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
               )}
             </PanelCard>
+          </div>
 
+          {/* Paneles solicitados */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Top productos */}
             <PanelCard title="Productos más vendidos" icon={Star}>
               {isLoadingView ? (
@@ -424,32 +512,107 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId }) => {
               )}
             </PanelCard>
 
-            {/* Resumen rápido */}
-            <PanelCard title="Resumen del periodo" icon={Award}>
+            {/* Productos con más utilidad */}
+            <PanelCard title="Productos con más utilidad" icon={TrendingUp}>
               {isLoadingView ? (
                 <LoadingRows />
+              ) : reportData.top_profit_products.length === 0 ? (
+                <EmptyMini icon={TrendingUp} text="Sin utilidad calculada"/>
               ) : (
-              <ul className="space-y-2 text-xs">
-                <li className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                  <span className="text-slate-500">Ventas totales</span>
-                  <span className="font-black text-slate-900">{reportData.total_sales}</span>
-                </li>
-                <li className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                  <span className="text-slate-500">Ingresos</span>
-                  <span className="font-black text-green-600">{formatCurrency(reportData.total_amount)}</span>
-                </li>
-                <li className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                  <span className="text-slate-500">Ticket promedio</span>
-                  <span className="font-black text-slate-900">{formatCurrency(reportData.avg_ticket)}</span>
-                </li>
-                <li className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                  <span className="text-slate-500">Clientes ORO/BLACK</span>
-                  <span className="font-black text-slate-900">{reportData.loyalty_distribution.ORO + reportData.loyalty_distribution.BLACK}</span>
-                </li>
-              </ul>
+                <ul className="space-y-2">
+                  {reportData.top_profit_products.map((p, i) => (
+                    <li key={p.product_id} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-[10px] font-black text-green-700">{i + 1}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-bold text-slate-800">{p.name}</p>
+                        <p className="text-[10px] font-mono text-slate-400">{p.sku} · {p.qty} uds · {formatCurrency(p.total)}</p>
+                      </div>
+                      <span className="font-black text-green-600">{formatCurrency(p.profit)}</span>
+                    </li>
+                  ))}
+                </ul>
               )}
             </PanelCard>
 
+            {/* Productos sin utilidad */}
+            <PanelCard title="Sin utilidad o pérdida" icon={TrendingDown}>
+              {isLoadingView ? (
+                <LoadingRows />
+              ) : reportData.loss_products.length === 0 ? (
+                <EmptyMini icon={TrendingDown} text="Sin ventas con pérdida"/>
+              ) : (
+                <ul className="space-y-2">
+                  {reportData.loss_products.map((p) => (
+                    <li key={p.product_id} className="flex items-center gap-2 rounded-lg border border-red-100 bg-red-50/40 px-3 py-2 text-xs">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-bold text-slate-800">{p.name}</p>
+                        <p className="text-[10px] font-mono text-slate-400">{p.sku} · {p.qty} uds · {formatCurrency(p.total)}</p>
+                      </div>
+                      <span className="font-black text-red-600">{formatCurrency(p.profit)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </PanelCard>
+
+            {/* Bajo inventario */}
+            <PanelCard title="Productos con poco inventario" icon={Package}>
+              {isLoadingView ? (
+                <LoadingRows />
+              ) : reportData.low_stock_products.length === 0 ? (
+                <EmptyMini icon={Package} text="Inventario dentro de mínimo"/>
+              ) : (
+                <ul className="space-y-2">
+                  {reportData.low_stock_products.map((p) => (
+                    <li key={p.product_id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-bold text-slate-800">{p.name}</p>
+                        <p className="text-[10px] font-mono text-slate-400">{p.sku}</p>
+                      </div>
+                      <span className="font-black text-orange-600">{p.stock} / {p.min_stock}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </PanelCard>
+
+            {/* Horas fuertes */}
+            <PanelCard title="Horas más fuertes" icon={Clock}>
+              {isLoadingView ? (
+                <LoadingRows />
+              ) : reportData.best_hours.length === 0 ? (
+                <EmptyMini icon={Clock} text="Sin ventas por hora"/>
+              ) : (
+                <ul className="space-y-2">
+                  {reportData.best_hours.map((row) => (
+                    <li key={row.hour} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-xs">
+                      <span className="font-bold text-slate-800">{formatHourRange(row.hour)}</span>
+                      <span className="text-slate-500">{row.count} ventas</span>
+                      <span className="font-black text-green-600">{formatCurrency(row.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </PanelCard>
+
+            {/* Horas bajas */}
+            <PanelCard title="Horas más bajas" icon={Clock}>
+              {isLoadingView ? (
+                <LoadingRows />
+              ) : reportData.slow_hours.length === 0 ? (
+                <EmptyMini icon={Clock} text="Sin datos suficientes"/>
+              ) : (
+                <ul className="space-y-2">
+                  {reportData.slow_hours.map((row) => (
+                    <li key={row.hour} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-xs">
+                      <span className="font-bold text-slate-800">{formatHourRange(row.hour)}</span>
+                      <span className="text-slate-500">{row.count} ventas</span>
+                      <span className="font-black text-slate-900">{formatCurrency(row.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </PanelCard>
           </div>
         </>
 

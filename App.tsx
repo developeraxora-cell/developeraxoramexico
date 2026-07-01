@@ -87,6 +87,33 @@ const APP_TAB_ORDER = [
   'vinos-audit',
 ];
 
+const normalizeBranchText = (value?: string | null) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+
+const isVinosTab = (tabId: string) => tabId.startsWith('vinos-');
+
+const findCasaTahonaBranch = (branchList: Branch[]) => {
+  return branchList.find((branch) => normalizeBranchText(branch.businessUnit) === 'VINOS')
+    ?? branchList.find((branch) => {
+      const label = normalizeBranchText(`${branch.name} ${branch.code}`);
+      return label.includes('CASA TAHONA') || label.includes('TAHONA');
+    })
+    ?? null;
+};
+
+const findDegolladoBranch = (branchList: Branch[]) => {
+  return branchList.find((branch) => {
+    const label = normalizeBranchText(`${branch.name} ${branch.code}`);
+    return label.includes('DEGOLLADO') && normalizeBranchText(branch.businessUnit) !== 'VINOS';
+  })
+    ?? branchList.find((branch) => normalizeBranchText(branch.businessUnit) !== 'VINOS')
+    ?? branchList[0]
+    ?? null;
+};
+
 const PlaceholderModule: React.FC<{ title: string; subtitle: string }> = ({ title, subtitle }) => (
   <div className="space-y-6">
     <div className="rounded-[32px] border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
@@ -135,6 +162,7 @@ const App: React.FC = () => {
   const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const branchPreselectedForUserRef = useRef<string | null>(null);
+  const wasCasaTahonaModuleRef = useRef(false);
   const [selectedBranchId, setSelectedBranchId] = useState<string>(() => {
     return localStorage.getItem('lopar_selected_branch') || '';
   });
@@ -440,6 +468,32 @@ const App: React.FC = () => {
       : activeBranches[0].id;
     setSelectedBranchId(preferred);
   }, [activeBranches, currentUser, selectedBranchId]);
+
+  useEffect(() => {
+    if (!currentUser || activeBranches.length === 0) return;
+
+    const isCasaTahonaModule = isVinosTab(activeTab);
+    const casaTahonaBranch = findCasaTahonaBranch(activeBranches);
+
+    if (isCasaTahonaModule) {
+      wasCasaTahonaModuleRef.current = true;
+      if (casaTahonaBranch && selectedBranchId !== casaTahonaBranch.id) {
+        setSelectedBranchId(casaTahonaBranch.id);
+      }
+      return;
+    }
+
+    const selectedIsCasaTahonaBranch = Boolean(casaTahonaBranch && selectedBranchId === casaTahonaBranch.id);
+    const shouldResetToDegollado = wasCasaTahonaModuleRef.current || selectedIsCasaTahonaBranch;
+    wasCasaTahonaModuleRef.current = false;
+
+    if (!shouldResetToDegollado) return;
+
+    const degolladoBranch = findDegolladoBranch(activeBranches);
+    if (degolladoBranch && selectedBranchId !== degolladoBranch.id) {
+      setSelectedBranchId(degolladoBranch.id);
+    }
+  }, [activeBranches, activeTab, currentUser, selectedBranchId]);
 
   if (authLoading) {
     return <AppLoading message="Cargando informacion..." />;

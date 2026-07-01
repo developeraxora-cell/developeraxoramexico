@@ -24,6 +24,7 @@ export interface VinosSalePdfInput {
   }>;
   subtotal: number;
   discount: number;
+  bankCommission?: number;
   total: number;
   discountCode?: string | null;   // código de cupón/promoción aplicado
 }
@@ -142,6 +143,7 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
     (Number(input.discount ?? 0) > 0 ? 14 : 0) +
     (Number(input.walletUsed ?? 0) > 0 ? 14 : 0) +
     (Number(input.creditUsed ?? 0) > 0 ? 14 : 0) +
+    (Number(input.bankCommission ?? 0) > 0 ? 28 : 0) +
     (input.paymentMethod === 'EFECTIVO' && Number(input.cashReceived ?? 0) > 0 ? 28 : 0) +
     (input.discountCode ? 12 : 0) +
     (footerLines.length * lineGap);
@@ -213,10 +215,15 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
   const discountAmt = Number(input.discount ?? 0);
   const walletUsed = Number(input.walletUsed ?? 0);
   const creditUsed = Number(input.creditUsed ?? 0);
+  const bankCommission = Number(input.bankCommission ?? 0);
   drawAmountRow('SUBTOTAL', formatCurrency(Number(input.subtotal ?? 0)), 8, fontBold);
   if (discountAmt > 0) drawAmountRow('DESCUENTO', `-${formatCurrency(discountAmt)}`, 8, fontBold);
   if (walletUsed > 0) drawAmountRow('SALDO A FAVOR', `-${formatCurrency(walletUsed)}`, 8, fontBold);
   if (creditUsed > 0) drawAmountRow('CREDITO', formatCurrency(creditUsed), 8, fontBold);
+  if (bankCommission > 0) {
+    drawAmountRow('TOTAL COMPRA', formatCurrency(Math.max(0, Number(input.total ?? 0) - bankCommission)), 8, fontBold);
+    drawAmountRow('COMISION BANCARIA (3%)', formatCurrency(bankCommission), 8, fontBold);
+  }
   drawDivider();
   drawAmountRow('TOTAL', formatCurrency(Number(input.total ?? 0)), 12, fontBold);
   if (input.paymentMethod === 'EFECTIVO' && Number(input.cashReceived ?? 0) > 0) {

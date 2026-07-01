@@ -36,6 +36,12 @@ interface CollapsedFlyoutState {
   left: number;
 }
 
+const normalizeBranchText = (value?: string | null) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+
 const BrickIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 100" width="22" height="22">
     <polygon points="95,40 120,20 120,62 95,82" fill="#A84E20"/>
@@ -268,7 +274,17 @@ const Layout: React.FC<LayoutProps> = ({
     : null;
 
   const activeBranch = branches.find(b => b.id === selectedBranchId);
-  const selectableBranches = branches.filter((branch) => userCanAccessBranch(currentUser, branch));
+  const isCasaTahonaModule = activeTab.startsWith('vinos-') || currentGroup?.id === 'vinos';
+  const casaTahonaBranch = branches.find((branch) => normalizeBranchText(branch.businessUnit) === 'VINOS')
+    ?? branches.find((branch) => {
+      const label = normalizeBranchText(`${branch.name} ${branch.code}`);
+      return label.includes('CASA TAHONA') || label.includes('TAHONA');
+    })
+    ?? null;
+  const selectableBranches = isCasaTahonaModule
+    ? (casaTahonaBranch ? [casaTahonaBranch] : activeBranch ? [activeBranch] : [])
+    : branches.filter((branch) => userCanAccessBranch(currentUser, branch));
+  const branchSelectorValue = isCasaTahonaModule && casaTahonaBranch ? casaTahonaBranch.id : selectedBranchId;
   const assistantBusinessUnit = ['materiales', 'concretera', 'logistica', 'transporteria', 'vinos'].includes(String(currentGroup?.id))
     ? String(currentGroup?.id)
     : activeBranch?.businessUnit || 'materiales';
@@ -609,15 +625,27 @@ const Layout: React.FC<LayoutProps> = ({
                 <div className="flex min-w-0 items-center gap-1 md:gap-2">
                   <span className="text-sm md:text-lg">🏢</span>
                   <select
-                    value={selectedBranchId}
-                    onChange={(e) => setSelectedBranchId(e.target.value)}
-                    className="max-w-[92px] bg-transparent font-black text-slate-900 outline-none text-[10px] md:max-w-[180px] md:text-xs uppercase tracking-tight cursor-pointer"
+                    value={branchSelectorValue}
+                    onChange={(e) => {
+                      if (isCasaTahonaModule) return;
+                      setSelectedBranchId(e.target.value);
+                    }}
+                    disabled={isCasaTahonaModule}
+                    title={isCasaTahonaModule ? 'Casa Tahona usa una sucursal fija' : 'Cambiar ubicacion'}
+                    className={`max-w-[92px] bg-transparent font-black text-slate-900 outline-none text-[10px] md:max-w-[180px] md:text-xs uppercase tracking-tight ${
+                      isCasaTahonaModule ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'
+                    }`}
                   >
                     {selectableBranches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
                 </div>
               </div>
-              <div className="bg-green-100 p-2 rounded-lg text-green-600 animate-pulse" title="Ubicación editable">🌐</div>
+              <div
+                className={`p-2 rounded-lg ${isCasaTahonaModule ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600 animate-pulse'}`}
+                title={isCasaTahonaModule ? 'Ubicación fija para Casa Tahona' : 'Ubicación editable'}
+              >
+                🌐
+              </div>
             </div>
           </div>
         </header>

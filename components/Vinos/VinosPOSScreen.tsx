@@ -51,9 +51,16 @@ const PRICE_TIER_LABEL: Record<PriceTier, string> = {
 
 const STOCK_EPSILON = 0.000001;
 const CASH_HISTORY_PAGE_SIZE = 5;
+const CARD_COMMISSION_RATE = 0.03;
 const wait = (ms: number) => new Promise<void>(resolve => window.setTimeout(resolve, ms));
 const getCashChange = (cashReceivedValue: number, saleTotal: number) =>
   Math.max(0, Number(cashReceivedValue || 0) - Number(saleTotal || 0));
+const roundCurrency = (value: number) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+const getStoredCardCommission = (sale: { payment_method: PaymentMethod; subtotal: number; discount_amount: number; wallet_used: number; total: number }) => {
+  if (sale.payment_method !== 'TARJETA') return 0;
+  const purchaseTotal = Math.max(0, Number(sale.subtotal ?? 0) - Number(sale.discount_amount ?? 0) - Number(sale.wallet_used ?? 0));
+  return roundCurrency(Math.max(0, Number(sale.total ?? 0) - purchaseTotal));
+};
 const formatDateTime = (value: string | null | undefined) =>
   value ? new Date(value).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 const formatDateInputValue = (value: string | null | undefined) => {
@@ -429,9 +436,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const isCortesia = paymentMethod === 'CORTESIA';
   const isCredito = paymentMethod === 'CREDITO';
   const isEfectivo = paymentMethod === 'EFECTIVO';
+  const isTarjeta = paymentMethod === 'TARJETA';
 
   const creditAvailable = Math.max(0, (selectedCustomer?.credit_limit ?? 0) - customerDebt);
-  const total = isCortesia ? 0 : totalAfterWallet;
+  const cardCommissionAmount = isTarjeta && !isCortesia ? roundCurrency(totalAfterWallet * CARD_COMMISSION_RATE) : 0;
+  const total = isCortesia ? 0 : roundCurrency(totalAfterWallet + cardCommissionAmount);
   const cashReceivedNum = Number(cashReceived) || 0;
   const change = isEfectivo && cashReceivedNum > 0 ? getCashChange(cashReceivedNum, total) : 0;
   const cashPaymentInvalid = isEfectivo && total > 0 && cashReceivedNum < total;
@@ -675,6 +684,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     if (s.payment_method === 'CORTESIA') {
       return { label: 'SIN COSTO', color: '#94a3b8', bg: 'bg-slate-200',  text: 'text-slate-700' };
     }
+    if (s.payment_method === 'TARJETA') {
+      return { label: 'TARJETA', color: '#6366f1', bg: 'bg-indigo-100', text: 'text-indigo-700' };
+    }
+    if (s.payment_method === 'TRANSFERENCIA') {
+      return { label: 'TRANSF.', color: '#06b6d4', bg: 'bg-cyan-100', text: 'text-cyan-700' };
+    }
     return { label: 'EFECTIVO',   color: '#22c55e', bg: 'bg-green-100',  text: 'text-green-700' };
   };
 
@@ -836,6 +851,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         items,
         subtotal: Number(s.subtotal),
         discount: Number(s.discount_amount ?? 0),
+        bankCommission: getStoredCardCommission(s),
         total: Number(s.total),
         discountCode: (s as { promotion_code?: string | null }).promotion_code ?? s.coupon_code ?? null,
       });
@@ -934,6 +950,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         items: ticketItems,
         subtotal,
         discount: activeDiscount,
+        bankCommission: cardCommissionAmount,
         total,
         discountCode: manualDiscountApplied ? 'DESCUENTO MANUAL' : couponDiscount > 0 ? couponCode.trim().toUpperCase() : null,
       };
@@ -957,6 +974,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           cash_received: isEfectivo ? cashReceivedNum : 0,
           cash_change: isEfectivo ? change : 0,
           discount_amount: activeDiscount,
+          bank_commission_rate: isTarjeta ? CARD_COMMISSION_RATE : 0,
+          bank_commission_amount: cardCommissionAmount,
+          purchase_total_before_commission: totalAfterWallet,
           manual_discount_percent: manualDiscountApplied?.percent ?? null,
           manual_discount_justification: manualDiscountApplied?.justification ?? null,
           coupon_code: !manualDiscountApplied && !appliedPromoId && couponDiscount > 0 ? couponCode.toUpperCase() : null,
@@ -1716,6 +1736,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     Se descontará <strong>{formatCurrency(totalAfterWallet)}</strong> del crédito de <strong>{selectedCustomer.name}</strong> (disponible: {formatCurrency(creditAvailable)}).
                   </div>
                 )}
+                {isTarjeta && totalAfterWallet > 0 && (
+                  <div className="mt-2 rounded-xl bg-indigo-50 px-3 py-2 text-[11px] text-indigo-700">
+                    Comisión bancaria del 3%: <strong>{formatCurrency(cardCommissionAmount)}</strong>. Total a cobrar: <strong>{formatCurrency(total)}</strong>.
+                  </div>
+                )}
               </div>
 
               {/* Saldo a favor */}
@@ -1798,8 +1823,14 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 <div className="flex justify-between text-slate-500"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
                 {activeDiscount > 0 && <div className="flex justify-between text-green-600"><span>{discountLabel}</span><span>-{formatCurrency(activeDiscount)}</span></div>}
                 {walletUsedActual > 0 && <div className="flex justify-between text-blue-600"><span>Saldo a favor</span><span>-{formatCurrency(walletUsedActual)}</span></div>}
+                {isTarjeta && (
+                  <>
+                    <div className="flex justify-between text-slate-700"><span>Total de la compra</span><span>{formatCurrency(totalAfterWallet)}</span></div>
+                    <div className="flex justify-between text-indigo-600"><span>Comisión bancaria (3%)</span><span>{formatCurrency(cardCommissionAmount)}</span></div>
+                  </>
+                )}
                 <div className="flex justify-between border-t border-slate-200 pt-1.5 text-lg font-black text-slate-900">
-                  <span>Total</span><span className="text-orange-600">{formatCurrency(total)}</span>
+                  <span>{isTarjeta ? 'Total a cobrar' : 'Total'}</span><span className="text-orange-600">{formatCurrency(total)}</span>
                 </div>
               </section>
               </div>
@@ -1948,6 +1979,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                       const typeInfo = getSaleTypeInfo(s);
                       const saleCashReceived = Number(s.cash_received ?? 0);
                       const saleCashChange = getCashChange(saleCashReceived, Number(s.total ?? 0));
+                      const saleCardCommission = getStoredCardCommission(s);
                       return (
                         <tr key={s.id} className="hover:bg-orange-50/30 border-l-4" style={{ borderLeftColor: typeInfo.color }}>
                           <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{new Date(s.created_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}</td>
@@ -1963,6 +1995,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                             {s.payment_method === 'EFECTIVO' && saleCashReceived > 0 && (
                               <div className="mt-0.5 text-[10px] font-bold text-slate-500">
                                 Pagó {formatCurrency(saleCashReceived)} · Vuelto {formatCurrency(saleCashChange)}
+                              </div>
+                            )}
+                            {s.payment_method === 'TARJETA' && saleCardCommission > 0 && (
+                              <div className="mt-0.5 text-[10px] font-bold text-indigo-600">
+                                Incluye comisión {formatCurrency(saleCardCommission)}
                               </div>
                             )}
                           </td>
@@ -2175,6 +2212,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 {Number(saleDetailRow.discount_amount) > 0 && <div className="flex justify-between text-green-600"><span>Descuento</span><span>-{formatCurrency(saleDetailRow.discount_amount)}</span></div>}
                 {Number(saleDetailRow.wallet_used) > 0 && <div className="flex justify-between text-purple-600"><span>Saldo aplicado</span><span>-{formatCurrency(saleDetailRow.wallet_used)}</span></div>}
                 {Number(saleDetailRow.credit_used) > 0 && <div className="flex justify-between text-red-600"><span>Crédito aplicado</span><span>{formatCurrency(saleDetailRow.credit_used)}</span></div>}
+                {saleDetailRow.payment_method === 'TARJETA' && getStoredCardCommission(saleDetailRow) > 0 && (
+                  <div className="flex justify-between text-indigo-600">
+                    <span>Comisión bancaria (3%)</span>
+                    <span>{formatCurrency(getStoredCardCommission(saleDetailRow))}</span>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-slate-200 pt-1 text-base font-black text-slate-900"><span>Total</span><span className="text-orange-600">{formatCurrency(saleDetailRow.total)}</span></div>
                 {saleDetailRow.payment_method === 'EFECTIVO' && Number(saleDetailRow.cash_received ?? 0) > 0 && (
                   <>

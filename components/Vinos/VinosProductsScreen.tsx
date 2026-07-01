@@ -438,7 +438,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
-                  {['Producto','Categoría','Unidad','Stock','Últ. compra','Menudeo','M. Mayoreo','Mayoreo',''].map(h => (
+                  {['Producto','Categoría','Unidad','Stock','Prec. Compra','Menudeo','M. Mayoreo','Mayoreo',''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
                   ))}
                 </tr>

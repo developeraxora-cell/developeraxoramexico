@@ -4,11 +4,33 @@ export interface ReportsKPIs {
   total_sales: number;
   total_amount: number;
   avg_ticket: number;
+  gross_profit: number;
+  profit_margin: number;
+  inventory_value: number;
   new_customers: number;
   top_customers: Array<{ customer_id: string; name: string; total: number; count: number }>;
-  top_products: Array<{ product_id: string; name: string; sku: string; qty: number; total: number }>;
+  top_products: Array<{ product_id: string; name: string; sku: string; qty: number; total: number; profit: number }>;
+  top_profit_products: Array<{ product_id: string; name: string; sku: string; qty: number; total: number; profit: number }>;
+  loss_products: Array<{ product_id: string; name: string; sku: string; qty: number; total: number; profit: number }>;
+  low_stock_products: Array<{ product_id: string; name: string; sku: string; stock: number; min_stock: number }>;
   sales_by_day: Array<{ day: string; amount: number; count: number }>;
-  payment_distribution: { EFECTIVO: number; CREDITO: number; CORTESIA: number; SALDO: number };
+  sales_by_weekday: Array<{ day: string; amount: number; count: number }>;
+  sales_by_hour: Array<{ hour: number; amount: number; count: number }>;
+  best_hours: Array<{ hour: number; amount: number; count: number }>;
+  slow_hours: Array<{ hour: number; amount: number; count: number }>;
+  sales_periods: {
+    today: { sales: number; amount: number };
+    week: { sales: number; amount: number };
+    month: { sales: number; amount: number };
+    year: { sales: number; amount: number };
+  };
+  profit_periods: {
+    today: number;
+    week: number;
+    month: number;
+    year: number;
+  };
+  payment_distribution: { EFECTIVO: number; TARJETA: number; TRANSFERENCIA: number; CREDITO: number; CORTESIA: number; SALDO: number };
   loyalty_distribution: { BRONCE: number; PLATA: number; ORO: number; BLACK: number };
   at_risk_customers: Array<{ id: string; name: string; status: string; last_purchase: string | null }>;
   birthdays_this_month: Array<{ id: string; name: string; birthday: string; phone: string | null }>;
@@ -39,6 +61,33 @@ const toLocalDateKey = (value: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const startOfLocalDay = (value: Date) => {
+  const next = new Date(value);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const startOfLocalWeek = (value: Date) => {
+  const next = startOfLocalDay(value);
+  const day = next.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  next.setDate(next.getDate() + mondayOffset);
+  return next;
+};
+
+const startOfLocalMonth = (value: Date) => new Date(value.getFullYear(), value.getMonth(), 1);
+const startOfLocalYear = (value: Date) => new Date(value.getFullYear(), 0, 1);
+const roundCurrency = (value: number) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+
+const emptyPeriods = () => ({
+  today: { sales: 0, amount: 0 },
+  week: { sales: 0, amount: 0 },
+  month: { sales: 0, amount: 0 },
+  year: { sales: 0, amount: 0 },
+});
+
+const emptyProfitPeriods = () => ({ today: 0, week: 0, month: 0, year: 0 });
+
 const resolveDateRange = (range: number | ReportsDateRange) => {
   if (typeof range === 'number') {
     const end = new Date();
@@ -58,9 +107,11 @@ const resolveDateRange = (range: number | ReportsDateRange) => {
 export const vinosReportsService = {
   async getKPIs(branchId: number | null, range: number | ReportsDateRange = 30): Promise<ReportsKPIs> {
     const empty: ReportsKPIs = {
-      total_sales: 0, total_amount: 0, avg_ticket: 0, new_customers: 0,
-      top_customers: [], top_products: [], sales_by_day: [],
-      payment_distribution: { EFECTIVO: 0, CREDITO: 0, CORTESIA: 0, SALDO: 0 },
+      total_sales: 0, total_amount: 0, avg_ticket: 0, gross_profit: 0, profit_margin: 0, inventory_value: 0, new_customers: 0,
+      top_customers: [], top_products: [], top_profit_products: [], loss_products: [], low_stock_products: [],
+      sales_by_day: [], sales_by_weekday: [], sales_by_hour: [], best_hours: [], slow_hours: [],
+      sales_periods: emptyPeriods(), profit_periods: emptyProfitPeriods(),
+      payment_distribution: { EFECTIVO: 0, TARJETA: 0, TRANSFERENCIA: 0, CREDITO: 0, CORTESIA: 0, SALDO: 0 },
       loyalty_distribution: { BRONCE: 0, PLATA: 0, ORO: 0, BLACK: 0 },
       at_risk_customers: [], birthdays_this_month: [],
     };
@@ -70,17 +121,95 @@ export const vinosReportsService = {
     const fromIso = fromDate.toISOString();
     const toIso = toDate.toISOString();
 
+    const now = new Date();
+    const todayStart = startOfLocalDay(now);
+    const weekStart = startOfLocalWeek(now);
+    const monthStart = startOfLocalMonth(now);
+    const yearStart = startOfLocalYear(now);
+    const periodFromIso = yearStart.toISOString();
+
+    const productsQuery = supabaseVinos
+      .from('products')
+      .select('id, name, sku, min_stock, product_stocks(qty, branch_id)')
+      .eq('is_active', true)
+      .is('deleted_at', null);
+
+    let purchasesQuery = supabaseVinos
+      .from('purchases')
+      .select('id, purchase_date, created_at, branch_id, items:purchase_items(product_id, qty, qty_base, cost_per_unit, subtotal)')
+      .is('deleted_at', null)
+      .order('purchase_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(3000);
+    if (branchId) purchasesQuery = purchasesQuery.eq('branch_id', branchId);
+
+    const [productsRes, purchasesRes] = await Promise.all([productsQuery, purchasesQuery]);
+    if (productsRes.error) throw productsRes.error;
+    if (purchasesRes.error) throw purchasesRes.error;
+
+    const costByProduct = new Map<string, number>();
+    const productMeta = new Map<string, { name: string; sku: string; stock: number; min_stock: number }>();
+
+    ((purchasesRes.data ?? []) as Array<{
+      items: Array<{ product_id: string; qty: number; qty_base: number; cost_per_unit: number; subtotal: number }> | { product_id: string; qty: number; qty_base: number; cost_per_unit: number; subtotal: number } | null;
+    }>).forEach((purchase) => {
+      const items = Array.isArray(purchase.items) ? purchase.items : purchase.items ? [purchase.items] : [];
+      items.forEach((item) => {
+        if (costByProduct.has(item.product_id)) return;
+        const qtyBase = Number(item.qty_base ?? Number(item.qty ?? 0));
+        const subtotal = Number(item.subtotal ?? Number(item.qty ?? 0) * Number(item.cost_per_unit ?? 0));
+        const baseCost = qtyBase > 0 ? subtotal / qtyBase : Number(item.cost_per_unit ?? 0);
+        costByProduct.set(item.product_id, roundCurrency(baseCost));
+      });
+    });
+
+    ((productsRes.data ?? []) as Array<{
+      id: string; name: string; sku: string; min_stock: number;
+      product_stocks?: Array<{ qty: number; branch_id: number }> | null;
+    }>).forEach((product) => {
+      const stocks = product.product_stocks ?? [];
+      const stock = branchId
+        ? stocks.filter((row) => row.branch_id === branchId).reduce((sum, row) => sum + Number(row.qty ?? 0), 0)
+        : stocks.reduce((sum, row) => sum + Number(row.qty ?? 0), 0);
+      productMeta.set(product.id, {
+        name: product.name,
+        sku: product.sku,
+        stock,
+        min_stock: Number(product.min_stock ?? 0),
+      });
+    });
+
+    const inventory_value = Array.from(productMeta.entries()).reduce((sum, [productId, product]) => {
+      return sum + (Number(product.stock ?? 0) * Number(costByProduct.get(productId) ?? 0));
+    }, 0);
+
+    const low_stock_products = Array.from(productMeta.entries())
+      .filter(([, product]) => product.min_stock > 0 && product.stock <= product.min_stock)
+      .map(([product_id, product]) => ({ product_id, ...product }))
+      .sort((a, b) => (a.stock - a.min_stock) - (b.stock - b.min_stock))
+      .slice(0, 8);
+
     // 1. Ventas en rango
     let salesQ = supabaseVinos
       .from('sales')
-      .select('id, customer_id, total, payment_method, wallet_used, created_at, customer:customers(name)')
+      .select('id, customer_id, subtotal, discount_amount, total, payment_method, wallet_used, created_at, customer:customers(name)')
       .gte('created_at', fromIso)
       .lte('created_at', toIso)
       .is('deleted_at', null);
     if (branchId) salesQ = salesQ.eq('branch_id', branchId);
     const { data: salesData } = await salesQ;
-    interface SaleRowRaw { id: string; customer_id: string | null; total: number; payment_method: string; wallet_used: number; created_at: string; customer?: { name: string } | { name: string }[] | null }
+    interface SaleRowRaw { id: string; customer_id: string | null; subtotal: number; discount_amount: number; total: number; payment_method: string; wallet_used: number; created_at: string; customer?: { name: string } | { name: string }[] | null }
     const sales: SaleRowRaw[] = (salesData as SaleRowRaw[]) ?? [];
+
+    let periodSalesQ = supabaseVinos
+      .from('sales')
+      .select('id, subtotal, discount_amount, total, payment_method, wallet_used, created_at')
+      .gte('created_at', periodFromIso)
+      .lte('created_at', now.toISOString())
+      .is('deleted_at', null);
+    if (branchId) periodSalesQ = periodSalesQ.eq('branch_id', branchId);
+    const { data: periodSalesData } = await periodSalesQ;
+    const periodSales = (periodSalesData as SaleRowRaw[]) ?? [];
 
     // 2. KPIs base
     const total_sales = sales.length;
@@ -88,12 +217,27 @@ export const vinosReportsService = {
     const avg_ticket = total_sales > 0 ? total_amount / total_sales : 0;
 
     // 3. Payment distribution
-    const payment_distribution = { EFECTIVO: 0, CREDITO: 0, CORTESIA: 0, SALDO: 0 };
+    const payment_distribution = { EFECTIVO: 0, TARJETA: 0, TRANSFERENCIA: 0, CREDITO: 0, CORTESIA: 0, SALDO: 0 };
     sales.forEach(s => {
       if (Number(s.wallet_used ?? 0) >= Number(s.total) && Number(s.wallet_used) > 0) payment_distribution.SALDO += 1;
       else if (s.payment_method === 'CREDITO') payment_distribution.CREDITO += 1;
       else if (s.payment_method === 'CORTESIA') payment_distribution.CORTESIA += 1;
+      else if (s.payment_method === 'TARJETA') payment_distribution.TARJETA += 1;
+      else if (s.payment_method === 'TRANSFERENCIA') payment_distribution.TRANSFERENCIA += 1;
       else payment_distribution.EFECTIVO += 1;
+    });
+
+    const sales_periods = emptyPeriods();
+    periodSales.forEach((sale) => {
+      const createdAt = new Date(sale.created_at);
+      const apply = (key: keyof typeof sales_periods) => {
+        sales_periods[key].sales += 1;
+        sales_periods[key].amount += Number(sale.total ?? 0);
+      };
+      if (createdAt >= todayStart) apply('today');
+      if (createdAt >= weekStart) apply('week');
+      if (createdAt >= monthStart) apply('month');
+      if (createdAt >= yearStart) apply('year');
     });
 
     // 4. Sales by day
@@ -118,6 +262,30 @@ export const vinosReportsService = {
     });
     const sales_by_day = Object.entries(dayMap).map(([day, v]) => ({ day, amount: v.amount, count: v.count }));
 
+    const weekdayLabels = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
+    const weekdayMap = weekdayLabels.reduce<Record<string, { amount: number; count: number }>>((acc, day) => {
+      acc[day] = { amount: 0, count: 0 };
+      return acc;
+    }, {});
+    const hourMap = Array.from({ length: 24 }).reduce<Record<number, { amount: number; count: number }>>((acc, _, hour) => {
+      acc[hour] = { amount: 0, count: 0 };
+      return acc;
+    }, {});
+    sales.forEach((sale) => {
+      const createdAt = new Date(sale.created_at);
+      const weekday = weekdayLabels[createdAt.getDay()];
+      const hour = createdAt.getHours();
+      weekdayMap[weekday].amount += Number(sale.total ?? 0);
+      weekdayMap[weekday].count += 1;
+      hourMap[hour].amount += Number(sale.total ?? 0);
+      hourMap[hour].count += 1;
+    });
+    const sales_by_weekday = weekdayLabels.map((day) => ({ day, ...weekdayMap[day] }));
+    const sales_by_hour = Object.entries(hourMap).map(([hour, value]) => ({ hour: Number(hour), ...value }));
+    const activeHours = sales_by_hour.filter((row) => row.count > 0);
+    const best_hours = [...activeHours].sort((a, b) => b.count - a.count || b.amount - a.amount).slice(0, 5);
+    const slow_hours = [...activeHours].sort((a, b) => a.count - b.count || a.amount - b.amount).slice(0, 5);
+
     // 5. Top customers
     const customerAgg: Record<string, { total: number; count: number; name: string }> = {};
     sales.forEach(s => {
@@ -136,27 +304,91 @@ export const vinosReportsService = {
 
     // 6. Top products
     const saleIds = sales.map(s => s.id);
-    interface ItemRow { sale_id: string; product_id: string; qty: number; line_total: number; product?: { name: string; sku: string } | { name: string; sku: string }[] | null }
+    interface ItemRow { sale_id: string; product_id: string; qty: number; qty_base: number; line_total: number; product?: { name: string; sku: string } | { name: string; sku: string }[] | null }
     let items: ItemRow[] = [];
     if (saleIds.length > 0) {
       const { data: itemsData } = await supabaseVinos
         .from('sale_items')
-        .select('sale_id, product_id, qty, line_total, product:products(name, sku)')
+        .select('sale_id, product_id, qty, qty_base, line_total, product:products(name, sku)')
         .in('sale_id', saleIds);
       items = (itemsData as ItemRow[]) ?? [];
     }
-    const productAgg: Record<string, { name: string; sku: string; qty: number; total: number }> = {};
+    const saleItemsTotal = items.reduce<Record<string, number>>((acc, item) => {
+      acc[item.sale_id] = (acc[item.sale_id] ?? 0) + Number(item.line_total ?? 0);
+      return acc;
+    }, {});
+    const saleById = new Map(sales.map((sale) => [sale.id, sale]));
+
+    const productAgg: Record<string, { name: string; sku: string; qty: number; total: number; profit: number }> = {};
+    let gross_profit = 0;
     items.forEach(it => {
-      const prod = Array.isArray(it.product) ? it.product[0] : it.product;
+      const product = productMeta.get(it.product_id);
+      if (!product) return;
+      const sale = saleById.get(it.sale_id);
+      const lineTotal = Number(it.line_total ?? 0);
+      const saleLineTotal = Number(saleItemsTotal[it.sale_id] ?? 0);
+      const discountShare = saleLineTotal > 0 ? (lineTotal / saleLineTotal) * Number(sale?.discount_amount ?? 0) : 0;
+      const netLineTotal = Math.max(0, lineTotal - discountShare);
+      const qtyBase = Number(it.qty_base ?? it.qty ?? 0);
+      const costTotal = qtyBase * Number(costByProduct.get(it.product_id) ?? 0);
+      const profit = roundCurrency(netLineTotal - costTotal);
       const k = it.product_id;
-      productAgg[k] = productAgg[k] || { name: prod?.name ?? '-', sku: prod?.sku ?? '-', qty: 0, total: 0 };
+      productAgg[k] = productAgg[k] || { name: product.name, sku: product.sku, qty: 0, total: 0, profit: 0 };
       productAgg[k].qty += Number(it.qty);
-      productAgg[k].total += Number(it.line_total);
+      productAgg[k].total += netLineTotal;
+      productAgg[k].profit += profit;
+      gross_profit += profit;
     });
     const top_products = Object.entries(productAgg)
       .map(([product_id, v]) => ({ product_id, ...v }))
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => b.qty - a.qty)
       .slice(0, 5);
+    const top_profit_products = Object.entries(productAgg)
+      .map(([product_id, v]) => ({ product_id, ...v }))
+      .sort((a, b) => b.profit - a.profit)
+      .slice(0, 5);
+    const loss_products = Object.entries(productAgg)
+      .map(([product_id, v]) => ({ product_id, ...v }))
+      .filter((row) => row.profit <= 0)
+      .sort((a, b) => a.profit - b.profit)
+      .slice(0, 5);
+    const profit_margin = total_amount > 0 ? (gross_profit / total_amount) * 100 : 0;
+
+    const periodSaleIds = periodSales.map((sale) => sale.id);
+    let periodItems: ItemRow[] = [];
+    if (periodSaleIds.length > 0) {
+      const { data: periodItemsData } = await supabaseVinos
+        .from('sale_items')
+        .select('sale_id, product_id, qty, qty_base, line_total')
+        .in('sale_id', periodSaleIds);
+      periodItems = (periodItemsData as ItemRow[]) ?? [];
+    }
+    const periodSaleById = new Map(periodSales.map((sale) => [sale.id, sale]));
+    const periodSaleItemsTotal = periodItems.reduce<Record<string, number>>((acc, item) => {
+      acc[item.sale_id] = (acc[item.sale_id] ?? 0) + Number(item.line_total ?? 0);
+      return acc;
+    }, {});
+    const profitBySale = periodItems.reduce<Record<string, number>>((acc, item) => {
+      if (!productMeta.has(item.product_id)) return acc;
+      const sale = periodSaleById.get(item.sale_id);
+      const lineTotal = Number(item.line_total ?? 0);
+      const saleLineTotal = Number(periodSaleItemsTotal[item.sale_id] ?? 0);
+      const discountShare = saleLineTotal > 0 ? (lineTotal / saleLineTotal) * Number(sale?.discount_amount ?? 0) : 0;
+      const netLineTotal = Math.max(0, lineTotal - discountShare);
+      const qtyBase = Number(item.qty_base ?? item.qty ?? 0);
+      const profit = roundCurrency(netLineTotal - (qtyBase * Number(costByProduct.get(item.product_id) ?? 0)));
+      acc[item.sale_id] = (acc[item.sale_id] ?? 0) + profit;
+      return acc;
+    }, {});
+    const profit_periods = emptyProfitPeriods();
+    periodSales.forEach((sale) => {
+      const createdAt = new Date(sale.created_at);
+      const profit = Number(profitBySale[sale.id] ?? 0);
+      if (createdAt >= todayStart) profit_periods.today += profit;
+      if (createdAt >= weekStart) profit_periods.week += profit;
+      if (createdAt >= monthStart) profit_periods.month += profit;
+      if (createdAt >= yearStart) profit_periods.year += profit;
+    });
 
     // 7. Nuevos clientes
     let custQ = supabaseVinos
@@ -194,8 +426,10 @@ export const vinosReportsService = {
       .map(c => ({ id: c.id, name: c.name, birthday: c.birthday!, phone: c.phone }));
 
     return {
-      total_sales, total_amount, avg_ticket, new_customers,
-      top_customers, top_products, sales_by_day,
+      total_sales, total_amount, avg_ticket, gross_profit, profit_margin, inventory_value, new_customers,
+      top_customers, top_products, top_profit_products, loss_products, low_stock_products,
+      sales_by_day, sales_by_weekday, sales_by_hour, best_hours, slow_hours,
+      sales_periods, profit_periods,
       payment_distribution, loyalty_distribution,
       at_risk_customers, birthdays_this_month,
     };
