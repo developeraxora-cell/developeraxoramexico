@@ -674,13 +674,13 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
             <div className="space-y-4 px-6 py-5">
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Precio actual</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Precio de compra actual</p>
                   <p className="mt-1 text-xl font-black text-slate-900">
                     {purchaseCostTarget.last_purchase_cost != null ? formatCurrency(purchaseCostTarget.last_purchase_cost) : '—'}
                   </p>
                 </div>
                 <label className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nuevo precio</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nuevo precio de compra</span>
                   <input
                     type="number"
                     min="0"
