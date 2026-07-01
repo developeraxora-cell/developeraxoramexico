@@ -21,6 +21,7 @@ interface ProductWithUoms extends ProductWithStock {
 }
 
 interface PurchaseCartItem extends CartItem {
+  qty_input: string;
   cost_per_unit_input: string;
 }
 
@@ -41,6 +42,12 @@ const parseMoneyInput = (value: string) => {
   const normalized = normalizeMoneyInput(value);
   if (!normalized) return 0;
   return Number(normalized.replace(',', '.')) || 0;
+};
+const normalizeQtyInput = (value: string) => value.replace(/[^\d.,]/g, '').replace(',', '.');
+const parseQtyInput = (value: string) => {
+  const normalized = normalizeQtyInput(value);
+  if (!normalized) return 0;
+  return Number(normalized) || 0;
 };
 const getPurchaseProductNames = (purchase: PurchaseRow) => {
   const names = (purchase.items ?? [])
@@ -174,6 +181,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       product_uom_id: baseOption.id,
       factor_to_base: Number(baseOption.factor_to_base),
       qty: 1,
+      qty_input: '1',
       cost_per_unit: parseMoneyInput(String(costPerUnit)),
       cost_per_unit_input: normalizeMoneyInput(String(costPerUnit)),
       product_name: p.name,
@@ -224,6 +232,9 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
     setCart(prev => prev.map((row, i) => {
       if (i !== idx) return row;
       const next = { ...row, ...patch };
+      if (Object.prototype.hasOwnProperty.call(patch, 'qty_input')) {
+        next.qty = parseQtyInput(String(next.qty_input ?? ''));
+      }
       if (Object.prototype.hasOwnProperty.call(patch, 'cost_per_unit_input')) {
         next.cost_per_unit = parseMoneyInput(String(next.cost_per_unit_input ?? ''));
       }
@@ -664,8 +675,8 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                             <input
                               type="number" min="0" step="0.01"
                               className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-orange-400"
-                              value={it.qty}
-                              onChange={e => updateCartItem(idx, { qty: Number(e.target.value) })}
+                              value={it.qty_input}
+                              onChange={e => updateCartItem(idx, { qty_input: normalizeQtyInput(e.target.value) })}
                             />
                           </div>
                           <div>
