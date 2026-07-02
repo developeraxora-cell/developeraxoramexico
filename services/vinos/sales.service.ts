@@ -150,17 +150,18 @@ export const vinosSalesService = {
       if (!Number.isFinite(qtyBase) || qtyBase <= 0) continue;
       const { data: stockRow, error: stockLoadError } = await supabaseVinos
         .from('product_stocks')
-        .select('id, qty')
+        .select('qty')
         .eq('branch_id', sale.branch_id)
         .eq('product_id', productId)
         .maybeSingle();
       if (stockLoadError) throw stockLoadError;
 
-      if (stockRow?.id) {
+      if (stockRow) {
         const { error: stockUpdateError } = await supabaseVinos
           .from('product_stocks')
           .update({ qty: Number(stockRow.qty ?? 0) + qtyBase })
-          .eq('id', stockRow.id);
+          .eq('branch_id', sale.branch_id)
+          .eq('product_id', productId);
         if (stockUpdateError) throw stockUpdateError;
       } else {
         const { error: stockInsertError } = await supabaseVinos
