@@ -184,25 +184,28 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   // ── branch ──────────────────────────────────────────────
   useEffect(() => {
-    if (activeBranch?.dbId) {
-      setBranchDbId(Number(activeBranch.dbId));
-      return;
-    }
     let cancelled = false;
     setBranchDbId(null);
     vinosCustomersService.getBranchId(activeBranch?.code ?? selectedBranchId)
       .then((id) => { if (!cancelled) setBranchDbId(id); })
       .catch(() => { if (!cancelled) setBranchDbId(null); });
     return () => { cancelled = true; };
-  }, [activeBranch?.code, activeBranch?.dbId, selectedBranchId]);
+  }, [activeBranch?.code, selectedBranchId]);
 
   // ── load catálogo + clientes ────────────────────────────
   const load = useCallback(async () => {
+    if (!branchDbId) {
+      setProducts([]);
+      setCustomers([]);
+      setCustomerId('');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [prods, custs] = await Promise.all([
-        vinosProductsService.listWithStock(branchDbId ?? undefined),
-        vinosCustomersService.getAll(branchDbId ?? undefined),
+        vinosProductsService.listWithStock(branchDbId),
+        vinosCustomersService.getAll(branchDbId),
       ]);
       const ids = prods.map(p => p.id);
       const { data: pricedUoms } = await supabaseVinos
