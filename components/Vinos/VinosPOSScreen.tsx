@@ -175,17 +175,26 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const [customerDetailOpen, setCustomerDetailOpen] = useState(false);
   const [customerDebt, setCustomerDebt] = useState(0);
 
-  // ── branch ──────────────────────────────────────────────
-  useEffect(() => {
-    vinosCustomersService.getBranchId(selectedBranchId).then(setBranchDbId);
-  }, [selectedBranchId]);
-
   const activeBranch = useMemo(
     () => branches.find(b => b.id === selectedBranchId) ?? null,
     [branches, selectedBranchId],
   );
 
   const branchName = activeBranch?.name ?? 'CASA TAHONA';
+
+  // ── branch ──────────────────────────────────────────────
+  useEffect(() => {
+    if (activeBranch?.dbId) {
+      setBranchDbId(Number(activeBranch.dbId));
+      return;
+    }
+    let cancelled = false;
+    setBranchDbId(null);
+    vinosCustomersService.getBranchId(activeBranch?.code ?? selectedBranchId)
+      .then((id) => { if (!cancelled) setBranchDbId(id); })
+      .catch(() => { if (!cancelled) setBranchDbId(null); });
+    return () => { cancelled = true; };
+  }, [activeBranch?.code, activeBranch?.dbId, selectedBranchId]);
 
   // ── load catálogo + clientes ────────────────────────────
   const load = useCallback(async () => {
@@ -260,7 +269,10 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   };
 
   const handleOpenCash = async () => {
-    if (!branchDbId) return;
+    if (!branchDbId) {
+      setCashError('No se encontró la sucursal de Casa Tahona en la base de datos. Recarga la pantalla e intenta de nuevo.');
+      return;
+    }
     const amount = Number(openingCash);
     if (!Number.isFinite(amount) || amount < 0) {
       setCashError('Ingresa un efectivo inicial válido.');
