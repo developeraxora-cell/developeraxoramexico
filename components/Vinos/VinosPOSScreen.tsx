@@ -11,6 +11,7 @@ import { vinosCustomersService, type VinosCustomer } from '../../services/vinos/
 import { vinosSalesService, type SaleCartItem, type PaymentMethod, type PriceTier } from '../../services/vinos/sales.service';
 import { vinosCashRegisterService, type CashRegisterSession, type CashRegisterSummary } from '../../services/vinos/cashRegister.service';
 import { supabaseVinos } from '../../services/vinosClient';
+import { supabase } from '../../services/supabaseClient';
 import { generateVinosSaleTicket, type VinosSalePdfInput } from '../../services/vinos/saleTicketPdf';
 import { generateVinosCashRegisterReceipt } from '../../services/vinos/cashRegisterReceiptPdf';
 import { openVinosCashDrawer } from '../../services/printing/qzTrayCashDrawer';
@@ -151,6 +152,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const [historyTo, setHistoryTo] = useState('');
   const [historySearch, setHistorySearch] = useState('');
   const [historyPage, setHistoryPage] = useState(1);
+  const [historyEmployeeNames, setHistoryEmployeeNames] = useState<Record<string, string>>({});
   const HISTORY_PAGE_SIZE = 5;
 
   // sale detail / actions modals
@@ -678,6 +680,22 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         search: historySearch.trim() || undefined,
       });
       setHistorySales(rows);
+      const userIds = Array.from(new Set(rows.map(row => row.created_by).filter(Boolean)));
+      const nextNames: Record<string, string> = {};
+      userIds.forEach((id) => {
+        if (id === currentUser.id || id === currentUser.authUserId) nextNames[id] = currentUser.name;
+      });
+      const uuidIds = userIds.filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+      if (uuidIds.length > 0) {
+        const { data } = await supabase
+          .from('app_user_profiles')
+          .select('id, full_name, username')
+          .in('id', uuidIds);
+        (data ?? []).forEach((profile: { id: string; full_name?: string | null; username?: string | null }) => {
+          nextNames[profile.id] = profile.full_name || profile.username || profile.id;
+        });
+      }
+      setHistoryEmployeeNames(nextNames);
     } catch (e) { console.error(e); }
     finally { setHistoryLoading(false); }
   };
@@ -2017,7 +2035,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-slate-100 z-10">
                     <tr className="border-b border-slate-200">
-                      {['Fecha','Cliente','Tipo','Productos','Total','Notas','Acciones'].map(h => (
+                      {['Fecha','Cliente','Cajero','Tipo','Productos','Total','Notas','Acciones'].map(h => (
                         <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">{h}</th>
                       ))}
                     </tr>
@@ -2029,10 +2047,14 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                       const saleCashReceived = Number(s.cash_received ?? 0);
                       const saleCashChange = getCashChange(saleCashReceived, Number(s.total ?? 0));
                       const saleCardCommission = getStoredCardCommission(s);
+                      const employeeName = historyEmployeeNames[s.created_by] ?? s.created_by ?? '—';
                       return (
                         <tr key={s.id} className="hover:bg-orange-50/30 border-l-4" style={{ borderLeftColor: typeInfo.color }}>
                           <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{new Date(s.created_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}</td>
                           <td className="px-4 py-3 text-xs font-bold text-slate-800">{s.customer?.name ?? <span className="font-normal text-slate-400">Público general</span>}</td>
+                          <td className="max-w-[160px] truncate px-4 py-3 text-xs font-bold text-slate-700" title={employeeName}>
+                            {employeeName}
+                          </td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black tracking-wider ${typeInfo.bg} ${typeInfo.text}`}>{typeInfo.label}</span>
                           </td>
