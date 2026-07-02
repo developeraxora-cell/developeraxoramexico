@@ -620,6 +620,19 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
+            <div className="hidden min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm sm:flex md:px-5 md:py-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-sm font-black uppercase text-white md:h-10 md:w-10 md:text-base">
+                {currentUser.name
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((part) => part.charAt(0))
+                  .join('')}
+              </div>
+              <p className="max-w-[190px] truncate text-base font-black uppercase tracking-tight text-slate-950 md:max-w-[280px] md:text-lg">
+                {currentUser.name}
+              </p>
+            </div>
             <div className="bg-white border-2 rounded-2xl px-3 py-2 md:px-5 md:py-2.5 flex items-center gap-2 md:gap-3 shadow-sm transition-all border-orange-500 shadow-orange-500/10">
               <div className="flex min-w-0 flex-col">
                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Ubicación Activa</span>
