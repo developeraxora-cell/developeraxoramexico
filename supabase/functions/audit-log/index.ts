@@ -318,16 +318,8 @@ Deno.serve(async (request) => {
         justification: 1,
         timestamp: 1,
         observation: 1,
-        'new_data.notes': 1,
-        'new_data.note': 1,
-        'new_data.observacion': 1,
-        'new_data.observation': 1,
-        'new_data.reason': 1,
-        'previous_data.notes': 1,
-        'previous_data.note': 1,
-        'previous_data.observacion': 1,
-        'previous_data.observation': 1,
-        'previous_data.reason': 1,
+        new_data: 1,
+        previous_data: 1,
       };
 
       const [total, rawRows] = await Promise.all([

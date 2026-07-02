@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { fetchAuditLogs, type AuditQueryRow, type AuditActionType, type AuditEntityType } from '../../services/audit/audit.service';
+import { formatCurrency } from '../../services/currency';
 
 interface Props {
   selectedBranchId: string;
@@ -24,6 +25,64 @@ const ENTITY_ICON: Record<string, React.ElementType> = {
   producto: Package,
   cliente: Users,
   compra: ClipboardList,
+};
+
+interface DeletedSaleAuditItem {
+  product_name?: string | null;
+  sku?: string | null;
+  uom_name?: string | null;
+  qty?: number;
+  price_type?: string | null;
+  unit_price?: number;
+  line_total?: number;
+}
+
+interface DeletedSaleAuditSnapshot {
+  id?: string;
+  created_at?: string;
+  customer_name?: string | null;
+  payment_method?: string | null;
+  subtotal?: number;
+  discount_amount?: number;
+  total?: number;
+  wallet_used?: number;
+  notes?: string | null;
+  items?: DeletedSaleAuditItem[];
+}
+
+const asRecord = (value: unknown): Record<string, unknown> | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+};
+
+const getDeletedSaleSnapshot = (row: AuditQueryRow): DeletedSaleAuditSnapshot | null => {
+  if (row.action_type !== 'ELIMINAR' || row.entity_type !== 'venta') return null;
+  const data = asRecord(row.previous_data);
+  if (!data) return null;
+  const items = Array.isArray(data.items) ? data.items : [];
+  return {
+    id: typeof data.id === 'string' ? data.id : row.entity_id,
+    created_at: typeof data.created_at === 'string' ? data.created_at : undefined,
+    customer_name: typeof data.customer_name === 'string' ? data.customer_name : null,
+    payment_method: typeof data.payment_method === 'string' ? data.payment_method : null,
+    subtotal: Number(data.subtotal ?? 0),
+    discount_amount: Number(data.discount_amount ?? 0),
+    total: Number(data.total ?? 0),
+    wallet_used: Number(data.wallet_used ?? 0),
+    notes: typeof data.notes === 'string' ? data.notes : null,
+    items: items
+      .map((item) => asRecord(item))
+      .filter((item): item is Record<string, unknown> => Boolean(item))
+      .map((item) => ({
+        product_name: typeof item.product_name === 'string' ? item.product_name : 'Producto sin nombre',
+        sku: typeof item.sku === 'string' ? item.sku : null,
+        uom_name: typeof item.uom_name === 'string' ? item.uom_name : null,
+        qty: Number(item.qty ?? 0),
+        price_type: typeof item.price_type === 'string' ? item.price_type : null,
+        unit_price: Number(item.unit_price ?? 0),
+        line_total: Number(item.line_total ?? 0),
+      })),
+  };
 };
 
 const VinosAuditScreen: React.FC<Props> = () => {
@@ -256,6 +315,7 @@ const VinosAuditScreen: React.FC<Props> = () => {
                   <p className="text-sm font-bold text-amber-900 italic">{detail.observation ?? detail.justification}</p>
                 </div>
               )}
+              <DeletedSaleDetail snapshot={getDeletedSaleSnapshot(detail)} />
             </div>
           </div>
         </div>
@@ -268,6 +328,81 @@ const Field: React.FC<{ label: string; value: string }> = ({ label, value }) => 
   <div className="rounded-xl border border-slate-200 bg-white p-3">
     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
     <p className="mt-0.5 text-sm font-bold text-slate-900 truncate">{value}</p>
+  </div>
+);
+
+const DeletedSaleDetail: React.FC<{ snapshot: DeletedSaleAuditSnapshot | null }> = ({ snapshot }) => {
+  if (!snapshot) return null;
+  const items = snapshot.items ?? [];
+
+  return (
+    <div className="rounded-2xl border border-red-100 bg-white p-4">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Detalle de venta eliminada</p>
+          <p className="mt-1 text-sm font-black text-slate-900">{snapshot.customer_name || 'Cliente no registrado'}</p>
+          <p className="text-[11px] font-bold text-slate-400">
+            {snapshot.created_at ? new Date(snapshot.created_at).toLocaleString('es-MX') : 'Fecha no disponible'} · {snapshot.payment_method || 'Pago no disponible'}
+          </p>
+        </div>
+        <div className="text-left sm:text-right">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total venta</p>
+          <p className="text-lg font-black text-slate-950">{formatCurrency(Number(snapshot.total ?? 0))}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+        <table className="w-full text-xs">
+          <thead className="bg-slate-50">
+            <tr className="border-b border-slate-200">
+              {['Producto', 'Cant.', 'Tipo', 'Precio', 'Total'].map((label) => (
+                <th key={label} className="px-3 py-2 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {items.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-3 py-6 text-center text-slate-400">Este registro no tiene productos guardados en auditoría.</td>
+              </tr>
+            ) : items.map((item, index) => (
+              <tr key={`${item.sku ?? item.product_name}-${index}`}>
+                <td className="px-3 py-2">
+                  <p className="font-black text-slate-900">{item.product_name || 'Producto sin nombre'}</p>
+                  <p className="text-[10px] font-bold text-slate-400">
+                    {[item.sku, item.uom_name].filter(Boolean).join(' · ') || 'Sin SKU'}
+                  </p>
+                </td>
+                <td className="px-3 py-2 font-bold text-slate-700">{Number(item.qty ?? 0).toLocaleString('es-MX')}</td>
+                <td className="px-3 py-2 text-slate-500">{item.price_type || '-'}</td>
+                <td className="px-3 py-2 font-bold text-slate-900">{formatCurrency(Number(item.unit_price ?? 0))}</td>
+                <td className="px-3 py-2 font-black text-slate-950">{formatCurrency(Number(item.line_total ?? 0))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-4">
+        <SummaryPill label="Subtotal" value={formatCurrency(Number(snapshot.subtotal ?? 0))} />
+        <SummaryPill label="Descuento" value={formatCurrency(Number(snapshot.discount_amount ?? 0))} />
+        <SummaryPill label="Saldo usado" value={formatCurrency(Number(snapshot.wallet_used ?? 0))} />
+        <SummaryPill label="Total" value={formatCurrency(Number(snapshot.total ?? 0))} strong />
+      </div>
+      {snapshot.notes && (
+        <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Notas de venta</p>
+          <p className="mt-1 text-xs font-bold text-slate-700">{snapshot.notes}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const SummaryPill: React.FC<{ label: string; value: string; strong?: boolean }> = ({ label, value, strong }) => (
+  <div className="rounded-xl bg-slate-50 px-3 py-2">
+    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+    <p className={`mt-0.5 text-sm ${strong ? 'font-black text-slate-950' : 'font-bold text-slate-700'}`}>{value}</p>
   </div>
 );
 

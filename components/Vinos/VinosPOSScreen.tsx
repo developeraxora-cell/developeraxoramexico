@@ -843,10 +843,69 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     setDeleteSaleOpen(true);
   };
 
+  const buildDeletedSaleSnapshot = async (sale: import('../../services/vinos/sales.service').SaleRow) => {
+    const { data, error } = await supabaseVinos
+      .from('sale_items')
+      .select('id, product_id, qty, factor_used, qty_base, unit_price, line_total, price_type, product:products(id,name,sku), uom:product_uoms(id, uom:uoms(id,name,symbol))')
+      .eq('sale_id', sale.id);
+    if (error) throw error;
+
+    interface RawDeleteItem {
+      id: string;
+      product_id: string;
+      qty: number;
+      factor_used: number;
+      qty_base: number;
+      unit_price: number;
+      line_total: number;
+      price_type: string;
+      product?: { id: string; name: string; sku: string } | { id: string; name: string; sku: string }[] | null;
+      uom?: { id: string; uom?: { id: string; name: string; symbol: string | null } | { id: string; name: string; symbol: string | null }[] | null } | { id: string; uom?: { id: string; name: string; symbol: string | null } | { id: string; name: string; symbol: string | null }[] | null }[] | null;
+    }
+
+    const items = ((data ?? []) as RawDeleteItem[]).map((item) => {
+      const product = Array.isArray(item.product) ? item.product[0] : item.product;
+      const uomWrap = Array.isArray(item.uom) ? item.uom[0] : item.uom;
+      const uom = uomWrap?.uom ? (Array.isArray(uomWrap.uom) ? uomWrap.uom[0] : uomWrap.uom) : null;
+      return {
+        id: item.id,
+        product_id: item.product_id,
+        product_name: product?.name ?? 'Producto sin nombre',
+        sku: product?.sku ?? null,
+        uom_name: uom?.name ?? null,
+        uom_symbol: uom?.symbol ?? null,
+        qty: Number(item.qty ?? 0),
+        factor_used: Number(item.factor_used ?? 1),
+        qty_base: Number(item.qty_base ?? 0),
+        price_type: item.price_type,
+        unit_price: Number(item.unit_price ?? 0),
+        line_total: Number(item.line_total ?? 0),
+      };
+    });
+
+    return {
+      id: sale.id,
+      created_at: sale.created_at,
+      customer_id: sale.customer_id,
+      customer_name: sale.customer?.name ?? null,
+      payment_method: sale.payment_method,
+      price_type: sale.price_type,
+      subtotal: Number(sale.subtotal ?? 0),
+      discount_amount: Number(sale.discount_amount ?? 0),
+      total: Number(sale.total ?? 0),
+      wallet_used: Number(sale.wallet_used ?? 0),
+      credit_used: Number(sale.credit_used ?? 0),
+      cash_received: Number(sale.cash_received ?? 0),
+      notes: sale.notes ?? null,
+      items,
+    };
+  };
+
   const confirmDeleteSale = async () => {
     if (!deleteSaleRow || !deleteSaleNote.trim()) return;
     setDeletingSale(true);
     try {
+      const saleSnapshot = await buildDeletedSaleSnapshot(deleteSaleRow);
       await vinosSalesService.softDelete(deleteSaleRow.id, deleteSaleNote.trim(), currentUser.id);
       logVinosAudit({
         branch_id: selectedBranchId,
@@ -858,7 +917,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         entity_id: deleteSaleRow.id,
         description: `Venta eliminada · ${formatCurrency(deleteSaleRow.total)}`,
         justification: deleteSaleNote.trim(),
-        previous_data: { total: deleteSaleRow.total, payment_method: deleteSaleRow.payment_method, customer_id: deleteSaleRow.customer_id },
+        previous_data: saleSnapshot,
+        new_data: {
+          deleted_at: new Date().toISOString(),
+          delete_note: deleteSaleNote.trim(),
+          stock_restored: true,
+        },
       });
       setHistorySales(prev => prev.filter(s => s.id !== deleteSaleRow.id));
       await load();

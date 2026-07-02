@@ -178,6 +178,8 @@ export interface AuditQueryRow {
   description: string;
   justification: string | null;
   observation: string | null;
+  previous_data?: Record<string, unknown> | null;
+  new_data?: Record<string, unknown> | null;
   timestamp: string;
 }
 
