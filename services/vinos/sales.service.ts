@@ -82,15 +82,6 @@ export interface SaleRow {
 
 const STOCK_EPSILON = 0.000001;
 
-const isMissingAtomicSaleRpc = (error: unknown) => {
-  const err = error as { code?: string; message?: string; details?: string } | null;
-  const text = `${err?.code ?? ''} ${err?.message ?? ''} ${err?.details ?? ''}`.toLowerCase();
-  return (
-    text.includes('create_vinos_sale_atomic') &&
-    (text.includes('schema cache') || text.includes('function') || text.includes('does not exist') || text.includes('not found'))
-  );
-};
-
 export const vinosSalesService = {
 
   async list(branchId?: number, opts?: { search?: string; from?: string; to?: string; customerId?: string }): Promise<SaleRow[]> {
@@ -446,24 +437,6 @@ export const vinosSalesService = {
       created_by: input.created_by,
     };
 
-    const itemsPayload = input.items.map(it => ({
-      product_id: it.product_id,
-      product_uom_id: it.product_uom_id || null,
-      qty: it.qty,
-      factor_used: it.factor_to_base || 1,
-      qty_base: Number(it.qty) * Number(it.factor_to_base || 1),
-      price_type: it.price_type,
-      unit_price: it.unit_price,
-      line_total: Number(it.qty) * Number(it.unit_price),
-    }));
-
-    const { data: atomicSaleId, error: atomicSaleError } = await supabaseVinos.rpc('create_vinos_sale_atomic', {
-      p_sale: salePayload,
-      p_items: itemsPayload,
-    });
-    if (!atomicSaleError) return atomicSaleId as string;
-    if (!isMissingAtomicSaleRpc(atomicSaleError)) throw atomicSaleError;
-
     const { data: sale, error: sErr } = await supabaseVinos
       .from('sales')
       .insert(salePayload)
@@ -471,6 +444,8 @@ export const vinosSalesService = {
       .single();
     if (sErr) throw sErr;
 
+    // La base mueve inventario con triggers sobre sale_items. No usar la RPC legacy
+    // create_vinos_sale_atomic porque tambien descuenta product_stocks y duplica la salida.
     const legacyItemsPayload = input.items.map(it => ({
       sale_id: sale.id,
       product_id: it.product_id,

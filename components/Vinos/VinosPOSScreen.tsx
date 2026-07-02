@@ -484,10 +484,21 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   const closeAddProduct = () => setAddProductTarget(null);
 
-  const getPriceForTier = (pu: ProductUomFull, tier: PriceTier) => {
-    if (tier === 'MENUDEO') return pu.price_retail;
-    if (tier === 'MEDIO_MAYOREO') return pu.price_mid_wholesale;
-    return pu.price_wholesale;
+  const getProductPriceForTier = (product: ProductFull, tier: PriceTier) => {
+    if (tier === 'MENUDEO') return Number(product.price_retail || 0);
+    if (tier === 'MEDIO_MAYOREO') return Number(product.price_mid_wholesale || 0);
+    return Number(product.price_wholesale || 0);
+  };
+
+  const getPriceForTier = (product: ProductFull, pu: ProductUomFull, tier: PriceTier) => {
+    const price = tier === 'MENUDEO'
+      ? pu.price_retail
+      : tier === 'MEDIO_MAYOREO'
+        ? pu.price_mid_wholesale
+        : pu.price_wholesale;
+    if (Number(price) > 0) return Number(price);
+    const factor = Number(pu.factor_to_base || 1);
+    return getProductPriceForTier(product, tier) * factor;
   };
 
   const getCartItemQtyBase = (item: SaleCartItem) =>
@@ -548,7 +559,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     const factorToBase = Number(pu.factor_to_base || 1);
     const uomName = pu.uom?.name ?? '';
     if (!canUseStock(addProductTarget.id, addProductTarget.name, qty, factorToBase, uomName)) return;
-    const unit_price = getPriceForTier(pu, stepTier);
+    const unit_price = getPriceForTier(addProductTarget, pu, stepTier);
 
     setCart(prev => [...prev, {
       product_id: addProductTarget.id,
@@ -1592,7 +1603,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 <div className="grid grid-cols-3 gap-2">
                   {(['MENUDEO','MEDIO_MAYOREO','MAYOREO'] as PriceTier[]).map(tier => {
                     const pu = addProductTarget.product_uoms.find(u => u.id === stepUomId);
-                    const price = pu ? getPriceForTier(pu, tier) : 0;
+                    const price = pu ? getPriceForTier(addProductTarget, pu, tier) : 0;
                     const active = stepTier === tier;
                     return (
                       <button
@@ -1624,7 +1635,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 {addProductTarget.product_uoms.find(u => u.id === stepUomId) && (
                   <p className="mt-2 text-[11px] font-bold text-slate-500 text-right">
                     Subtotal: <span className="text-base font-black text-orange-600">
-                      {formatCurrency(Number(stepQty) * getPriceForTier(addProductTarget.product_uoms.find(u => u.id === stepUomId)!, stepTier))}
+                      {formatCurrency(Number(stepQty) * getPriceForTier(addProductTarget, addProductTarget.product_uoms.find(u => u.id === stepUomId)!, stepTier))}
                     </span>
                   </p>
                 )}
