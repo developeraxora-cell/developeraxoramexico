@@ -1035,7 +1035,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   // ── render ──────────────────────────────────────────────
   return (
-    <div className="relative grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_460px] xl:grid-cols-[minmax(0,1fr)_500px] gap-3 h-[calc(100vh-168px)]">
+    <div className="relative grid h-full min-h-0 grid-cols-1 gap-3 pb-3 pl-0 pr-3 pt-0 lg:grid-cols-[minmax(0,1fr)_460px] xl:grid-cols-[minmax(0,1fr)_500px]">
 
       {/* ─── Catálogo ──────────────────────────────────── */}
       <div className="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -1145,16 +1145,16 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       <div className="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
 
         {/* Cliente */}
-        <div className="border-b border-slate-100 p-3">
-          <p className="mb-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400">Cliente</p>
+        <div className="border-b border-slate-100 px-3 py-2">
+          <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-slate-400">Cliente</p>
           {selectedCustomer ? (
-            <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2">
+            <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-1.5">
               <button
                 onClick={() => setCustomerSelectorOpen(true)}
                 className="flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left"
                 title="Cambiar cliente"
               >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-600 text-sm font-black text-white">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-600 text-xs font-black text-white">
                   {selectedCustomer.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -1170,8 +1170,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               </button>
             </div>
           ) : (
-            <button onClick={() => setCustomerSelectorOpen(true)} className="flex w-full items-center gap-2.5 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-left hover:border-orange-400 hover:bg-orange-50/40">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
+            <button onClick={() => setCustomerSelectorOpen(true)} className="flex w-full items-center gap-2.5 rounded-xl border border-dashed border-slate-300 px-3 py-1.5 text-left hover:border-orange-400 hover:bg-orange-50/40">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
                 <UserIcon size={14}/>
               </div>
               <div className="flex-1">
@@ -1229,11 +1229,6 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           >
             Continuar a cobro
           </button>
-          {cart.length > 0 && (
-            <button onClick={clearCart} className="w-full rounded-2xl border border-slate-200 bg-white py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50">
-              Limpiar carrito
-            </button>
-          )}
         </div>
       </div>
 

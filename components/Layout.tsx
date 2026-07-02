@@ -80,6 +80,7 @@ const Layout: React.FC<LayoutProps> = ({
   const asideRef = useRef<HTMLElement | null>(null);
   const flyoutRef = useRef<HTMLDivElement | null>(null);
   const canUseAssistant = currentUser?.role === Role.SOCIO || currentUser?.role === Role.SUPERADMIN;
+  const isFullBleedContent = activeTab === 'vinos-pos';
 
   const handleLogout = async () => {
     const promises: Promise<unknown>[] = [];
@@ -650,8 +651,8 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="max-w-[1600px] mx-auto pb-32">
+        <div className={`flex-1 ${isFullBleedContent ? 'overflow-hidden p-0' : 'overflow-y-auto p-4 md:p-8'}`}>
+          <div className={isFullBleedContent ? 'h-full max-w-none pb-0' : 'max-w-[1600px] mx-auto pb-32'}>
             {/* Título del módulo en móvil (sale del header en pantallas chicas) */}
             <div className="md:hidden mb-4 flex items-center gap-3">
               <div className="w-9 h-9 bg-slate-900 rounded-lg flex items-center justify-center text-lg shadow-lg shrink-0">
