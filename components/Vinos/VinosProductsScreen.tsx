@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Plus, Search, Pencil, Trash2, Package, TrendingUp, AlertTriangle, X, Settings, RefreshCw, Check, ChevronDown, Save, BarChart3, Loader2,
-  DollarSign, SlidersHorizontal,
+  DollarSign, SlidersHorizontal, FileDown,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
@@ -13,6 +13,7 @@ import {
 import { vinosCatalogService, type Category, type Uom } from '../../services/vinos/catalog.service';
 import { vinosCustomersService } from '../../services/vinos/customers.service';
 import { logVinosAudit } from '../../services/audit/audit.service';
+import { generateVinosProductsListPdf } from '../../services/vinos/productsListPdf';
 import VinosProductModal from './VinosProductModal';
 
 interface Props {
@@ -71,6 +72,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newUomName, setNewUomName] = useState('');
   const [newUomSymbol, setNewUomSymbol] = useState('');
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   // ── branch id ────────────────────────────────────────────
   useEffect(() => {
@@ -122,6 +124,20 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
 
   const toggleCategoryFilter = (id: string) => {
     setCategoryFilters(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  };
+
+  const exportProductsPdf = async () => {
+    if (filtered.length === 0 || exportingPdf) return;
+    setExportingPdf(true);
+    try {
+      await generateVinosProductsListPdf({
+        products: filtered,
+        branchName,
+        title: 'PRODUCTOS CASA TAHONA',
+      });
+    } finally {
+      setExportingPdf(false);
+    }
   };
 
   // ── stats ────────────────────────────────────────────────
@@ -498,6 +514,15 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
           </button>
           <button onClick={load} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50" title="Recargar">
             <RefreshCw size={14} />
+          </button>
+          <button
+            onClick={exportProductsPdf}
+            disabled={filtered.length === 0 || exportingPdf}
+            className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Exportar PDF"
+          >
+            {exportingPdf ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+            PDF
           </button>
         </div>
         <button onClick={openCreate} className="flex items-center gap-2 rounded-2xl bg-orange-600 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500">
