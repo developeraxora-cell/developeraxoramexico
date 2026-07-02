@@ -20,6 +20,14 @@ const formatDate = () => new Date().toLocaleString('es-MX', {
   timeStyle: 'short',
 });
 
+const formatGainPercent = (salePrice: number, purchaseCost?: number | null) => {
+  const cost = Number(purchaseCost ?? 0);
+  const price = Number(salePrice ?? 0);
+  if (!Number.isFinite(cost) || cost <= 0 || !Number.isFinite(price)) return '-';
+  const gain = ((price - cost) / cost) * 100;
+  return `${Math.round((gain + Number.EPSILON) * 10) / 10}%`;
+};
+
 const drawText = (
   page: PDFPage,
   text: string,
@@ -47,23 +55,26 @@ export const generateVinosProductsListPdf = async (input: VinosProductsListPdfIn
   const fontRegular = await pdfDoc.embedFont('Helvetica');
   const fontBold = await pdfDoc.embedFont('Helvetica-Bold');
 
-  const pageWidth = 842;
-  const pageHeight = 595;
+  const pageWidth = 1008;
+  const pageHeight = 612;
   const margin = 24;
   const rowHeight = 34;
   const headerHeight = 22;
   const tableTopGap = 70;
   const bottomMargin = 28;
   const columns = [
-    { key: 'product', label: 'PRODUCTO', width: 150 },
-    { key: 'category', label: 'CATEGORIA', width: 72 },
-    { key: 'uom', label: 'UNIDAD', width: 55 },
-    { key: 'stock', label: 'STOCK', width: 38 },
-    { key: 'cost', label: 'PREC. COMPRA', width: 65 },
-    { key: 'retail', label: 'MENUDEO', width: 65 },
-    { key: 'mid', label: 'M. MAYOREO', width: 65 },
-    { key: 'wholesale', label: 'MAYOREO', width: 65 },
-    { key: 'notes', label: 'OBSERVACION', width: 219 },
+    { key: 'product', label: 'PRODUCTO', width: 142 },
+    { key: 'category', label: 'CATEGORIA', width: 62 },
+    { key: 'uom', label: 'UNIDAD', width: 48 },
+    { key: 'stock', label: 'STOCK', width: 36 },
+    { key: 'cost', label: 'PREC. COMPRA', width: 62 },
+    { key: 'retail', label: 'MENUDEO', width: 58 },
+    { key: 'retailGain', label: 'MEN. %', width: 45 },
+    { key: 'mid', label: 'M. MAYOREO', width: 58 },
+    { key: 'midGain', label: 'M.MAY. %', width: 45 },
+    { key: 'wholesale', label: 'MAYOREO', width: 58 },
+    { key: 'wholesaleGain', label: 'MAY. %', width: 45 },
+    { key: 'notes', label: 'OBSERVACION', width: 301 },
   ];
 
   let page = pdfDoc.addPage([pageWidth, pageHeight]);
@@ -146,8 +157,11 @@ export const generateVinosProductsListPdf = async (input: VinosProductsListPdfIn
       stock: String(product.total_stock ?? 0),
       cost: product.last_purchase_cost != null ? formatCurrency(product.last_purchase_cost) : '-',
       retail: formatCurrency(product.price_retail),
+      retailGain: formatGainPercent(product.price_retail, product.last_purchase_cost),
       mid: formatCurrency(product.price_mid_wholesale),
+      midGain: formatGainPercent(product.price_mid_wholesale, product.last_purchase_cost),
       wholesale: formatCurrency(product.price_wholesale),
+      wholesaleGain: formatGainPercent(product.price_wholesale, product.last_purchase_cost),
       notes: '',
     };
 

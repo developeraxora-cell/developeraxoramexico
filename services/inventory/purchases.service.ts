@@ -163,7 +163,7 @@ const isRlsErrorForTable = (error: unknown, tableName: string) => {
   return payload?.code === '42501' && message.includes('row-level security policy') && message.includes(tableName.toLowerCase());
 };
 
-const cleanupUnusedProductUoms = async (productId: string, nextUomIds: string[]) => {
+const getRemovedProductUomRowIds = async (productId: string, nextUomIds: string[]) => {
   const nextIdsSet = new Set(nextUomIds.map((id) => String(id)));
 
   const { data: existingRows, error: existingError } = await supabase
@@ -177,26 +177,51 @@ const cleanupUnusedProductUoms = async (productId: string, nextUomIds: string[])
     .filter((row) => !nextIdsSet.has(String(row.uom_id)))
     .map((row) => String(row.id));
 
-  if (removableUomRowIds.length === 0) return;
+  return removableUomRowIds;
+};
+
+const assertProductUomsCanBeRemoved = async (productUomRowIds: string[]) => {
+  if (productUomRowIds.length === 0) return;
 
   const { data: referencedRows, error: referenceError } = await supabase
     .from('inventory_transaction_items')
     .select('product_uom_id')
-    .in('product_uom_id', removableUomRowIds);
+    .in('product_uom_id', productUomRowIds);
 
   if (referenceError) throw referenceError;
 
   const referencedSet = new Set((referencedRows ?? []).map((row) => String(row.product_uom_id)));
-  const deletableIds = removableUomRowIds.filter((id) => !referencedSet.has(id));
+  if (referencedSet.size > 0) {
+    throw new Error('No se puede eliminar una unidad de medida que ya tiene compras o ventas registradas.');
+  }
+};
 
-  if (deletableIds.length === 0) return;
+const cleanupUnusedProductUoms = async (productId: string, nextUomIds: string[]) => {
+  const removableUomRowIds = await getRemovedProductUomRowIds(productId, nextUomIds);
+
+  if (removableUomRowIds.length === 0) return;
+
+  await assertProductUomsCanBeRemoved(removableUomRowIds);
+
+  const { error: priceError } = await supabase
+    .from('branch_product_prices')
+    .delete()
+    .in('product_uom_id', removableUomRowIds);
+
+  if (priceError) throw priceError;
 
   const { error: deleteError } = await supabase
     .from('product_uoms')
     .delete()
-    .in('id', deletableIds);
+    .in('id', removableUomRowIds);
 
-  if (deleteError) throw deleteError;
+  if (deleteError) {
+    const payload = deleteError as { code?: string };
+    if (payload.code === '23503') {
+      throw new Error('No se puede eliminar una unidad de medida que ya tiene compras o ventas registradas.');
+    }
+    throw deleteError;
+  }
 };
 
 export const purchasesService = {
@@ -557,6 +582,8 @@ export const purchasesService = {
     saleUoms: CreateProductUomInput[];
   }) {
     const { productId, product, purchaseUom, saleUoms } = input;
+    const uomsPayload = buildUomsPayload(productId, purchaseUom, saleUoms);
+    const nextUomIds = uomsPayload.map((uom) => String(uom.uom_id));
 
     const { data: updatedProduct, error: productError } = await supabase
       .from('products')
@@ -572,8 +599,6 @@ export const purchasesService = {
 
     let createdUoms: ProductUom[] | null = null;
     try {
-      const uomsPayload = buildUomsPayload(productId, purchaseUom, saleUoms);
-
       const { error: clearDefaultsError } = await supabase
         .from('product_uoms')
         .update({
@@ -592,8 +617,7 @@ export const purchasesService = {
       if (uomError) throw uomError;
       createdUoms = (data ?? []) as ProductUom[];
 
-      // No eliminamos UOMs antiguas aqui para no romper FKs historicas
-      // (inventory_transaction_items.product_uom_id).
+      await cleanupUnusedProductUoms(productId, nextUomIds);
     } catch (uomSyncError) {
       if (!isRlsErrorForTable(uomSyncError, 'product_uoms')) {
         throw uomSyncError;

@@ -836,7 +836,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     if (!deleteSaleRow || !deleteSaleNote.trim()) return;
     setDeletingSale(true);
     try {
-      await vinosSalesService.softDelete(deleteSaleRow.id, deleteSaleNote.trim());
+      await vinosSalesService.softDelete(deleteSaleRow.id, deleteSaleNote.trim(), currentUser.id);
       logVinosAudit({
         branch_id: selectedBranchId,
         branch_name: branches.find(b => b.id === selectedBranchId)?.name ?? null,
@@ -850,8 +850,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         previous_data: { total: deleteSaleRow.total, payment_method: deleteSaleRow.payment_method, customer_id: deleteSaleRow.customer_id },
       });
       setHistorySales(prev => prev.filter(s => s.id !== deleteSaleRow.id));
+      await load();
       setDeleteSaleOpen(false);
-    } catch (e) { console.error(e); }
+      setFeedback({ type: 'success', msg: 'Venta cancelada y stock restaurado.' });
+    } catch (e) {
+      console.error(e);
+      setFeedback({ type: 'error', msg: e instanceof Error ? e.message : 'No se pudo eliminar la venta.' });
+    }
     finally { setDeletingSale(false); }
   };
 
@@ -2471,7 +2476,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 placeholder="Explica por qué se elimina…"
                 className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400 resize-none"
               />
-              <p className="rounded-xl bg-red-50 px-3 py-2 text-[11px] text-red-700">⚠ La venta quedará marcada como eliminada. El stock no se revierte automáticamente.</p>
+              <p className="rounded-xl bg-red-50 px-3 py-2 text-[11px] text-red-700">La venta quedará cancelada y el stock de los productos se restaurará automáticamente.</p>
             </div>
             <div className="flex gap-2 border-t border-slate-200 bg-slate-50 px-6 py-3">
               <button onClick={() => setDeleteSaleOpen(false)} className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100">Cancelar</button>

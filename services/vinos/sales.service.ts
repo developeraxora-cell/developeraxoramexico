@@ -133,8 +133,113 @@ export const vinosSalesService = {
     return { debt };
   },
 
-  async softDelete(saleId: string, deleteNote: string): Promise<void> {
+  async softDelete(saleId: string, deleteNote: string, actorId?: string): Promise<void> {
     if (!isVinosConfigured) throw new Error('DB vinos no configurada');
+
+    const { data: sale, error: saleError } = await supabaseVinos
+      .from('sales')
+      .select('id, branch_id, customer_id, wallet_used, coupon_code, promotion_id, deleted_at')
+      .eq('id', saleId)
+      .single();
+    if (saleError || !sale) throw new Error('Venta no encontrada.');
+    if (sale.deleted_at) throw new Error('Esta venta ya fue eliminada.');
+
+    const { data: items, error: itemsError } = await supabaseVinos
+      .from('sale_items')
+      .select('product_id, qty_base')
+      .eq('sale_id', saleId);
+    if (itemsError) throw itemsError;
+
+    const restoreByProduct = (items ?? []).reduce<Record<string, number>>((acc, item: { product_id: string; qty_base: number }) => {
+      acc[item.product_id] = (acc[item.product_id] ?? 0) + Number(item.qty_base ?? 0);
+      return acc;
+    }, {});
+
+    for (const [productId, qtyBase] of Object.entries(restoreByProduct)) {
+      if (!Number.isFinite(qtyBase) || qtyBase <= 0) continue;
+      const { data: stockRow, error: stockLoadError } = await supabaseVinos
+        .from('product_stocks')
+        .select('id, qty')
+        .eq('branch_id', sale.branch_id)
+        .eq('product_id', productId)
+        .maybeSingle();
+      if (stockLoadError) throw stockLoadError;
+
+      if (stockRow?.id) {
+        const { error: stockUpdateError } = await supabaseVinos
+          .from('product_stocks')
+          .update({ qty: Number(stockRow.qty ?? 0) + qtyBase })
+          .eq('id', stockRow.id);
+        if (stockUpdateError) throw stockUpdateError;
+      } else {
+        const { error: stockInsertError } = await supabaseVinos
+          .from('product_stocks')
+          .insert({ branch_id: sale.branch_id, product_id: productId, qty: qtyBase });
+        if (stockInsertError) throw stockInsertError;
+      }
+    }
+
+    const walletUsed = Number(sale.wallet_used ?? 0);
+    if (sale.customer_id && walletUsed > 0) {
+      const { data: customer, error: customerError } = await supabaseVinos
+        .from('customers')
+        .select('wallet_balance')
+        .eq('id', sale.customer_id)
+        .single();
+      if (customerError) throw customerError;
+
+      const { error: walletUpdateError } = await supabaseVinos
+        .from('customers')
+        .update({
+          wallet_balance: Number(customer?.wallet_balance ?? 0) + walletUsed,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sale.customer_id);
+      if (walletUpdateError) throw walletUpdateError;
+
+      const { error: walletMovementError } = await supabaseVinos
+        .from('customer_wallet_movements')
+        .insert({
+          customer_id: sale.customer_id,
+          amount: walletUsed,
+          type: 'AJUSTE',
+          related_sale_id: sale.id,
+          notes: `Reverso por eliminacion de venta`,
+          created_by: actorId ?? null,
+        });
+      if (walletMovementError) throw walletMovementError;
+    }
+
+    if (sale.promotion_id) {
+      const { error: promoError } = await supabaseVinos
+        .from('promotions')
+        .update({
+          status: 'ACTIVA',
+          used_at: null,
+          sale_id: null,
+          redeemed_by: null,
+        })
+        .eq('id', sale.promotion_id)
+        .eq('sale_id', sale.id);
+      if (promoError) throw promoError;
+    }
+
+    if (sale.coupon_code) {
+      const { data: coupon, error: couponLoadError } = await supabaseVinos
+        .from('coupons')
+        .select('id, uses')
+        .eq('code', sale.coupon_code)
+        .maybeSingle();
+      if (couponLoadError) throw couponLoadError;
+      if (coupon?.id) {
+        const { error: couponUpdateError } = await supabaseVinos
+          .from('coupons')
+          .update({ uses: Math.max(0, Number(coupon.uses ?? 0) - 1) })
+          .eq('id', coupon.id);
+        if (couponUpdateError) throw couponUpdateError;
+      }
+    }
+
     const { error } = await supabaseVinos
       .from('sales')
       .update({ deleted_at: new Date().toISOString(), delete_note: deleteNote })
