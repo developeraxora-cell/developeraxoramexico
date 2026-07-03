@@ -321,6 +321,7 @@ export const vinosReportsService = {
 
     const productAgg: Record<string, { name: string; sku: string; qty: number; total: number; profit: number }> = {};
     let gross_profit = 0;
+    let sold_cost_total = 0;
     items.forEach(it => {
       const product = productMeta.get(it.product_id);
       if (!product) return;
@@ -338,6 +339,7 @@ export const vinosReportsService = {
       productAgg[k].total += netLineTotal;
       productAgg[k].profit += profit;
       gross_profit += profit;
+      sold_cost_total += costTotal;
     });
     const top_products = Object.entries(productAgg)
       .map(([product_id, v]) => ({ product_id, ...v }))
@@ -352,7 +354,7 @@ export const vinosReportsService = {
       .filter((row) => row.profit <= 0)
       .sort((a, b) => a.profit - b.profit)
       .slice(0, 5);
-    const profit_margin = total_amount > 0 ? (gross_profit / total_amount) * 100 : 0;
+    const profit_margin = sold_cost_total > 0 ? (gross_profit / sold_cost_total) * 100 : 0;
 
     const periodSaleIds = periodSales.map((sale) => sale.id);
     let periodItems: ItemRow[] = [];

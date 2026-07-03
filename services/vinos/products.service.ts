@@ -13,6 +13,9 @@ export interface VinosProduct {
   price_retail: number;
   price_mid_wholesale: number;
   price_wholesale: number;
+  purchase_cost: number | null;
+  price_mid_wholesale_min_qty: number | null;
+  price_wholesale_min_qty: number | null;
   min_stock: number;
   image_url: string | null;
   notes: string | null;
@@ -95,6 +98,9 @@ export type CreateProductInput = {
   price_retail: number;
   price_mid_wholesale: number;
   price_wholesale: number;
+  purchase_cost?: number | null;
+  price_mid_wholesale_min_qty?: number | null;
+  price_wholesale_min_qty?: number | null;
   min_stock?: number;
   image_url?: string | null;
   notes?: string | null;
@@ -145,7 +151,7 @@ export const vinosProductsService = {
       return {
         ...p,
         total_stock: total,
-        last_purchase_cost: lastPurchaseCostByProduct.get(String(p.id)) ?? null,
+        last_purchase_cost: lastPurchaseCostByProduct.get(String(p.id)) ?? (p.purchase_cost != null ? Number(p.purchase_cost) : null),
       } as ProductWithStock;
     });
   },
@@ -167,6 +173,9 @@ export const vinosProductsService = {
         price_retail: input.price_retail,
         price_mid_wholesale: input.price_mid_wholesale,
         price_wholesale: input.price_wholesale,
+        purchase_cost: input.purchase_cost ?? null,
+        price_mid_wholesale_min_qty: input.price_mid_wholesale_min_qty ?? null,
+        price_wholesale_min_qty: input.price_wholesale_min_qty ?? null,
         min_stock: input.min_stock ?? 0,
         image_url: input.image_url ?? null,
         notes: input.notes ?? null,
@@ -340,7 +349,12 @@ export const vinosProductsService = {
     }
 
     if (!targetPurchase || !targetItem) {
-      throw new Error('Este producto todavía no tiene una compra registrada para editar su precio de compra.');
+      const { error: productCostError } = await supabaseVinos
+        .from('products')
+        .update({ purchase_cost: newCost })
+        .eq('id', productId);
+      if (productCostError) throw productCostError;
+      return;
     }
 
     const qty = Number(targetItem.qty ?? 0);
@@ -362,6 +376,12 @@ export const vinosProductsService = {
       .update({ total: nextTotal })
       .eq('id', targetPurchase.id);
     if (purchaseError) throw purchaseError;
+
+    const { error: productCostError } = await supabaseVinos
+      .from('products')
+      .update({ purchase_cost: newCost })
+      .eq('id', productId);
+    if (productCostError) throw productCostError;
   },
 
   async deactivate(id: string): Promise<void> {

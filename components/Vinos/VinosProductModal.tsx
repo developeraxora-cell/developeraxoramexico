@@ -17,9 +17,12 @@ interface FormState {
   uom_id: string;
   is_divisible: boolean;
   barcode: string;
+  purchase_cost: string;
   price_retail: string;
   price_mid_wholesale: string;
   price_wholesale: string;
+  price_mid_wholesale_min_qty: string;
+  price_wholesale_min_qty: string;
   min_stock: string;
   image_url: string;
 }
@@ -66,9 +69,12 @@ const emptyForm = (initialValues?: Partial<Pick<FormState, 'barcode' | 'name'>>)
   uom_id: '',
   is_divisible: false,
   barcode: initialValues?.barcode ?? '',
+  purchase_cost: '',
   price_retail: '',
   price_mid_wholesale: '',
   price_wholesale: '',
+  price_mid_wholesale_min_qty: '10',
+  price_wholesale_min_qty: '20',
   min_stock: '0',
   image_url: '',
 });
@@ -80,6 +86,21 @@ const emptyEquivalence = (): EquivalenceRow => ({
   price_mid_wholesale: '',
   price_wholesale: '',
 });
+
+const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+const formatMoneyInput = (value: number) => String(roundMoney(value));
+
+const buildSuggestedPrices = (purchaseCost: string, factorValue: string | number) => {
+  const cost = Number(purchaseCost);
+  const factor = Number(factorValue || 1);
+  if (!Number.isFinite(cost) || cost <= 0 || !Number.isFinite(factor) || factor <= 0) return null;
+  const unitCost = cost * factor;
+  return {
+    price_retail: formatMoneyInput(unitCost * 1.25),
+    price_mid_wholesale: formatMoneyInput(unitCost * 1.2),
+    price_wholesale: formatMoneyInput(unitCost * 1.15),
+  };
+};
 
 const VinosProductModal: React.FC<Props> = ({
   isOpen,
@@ -111,9 +132,12 @@ const VinosProductModal: React.FC<Props> = ({
         uom_id: editTarget.uom_id ?? '',
         is_divisible: editTarget.is_divisible ?? false,
         barcode: editTarget.barcode ?? '',
+        purchase_cost: editTarget.last_purchase_cost != null ? String(editTarget.last_purchase_cost) : '',
         price_retail: String(editTarget.price_retail),
         price_mid_wholesale: String(editTarget.price_mid_wholesale),
         price_wholesale: String(editTarget.price_wholesale),
+        price_mid_wholesale_min_qty: String(editTarget.price_mid_wholesale_min_qty ?? 10),
+        price_wholesale_min_qty: String(editTarget.price_wholesale_min_qty ?? 20),
         min_stock: String(editTarget.min_stock),
         image_url: editTarget.image_url ?? '',
       });
@@ -160,20 +184,41 @@ const VinosProductModal: React.FC<Props> = ({
         }
         return prev;
       }
+      const suggested = buildSuggestedPrices(form.purchase_cost, 1);
       return [{
         uom_id: form.uom_id,
         factor_to_base: '1',
-        price_retail: '',
-        price_mid_wholesale: '',
-        price_wholesale: '',
+        price_retail: suggested?.price_retail ?? '',
+        price_mid_wholesale: suggested?.price_mid_wholesale ?? '',
+        price_wholesale: suggested?.price_wholesale ?? '',
       }, ...prev];
     });
-  }, [form.uom_id]);
+  }, [form.purchase_cost, form.uom_id]);
+
+  const applyPurchaseCostSuggestions = (purchaseCost: string) => {
+    setEquivalences(prev => prev.map((row) => {
+      const suggested = buildSuggestedPrices(purchaseCost, row.factor_to_base || 1);
+      return suggested ? { ...row, ...suggested } : row;
+    }));
+  };
+
+  const handlePurchaseCostChange = (value: string) => {
+    setForm(f => ({ ...f, purchase_cost: value }));
+    applyPurchaseCostSuggestions(value);
+  };
 
   const addEquivalence = () => setEquivalences(prev => [...prev, emptyEquivalence()]);
   const removeEquivalence = (idx: number) => setEquivalences(prev => prev.filter((_, i) => i !== idx));
   const updateEquivalence = (idx: number, patch: Partial<EquivalenceRow>) =>
-    setEquivalences(prev => prev.map((row, i) => i === idx ? { ...row, ...patch } : row));
+    setEquivalences(prev => prev.map((row, i) => {
+      if (i !== idx) return row;
+      const next = { ...row, ...patch };
+      if (Object.prototype.hasOwnProperty.call(patch, 'factor_to_base')) {
+        const suggested = buildSuggestedPrices(form.purchase_cost, next.factor_to_base);
+        return suggested ? { ...next, ...suggested } : next;
+      }
+      return next;
+    }));
 
   const handleSave = async () => {
     if (!form.name.trim()) { setFormError('El nombre es obligatorio.'); return; }
@@ -187,6 +232,11 @@ const VinosProductModal: React.FC<Props> = ({
 
     const baseRow = equivalences.find(e => Number(e.factor_to_base) === 1 && e.uom_id === form.uom_id);
     if (!baseRow) { setFormError('Falta la fila de la unidad base en equivalencias.'); return; }
+    const midMinQty = Number(form.price_mid_wholesale_min_qty);
+    const wholesaleMinQty = Number(form.price_wholesale_min_qty);
+    if (!Number.isFinite(midMinQty) || midMinQty <= 0) { setFormError('El limite de medio mayoreo debe ser mayor a 0.'); return; }
+    if (!Number.isFinite(wholesaleMinQty) || wholesaleMinQty <= 0) { setFormError('El limite de mayoreo debe ser mayor a 0.'); return; }
+    if (wholesaleMinQty <= midMinQty) { setFormError('El limite de mayoreo debe ser mayor al limite de medio mayoreo.'); return; }
 
     setSaving(true);
     setFormError('');
@@ -200,6 +250,9 @@ const VinosProductModal: React.FC<Props> = ({
         price_retail: Number(baseRow.price_retail) || 0,
         price_mid_wholesale: Number(baseRow.price_mid_wholesale) || 0,
         price_wholesale: Number(baseRow.price_wholesale) || 0,
+        purchase_cost: Number(form.purchase_cost) || null,
+        price_mid_wholesale_min_qty: midMinQty,
+        price_wholesale_min_qty: wholesaleMinQty,
         min_stock: Number(form.min_stock) || 0,
         image_url: form.image_url || null,
       };
@@ -232,6 +285,7 @@ const VinosProductModal: React.FC<Props> = ({
         } : null,
         new_data: {
           product,
+          purchase_cost_suggestion: Number(form.purchase_cost) || null,
           equivalences_count: productUoms.length,
         },
       });
@@ -287,7 +341,7 @@ const VinosProductModal: React.FC<Props> = ({
                 />
               </div>
 
-              <div className="md:col-span-2">
+              <div>
                 <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Nombre *</label>
                 <input
                   className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
@@ -328,6 +382,50 @@ const VinosProductModal: React.FC<Props> = ({
                   />
                   <span className="text-[11px] font-bold text-slate-600">Permite fraccionar (decimales)</span>
                 </label>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Precio de compra</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  value={form.purchase_cost}
+                  onChange={e => handlePurchaseCostChange(e.target.value)}
+                  placeholder="Precio por unidad base"
+                />
+                <p className="mt-1 text-[10px] font-bold text-slate-400">
+                  Si lo capturas, se sugieren precios con utilidad de 25%, 20% y 15%. Puedes editarlos antes de guardar.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">M. mayoreo desde</label>
+                <input
+                  type="number"
+                  min="0.0001"
+                  step="0.0001"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  value={form.price_mid_wholesale_min_qty}
+                  onChange={e => setForm(f => ({ ...f, price_mid_wholesale_min_qty: e.target.value }))}
+                  placeholder="Cantidad base"
+                />
+                <p className="mt-1 text-[10px] font-bold text-slate-400">Cantidad en unidad base para aplicar medio mayoreo.</p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Mayoreo desde</label>
+                <input
+                  type="number"
+                  min="0.0001"
+                  step="0.0001"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  value={form.price_wholesale_min_qty}
+                  onChange={e => setForm(f => ({ ...f, price_wholesale_min_qty: e.target.value }))}
+                  placeholder="Cantidad base"
+                />
+                <p className="mt-1 text-[10px] font-bold text-slate-400">Desde esta cantidad base se aplicara mayoreo.</p>
               </div>
             </div>
           </section>

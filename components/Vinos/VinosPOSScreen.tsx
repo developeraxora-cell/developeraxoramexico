@@ -116,7 +116,6 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   // add-product modal
   const [addProductTarget, setAddProductTarget] = useState<ProductFull | null>(null);
   const [stepUomId, setStepUomId] = useState('');
-  const [stepTier, setStepTier] = useState<PriceTier>('MENUDEO');
   const [stepQty, setStepQty] = useState('1');
 
   // pago
@@ -478,7 +477,6 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     const base = p.product_uoms.find(u => Number(u.factor_to_base) === 1) ?? p.product_uoms[0];
     setAddProductTarget(p);
     setStepUomId(base.id);
-    setStepTier('MENUDEO');
     setStepQty('1');
   };
 
@@ -499,6 +497,52 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     if (Number(price) > 0) return Number(price);
     const factor = Number(pu.factor_to_base || 1);
     return getProductPriceForTier(product, tier) * factor;
+  };
+
+  const getTierForBaseQty = (product: ProductFull, qtyBase: number): PriceTier => {
+    const wholesaleMin = Number(product.price_wholesale_min_qty ?? 0);
+    const midMin = Number(product.price_mid_wholesale_min_qty ?? 0);
+    if (Number.isFinite(wholesaleMin) && wholesaleMin > 0 && qtyBase >= wholesaleMin) return 'MAYOREO';
+    if (Number.isFinite(midMin) && midMin > 0 && qtyBase >= midMin) return 'MEDIO_MAYOREO';
+    return 'MENUDEO';
+  };
+
+  const getAutoPriceForQty = (product: ProductFull, pu: ProductUomFull, qty: number) => {
+    const factor = Number(pu.factor_to_base || 1);
+    const qtyBase = Number(qty || 0) * factor;
+    const tier = getTierForBaseQty(product, qtyBase);
+    return {
+      tier,
+      qtyBase,
+      unitPrice: getPriceForTier(product, pu, tier),
+    };
+  };
+
+  const formatBaseQty = (value: number) =>
+    value.toLocaleString('es-MX', { maximumFractionDigits: 4 });
+
+  const getTierRangeRows = (product: ProductFull, pu: ProductUomFull) => {
+    const midMin = Number(product.price_mid_wholesale_min_qty ?? 10);
+    const wholesaleMin = Number(product.price_wholesale_min_qty ?? 20);
+    return [
+      {
+        tier: 'MENUDEO' as PriceTier,
+        range: midMin > 0 ? `< ${formatBaseQty(midMin)}` : 'Desde 0',
+      },
+      {
+        tier: 'MEDIO_MAYOREO' as PriceTier,
+        range: midMin > 0 && wholesaleMin > midMin
+          ? `${formatBaseQty(midMin)} - < ${formatBaseQty(wholesaleMin)}`
+          : `Desde ${formatBaseQty(midMin || 0)}`,
+      },
+      {
+        tier: 'MAYOREO' as PriceTier,
+        range: wholesaleMin > 0 ? `>= ${formatBaseQty(wholesaleMin)}` : 'Sin limite',
+      },
+    ].map((row) => ({
+      ...row,
+      price: getPriceForTier(product, pu, row.tier),
+    }));
   };
 
   const getCartItemQtyBase = (item: SaleCartItem) =>
@@ -559,15 +603,15 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     const factorToBase = Number(pu.factor_to_base || 1);
     const uomName = pu.uom?.name ?? '';
     if (!canUseStock(addProductTarget.id, addProductTarget.name, qty, factorToBase, uomName)) return;
-    const unit_price = getPriceForTier(addProductTarget, pu, stepTier);
+    const autoPrice = getAutoPriceForQty(addProductTarget, pu, qty);
 
     setCart(prev => [...prev, {
       product_id: addProductTarget.id,
       product_uom_id: pu.id,
       factor_to_base: factorToBase,
       qty,
-      price_type: stepTier,
-      unit_price,
+      price_type: autoPrice.tier,
+      unit_price: autoPrice.unitPrice,
       product_name: addProductTarget.name,
       product_sku: addProductTarget.sku,
       uom_name: uomName,
@@ -592,6 +636,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       if (requestedQtyBase - availableBase > STOCK_EPSILON) {
         showStockInsufficient(next.product_name ?? 'producto', availableBase, nextFactor, next.uom_name);
         return prev;
+      }
+      const product = products.find(p => p.id === next.product_id);
+      const productUom = product?.product_uoms.find(u => u.id === next.product_uom_id);
+      if (product && productUom) {
+        const autoPrice = getAutoPriceForQty(product, productUom, nextQty);
+        next.price_type = autoPrice.tier;
+        next.unit_price = autoPrice.unitPrice;
       }
       return prev.map((row, i) => i === idx ? next : row);
     });
@@ -1632,7 +1683,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         </div>
       )}
 
-      {/* ─── MODAL ADD PRODUCT (uom + tier + qty) ───────── */}
+      {/* ─── MODAL ADD PRODUCT (uom + qty + auto price) ───────── */}
       {addProductTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl">
@@ -1661,34 +1712,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 </select>
               </div>
 
-              {/* Tipo precio */}
-              <div>
-                <label className="mb-2 block text-[11px] font-black uppercase tracking-widest text-slate-500">2. Tipo de precio</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['MENUDEO','MEDIO_MAYOREO','MAYOREO'] as PriceTier[]).map(tier => {
-                    const pu = addProductTarget.product_uoms.find(u => u.id === stepUomId);
-                    const price = pu ? getPriceForTier(addProductTarget, pu, tier) : 0;
-                    const active = stepTier === tier;
-                    return (
-                      <button
-                        key={tier}
-                        type="button"
-                        onClick={() => setStepTier(tier)}
-                        className={`rounded-2xl border px-3 py-2 text-center transition-colors ${
-                          active ? 'border-orange-500 bg-orange-50' : 'border-slate-200 hover:border-slate-300'
-                        }`}
-                      >
-                        <p className={`text-[10px] font-black uppercase tracking-widest ${active ? 'text-orange-700' : 'text-slate-500'}`}>{PRICE_TIER_LABEL[tier]}</p>
-                        <p className={`mt-1 text-sm font-black ${active ? 'text-orange-700' : 'text-slate-900'}`}>{formatCurrency(price)}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {/* Cantidad */}
               <div>
-                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">3. Cantidad</label>
+                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">2. Cantidad</label>
                 <input
                   type="number" min="0" step="0.01" autoFocus
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-base font-bold outline-none focus:border-orange-400"
@@ -1696,14 +1722,53 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   onChange={e => setStepQty(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleAddToCart(); }}
                 />
-                {addProductTarget.product_uoms.find(u => u.id === stepUomId) && (
-                  <p className="mt-2 text-[11px] font-bold text-slate-500 text-right">
-                    Subtotal: <span className="text-base font-black text-orange-600">
-                      {formatCurrency(Number(stepQty) * getPriceForTier(addProductTarget, addProductTarget.product_uoms.find(u => u.id === stepUomId)!, stepTier))}
-                    </span>
-                  </p>
-                )}
               </div>
+
+              {(() => {
+                const pu = addProductTarget.product_uoms.find(u => u.id === stepUomId);
+                if (!pu) return null;
+                const qty = Number(stepQty) || 0;
+                const autoPrice = getAutoPriceForQty(addProductTarget, pu, qty);
+                const tierRows = getTierRangeRows(addProductTarget, pu);
+                return (
+                  <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-orange-700">Precio aplicado</p>
+                        <p className="mt-1 text-sm font-black text-slate-950">{PRICE_TIER_LABEL[autoPrice.tier]}</p>
+                        <p className="mt-0.5 text-[10px] font-bold text-slate-500">
+                          {autoPrice.qtyBase.toLocaleString('es-MX', { maximumFractionDigits: 4 })} en unidad base
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-base font-black text-orange-600">{formatCurrency(autoPrice.unitPrice)}</p>
+                        <p className="mt-1 text-[11px] font-bold text-slate-500">
+                          Subtotal: <span className="font-black text-slate-900">{formatCurrency(qty * autoPrice.unitPrice)}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {tierRows.map((row) => {
+                        const active = row.tier === autoPrice.tier;
+                        return (
+                          <div
+                            key={row.tier}
+                            className={`rounded-xl border px-2 py-2 ${active ? 'border-orange-400 bg-white' : 'border-orange-100 bg-orange-100/40'}`}
+                          >
+                            <p className={`text-[9px] font-black uppercase tracking-widest ${active ? 'text-orange-700' : 'text-slate-500'}`}>
+                              {PRICE_TIER_LABEL[row.tier]}
+                            </p>
+                            <p className="mt-1 text-[10px] font-black text-slate-700">{row.range}</p>
+                            <p className={`mt-1 text-xs font-black ${active ? 'text-orange-600' : 'text-slate-900'}`}>
+                              {formatCurrency(row.price)}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4 bg-slate-50/50">
               <button onClick={closeAddProduct} className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100">Cancelar</button>

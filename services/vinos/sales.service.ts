@@ -146,6 +146,7 @@ export const vinosSalesService = {
       return acc;
     }, {});
 
+    const stockBeforeDelete = new Map<string, number | null>();
     for (const [productId, qtyBase] of Object.entries(restoreByProduct)) {
       if (!Number.isFinite(qtyBase) || qtyBase <= 0) continue;
       const { data: stockRow, error: stockLoadError } = await supabaseVinos
@@ -155,20 +156,7 @@ export const vinosSalesService = {
         .eq('product_id', productId)
         .maybeSingle();
       if (stockLoadError) throw stockLoadError;
-
-      if (stockRow) {
-        const { error: stockUpdateError } = await supabaseVinos
-          .from('product_stocks')
-          .update({ qty: Number(stockRow.qty ?? 0) + qtyBase })
-          .eq('branch_id', sale.branch_id)
-          .eq('product_id', productId);
-        if (stockUpdateError) throw stockUpdateError;
-      } else {
-        const { error: stockInsertError } = await supabaseVinos
-          .from('product_stocks')
-          .insert({ branch_id: sale.branch_id, product_id: productId, qty: qtyBase });
-        if (stockInsertError) throw stockInsertError;
-      }
+      stockBeforeDelete.set(productId, stockRow ? Number(stockRow.qty ?? 0) : null);
     }
 
     const walletUsed = Number(sale.wallet_used ?? 0);
@@ -237,6 +225,26 @@ export const vinosSalesService = {
       .update({ deleted_at: new Date().toISOString(), delete_note: deleteNote })
       .eq('id', saleId);
     if (error) throw error;
+
+    for (const [productId, qtyBase] of Object.entries(restoreByProduct)) {
+      if (!Number.isFinite(qtyBase) || qtyBase <= 0) continue;
+      const previousQty = stockBeforeDelete.get(productId);
+      const restoredQty = Number(previousQty ?? 0) + qtyBase;
+
+      if (previousQty === null) {
+        const { error: stockInsertError } = await supabaseVinos
+          .from('product_stocks')
+          .insert({ branch_id: sale.branch_id, product_id: productId, qty: restoredQty });
+        if (stockInsertError) throw stockInsertError;
+      } else {
+        const { error: stockUpdateError } = await supabaseVinos
+          .from('product_stocks')
+          .update({ qty: restoredQty })
+          .eq('branch_id', sale.branch_id)
+          .eq('product_id', productId);
+        if (stockUpdateError) throw stockUpdateError;
+      }
+    }
   },
 
   async updatePaymentType(input: {
@@ -445,9 +453,7 @@ export const vinosSalesService = {
       .single();
     if (sErr) throw sErr;
 
-    // La base mueve inventario con triggers sobre sale_items. No usar la RPC legacy
-    // create_vinos_sale_atomic porque tambien descuenta product_stocks y duplica la salida.
-    const legacyItemsPayload = input.items.map(it => ({
+    const itemsPayload = input.items.map(it => ({
       sale_id: sale.id,
       product_id: it.product_id,
       product_uom_id: it.product_uom_id || null,
@@ -459,8 +465,19 @@ export const vinosSalesService = {
       line_total: Number(it.qty) * Number(it.unit_price),
     }));
 
-    const { error: iErr } = await supabaseVinos.from('sale_items').insert(legacyItemsPayload);
+    const { error: iErr } = await supabaseVinos.from('sale_items').insert(itemsPayload);
     if (iErr) throw iErr;
+
+    for (const [productId, requiredQtyBase] of Object.entries(requiredByProduct)) {
+      const stock = stockByProduct.get(productId);
+      const nextQty = Math.max(0, Number(stock?.qty ?? 0) - requiredQtyBase);
+      const { error: stockUpdateError } = await supabaseVinos
+        .from('product_stocks')
+        .update({ qty: nextQty })
+        .eq('branch_id', input.branch_id)
+        .eq('product_id', productId);
+      if (stockUpdateError) throw stockUpdateError;
+    }
 
     // Wallet usage
     if (input.wallet_used && input.wallet_used > 0 && input.customer_id) {
@@ -472,7 +489,6 @@ export const vinosSalesService = {
         notes: `Uso en venta ${sale.id}`,
         created_by: input.created_by,
       });
-      // Decrement balance
       const { data: cust } = await supabaseVinos
         .from('customers')
         .select('wallet_balance')
@@ -488,7 +504,7 @@ export const vinosSalesService = {
     // El crédito usado se registra en sales.credit_used; la deuda = Σ credit_used - Σ pagos.
     // credit_limit es la línea fija registrada al cliente, no se decrementa.
 
-    // Promotion redemption → marcar USADA
+    // Promotion redemption -> marcar USADA
     if (input.promotion_id) {
       await supabaseVinos
         .from('promotions')
