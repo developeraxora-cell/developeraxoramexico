@@ -79,6 +79,27 @@ export const authService = {
     return payload as AuthPayloadRow;
   },
 
+  async verifyPasswordForUser(identifier: string, password: string, expectedUserId: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('app_login_user', {
+      p_identifier: identifier.trim(),
+      p_password: password,
+    });
+
+    if (error) throw new Error('Código de verificación inválido.');
+
+    const payload = Array.isArray(data) ? data[0] : data;
+    const token = payload?.session_token ? String(payload.session_token) : null;
+    if (token) {
+      try {
+        await supabase.rpc('app_logout_user', { p_session_token: token });
+      } catch (logoutError) {
+        console.warn('No se pudo cerrar la sesión temporal de verificación.', logoutError);
+      }
+    }
+
+    return Boolean(payload?.user_id && String(payload.user_id) === expectedUserId);
+  },
+
   async signOut(sessionToken?: string | null) {
     const token = sessionToken || localStorage.getItem(SESSION_TOKEN_KEY);
     if (token) {
@@ -108,4 +129,3 @@ export const authService = {
     return buildUserFromPayload(payload as AuthPayloadRow);
   },
 };
-

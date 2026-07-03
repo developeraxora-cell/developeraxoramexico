@@ -13,6 +13,7 @@ export interface VinosProduct {
   price_retail: number;
   price_mid_wholesale: number;
   price_wholesale: number;
+  single_price_mode: boolean;
   purchase_cost: number | null;
   price_mid_wholesale_min_qty: number | null;
   price_wholesale_min_qty: number | null;
@@ -98,6 +99,7 @@ export type CreateProductInput = {
   price_retail: number;
   price_mid_wholesale: number;
   price_wholesale: number;
+  single_price_mode?: boolean;
   purchase_cost?: number | null;
   price_mid_wholesale_min_qty?: number | null;
   price_wholesale_min_qty?: number | null;
@@ -173,6 +175,7 @@ export const vinosProductsService = {
         price_retail: input.price_retail,
         price_mid_wholesale: input.price_mid_wholesale,
         price_wholesale: input.price_wholesale,
+        single_price_mode: input.single_price_mode ?? false,
         purchase_cost: input.purchase_cost ?? null,
         price_mid_wholesale_min_qty: input.price_mid_wholesale_min_qty ?? null,
         price_wholesale_min_qty: input.price_wholesale_min_qty ?? null,

@@ -21,6 +21,7 @@ interface FormState {
   price_retail: string;
   price_mid_wholesale: string;
   price_wholesale: string;
+  single_price_mode: boolean;
   price_mid_wholesale_min_qty: string;
   price_wholesale_min_qty: string;
   min_stock: string;
@@ -73,6 +74,7 @@ const emptyForm = (initialValues?: Partial<Pick<FormState, 'barcode' | 'name'>>)
   price_retail: '',
   price_mid_wholesale: '',
   price_wholesale: '',
+  single_price_mode: false,
   price_mid_wholesale_min_qty: '10',
   price_wholesale_min_qty: '20',
   min_stock: '0',
@@ -90,17 +92,31 @@ const emptyEquivalence = (): EquivalenceRow => ({
 const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 const formatMoneyInput = (value: number) => String(roundMoney(value));
 
-const buildSuggestedPrices = (purchaseCost: string, factorValue: string | number) => {
+const buildSuggestedPrices = (purchaseCost: string, factorValue: string | number, singlePriceMode = false) => {
   const cost = Number(purchaseCost);
   const factor = Number(factorValue || 1);
   if (!Number.isFinite(cost) || cost <= 0 || !Number.isFinite(factor) || factor <= 0) return null;
   const unitCost = cost * factor;
+  if (singlePriceMode) {
+    const price = formatMoneyInput(unitCost * 1.25);
+    return {
+      price_retail: price,
+      price_mid_wholesale: price,
+      price_wholesale: price,
+    };
+  }
   return {
     price_retail: formatMoneyInput(unitCost * 1.25),
     price_mid_wholesale: formatMoneyInput(unitCost * 1.2),
     price_wholesale: formatMoneyInput(unitCost * 1.15),
   };
 };
+
+const normalizeSinglePriceRow = (row: EquivalenceRow): EquivalenceRow => ({
+  ...row,
+  price_mid_wholesale: row.price_retail,
+  price_wholesale: row.price_retail,
+});
 
 const VinosProductModal: React.FC<Props> = ({
   isOpen,
@@ -136,6 +152,7 @@ const VinosProductModal: React.FC<Props> = ({
         price_retail: String(editTarget.price_retail),
         price_mid_wholesale: String(editTarget.price_mid_wholesale),
         price_wholesale: String(editTarget.price_wholesale),
+        single_price_mode: Boolean(editTarget.single_price_mode),
         price_mid_wholesale_min_qty: String(editTarget.price_mid_wholesale_min_qty ?? 10),
         price_wholesale_min_qty: String(editTarget.price_wholesale_min_qty ?? 20),
         min_stock: String(editTarget.min_stock),
@@ -184,7 +201,7 @@ const VinosProductModal: React.FC<Props> = ({
         }
         return prev;
       }
-      const suggested = buildSuggestedPrices(form.purchase_cost, 1);
+      const suggested = buildSuggestedPrices(form.purchase_cost, 1, form.single_price_mode);
       return [{
         uom_id: form.uom_id,
         factor_to_base: '1',
@@ -193,11 +210,11 @@ const VinosProductModal: React.FC<Props> = ({
         price_wholesale: suggested?.price_wholesale ?? '',
       }, ...prev];
     });
-  }, [form.purchase_cost, form.uom_id]);
+  }, [form.purchase_cost, form.single_price_mode, form.uom_id]);
 
   const applyPurchaseCostSuggestions = (purchaseCost: string) => {
     setEquivalences(prev => prev.map((row) => {
-      const suggested = buildSuggestedPrices(purchaseCost, row.factor_to_base || 1);
+      const suggested = buildSuggestedPrices(purchaseCost, row.factor_to_base || 1, form.single_price_mode);
       return suggested ? { ...row, ...suggested } : row;
     }));
   };
@@ -207,6 +224,15 @@ const VinosProductModal: React.FC<Props> = ({
     applyPurchaseCostSuggestions(value);
   };
 
+  const handleSinglePriceModeChange = (enabled: boolean) => {
+    setForm(f => ({ ...f, single_price_mode: enabled }));
+    setEquivalences(prev => prev.map((row) => {
+      if (enabled) return normalizeSinglePriceRow(row);
+      const suggested = buildSuggestedPrices(form.purchase_cost, row.factor_to_base || 1, false);
+      return suggested ? { ...row, ...suggested } : row;
+    }));
+  };
+
   const addEquivalence = () => setEquivalences(prev => [...prev, emptyEquivalence()]);
   const removeEquivalence = (idx: number) => setEquivalences(prev => prev.filter((_, i) => i !== idx));
   const updateEquivalence = (idx: number, patch: Partial<EquivalenceRow>) =>
@@ -214,8 +240,11 @@ const VinosProductModal: React.FC<Props> = ({
       if (i !== idx) return row;
       const next = { ...row, ...patch };
       if (Object.prototype.hasOwnProperty.call(patch, 'factor_to_base')) {
-        const suggested = buildSuggestedPrices(form.purchase_cost, next.factor_to_base);
+        const suggested = buildSuggestedPrices(form.purchase_cost, next.factor_to_base, form.single_price_mode);
         return suggested ? { ...next, ...suggested } : next;
+      }
+      if (form.single_price_mode && Object.prototype.hasOwnProperty.call(patch, 'price_retail')) {
+        return normalizeSinglePriceRow(next);
       }
       return next;
     }));
@@ -232,11 +261,16 @@ const VinosProductModal: React.FC<Props> = ({
 
     const baseRow = equivalences.find(e => Number(e.factor_to_base) === 1 && e.uom_id === form.uom_id);
     if (!baseRow) { setFormError('Falta la fila de la unidad base en equivalencias.'); return; }
+    const singlePriceMode = form.single_price_mode;
+    const baseRetailPrice = Number(baseRow.price_retail) || 0;
     const midMinQty = Number(form.price_mid_wholesale_min_qty);
     const wholesaleMinQty = Number(form.price_wholesale_min_qty);
-    if (!Number.isFinite(midMinQty) || midMinQty <= 0) { setFormError('El limite de medio mayoreo debe ser mayor a 0.'); return; }
-    if (!Number.isFinite(wholesaleMinQty) || wholesaleMinQty <= 0) { setFormError('El limite de mayoreo debe ser mayor a 0.'); return; }
-    if (wholesaleMinQty <= midMinQty) { setFormError('El limite de mayoreo debe ser mayor al limite de medio mayoreo.'); return; }
+    if (singlePriceMode && baseRetailPrice <= 0) { setFormError('El precio único debe ser mayor a 0.'); return; }
+    if (!singlePriceMode) {
+      if (!Number.isFinite(midMinQty) || midMinQty <= 0) { setFormError('El limite de medio mayoreo debe ser mayor a 0.'); return; }
+      if (!Number.isFinite(wholesaleMinQty) || wholesaleMinQty <= 0) { setFormError('El limite de mayoreo debe ser mayor a 0.'); return; }
+      if (wholesaleMinQty <= midMinQty) { setFormError('El limite de mayoreo debe ser mayor al limite de medio mayoreo.'); return; }
+    }
 
     setSaving(true);
     setFormError('');
@@ -247,12 +281,13 @@ const VinosProductModal: React.FC<Props> = ({
         uom_id: form.uom_id || null,
         is_divisible: form.is_divisible,
         barcode: form.barcode || null,
-        price_retail: Number(baseRow.price_retail) || 0,
-        price_mid_wholesale: Number(baseRow.price_mid_wholesale) || 0,
-        price_wholesale: Number(baseRow.price_wholesale) || 0,
+        price_retail: baseRetailPrice,
+        price_mid_wholesale: singlePriceMode ? baseRetailPrice : Number(baseRow.price_mid_wholesale) || 0,
+        price_wholesale: singlePriceMode ? baseRetailPrice : Number(baseRow.price_wholesale) || 0,
+        single_price_mode: singlePriceMode,
         purchase_cost: Number(form.purchase_cost) || null,
-        price_mid_wholesale_min_qty: midMinQty,
-        price_wholesale_min_qty: wholesaleMinQty,
+        price_mid_wholesale_min_qty: singlePriceMode ? null : midMinQty,
+        price_wholesale_min_qty: singlePriceMode ? null : wholesaleMinQty,
         min_stock: Number(form.min_stock) || 0,
         image_url: form.image_url || null,
       };
@@ -266,8 +301,8 @@ const VinosProductModal: React.FC<Props> = ({
         uom_id: eq.uom_id,
         factor_to_base: Number(eq.factor_to_base) || 1,
         price_retail: Number(eq.price_retail) || 0,
-        price_mid_wholesale: Number(eq.price_mid_wholesale) || 0,
-        price_wholesale: Number(eq.price_wholesale) || 0,
+        price_mid_wholesale: singlePriceMode ? Number(eq.price_retail) || 0 : Number(eq.price_mid_wholesale) || 0,
+        price_wholesale: singlePriceMode ? Number(eq.price_retail) || 0 : Number(eq.price_wholesale) || 0,
       })));
 
       const productUoms = await vinosProductsService.listAllProductUoms([product.id]);
@@ -400,33 +435,54 @@ const VinosProductModal: React.FC<Props> = ({
                 </p>
               </div>
 
-              <div>
-                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">M. mayoreo desde</label>
-                <input
-                  type="number"
-                  min="0.0001"
-                  step="0.0001"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-                  value={form.price_mid_wholesale_min_qty}
-                  onChange={e => setForm(f => ({ ...f, price_mid_wholesale_min_qty: e.target.value }))}
-                  placeholder="Cantidad base"
-                />
-                <p className="mt-1 text-[10px] font-bold text-slate-400">Cantidad en unidad base para aplicar medio mayoreo.</p>
+              <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                    checked={form.single_price_mode}
+                    onChange={e => handleSinglePriceModeChange(e.target.checked)}
+                  />
+                  <span>
+                    <span className="block text-xs font-black uppercase tracking-widest text-slate-800">Usar precio único</span>
+                    <span className="mt-0.5 block text-[11px] font-bold text-slate-500">
+                      Si está activo solo se captura el precio de menudeo y se usa para cualquier cantidad.
+                    </span>
+                  </span>
+                </label>
               </div>
 
-              <div>
-                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Mayoreo desde</label>
-                <input
-                  type="number"
-                  min="0.0001"
-                  step="0.0001"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-                  value={form.price_wholesale_min_qty}
-                  onChange={e => setForm(f => ({ ...f, price_wholesale_min_qty: e.target.value }))}
-                  placeholder="Cantidad base"
-                />
-                <p className="mt-1 text-[10px] font-bold text-slate-400">Desde esta cantidad base se aplicara mayoreo.</p>
-              </div>
+              {!form.single_price_mode && (
+                <>
+                  <div>
+                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">M. mayoreo desde</label>
+                    <input
+                      type="number"
+                      min="0.0001"
+                      step="0.0001"
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      value={form.price_mid_wholesale_min_qty}
+                      onChange={e => setForm(f => ({ ...f, price_mid_wholesale_min_qty: e.target.value }))}
+                      placeholder="Cantidad base"
+                    />
+                    <p className="mt-1 text-[10px] font-bold text-slate-400">Cantidad en unidad base para aplicar medio mayoreo.</p>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Mayoreo desde</label>
+                    <input
+                      type="number"
+                      min="0.0001"
+                      step="0.0001"
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      value={form.price_wholesale_min_qty}
+                      onChange={e => setForm(f => ({ ...f, price_wholesale_min_qty: e.target.value }))}
+                      placeholder="Cantidad base"
+                    />
+                    <p className="mt-1 text-[10px] font-bold text-slate-400">Desde esta cantidad base se aplicara mayoreo.</p>
+                  </div>
+                </>
+              )}
             </div>
           </section>
 
@@ -453,18 +509,18 @@ const VinosProductModal: React.FC<Props> = ({
               </p>
             ) : (
               <div className="space-y-2">
-                <div className="hidden md:grid grid-cols-[1fr_100px_100px_100px_100px_32px] gap-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                <div className={`hidden md:grid ${form.single_price_mode ? 'grid-cols-[1fr_100px_130px_32px]' : 'grid-cols-[1fr_100px_100px_100px_100px_32px]'} gap-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400`}>
                   <span>Unidad</span>
                   <span>Factor</span>
-                  <span>Menudeo</span>
-                  <span>M. Mayoreo</span>
-                  <span>Mayoreo</span>
+                  <span>{form.single_price_mode ? 'Precio único' : 'Menudeo'}</span>
+                  {!form.single_price_mode && <span>M. Mayoreo</span>}
+                  {!form.single_price_mode && <span>Mayoreo</span>}
                   <span></span>
                 </div>
                 {equivalences.map((eq, idx) => {
                   const isBase = Number(eq.factor_to_base) === 1 && eq.uom_id === form.uom_id;
                   return (
-                    <div key={idx} className={`grid grid-cols-2 md:grid-cols-[1fr_100px_100px_100px_100px_32px] gap-2 rounded-xl border p-2 ${isBase ? 'border-orange-300 bg-orange-50' : 'border-slate-200 bg-white'}`}>
+                    <div key={idx} className={`grid grid-cols-2 ${form.single_price_mode ? 'md:grid-cols-[1fr_100px_130px_32px]' : 'md:grid-cols-[1fr_100px_100px_100px_100px_32px]'} gap-2 rounded-xl border p-2 ${isBase ? 'border-orange-300 bg-orange-50' : 'border-slate-200 bg-white'}`}>
                       {isBase ? (
                         <div className="flex items-center gap-2 px-2 py-1.5">
                           <span className="rounded-md bg-orange-200 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-orange-800">Base</span>
@@ -495,24 +551,28 @@ const VinosProductModal: React.FC<Props> = ({
                       <input
                         type="number" min="0" step="0.01"
                         className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400"
-                        placeholder="Menudeo"
+                        placeholder={form.single_price_mode ? 'Precio' : 'Menudeo'}
                         value={eq.price_retail}
                         onChange={e => updateEquivalence(idx, { price_retail: e.target.value })}
                       />
-                      <input
-                        type="number" min="0" step="0.01"
-                        className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400"
-                        placeholder="M.May."
-                        value={eq.price_mid_wholesale}
-                        onChange={e => updateEquivalence(idx, { price_mid_wholesale: e.target.value })}
-                      />
-                      <input
-                        type="number" min="0" step="0.01"
-                        className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400"
-                        placeholder="Mayoreo"
-                        value={eq.price_wholesale}
-                        onChange={e => updateEquivalence(idx, { price_wholesale: e.target.value })}
-                      />
+                      {!form.single_price_mode && (
+                        <input
+                          type="number" min="0" step="0.01"
+                          className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400"
+                          placeholder="M.May."
+                          value={eq.price_mid_wholesale}
+                          onChange={e => updateEquivalence(idx, { price_mid_wholesale: e.target.value })}
+                        />
+                      )}
+                      {!form.single_price_mode && (
+                        <input
+                          type="number" min="0" step="0.01"
+                          className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400"
+                          placeholder="Mayoreo"
+                          value={eq.price_wholesale}
+                          onChange={e => updateEquivalence(idx, { price_wholesale: e.target.value })}
+                        />
+                      )}
                       {isBase ? (
                         <span className="flex items-center justify-center text-slate-300" title="No se puede eliminar la unidad base">
                           <Trash2 size={14}/>

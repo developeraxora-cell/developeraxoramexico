@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Plus, Search, Pencil, Trash2, Package, TrendingUp, AlertTriangle, X, Settings, RefreshCw, Check, ChevronDown, Save, BarChart3, Loader2,
-  DollarSign, SlidersHorizontal, FileDown,
+  DollarSign, SlidersHorizontal, FileDown, ShieldCheck,
 } from 'lucide-react';
-import { Branch, User } from '../../types';
+import { Branch, Role, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
+import { authService } from '../../services/auth/auth.service';
 import {
   vinosProductsService,
   type ProductWithStock,
@@ -52,6 +53,11 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
   // delete
   const [deleteTarget, setDeleteTarget] = useState<ProductWithStock | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteVerificationCode, setDeleteVerificationCode] = useState('');
+  const [deleteVerificationValid, setDeleteVerificationValid] = useState(false);
+  const [deleteVerifying, setDeleteVerifying] = useState(false);
+  const [deleteObservation, setDeleteObservation] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   // stock manual
   const [stockTarget, setStockTarget] = useState<ProductWithStock | null>(null);
@@ -214,14 +220,109 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
 
   const closeModal = () => { setModalOpen(false); setEditTarget(null); };
 
+  const openDeleteConfirm = (product: ProductWithStock) => {
+    setDeleteTarget(product);
+    setDeleteVerificationCode('');
+    setDeleteVerificationValid(false);
+    setDeleteVerifying(false);
+    setDeleteObservation('');
+    setDeleteError('');
+  };
+
+  const closeDeleteConfirm = () => {
+    if (deleting || deleteVerifying) return;
+    setDeleteTarget(null);
+    setDeleteVerificationCode('');
+    setDeleteVerificationValid(false);
+    setDeleteObservation('');
+    setDeleteError('');
+  };
+
+  const verifyDeleteCode = async () => {
+    const code = deleteVerificationCode.trim();
+    setDeleteError('');
+
+    if (currentUser.role !== Role.SUPERADMIN) {
+      setDeleteError('Esta eliminación requiere la contraseña del usuario SUPERADMIN actual.');
+      return;
+    }
+    if (!code) {
+      setDeleteError('Ingresa el código de verificación.');
+      return;
+    }
+
+    setDeleteVerifying(true);
+    try {
+      const identifier = currentUser.username || currentUser.email || currentUser.id;
+      const valid = await authService.verifyPasswordForUser(identifier, code, currentUser.id);
+      if (!valid) {
+        setDeleteError('El código no corresponde al superadmin actual.');
+        setDeleteVerificationValid(false);
+        return;
+      }
+      setDeleteVerificationValid(true);
+      setDeleteVerificationCode('');
+    } catch (e) {
+      setDeleteVerificationValid(false);
+      setDeleteError(e instanceof Error ? e.message : 'No se pudo validar el código.');
+    } finally {
+      setDeleteVerifying(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    const note = deleteObservation.trim();
+    if (!deleteVerificationValid) {
+      setDeleteError('Primero valida el código de verificación.');
+      return;
+    }
+    if (!note) {
+      setDeleteError('La observación es obligatoria.');
+      return;
+    }
+
     setDeleting(true);
+    setDeleteError('');
     try {
       await vinosProductsService.deactivate(deleteTarget.id);
+      logVinosAudit({
+        branch_id: selectedBranchId,
+        branch_name: branchName,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ELIMINAR',
+        entity_type: 'producto',
+        entity_id: String(deleteTarget.id),
+        description: `Producto desactivado: ${deleteTarget.name}`,
+        justification: note,
+        previous_data: {
+          product_id: deleteTarget.id,
+          name: deleteTarget.name,
+          sku: deleteTarget.sku,
+          stock: deleteTarget.total_stock,
+          authorized_by: {
+            id: currentUser.id,
+            name: currentUser.name,
+            role: currentUser.role,
+          },
+        },
+        new_data: {
+          is_active: false,
+          deleted_at: new Date().toISOString(),
+          observation: note,
+        },
+      });
       setProducts(prev => prev.filter(p => p.id !== deleteTarget.id));
       setDeleteTarget(null);
-    } catch (e) { console.error(e); }
+      setDeleteVerificationCode('');
+      setDeleteVerificationValid(false);
+      setDeleteObservation('');
+      setDeleteError('');
+    } catch (e) {
+      console.error(e);
+      setDeleteError(e instanceof Error ? e.message : 'No se pudo eliminar el producto.');
+    }
     finally { setDeleting(false); }
   };
 
@@ -583,9 +684,12 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                       <td className="px-4 py-3 text-xs font-bold text-slate-800">
                         {p.last_purchase_cost != null ? formatCurrency(p.last_purchase_cost) : '—'}
                       </td>
-                      <td className="px-4 py-3 text-xs font-bold text-slate-800">{formatCurrency(p.price_retail)}</td>
-                      <td className="px-4 py-3 text-xs font-bold text-slate-800">{formatCurrency(p.price_mid_wholesale)}</td>
-                      <td className="px-4 py-3 text-xs font-bold text-slate-800">{formatCurrency(p.price_wholesale)}</td>
+                      <td className="px-4 py-3 text-xs font-bold text-slate-800">
+                        {formatCurrency(p.price_retail)}
+                        {p.single_price_mode && <p className="mt-0.5 text-[9px] font-black uppercase tracking-widest text-orange-500">Único</p>}
+                      </td>
+                      <td className="px-4 py-3 text-xs font-bold text-slate-800">{p.single_price_mode ? '—' : formatCurrency(p.price_mid_wholesale)}</td>
+                      <td className="px-4 py-3 text-xs font-bold text-slate-800">{p.single_price_mode ? '—' : formatCurrency(p.price_wholesale)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <button onClick={() => openHistory(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600" title="Ver estadísticas">
@@ -598,7 +702,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                             <DollarSign size={14}/>
                           </button>
                           <button onClick={() => openEdit(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Editar"><Pencil size={14}/></button>
-                          <button onClick={() => setDeleteTarget(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
+                          <button onClick={() => openDeleteConfirm(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
                         </div>
                       </td>
                     </tr>
@@ -851,21 +955,75 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
       {/* ─── CONFIRMAR ELIMINAR ──────────────────────────── */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-500">
-              <Trash2 size={24} />
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-5">
+              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${deleteVerificationValid ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
+                {deleteVerificationValid ? <ShieldCheck size={22} /> : <Trash2 size={22} />}
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">Eliminar producto</h3>
+                <p className="text-xs font-bold text-slate-500">
+                  <span className="text-slate-800">{deleteTarget.name}</span> se desactivará.
+                </p>
+              </div>
             </div>
-            <h3 className="text-base font-black text-slate-900">¿Eliminar producto?</h3>
-            <p className="mt-2 text-sm text-slate-500">
-              <span className="font-bold">{deleteTarget.name}</span> se desactivará. No se borra historial.
-            </p>
-            <div className="mt-5 flex gap-3">
-              <button onClick={() => setDeleteTarget(null)} className="flex-1 rounded-2xl border border-slate-200 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">
+
+            <div className="space-y-4 px-6 py-5">
+              {!deleteVerificationValid ? (
+                <>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Código de verificación</label>
+                    <input
+                      type="password"
+                      value={deleteVerificationCode}
+                      onChange={e => setDeleteVerificationCode(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && verifyDeleteCode()}
+                      className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      placeholder="Contraseña del SUPERADMIN"
+                      autoComplete="current-password"
+                    />
+                  </div>
+                  <p className="rounded-2xl bg-orange-50 px-4 py-3 text-xs font-bold leading-relaxed text-orange-700">
+                    Para continuar se debe validar la contraseña del usuario SUPERADMIN actual: {currentUser.name}.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-2xl border border-green-100 bg-green-50 px-4 py-3">
+                    <p className="text-xs font-black uppercase tracking-widest text-green-700">Código validado</p>
+                    <p className="mt-1 text-xs font-bold text-green-800">Autorizado por {currentUser.name}.</p>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-red-500">Observación de eliminación *</label>
+                    <textarea
+                      rows={3}
+                      value={deleteObservation}
+                      onChange={e => setDeleteObservation(e.target.value)}
+                      className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                      placeholder="Explica por qué se elimina este producto..."
+                    />
+                  </div>
+                </>
+              )}
+
+              {deleteError && (
+                <p className="rounded-2xl bg-red-50 px-4 py-3 text-xs font-bold text-red-600">{deleteError}</p>
+              )}
+            </div>
+
+            <div className="flex gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
+              <button onClick={closeDeleteConfirm} disabled={deleting || deleteVerifying} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50">
                 Cancelar
               </button>
-              <button onClick={handleDelete} disabled={deleting} className="flex-1 rounded-2xl bg-red-500 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-red-600 disabled:opacity-50">
-                {deleting ? 'Eliminando…' : 'Eliminar'}
-              </button>
+              {!deleteVerificationValid ? (
+                <button onClick={verifyDeleteCode} disabled={deleteVerifying || !deleteVerificationCode.trim()} className="flex-1 rounded-2xl bg-slate-900 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-700 disabled:opacity-50">
+                  {deleteVerifying ? 'Validando...' : 'Validar'}
+                </button>
+              ) : (
+                <button onClick={handleDelete} disabled={deleting || !deleteObservation.trim()} className="flex-1 rounded-2xl bg-red-500 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-red-600 disabled:opacity-50">
+                  {deleting ? 'Eliminando...' : 'Eliminar'}
+                </button>
+              )}
             </div>
           </div>
         </div>

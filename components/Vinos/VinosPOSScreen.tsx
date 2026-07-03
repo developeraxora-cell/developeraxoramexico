@@ -500,6 +500,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   };
 
   const getTierForBaseQty = (product: ProductFull, qtyBase: number): PriceTier => {
+    if (product.single_price_mode) return 'MENUDEO';
     const wholesaleMin = Number(product.price_wholesale_min_qty ?? 0);
     const midMin = Number(product.price_mid_wholesale_min_qty ?? 0);
     if (Number.isFinite(wholesaleMin) && wholesaleMin > 0 && qtyBase >= wholesaleMin) return 'MAYOREO';
@@ -522,6 +523,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     value.toLocaleString('es-MX', { maximumFractionDigits: 4 });
 
   const getTierRangeRows = (product: ProductFull, pu: ProductUomFull) => {
+    if (product.single_price_mode) {
+      return [{
+        tier: 'MENUDEO' as PriceTier,
+        range: 'Cualquier cantidad',
+        price: getPriceForTier(product, pu, 'MENUDEO'),
+      }];
+    }
     const midMin = Number(product.price_mid_wholesale_min_qty ?? 10);
     const wholesaleMin = Number(product.price_wholesale_min_qty ?? 20);
     return [
@@ -617,6 +625,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       uom_name: uomName,
     }]);
     setAddProductTarget(null);
+    setSearch('');
+    setStepQty('1');
   };
 
   const updateCartItem = (idx: number, patch: Partial<SaleCartItem>) =>
@@ -1747,7 +1757,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                         </p>
                       </div>
                     </div>
-                    <div className="mt-3 grid grid-cols-3 gap-2">
+                    <div className={`mt-3 grid gap-2 ${tierRows.length === 1 ? 'grid-cols-1' : 'grid-cols-3'}`}>
                       {tierRows.map((row) => {
                         const active = row.tier === autoPrice.tier;
                         return (
