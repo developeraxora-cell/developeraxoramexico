@@ -57,8 +57,8 @@ const wait = (ms: number) => new Promise<void>(resolve => window.setTimeout(reso
 const getCashChange = (cashReceivedValue: number, saleTotal: number) =>
   Math.max(0, Number(cashReceivedValue || 0) - Number(saleTotal || 0));
 const roundCurrency = (value: number) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
-const getStoredCardCommission = (sale: { payment_method: PaymentMethod; subtotal: number; discount_amount: number; wallet_used: number; total: number }) => {
-  if (sale.payment_method !== 'TARJETA') return 0;
+const getStoredCardCommission = (sale: { payment_method: PaymentMethod; split_payment_method?: PaymentMethod | null; subtotal: number; discount_amount: number; wallet_used: number; total: number }) => {
+  if (sale.payment_method !== 'TARJETA' && sale.split_payment_method !== 'TARJETA') return 0;
   const purchaseTotal = Math.max(0, Number(sale.subtotal ?? 0) - Number(sale.discount_amount ?? 0) - Number(sale.wallet_used ?? 0));
   return roundCurrency(Math.max(0, Number(sale.total ?? 0) - purchaseTotal));
 };
@@ -121,6 +121,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   // pago
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('EFECTIVO');
   const [cashReceived, setCashReceived] = useState('');
+  const [creditAmount, setCreditAmount] = useState('');
+  const [creditRemainderMethod, setCreditRemainderMethod] = useState<'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA'>('EFECTIVO');
+  const [creditRemainderCashReceived, setCreditRemainderCashReceived] = useState('');
   const [useCoupon, setUseCoupon] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -455,13 +458,60 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const isTarjeta = paymentMethod === 'TARJETA';
 
   const creditAvailable = Math.max(0, (selectedCustomer?.credit_limit ?? 0) - customerDebt);
-  const cardCommissionAmount = isTarjeta && !isCortesia ? roundCurrency(totalAfterWallet * CARD_COMMISSION_RATE) : 0;
+  const creditMaxAllowed = Math.min(creditAvailable, totalAfterWallet);
+  const creditAmountRequested = Number(creditAmount) || 0;
+  const creditUsedActual = isCredito ? Math.min(Math.max(0, creditAmountRequested), creditMaxAllowed) : 0;
+  const creditRemainderBase = isCredito ? Math.max(0, totalAfterWallet - creditUsedActual) : 0;
+  const creditRemainderTotal = roundCurrency(creditRemainderBase + (isCredito && creditRemainderMethod === 'TARJETA' ? roundCurrency(creditRemainderBase * CARD_COMMISSION_RATE) : 0));
+  const cardCommissionAmount = !isCortesia && (
+    isTarjeta
+      ? roundCurrency(totalAfterWallet * CARD_COMMISSION_RATE)
+      : isCredito && creditRemainderMethod === 'TARJETA'
+        ? roundCurrency(creditRemainderBase * CARD_COMMISSION_RATE)
+        : 0
+  );
   const total = isCortesia ? 0 : roundCurrency(totalAfterWallet + cardCommissionAmount);
   const cashReceivedNum = Number(cashReceived) || 0;
+  const creditRemainderCashReceivedNum = Number(creditRemainderCashReceived) || 0;
   const change = isEfectivo && cashReceivedNum > 0 ? getCashChange(cashReceivedNum, total) : 0;
-  const cashPaymentInvalid = isEfectivo && total > 0 && cashReceivedNum < total;
+  const creditRemainderCashChange = isCredito && creditRemainderMethod === 'EFECTIVO' && creditRemainderCashReceivedNum > 0
+    ? getCashChange(creditRemainderCashReceivedNum, creditRemainderTotal)
+    : 0;
+  const cashPaymentInvalid =
+    (isEfectivo && total > 0 && cashReceivedNum < total) ||
+    (isCredito && creditRemainderMethod === 'EFECTIVO' && creditRemainderTotal > 0 && creditRemainderCashReceivedNum < creditRemainderTotal);
+  const creditPaymentInvalid = isCredito && (!selectedCustomer || creditAmountRequested <= 0 || creditAmountRequested - creditMaxAllowed > STOCK_EPSILON);
   const isCashRegisterOpen = Boolean(cashSession);
   const shouldShowCashStartGate = cashSessionReady && !isCashRegisterOpen && !cashOpenModal;
+
+  const handleCreditAmountChange = (value: string) => {
+    if (value.trim() === '') {
+      setCreditAmount('');
+      return;
+    }
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return;
+    if (numeric < 0) {
+      setCreditAmount('0');
+      return;
+    }
+    if (numeric > creditMaxAllowed) {
+      setCreditAmount(String(roundCurrency(creditMaxAllowed)));
+      return;
+    }
+    setCreditAmount(value);
+  };
+
+  useEffect(() => {
+    if (!isCredito) return;
+    setCreditAmount(prev => {
+      const current = Number(prev);
+      if (!prev || !Number.isFinite(current) || current <= 0 || current > creditMaxAllowed) {
+        return creditMaxAllowed > 0 ? String(roundCurrency(creditMaxAllowed)) : '';
+      }
+      return prev;
+    });
+  }, [creditMaxAllowed, isCredito]);
 
   // ── add product modal helpers ──────────────────────────
   const openAddProduct = (p: ProductFull) => {
@@ -667,6 +717,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     setManualDiscountOpen(false); setManualDiscountPercent(''); setManualDiscountJustification(''); setManualDiscountError(''); setManualDiscountApplied(null);
     setUseWallet(false); setWalletAmount('0');
     setCashReceived('');
+    setCreditAmount('');
+    setCreditRemainderMethod('EFECTIVO');
+    setCreditRemainderCashReceived('');
     setPaymentMethod('EFECTIVO');
     setSaleNotes('');
     setCheckoutOpen(false);
@@ -795,6 +848,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const getSaleTypeInfo = (s: import('../../services/vinos/sales.service').SaleRow) => {
     if (Number(s.wallet_used ?? 0) > 0 && Number(s.wallet_used) >= Number(s.total)) {
       return { label: 'SALDO',    color: '#a855f7', bg: 'bg-purple-100', text: 'text-purple-700' };
+    }
+    if (s.payment_method === 'CREDITO' && Number(s.split_payment_amount ?? 0) > 0) {
+      return { label: 'MIXTO', color: '#f97316', bg: 'bg-orange-100', text: 'text-orange-700' };
     }
     if (s.payment_method === 'CREDITO') {
       return { label: 'CREDITO',  color: '#ef4444', bg: 'bg-red-100',    text: 'text-red-700' };
@@ -1034,6 +1090,10 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         creditUsed: Number(s.credit_used ?? 0),
         cashReceived: Number(s.cash_received ?? 0),
         cashChange: s.payment_method === 'EFECTIVO' ? getCashChange(Number(s.cash_received ?? 0), Number(s.total ?? 0)) : 0,
+        splitPaymentMethod: s.split_payment_method as 'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA' | null,
+        splitPaymentAmount: Number(s.split_payment_amount ?? 0),
+        splitCashReceived: s.split_payment_method === 'EFECTIVO' ? Number(s.cash_received ?? 0) : 0,
+        splitCashChange: s.split_payment_method === 'EFECTIVO' ? getCashChange(Number(s.cash_received ?? 0), Number(s.split_payment_amount ?? 0)) : 0,
         saleNotes: s.notes,
         items,
         subtotal: Number(s.subtotal),
@@ -1080,8 +1140,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       return;
     }
     if (isCredito && !customerId) { setFeedback({ type: 'error', msg: 'Crédito requiere cliente seleccionado.' }); return; }
-    if (isCredito && totalAfterWallet > creditAvailable) {
-      setFeedback({ type: 'error', msg: `Crédito insuficiente. Disponible: ${formatCurrency(creditAvailable)}` });
+    if (creditPaymentInvalid) {
+      setFeedback({ type: 'error', msg: `Crédito inválido. Disponible: ${formatCurrency(creditAvailable)}` });
       return;
     }
     flushSync(() => {
@@ -1109,6 +1169,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       : null;
     const notesForSale = [saleNotes.trim(), manualDiscountNote].filter(Boolean).join(' | ') || null;
     const notesForTicket = notesForSale;
+    const splitPaymentMethod = isCredito && creditRemainderTotal > 0 ? creditRemainderMethod : null;
+    const splitPaymentAmount = isCredito ? creditRemainderTotal : 0;
     try {
       const saleId = await vinosSalesService.create({
         branch_id: branchDbId,
@@ -1121,8 +1183,10 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         promotion_id: manualDiscountApplied ? null : appliedPromoId,
         promotion_code: !manualDiscountApplied && appliedPromoId ? couponCode.trim().toUpperCase() : null,
         wallet_used: walletUsedActual,
-        credit_used: isCredito ? totalAfterWallet : 0,
-        cash_received: isEfectivo ? cashReceivedNum : 0,
+        credit_used: isCredito ? creditUsedActual : 0,
+        cash_received: isEfectivo ? cashReceivedNum : isCredito && creditRemainderMethod === 'EFECTIVO' ? creditRemainderCashReceivedNum : 0,
+        split_payment_method: splitPaymentMethod,
+        split_payment_amount: splitPaymentAmount,
         notes: notesForSale,
         created_by: currentUser.id,
         items: cart,
@@ -1136,9 +1200,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         cashierName: currentUser.name,
         paymentMethod,
         walletUsed: walletUsedActual,
-        creditUsed: isCredito ? totalAfterWallet : 0,
+        creditUsed: isCredito ? creditUsedActual : 0,
         cashReceived: isEfectivo ? cashReceivedNum : 0,
         cashChange: isEfectivo ? change : 0,
+        splitPaymentMethod,
+        splitPaymentAmount,
+        splitCashReceived: isCredito && creditRemainderMethod === 'EFECTIVO' ? creditRemainderCashReceivedNum : 0,
+        splitCashChange: isCredito && creditRemainderMethod === 'EFECTIVO' ? creditRemainderCashChange : 0,
         saleNotes: notesForTicket,
         items: ticketItems,
         subtotal,
@@ -1163,11 +1231,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           customer_id: customerId,
           items_count: cart.length,
           wallet_used: walletUsedActual,
-          credit_used: isCredito ? totalAfterWallet : 0,
-          cash_received: isEfectivo ? cashReceivedNum : 0,
-          cash_change: isEfectivo ? change : 0,
+          credit_used: isCredito ? creditUsedActual : 0,
+          split_payment_method: splitPaymentMethod,
+          split_payment_amount: splitPaymentAmount,
+          cash_received: isEfectivo ? cashReceivedNum : isCredito && creditRemainderMethod === 'EFECTIVO' ? creditRemainderCashReceivedNum : 0,
+          cash_change: isEfectivo ? change : isCredito && creditRemainderMethod === 'EFECTIVO' ? creditRemainderCashChange : 0,
           discount_amount: activeDiscount,
-          bank_commission_rate: isTarjeta ? CARD_COMMISSION_RATE : 0,
+          bank_commission_rate: isTarjeta || (isCredito && creditRemainderMethod === 'TARJETA') ? CARD_COMMISSION_RATE : 0,
           bank_commission_amount: cardCommissionAmount,
           purchase_total_before_commission: totalAfterWallet,
           manual_discount_percent: manualDiscountApplied?.percent ?? null,
@@ -1178,7 +1248,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         },
       });
       let cashDrawerWarning = '';
-      if (isEfectivo) {
+      if (isEfectivo || (isCredito && creditRemainderMethod === 'EFECTIVO' && creditRemainderTotal > 0)) {
         try {
           await openVinosCashDrawer();
         } catch (drawerError) {
@@ -1954,8 +2024,56 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   <p className="mt-2 text-[10px] text-slate-400">Crédito requiere cliente seleccionado.</p>
                 )}
                 {isCredito && selectedCustomer && (
-                  <div className="mt-2 rounded-xl bg-blue-50 px-3 py-2 text-[11px] text-blue-700">
-                    Se descontará <strong>{formatCurrency(totalAfterWallet)}</strong> del crédito de <strong>{selectedCustomer.name}</strong> (disponible: {formatCurrency(creditAvailable)}).
+                  <div className="mt-2 space-y-3 rounded-xl bg-blue-50 px-3 py-3 text-[11px] text-blue-700">
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Disponible de <strong>{selectedCustomer.name}</strong></span>
+                      <strong>{formatCurrency(creditAvailable)}</strong>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-blue-700">Monto a crédito</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        max={creditMaxAllowed}
+                        value={creditAmount}
+                        onChange={e => handleCreditAmountChange(e.target.value)}
+                        className="w-full rounded-xl border border-blue-100 bg-white px-3 py-2 text-sm font-black text-slate-900 outline-none focus:border-blue-300"
+                        placeholder="Monto que quedará como deuda"
+                      />
+                      <p className="mt-1 text-[10px] font-bold text-blue-600">
+                        Máximo permitido: {formatCurrency(creditMaxAllowed)}
+                      </p>
+                    </div>
+                    {creditRemainderBase > 0 ? (
+                      <div className="space-y-2 rounded-xl bg-white px-3 py-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="font-bold text-slate-600">Restante por pagar</span>
+                          <strong className="text-slate-900">{formatCurrency(creditRemainderBase)}</strong>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Pagar restante con</label>
+                          <select
+                            value={creditRemainderMethod}
+                            onChange={e => setCreditRemainderMethod(e.target.value as 'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA')}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-orange-400"
+                          >
+                            <option value="EFECTIVO">Efectivo</option>
+                            <option value="TRANSFERENCIA">Transferencia</option>
+                            <option value="TARJETA">Tarjeta</option>
+                          </select>
+                        </div>
+                        {creditRemainderMethod === 'TARJETA' && (
+                          <p className="rounded-lg bg-indigo-50 px-3 py-2 text-[11px] font-bold text-indigo-700">
+                            Comisión bancaria sobre el restante: {formatCurrency(cardCommissionAmount)}. Total restante a cobrar: {formatCurrency(creditRemainderTotal)}.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="rounded-xl bg-white px-3 py-2 text-[11px] font-bold text-blue-700">
+                        El crédito cubre el total pendiente.
+                      </p>
+                    )}
                   </div>
                 )}
                 {isTarjeta && totalAfterWallet > 0 && (
@@ -2040,19 +2158,60 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 </section>
               ) : null}
 
+              {isCredito && creditRemainderMethod === 'EFECTIVO' && creditRemainderTotal > 0 ? (
+                <section className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Efectivo recibido para restante</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-base font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    placeholder="Ej. 200.00"
+                    value={creditRemainderCashReceived}
+                    onChange={e => setCreditRemainderCashReceived(e.target.value)}
+                  />
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-xl bg-white px-3 py-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Restante</p>
+                      <p className="mt-1 font-black text-slate-900">{formatCurrency(creditRemainderTotal)}</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vuelto</p>
+                      <p className={`mt-1 font-black ${cashPaymentInvalid ? 'text-red-500' : 'text-green-600'}`}>{formatCurrency(creditRemainderCashChange)}</p>
+                    </div>
+                  </div>
+                  {cashPaymentInvalid && (
+                    <p className="mt-2 text-[11px] font-bold text-red-500">
+                      El efectivo recibido debe cubrir el restante.
+                    </p>
+                  )}
+                </section>
+              ) : null}
+
               {/* Resumen */}
               <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-1.5 text-xs">
                 <div className="flex justify-between text-slate-500"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
                 {activeDiscount > 0 && <div className="flex justify-between text-green-600"><span>{discountLabel}</span><span>-{formatCurrency(activeDiscount)}</span></div>}
                 {walletUsedActual > 0 && <div className="flex justify-between text-blue-600"><span>Saldo a favor</span><span>-{formatCurrency(walletUsedActual)}</span></div>}
+                {isCredito && creditUsedActual > 0 && <div className="flex justify-between text-red-600"><span>Crédito a deuda</span><span>{formatCurrency(creditUsedActual)}</span></div>}
+                {isCredito && creditRemainderBase > 0 && (
+                  <div className="flex justify-between text-slate-700">
+                    <span>Pago restante ({creditRemainderMethod.toLowerCase()})</span>
+                    <span>{formatCurrency(creditRemainderBase)}</span>
+                  </div>
+                )}
                 {isTarjeta && (
                   <>
                     <div className="flex justify-between text-slate-700"><span>Total de la compra</span><span>{formatCurrency(totalAfterWallet)}</span></div>
                     <div className="flex justify-between text-indigo-600"><span>Comisión bancaria (3%)</span><span>{formatCurrency(cardCommissionAmount)}</span></div>
                   </>
                 )}
+                {isCredito && creditRemainderMethod === 'TARJETA' && cardCommissionAmount > 0 && (
+                  <div className="flex justify-between text-indigo-600"><span>Comisión bancaria (3%)</span><span>{formatCurrency(cardCommissionAmount)}</span></div>
+                )}
                 <div className="flex justify-between border-t border-slate-200 pt-1.5 text-lg font-black text-slate-900">
-                  <span>{isTarjeta ? 'Total a cobrar' : 'Total'}</span><span className="text-orange-600">{formatCurrency(total)}</span>
+                  <span>{isTarjeta || (isCredito && creditRemainderMethod === 'TARJETA') ? 'Total a cobrar' : 'Total'}</span><span className="text-orange-600">{formatCurrency(total)}</span>
                 </div>
               </section>
               </div>
@@ -2064,7 +2223,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               </button>
               <button
                 onClick={handleCharge}
-                disabled={charging || cart.length === 0 || cashPaymentInvalid || (isCredito && (!selectedCustomer || totalAfterWallet > creditAvailable))}
+                disabled={charging || cart.length === 0 || cashPaymentInvalid || creditPaymentInvalid}
                 className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
               >
                 {charging && <Loader2 size={14} className="animate-spin"/>}
@@ -2226,6 +2385,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                             {s.payment_method === 'TARJETA' && saleCardCommission > 0 && (
                               <div className="mt-0.5 text-[10px] font-bold text-indigo-600">
                                 Incluye comisión {formatCurrency(saleCardCommission)}
+                              </div>
+                            )}
+                            {s.payment_method === 'CREDITO' && Number(s.split_payment_amount ?? 0) > 0 && (
+                              <div className="mt-0.5 text-[10px] font-bold text-orange-600">
+                                Crédito {formatCurrency(Number(s.credit_used ?? 0))} + {s.split_payment_method?.toLowerCase()} {formatCurrency(Number(s.split_payment_amount ?? 0))}
                               </div>
                             )}
                           </td>
@@ -2438,7 +2602,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 {Number(saleDetailRow.discount_amount) > 0 && <div className="flex justify-between text-green-600"><span>Descuento</span><span>-{formatCurrency(saleDetailRow.discount_amount)}</span></div>}
                 {Number(saleDetailRow.wallet_used) > 0 && <div className="flex justify-between text-purple-600"><span>Saldo aplicado</span><span>-{formatCurrency(saleDetailRow.wallet_used)}</span></div>}
                 {Number(saleDetailRow.credit_used) > 0 && <div className="flex justify-between text-red-600"><span>Crédito aplicado</span><span>{formatCurrency(saleDetailRow.credit_used)}</span></div>}
-                {saleDetailRow.payment_method === 'TARJETA' && getStoredCardCommission(saleDetailRow) > 0 && (
+                {Number(saleDetailRow.split_payment_amount ?? 0) > 0 && saleDetailRow.split_payment_method && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>Pago restante ({saleDetailRow.split_payment_method.toLowerCase()})</span>
+                    <span>{formatCurrency(Number(saleDetailRow.split_payment_amount ?? 0))}</span>
+                  </div>
+                )}
+                {(saleDetailRow.payment_method === 'TARJETA' || saleDetailRow.split_payment_method === 'TARJETA') && getStoredCardCommission(saleDetailRow) > 0 && (
                   <div className="flex justify-between text-indigo-600">
                     <span>Comisión bancaria (3%)</span>
                     <span>{formatCurrency(getStoredCardCommission(saleDetailRow))}</span>
@@ -2449,6 +2619,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   <>
                     <div className="flex justify-between text-slate-500"><span>Pagó con</span><span>{formatCurrency(Number(saleDetailRow.cash_received ?? 0))}</span></div>
                     <div className="flex justify-between font-bold text-green-600"><span>Vuelto</span><span>{formatCurrency(getCashChange(Number(saleDetailRow.cash_received ?? 0), Number(saleDetailRow.total ?? 0)))}</span></div>
+                  </>
+                )}
+                {saleDetailRow.split_payment_method === 'EFECTIVO' && Number(saleDetailRow.cash_received ?? 0) > 0 && (
+                  <>
+                    <div className="flex justify-between text-slate-500"><span>Efectivo recibido</span><span>{formatCurrency(Number(saleDetailRow.cash_received ?? 0))}</span></div>
+                    <div className="flex justify-between font-bold text-green-600"><span>Vuelto</span><span>{formatCurrency(getCashChange(Number(saleDetailRow.cash_received ?? 0), Number(saleDetailRow.split_payment_amount ?? 0)))}</span></div>
                   </>
                 )}
               </div>

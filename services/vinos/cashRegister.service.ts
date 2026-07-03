@@ -46,6 +46,9 @@ interface SaleForCashRegister {
   subtotal: number | null;
   discount_amount: number | null;
   total: number | null;
+  credit_used: number | null;
+  split_payment_method: string | null;
+  split_payment_amount: number | null;
   deleted_at: string | null;
 }
 
@@ -107,11 +110,23 @@ const paymentKey = (value: string | null | undefined) =>
 const calculateSummary = (sales: SaleForCashRegister[], openingCash: number): CashRegisterSummary => {
   const summary = emptySummary(openingCash);
 
+  const applyMethodAmount = (method: string, amount: number, subtotalForCourtesy = 0) => {
+    if (amount <= 0 && method !== 'CORTESIA' && method !== 'CORTESÍA') return;
+    if (method === 'EFECTIVO') summary.cash_sales_total += amount;
+    else if (method === 'TARJETA') summary.card_sales_total += amount;
+    else if (method === 'TRANSFERENCIA' || method === 'TRANSFER' || method === 'TRANSFERENCIAS') summary.transfer_sales_total += amount;
+    else if (method === 'CREDITO' || method === 'CRÉDITO') summary.credit_sales_total += amount;
+    else if (method === 'CORTESIA' || method === 'CORTESÍA') summary.courtesy_total += subtotalForCourtesy;
+  };
+
   sales.forEach((sale) => {
     const total = Number(sale.total ?? 0);
     const subtotal = Number(sale.subtotal ?? 0);
     const discount = Number(sale.discount_amount ?? 0);
     const method = paymentKey(sale.payment_method);
+    const creditUsed = Number(sale.credit_used ?? 0);
+    const splitMethod = paymentKey(sale.split_payment_method);
+    const splitAmount = Number(sale.split_payment_amount ?? 0);
 
     if (sale.deleted_at) {
       summary.cancellations_count += 1;
@@ -122,11 +137,13 @@ const calculateSummary = (sales: SaleForCashRegister[], openingCash: number): Ca
     summary.total_sold += total;
     summary.discounts_total += discount;
 
-    if (method === 'EFECTIVO') summary.cash_sales_total += total;
-    else if (method === 'TARJETA') summary.card_sales_total += total;
-    else if (method === 'TRANSFERENCIA' || method === 'TRANSFER' || method === 'TRANSFERENCIAS') summary.transfer_sales_total += total;
-    else if (method === 'CREDITO' || method === 'CRÉDITO') summary.credit_sales_total += total;
-    else if (method === 'CORTESIA' || method === 'CORTESÍA') summary.courtesy_total += subtotal;
+    if ((method === 'CREDITO' || method === 'CRÉDITO') && (creditUsed > 0 || splitAmount > 0)) {
+      summary.credit_sales_total += creditUsed > 0 ? creditUsed : Math.max(0, total - splitAmount);
+      applyMethodAmount(splitMethod, splitAmount);
+      return;
+    }
+
+    applyMethodAmount(method, total, subtotal);
   });
 
   summary.expected_cash = Number(openingCash || 0) + summary.cash_sales_total;
@@ -258,7 +275,7 @@ export const vinosCashRegisterService = {
     if (!isVinosConfigured) return emptySummary(Number(session.opening_cash ?? 0));
     const { data, error } = await supabaseVinos
       .from('sales')
-      .select('payment_method, subtotal, discount_amount, total, deleted_at')
+      .select('payment_method, subtotal, discount_amount, total, credit_used, split_payment_method, split_payment_amount, deleted_at')
       .eq('branch_id', session.branch_id)
       .eq('created_by', session.cashier_user_id)
       .gte('created_at', session.opened_at)

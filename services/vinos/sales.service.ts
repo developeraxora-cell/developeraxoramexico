@@ -28,6 +28,8 @@ export interface CreateSaleInput {
   wallet_used?: number;
   credit_used?: number;
   cash_received?: number;
+  split_payment_method?: PaymentMethod | null;
+  split_payment_amount?: number;
   notes?: string | null;
   delivery_address?: string | null;
   created_by: string;
@@ -71,6 +73,8 @@ export interface SaleRow {
   wallet_used: number;
   credit_used: number;
   cash_received: number;
+  split_payment_method: PaymentMethod | null;
+  split_payment_amount: number;
   notes: string | null;
   delivery_address: string | null;
   created_by: string;
@@ -441,6 +445,8 @@ export const vinosSalesService = {
       wallet_used: input.wallet_used ?? 0,
       credit_used: input.credit_used ?? 0,
       cash_received: input.cash_received ?? 0,
+      split_payment_method: input.split_payment_method ?? null,
+      split_payment_amount: input.split_payment_amount ?? 0,
       notes: input.notes ?? null,
       delivery_address: input.delivery_address ?? null,
       created_by: input.created_by,

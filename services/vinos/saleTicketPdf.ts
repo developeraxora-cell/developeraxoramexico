@@ -13,6 +13,10 @@ export interface VinosSalePdfInput {
   creditUsed?: number;
   cashReceived?: number;
   cashChange?: number;
+  splitPaymentMethod?: 'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA' | null;
+  splitPaymentAmount?: number;
+  splitCashReceived?: number;
+  splitCashChange?: number;
   saleNotes?: string | null;
   items: Array<{
     name: string;
@@ -58,6 +62,7 @@ const formatLocalDateTime = (value: string) => {
 
 const statusLabel = (input: VinosSalePdfInput): string => {
   if (Number(input.walletUsed ?? 0) > 0 && Number(input.walletUsed) >= Number(input.total)) return 'SALDO A FAVOR';
+  if (Number(input.creditUsed ?? 0) > 0 && Number(input.splitPaymentAmount ?? 0) > 0) return 'CREDITO MIXTO';
   if (input.paymentMethod === 'CREDITO') return 'CREDITO';
   if (input.paymentMethod === 'TRANSFERENCIA') return 'TRANSFERENCIA';
   if (input.paymentMethod === 'TARJETA') return 'TARJETA';
@@ -80,6 +85,7 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
   const width = 212.6; // 75 mm thermal paper
   const marginLeft = 5;
   const marginRight = 12;
+  const bottomSafetyPadding = 44;
   const contentWidth = width - marginLeft - marginRight;
   const lineGap = 10;
 
@@ -149,11 +155,14 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
     (Number(input.discount ?? 0) > 0 ? 14 : 0) +
     (Number(input.walletUsed ?? 0) > 0 ? 14 : 0) +
     (Number(input.creditUsed ?? 0) > 0 ? 14 : 0) +
+    (Number(input.splitPaymentAmount ?? 0) > 0 ? 14 : 0) +
     (Number(input.bankCommission ?? 0) > 0 ? 28 : 0) +
     (input.paymentMethod === 'EFECTIVO' && Number(input.cashReceived ?? 0) > 0 ? 28 : 0) +
+    (input.splitPaymentMethod === 'EFECTIVO' && Number(input.splitCashReceived ?? 0) > 0 ? 28 : 0) +
     (input.discountCode ? 12 : 0) +
     (footerNoticeLines.length * lineGap) +
-    (footerLines.length * lineGap);
+    (footerLines.length * lineGap) +
+    bottomSafetyPadding;
   const height = Math.max(320, Math.min(14000, dynamicHeight));
   const page = pdfDoc.addPage([width, height]);
   let y = height - 14;
@@ -223,10 +232,19 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
   const walletUsed = Number(input.walletUsed ?? 0);
   const creditUsed = Number(input.creditUsed ?? 0);
   const bankCommission = Number(input.bankCommission ?? 0);
+  const splitPaymentAmount = Number(input.splitPaymentAmount ?? 0);
   drawAmountRow('SUBTOTAL', formatCurrency(Number(input.subtotal ?? 0)), 8, fontBold);
   if (discountAmt > 0) drawAmountRow('DESCUENTO', `-${formatCurrency(discountAmt)}`, 8, fontBold);
   if (walletUsed > 0) drawAmountRow('SALDO A FAVOR', `-${formatCurrency(walletUsed)}`, 8, fontBold);
   if (creditUsed > 0) drawAmountRow('CREDITO', formatCurrency(creditUsed), 8, fontBold);
+  if (splitPaymentAmount > 0 && input.splitPaymentMethod) {
+    const splitLabel = input.splitPaymentMethod === 'TARJETA'
+      ? 'PAGO TARJETA'
+      : input.splitPaymentMethod === 'TRANSFERENCIA'
+        ? 'PAGO TRANSFERENCIA'
+        : 'PAGO EFECTIVO';
+    drawAmountRow(splitLabel, formatCurrency(splitPaymentAmount), 8, fontBold);
+  }
   if (bankCommission > 0) {
     drawAmountRow('TOTAL COMPRA', formatCurrency(Math.max(0, Number(input.total ?? 0) - bankCommission)), 8, fontBold);
     drawAmountRow('COMISION BANCARIA (3%)', formatCurrency(bankCommission), 8, fontBold);
@@ -238,6 +256,12 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
     const cashChange = Number(input.cashChange ?? Math.max(0, cashReceived - Number(input.total ?? 0)));
     drawAmountRow('PAGO CON', formatCurrency(cashReceived), 8, fontBold);
     drawAmountRow('CAMBIO', formatCurrency(cashChange), 8, fontBold);
+  }
+  if (input.splitPaymentMethod === 'EFECTIVO' && Number(input.splitCashReceived ?? 0) > 0) {
+    const splitCashReceived = Number(input.splitCashReceived ?? 0);
+    const splitCashChange = Number(input.splitCashChange ?? Math.max(0, splitCashReceived - splitPaymentAmount));
+    drawAmountRow('EFECTIVO RECIBIDO', formatCurrency(splitCashReceived), 8, fontBold);
+    drawAmountRow('CAMBIO', formatCurrency(splitCashChange), 8, fontBold);
   }
   if (input.discountCode) drawLine(`CODIGO: ${String(input.discountCode).toUpperCase()}`, 7, fontRegular);
   drawDivider();
