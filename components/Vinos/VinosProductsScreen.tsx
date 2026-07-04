@@ -81,14 +81,24 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
   const [exportingPdf, setExportingPdf] = useState(false);
 
   // ── branch id ────────────────────────────────────────────
-  useEffect(() => {
-    vinosCustomersService.getBranchId(selectedBranchId).then(setBranchDbId);
-  }, [selectedBranchId]);
-
   const branchName = useMemo(
     () => branches.find((branch) => branch.id === selectedBranchId)?.name ?? null,
     [branches, selectedBranchId],
   );
+
+  const selectedBranch = useMemo(
+    () => branches.find((branch) => branch.id === selectedBranchId) ?? null,
+    [branches, selectedBranchId],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    setBranchDbId(null);
+    vinosCustomersService.getBranchId(selectedBranch?.code ?? selectedBranchId)
+      .then((id) => { if (!cancelled) setBranchDbId(id); })
+      .catch(() => { if (!cancelled) setBranchDbId(null); });
+    return () => { cancelled = true; };
+  }, [selectedBranch?.code, selectedBranchId]);
 
   // ── load all ─────────────────────────────────────────────
   const load = useCallback(async () => {

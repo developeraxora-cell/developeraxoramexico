@@ -73,13 +73,35 @@ export interface NewDocumentInput {
 export const vinosCustomersService = {
   async getBranchId(branchCode: string): Promise<number | null> {
     if (!isVinosConfigured) return null;
-    const { data, error } = await supabaseVinos
+    const cleanBranch = String(branchCode ?? '').trim();
+    if (!cleanBranch) return null;
+
+    let query = supabaseVinos
       .from('branches')
       .select('id')
-      .eq('code', branchCode)
-      .single();
-    if (error || !data) return null;
-    return data.id as number;
+      .eq('code', cleanBranch);
+
+    const numericId = Number(cleanBranch);
+    if (Number.isFinite(numericId)) {
+      query = supabaseVinos
+        .from('branches')
+        .select('id')
+        .or(`code.eq.${cleanBranch},id.eq.${numericId}`);
+    }
+
+    const { data, error } = await query.maybeSingle();
+    if (error) return null;
+    if (data?.id) return data.id as number;
+
+    const { data: fallback, error: fallbackError } = await supabaseVinos
+      .from('branches')
+      .select('id')
+      .eq('is_active', true)
+      .order('id', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (fallbackError || !fallback?.id) return null;
+    return fallback.id as number;
   },
 
   async getAll(branchId?: number): Promise<VinosCustomer[]> {
