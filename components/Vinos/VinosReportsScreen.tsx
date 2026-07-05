@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   TrendingUp, DollarSign, ShoppingBag,
   AlertTriangle, Star, BarChart3, RefreshCw,
@@ -8,6 +8,7 @@ import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
 import { vinosReportsService, type ReportsKPIs } from '../../services/vinos/reports.service';
 import { vinosCustomersService } from '../../services/vinos/customers.service';
+import { vinosCashRegisterService, type CashRegisterSession } from '../../services/vinos/cashRegister.service';
 
 type DatePreset = 'today' | '7d' | '30d' | '90d' | 'year' | 'custom';
 
@@ -129,6 +130,20 @@ const formatHourRange = (hour: number) => {
   const start = String(hour).padStart(2, '0');
   const end = String((hour + 1) % 24).padStart(2, '0');
   return `${start}:00-${end}:00`;
+};
+
+const formatSessionDateTime = (value: string | null | undefined) =>
+  value ? new Date(value).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+
+const formatSessionDuration = (openedAt: string, closedAt?: string | null) => {
+  const start = new Date(openedAt).getTime();
+  const end = closedAt ? new Date(closedAt).getTime() : Date.now();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return '—';
+  const totalMinutes = Math.floor((end - start) / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours <= 0) return `${minutes} min`;
+  return `${hours} h ${minutes} min`;
 };
 
 const createSmoothPath = (points: Array<{ x: number; y: number }>) => {
@@ -303,13 +318,19 @@ const HourlyHistogram: React.FC<{
   );
 };
 
-const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId }) => {
+const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches }) => {
   const [period, setPeriod] = useState<DatePreset>('30d');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [data, setData] = useState<ReportsKPIs | null>(null);
+  const [cashHistory, setCashHistory] = useState<CashRegisterSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [branchDbId, setBranchDbId] = useState<number | null>(null);
+
+  const selectedBranch = useMemo(
+    () => branches.find((branch) => branch.id === selectedBranchId) ?? null,
+    [branches, selectedBranchId],
+  );
 
   useEffect(() => {
     if (period === 'custom') return;
@@ -333,15 +354,24 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId }) => {
   }, [period]);
 
   useEffect(() => {
-    vinosCustomersService.getBranchId(selectedBranchId).then(setBranchDbId);
-  }, [selectedBranchId]);
+    let cancelled = false;
+    setBranchDbId(null);
+    vinosCustomersService.getBranchId(selectedBranch?.code ?? selectedBranchId)
+      .then((id) => { if (!cancelled) setBranchDbId(id); })
+      .catch(() => { if (!cancelled) setBranchDbId(null); });
+    return () => { cancelled = true; };
+  }, [selectedBranch?.code, selectedBranchId]);
 
   const load = useCallback(async () => {
     if (!startDate || !endDate) return;
     setLoading(true);
     try {
-      const kpis = await vinosReportsService.getKPIs(branchDbId, { startDate, endDate });
+      const [kpis, sessions] = await Promise.all([
+        vinosReportsService.getKPIs(branchDbId, { startDate, endDate }),
+        branchDbId ? vinosCashRegisterService.list(branchDbId) : Promise.resolve([]),
+      ]);
       setData(kpis);
+      setCashHistory(sessions.slice(0, 8));
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [branchDbId, startDate, endDate]);
@@ -614,6 +644,79 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId }) => {
               )}
             </PanelCard>
           </div>
+
+          <PanelCard title="Historial de caja" icon={Clock}>
+            {isLoadingView ? (
+              <LoadingRows rows={4} />
+            ) : cashHistory.length === 0 ? (
+              <EmptyMini icon={Clock} text="Sin aperturas de caja registradas" />
+            ) : (
+              <div className="space-y-3">
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="min-w-[1180px] w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      <tr>
+                        <th className="px-4 py-3">Estado</th>
+                        <th className="px-4 py-3">Responsable</th>
+                        <th className="px-4 py-3">Apertura</th>
+                        <th className="px-4 py-3">Cierre</th>
+                        <th className="px-4 py-3">Duración</th>
+                        <th className="px-4 py-3 text-right">Inicial</th>
+                        <th className="px-4 py-3 text-right">Vendido</th>
+                        <th className="px-4 py-3 text-right">Efectivo</th>
+                        <th className="px-4 py-3 text-right">Tarjeta</th>
+                        <th className="px-4 py-3 text-right">Transf.</th>
+                        <th className="px-4 py-3 text-right">Crédito</th>
+                        <th className="px-4 py-3 text-right">Esperado</th>
+                        <th className="px-4 py-3 text-right">Entregado</th>
+                        <th className="px-4 py-3 text-right">Diferencia</th>
+                        <th className="px-4 py-3">Observaciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {cashHistory.map((session) => {
+                        const isOpen = !session.closed_at;
+                        const difference = Number(session.cash_difference ?? 0);
+                        const observations = [
+                          session.opening_observations ? `Apertura: ${session.opening_observations}` : '',
+                          session.closing_observations ? `Cierre: ${session.closing_observations}` : '',
+                        ].filter(Boolean).join(' | ');
+
+                        return (
+                          <tr key={session.id} className="align-top hover:bg-slate-50">
+                            <td className="px-4 py-3">
+                              <span className={`rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest ${isOpen ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
+                                {isOpen ? 'Abierta' : 'Cerrada'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 font-black text-slate-900">{session.cashier_name || 'Sin responsable'}</td>
+                            <td className="px-4 py-3 font-bold text-slate-600">{formatSessionDateTime(session.opened_at)}</td>
+                            <td className="px-4 py-3 font-bold text-slate-600">{formatSessionDateTime(session.closed_at)}</td>
+                            <td className="px-4 py-3 font-bold text-slate-500">{formatSessionDuration(session.opened_at, session.closed_at)}</td>
+                            <td className="px-4 py-3 text-right font-black text-slate-900">{formatCurrency(Number(session.opening_cash ?? 0))}</td>
+                            <td className="px-4 py-3 text-right font-black text-orange-600">{formatCurrency(Number(session.total_sold ?? 0))}</td>
+                            <td className="px-4 py-3 text-right font-bold text-slate-700">{formatCurrency(Number(session.cash_sales_total ?? 0))}</td>
+                            <td className="px-4 py-3 text-right font-bold text-slate-700">{formatCurrency(Number(session.card_sales_total ?? 0))}</td>
+                            <td className="px-4 py-3 text-right font-bold text-slate-700">{formatCurrency(Number(session.transfer_sales_total ?? 0))}</td>
+                            <td className="px-4 py-3 text-right font-bold text-slate-700">{formatCurrency(Number(session.credit_sales_total ?? 0))}</td>
+                            <td className="px-4 py-3 text-right font-black text-slate-900">{formatCurrency(Number(session.expected_cash ?? 0))}</td>
+                            <td className="px-4 py-3 text-right font-black text-slate-900">{session.delivered_cash == null ? '—' : formatCurrency(Number(session.delivered_cash ?? 0))}</td>
+                            <td className={`px-4 py-3 text-right font-black ${difference === 0 ? 'text-slate-900' : difference > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {session.cash_difference == null ? '—' : formatCurrency(difference)}
+                            </td>
+                            <td className="max-w-[260px] px-4 py-3 font-bold text-slate-500">
+                              {observations || '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-[11px] font-bold text-slate-400">Mostrando las últimas {cashHistory.length} cajas de la sucursal.</p>
+              </div>
+            )}
+          </PanelCard>
         </>
 
     </div>
