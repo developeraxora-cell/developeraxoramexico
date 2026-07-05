@@ -3,12 +3,14 @@ import {
   TrendingUp, DollarSign, ShoppingBag,
   AlertTriangle, Star, BarChart3, RefreshCw,
   Package, TrendingDown, Clock, Activity,
+  Printer, X, Loader2, Eye, Receipt,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
 import { vinosReportsService, type ReportsKPIs } from '../../services/vinos/reports.service';
 import { vinosCustomersService } from '../../services/vinos/customers.service';
-import { vinosCashRegisterService, type CashRegisterSession } from '../../services/vinos/cashRegister.service';
+import { vinosCashRegisterService, type CashRegisterSaleDetail, type CashRegisterSession } from '../../services/vinos/cashRegister.service';
+import { generateVinosCashRegisterReceipt } from '../../services/vinos/cashRegisterReceiptPdf';
 
 type DatePreset = 'today' | '7d' | '30d' | '90d' | 'year' | 'custom';
 
@@ -126,6 +128,15 @@ const toLocalDateInputValue = (value: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const toLocalDateTimeInputValue = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  const hours = String(value.getHours()).padStart(2, '0');
+  const minutes = String(value.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 const formatHourRange = (hour: number) => {
   const start = String(hour).padStart(2, '0');
   const end = String((hour + 1) % 24).padStart(2, '0');
@@ -145,6 +156,24 @@ const formatSessionDuration = (openedAt: string, closedAt?: string | null) => {
   if (hours <= 0) return `${minutes} min`;
   return `${hours} h ${minutes} min`;
 };
+
+const formatSaleFolio = (id: string) => `#${String(id).replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+
+const getSaleCustomerName = (sale: CashRegisterSaleDetail) => {
+  const customer = Array.isArray(sale.customer) ? sale.customer[0] : sale.customer;
+  return customer?.name ?? 'Publico general';
+};
+
+const getCashSalePaymentLabel = (sale: CashRegisterSaleDetail) => {
+  if (Number(sale.wallet_used ?? 0) > 0 && Number(sale.wallet_used) >= Number(sale.total ?? 0)) return 'SALDO';
+  if (sale.payment_method === 'CREDITO' && Number(sale.split_payment_amount ?? 0) > 0) return 'MIXTO';
+  if (sale.payment_method === 'TRANSFERENCIA') return 'TRANSF.';
+  if (sale.payment_method === 'CORTESIA') return 'SIN COSTO';
+  return String(sale.payment_method ?? 'EFECTIVO').replace('_', ' ');
+};
+
+const getCashSaleItemCount = (sale: CashRegisterSaleDetail) =>
+  (sale.items ?? []).reduce((sum, item) => sum + Number(item.qty ?? 0), 0);
 
 const createSmoothPath = (points: Array<{ x: number; y: number }>) => {
   if (points.length === 0) return '';
@@ -318,7 +347,7 @@ const HourlyHistogram: React.FC<{
   );
 };
 
-const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches }) => {
+const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, currentUser }) => {
   const [period, setPeriod] = useState<DatePreset>('30d');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -326,11 +355,21 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches }) => 
   const [cashHistory, setCashHistory] = useState<CashRegisterSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [branchDbId, setBranchDbId] = useState<number | null>(null);
+  const [customCutOpen, setCustomCutOpen] = useState(false);
+  const [customCutStart, setCustomCutStart] = useState('');
+  const [customCutEnd, setCustomCutEnd] = useState('');
+  const [customCutLoading, setCustomCutLoading] = useState(false);
+  const [customCutError, setCustomCutError] = useState('');
+  const [cashDetailSession, setCashDetailSession] = useState<CashRegisterSession | null>(null);
+  const [cashDetailSales, setCashDetailSales] = useState<CashRegisterSaleDetail[]>([]);
+  const [cashDetailLoading, setCashDetailLoading] = useState(false);
+  const [cashDetailError, setCashDetailError] = useState('');
 
   const selectedBranch = useMemo(
     () => branches.find((branch) => branch.id === selectedBranchId) ?? null,
     [branches, selectedBranchId],
   );
+  const branchName = selectedBranch?.name ?? 'CASA TAHONA';
 
   useEffect(() => {
     if (period === 'custom') return;
@@ -378,6 +417,85 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches }) => 
 
   useEffect(() => { load(); }, [load]);
 
+  const openCustomCutModal = () => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(17, 0, 0, 0);
+    if (start > now) start.setDate(start.getDate() - 1);
+    setCustomCutStart(toLocalDateTimeInputValue(start));
+    setCustomCutEnd(toLocalDateTimeInputValue(now));
+    setCustomCutError('');
+    setCustomCutOpen(true);
+  };
+
+  const handleGenerateCustomCut = async () => {
+    if (!branchDbId) {
+      setCustomCutError('No se encontró la sucursal de Casa Tahona en la base de datos.');
+      return;
+    }
+    const start = new Date(customCutStart);
+    const end = new Date(customCutEnd);
+    if (!customCutStart || !customCutEnd || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      setCustomCutError('Selecciona fecha y hora de inicio y fin.');
+      return;
+    }
+    if (end <= start) {
+      setCustomCutError('La fecha y hora fin debe ser posterior al inicio.');
+      return;
+    }
+
+    const cutWindow = window.open('', '_blank');
+    if (cutWindow) {
+      cutWindow.document.title = 'Corte personalizado';
+      cutWindow.blur();
+      window.focus();
+    }
+
+    setCustomCutLoading(true);
+    setCustomCutError('');
+    try {
+      const session = await vinosCashRegisterService.buildCustomCut({
+        branch_id: branchDbId,
+        branch_code: selectedBranch?.code ?? selectedBranchId,
+        branch_name: branchName,
+        start_at: customCutStart,
+        end_at: customCutEnd,
+        generated_by: currentUser.name,
+      });
+      await generateVinosCashRegisterReceipt(
+        { session, branchName },
+        { mode: 'print', targetWindow: cutWindow },
+      );
+      setCustomCutOpen(false);
+    } catch (error) {
+      if (cutWindow && !cutWindow.closed) cutWindow.close();
+      setCustomCutError(error instanceof Error ? error.message : 'No se pudo generar el corte personalizado.');
+    } finally {
+      setCustomCutLoading(false);
+    }
+  };
+
+  const openCashSessionDetail = async (session: CashRegisterSession) => {
+    setCashDetailSession(session);
+    setCashDetailSales([]);
+    setCashDetailError('');
+    setCashDetailLoading(true);
+    try {
+      const rows = await vinosCashRegisterService.listSessionSales(session);
+      setCashDetailSales(rows);
+    } catch (error) {
+      setCashDetailError(error instanceof Error ? error.message : 'No se pudieron cargar las ventas de esta caja.');
+    } finally {
+      setCashDetailLoading(false);
+    }
+  };
+
+  const closeCashSessionDetail = () => {
+    setCashDetailSession(null);
+    setCashDetailSales([]);
+    setCashDetailError('');
+  };
+
   const reportData = data ?? EMPTY_REPORTS_DATA;
   const isLoadingView = loading || !data;
   const maxSalesHour = Math.max(1, ...reportData.sales_by_hour.map(d => d.count));
@@ -388,6 +506,24 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches }) => 
     { label: 'Mes', sales: reportData.sales_periods.month.sales, amount: reportData.sales_periods.month.amount, profit: reportData.profit_periods.month },
     { label: 'Año', sales: reportData.sales_periods.year.sales, amount: reportData.sales_periods.year.amount, profit: reportData.profit_periods.year },
   ];
+  const cashDetailTotals = useMemo(() => {
+    return cashDetailSales.reduce(
+      (acc, sale) => {
+        const total = Number(sale.total ?? 0);
+        const items = getCashSaleItemCount(sale);
+        if (sale.deleted_at) {
+          acc.cancelled += 1;
+          acc.cancelledTotal += total;
+          return acc;
+        }
+        acc.active += 1;
+        acc.total += total;
+        acc.items += items;
+        return acc;
+      },
+      { active: 0, cancelled: 0, total: 0, cancelledTotal: 0, items: 0 },
+    );
+  }, [cashDetailSales]);
 
   return (
     <div className="space-y-6">
@@ -445,6 +581,13 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches }) => 
               />
             </label>
           </div>
+          <button
+            onClick={openCustomCutModal}
+            className="flex items-center justify-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-700 hover:bg-orange-100"
+          >
+            <Printer size={14} />
+            Corte personalizado
+          </button>
           <button onClick={load} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">
             <RefreshCw size={14}/>
           </button>
@@ -656,7 +799,6 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches }) => 
                   <table className="min-w-[1180px] w-full text-left text-xs">
                     <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
                       <tr>
-                        <th className="px-4 py-3">Estado</th>
                         <th className="px-4 py-3">Responsable</th>
                         <th className="px-4 py-3">Apertura</th>
                         <th className="px-4 py-3">Cierre</th>
@@ -671,6 +813,7 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches }) => 
                         <th className="px-4 py-3 text-right">Entregado</th>
                         <th className="px-4 py-3 text-right">Diferencia</th>
                         <th className="px-4 py-3">Observaciones</th>
+                        <th className="px-4 py-3 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
@@ -683,12 +826,7 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches }) => 
                         ].filter(Boolean).join(' | ');
 
                         return (
-                          <tr key={session.id} className="align-top hover:bg-slate-50">
-                            <td className="px-4 py-3">
-                              <span className={`rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest ${isOpen ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
-                                {isOpen ? 'Abierta' : 'Cerrada'}
-                              </span>
-                            </td>
+                          <tr key={session.id} className={`align-top ${isOpen ? 'bg-green-200/70 hover:bg-green-300/70' : 'bg-slate-200/80 hover:bg-slate-300/80'}`}>
                             <td className="px-4 py-3 font-black text-slate-900">{session.cashier_name || 'Sin responsable'}</td>
                             <td className="px-4 py-3 font-bold text-slate-600">{formatSessionDateTime(session.opened_at)}</td>
                             <td className="px-4 py-3 font-bold text-slate-600">{formatSessionDateTime(session.closed_at)}</td>
@@ -707,6 +845,16 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches }) => 
                             <td className="max-w-[260px] px-4 py-3 font-bold text-slate-500">
                               {observations || '—'}
                             </td>
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                onClick={() => openCashSessionDetail(session)}
+                                title="Ver detalle"
+                                aria-label="Ver detalle de caja"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                              >
+                                <Eye size={13} />
+                              </button>
+                            </td>
                           </tr>
                         );
                       })}
@@ -718,6 +866,196 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches }) => 
             )}
           </PanelCard>
         </>
+
+      {customCutOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-100 text-orange-600">
+                  <Printer size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Corte personalizado</h3>
+                  <p className="text-[11px] font-bold text-slate-400">Selecciona cualquier rango de fecha y hora</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCustomCutOpen(false)}
+                disabled={customCutLoading}
+                className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div className="rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3">
+                <p className="text-xs font-bold leading-relaxed text-orange-800">
+                  Este corte reconstruye las ventas dentro del rango seleccionado, aunque el turno cruce medianoche. No modifica el cierre automático ni las cajas guardadas.
+                </p>
+              </div>
+
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha y hora de inicio</span>
+                <input
+                  type="datetime-local"
+                  value={customCutStart}
+                  onChange={(event) => setCustomCutStart(event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha y hora de fin</span>
+                <input
+                  type="datetime-local"
+                  value={customCutEnd}
+                  onChange={(event) => setCustomCutEnd(event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                />
+              </label>
+
+              {customCutError && (
+                <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                  {customCutError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3 border-t border-slate-100 bg-slate-50/70 px-6 py-4">
+              <button
+                onClick={() => setCustomCutOpen(false)}
+                disabled={customCutLoading}
+                className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleGenerateCustomCut}
+                disabled={customCutLoading}
+                className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-50"
+              >
+                {customCutLoading ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
+                Generar e imprimir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cashDetailSession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-orange-600">
+                  <Receipt size={18} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="truncate text-base font-black uppercase tracking-tight text-slate-900">Ventas asociadas al corte</h3>
+                  <p className="truncate text-[11px] font-bold text-slate-400">
+                    {cashDetailSession.cashier_name} · {formatSessionDateTime(cashDetailSession.opened_at)} - {formatSessionDateTime(cashDetailSession.closed_at ?? new Date().toISOString())}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={closeCashSessionDetail}
+                disabled={cashDetailLoading}
+                className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ventas activas</p>
+                  <p className="mt-1 text-xl font-black text-slate-900">{cashDetailTotals.active}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Productos</p>
+                  <p className="mt-1 text-xl font-black text-slate-900">{cashDetailTotals.items}</p>
+                </div>
+                <div className="rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-orange-400">Total activo</p>
+                  <p className="mt-1 text-xl font-black text-orange-600">{formatCurrency(cashDetailTotals.total)}</p>
+                </div>
+                <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-red-400">Canceladas</p>
+                  <p className="mt-1 text-xl font-black text-red-600">{cashDetailTotals.cancelled} · {formatCurrency(cashDetailTotals.cancelledTotal)}</p>
+                </div>
+              </div>
+
+              {cashDetailError && (
+                <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                  {cashDetailError}
+                </p>
+              )}
+
+              {cashDetailLoading ? (
+                <div className="py-16 text-center">
+                  <Loader2 size={28} className="mx-auto animate-spin text-orange-500" />
+                  <p className="mt-3 text-sm font-bold text-slate-400">Cargando ventas de la caja...</p>
+                </div>
+              ) : cashDetailSales.length === 0 ? (
+                <EmptyMini icon={Receipt} text="Sin ventas asociadas a esta caja" />
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                  <table className="min-w-[980px] w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      <tr>
+                        <th className="px-4 py-3">Folio</th>
+                        <th className="px-4 py-3">Fecha</th>
+                        <th className="px-4 py-3">Cliente</th>
+                        <th className="px-4 py-3">Pago</th>
+                        <th className="px-4 py-3 text-right">Productos</th>
+                        <th className="px-4 py-3 text-right">Subtotal</th>
+                        <th className="px-4 py-3 text-right">Descuento</th>
+                        <th className="px-4 py-3 text-right">Total</th>
+                        <th className="px-4 py-3">Estado</th>
+                        <th className="px-4 py-3">Observación</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {cashDetailSales.map((sale) => {
+                        const isDeleted = Boolean(sale.deleted_at);
+                        return (
+                          <tr key={sale.id} className={`align-top ${isDeleted ? 'bg-red-50/40' : 'hover:bg-slate-50'}`}>
+                            <td className="px-4 py-3 font-mono text-[11px] font-black text-blue-600">{formatSaleFolio(sale.id)}</td>
+                            <td className="px-4 py-3 font-bold text-slate-600">{formatSessionDateTime(sale.created_at)}</td>
+                            <td className="px-4 py-3 font-black text-slate-900">{getSaleCustomerName(sale)}</td>
+                            <td className="px-4 py-3">
+                              <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600">
+                                {getCashSalePaymentLabel(sale)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right font-black text-slate-900">{getCashSaleItemCount(sale)}</td>
+                            <td className="px-4 py-3 text-right font-bold text-slate-700">{formatCurrency(Number(sale.subtotal ?? 0))}</td>
+                            <td className="px-4 py-3 text-right font-bold text-slate-700">{formatCurrency(Number(sale.discount_amount ?? 0))}</td>
+                            <td className={`px-4 py-3 text-right font-black ${isDeleted ? 'text-red-600' : 'text-orange-600'}`}>
+                              {formatCurrency(Number(sale.total ?? 0))}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest ${isDeleted ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                {isDeleted ? 'Cancelada' : 'Activa'}
+                              </span>
+                            </td>
+                            <td className="max-w-[240px] px-4 py-3 font-bold text-slate-500">
+                              {sale.delete_note || '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

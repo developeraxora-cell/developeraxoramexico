@@ -18,6 +18,9 @@ export interface CashRegisterSession {
   discounts_total: number;
   cancellations_total: number;
   cancellations_count: number;
+  ticket_count?: number;
+  products_sold?: number;
+  returns_total?: number;
   total_sold: number;
   expected_cash: number;
   delivered_cash: number | null;
@@ -37,11 +40,32 @@ export interface CashRegisterSummary {
   discounts_total: number;
   cancellations_total: number;
   cancellations_count: number;
+  ticket_count: number;
+  products_sold: number;
+  returns_total: number;
   total_sold: number;
   expected_cash: number;
 }
 
+export interface CashRegisterSaleDetail {
+  id: string;
+  created_at: string;
+  payment_method: string | null;
+  subtotal: number | null;
+  discount_amount: number | null;
+  total: number | null;
+  wallet_used: number | null;
+  credit_used: number | null;
+  split_payment_method: string | null;
+  split_payment_amount: number | null;
+  deleted_at: string | null;
+  delete_note: string | null;
+  customer?: { id: string; name: string } | { id: string; name: string }[] | null;
+  items?: Array<{ id: string; qty: number | null; line_total: number | null }>;
+}
+
 interface SaleForCashRegister {
+  id?: string;
   payment_method: string | null;
   subtotal: number | null;
   discount_amount: number | null;
@@ -100,6 +124,9 @@ const emptySummary = (openingCash = 0): CashRegisterSummary => ({
   discounts_total: 0,
   cancellations_total: 0,
   cancellations_count: 0,
+  ticket_count: 0,
+  products_sold: 0,
+  returns_total: 0,
   total_sold: 0,
   expected_cash: openingCash,
 });
@@ -134,6 +161,7 @@ const calculateSummary = (sales: SaleForCashRegister[], openingCash: number): Ca
       return;
     }
 
+    summary.ticket_count += 1;
     summary.total_sold += total;
     summary.discounts_total += discount;
 
@@ -148,6 +176,65 @@ const calculateSummary = (sales: SaleForCashRegister[], openingCash: number): Ca
 
   summary.expected_cash = Number(openingCash || 0) + summary.cash_sales_total;
   return summary;
+};
+
+const fetchSalesForRange = async (
+  branchId: number,
+  startIso: string,
+  endIso: string,
+): Promise<SaleForCashRegister[]> => {
+  const rows: SaleForCashRegister[] = [];
+  const pageSize = 1000;
+  let from = 0;
+
+  while (true) {
+    const to = from + pageSize - 1;
+    const { data, error } = await supabaseVinos
+      .from('sales')
+      .select('id, payment_method, subtotal, discount_amount, total, credit_used, split_payment_method, split_payment_amount, deleted_at')
+      .eq('branch_id', branchId)
+      .gte('created_at', startIso)
+      .lte('created_at', endIso)
+      .order('created_at', { ascending: true })
+      .range(from, to);
+    if (error) throw error;
+
+    const batch = (data ?? []) as SaleForCashRegister[];
+    rows.push(...batch);
+    if (batch.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return rows;
+};
+
+const fetchProductsSold = async (saleIds: string[]): Promise<number> => {
+  if (saleIds.length === 0) return 0;
+  let total = 0;
+  const chunkSize = 200;
+  const pageSize = 1000;
+
+  for (let index = 0; index < saleIds.length; index += chunkSize) {
+    const ids = saleIds.slice(index, index + chunkSize);
+    let from = 0;
+
+    while (true) {
+      const to = from + pageSize - 1;
+      const { data, error } = await supabaseVinos
+        .from('sale_items')
+        .select('qty')
+        .in('sale_id', ids)
+        .range(from, to);
+      if (error) throw error;
+
+      const batch = (data ?? []) as Array<{ qty: number | null }>;
+      total += batch.reduce((sum: number, row) => sum + Number(row.qty ?? 0), 0);
+      if (batch.length < pageSize) break;
+      from += pageSize;
+    }
+  }
+
+  return total;
 };
 
 export const vinosCashRegisterService = {
@@ -275,13 +362,19 @@ export const vinosCashRegisterService = {
     if (!isVinosConfigured) return emptySummary(Number(session.opening_cash ?? 0));
     const { data, error } = await supabaseVinos
       .from('sales')
-      .select('payment_method, subtotal, discount_amount, total, credit_used, split_payment_method, split_payment_amount, deleted_at')
+      .select('id, payment_method, subtotal, discount_amount, total, credit_used, split_payment_method, split_payment_amount, deleted_at')
       .eq('branch_id', session.branch_id)
       .eq('created_by', session.cashier_user_id)
       .gte('created_at', session.opened_at)
       .lte('created_at', closedAt.toISOString());
     if (error) throw error;
-    return calculateSummary((data ?? []) as SaleForCashRegister[], Number(session.opening_cash ?? 0));
+    const sales = (data ?? []) as SaleForCashRegister[];
+    const summary = calculateSummary(sales, Number(session.opening_cash ?? 0));
+    const activeSaleIds = sales
+      .filter((sale) => !sale.deleted_at && sale.id)
+      .map((sale) => sale.id as string);
+    summary.products_sold = await fetchProductsSold(activeSaleIds);
+    return summary;
   },
 
   async close(input: {
@@ -318,6 +411,99 @@ export const vinosCashRegisterService = {
       .select()
       .single();
     if (error) throw error;
-    return data as CashRegisterSession;
+    return {
+      ...(data as CashRegisterSession),
+      ticket_count: summary.ticket_count,
+      products_sold: summary.products_sold,
+      returns_total: summary.returns_total,
+    };
+  },
+
+  async buildCustomCut(input: {
+    branch_id: number;
+    branch_code?: string | null;
+    branch_name?: string | null;
+    start_at: string;
+    end_at: string;
+    generated_by?: string | null;
+  }): Promise<CashRegisterSession> {
+    if (!isVinosConfigured) throw new Error('DB vinos no configurada');
+
+    const start = new Date(input.start_at);
+    const end = new Date(input.end_at);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      throw new Error('Selecciona fechas válidas para el corte.');
+    }
+    if (end <= start) {
+      throw new Error('La fecha y hora fin debe ser posterior al inicio.');
+    }
+
+    const sales = await fetchSalesForRange(input.branch_id, start.toISOString(), end.toISOString());
+    const summary = calculateSummary(sales, 0);
+    const activeSaleIds = sales
+      .filter((sale) => !sale.deleted_at && sale.id)
+      .map((sale) => sale.id as string);
+    summary.products_sold = await fetchProductsSold(activeSaleIds);
+
+    const generatedBy = input.generated_by?.trim();
+    return {
+      id: `custom-${start.getTime()}-${end.getTime()}`,
+      branch_id: input.branch_id,
+      branch_code: input.branch_code ?? null,
+      branch_name: input.branch_name ?? null,
+      cashier_user_id: 'custom-range',
+      cashier_name: 'Corte personalizado',
+      opened_at: start.toISOString(),
+      closed_at: end.toISOString(),
+      opening_cash: 0,
+      cash_sales_total: summary.cash_sales_total,
+      card_sales_total: summary.card_sales_total,
+      transfer_sales_total: summary.transfer_sales_total,
+      credit_sales_total: summary.credit_sales_total,
+      courtesy_total: summary.courtesy_total,
+      discounts_total: summary.discounts_total,
+      cancellations_total: summary.cancellations_total,
+      cancellations_count: summary.cancellations_count,
+      ticket_count: summary.ticket_count,
+      products_sold: summary.products_sold,
+      returns_total: summary.returns_total,
+      total_sold: summary.total_sold,
+      expected_cash: summary.expected_cash,
+      delivered_cash: null,
+      cash_difference: null,
+      opening_observations: 'Corte reconstruido por rango de fecha y hora.',
+      closing_observations: generatedBy ? `Generado por ${generatedBy}.` : null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+  },
+
+  async listSessionSales(session: CashRegisterSession, endAt = new Date()): Promise<CashRegisterSaleDetail[]> {
+    if (!isVinosConfigured) return [];
+    const endIso = session.closed_at ?? endAt.toISOString();
+    const rows: CashRegisterSaleDetail[] = [];
+    const pageSize = 1000;
+    let from = 0;
+
+    while (true) {
+      const to = from + pageSize - 1;
+      const { data, error } = await supabaseVinos
+        .from('sales')
+        .select('id, created_at, payment_method, subtotal, discount_amount, total, wallet_used, credit_used, split_payment_method, split_payment_amount, deleted_at, delete_note, customer:customers(id,name), items:sale_items(id, qty, line_total)')
+        .eq('branch_id', session.branch_id)
+        .eq('created_by', session.cashier_user_id)
+        .gte('created_at', session.opened_at)
+        .lte('created_at', endIso)
+        .order('created_at', { ascending: false })
+        .range(from, to);
+      if (error) throw error;
+
+      const batch = (data ?? []) as CashRegisterSaleDetail[];
+      rows.push(...batch);
+      if (batch.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return rows;
   },
 };

@@ -86,17 +86,21 @@ export const generateVinosCashRegisterReceipt = async (
     ? wrapText(`OBS. CIERRE: ${session.closing_observations.trim().toUpperCase()}`, contentWidth, fontRegular, 7)
     : [];
   const rows = [
+    ['NUMERO DE TICKETS', String(Number(session.ticket_count ?? 0))],
+    ['PRODUCTOS VENDIDOS', String(Number(session.products_sold ?? 0))],
     ['EFECTIVO INICIAL', formatCurrency(Number(session.opening_cash ?? 0))],
     ['VENTAS EFECTIVO', formatCurrency(Number(session.cash_sales_total ?? 0))],
     ['VENTAS TARJETA', formatCurrency(Number(session.card_sales_total ?? 0))],
     ['TRANSFERENCIAS', formatCurrency(Number(session.transfer_sales_total ?? 0))],
+    ['VENTAS CREDITO', formatCurrency(Number(session.credit_sales_total ?? 0))],
+    ['DEVOLUCIONES', formatCurrency(Number(session.returns_total ?? 0))],
     ['CORTESIAS', formatCurrency(Number(session.courtesy_total ?? 0))],
     ['DESCUENTOS', `-${formatCurrency(Number(session.discounts_total ?? 0))}`],
     ['CANCELACIONES', `${Number(session.cancellations_count ?? 0)} - ${formatCurrency(Number(session.cancellations_total ?? 0))}`],
     ['TOTAL VENDIDO', formatCurrency(Number(session.total_sold ?? 0))],
     ['EFECTIVO ESPERADO', formatCurrency(Number(session.expected_cash ?? 0))],
-    ['EFECTIVO ENTREGADO', formatCurrency(Number(session.delivered_cash ?? 0))],
-    ['DIFERENCIA', formatCurrency(Number(session.cash_difference ?? 0))],
+    ['EFECTIVO ENTREGADO', session.delivered_cash == null ? '-' : formatCurrency(Number(session.delivered_cash ?? 0))],
+    ['DIFERENCIA', session.cash_difference == null ? '-' : formatCurrency(Number(session.cash_difference ?? 0))],
   ];
 
   const dynamicHeight =
