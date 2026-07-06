@@ -24,6 +24,11 @@ interface Props {
   currentUser: User;
 }
 
+interface CashierOption {
+  id: string;
+  name: string;
+}
+
 interface UomMini {
   id: string;
   name: string;
@@ -153,6 +158,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const [historyFrom, setHistoryFrom] = useState('');
   const [historyTo, setHistoryTo] = useState('');
   const [historySearch, setHistorySearch] = useState('');
+  const [historyCashierId, setHistoryCashierId] = useState('');
+  const [historyCashiers, setHistoryCashiers] = useState<CashierOption[]>([]);
+  const [historyCashiersLoading, setHistoryCashiersLoading] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyEmployeeNames, setHistoryEmployeeNames] = useState<Record<string, string>>({});
   const HISTORY_PAGE_SIZE = 5;
@@ -803,6 +811,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         from: historyFrom || undefined,
         to: historyTo || undefined,
         search: historySearch.trim() || undefined,
+        createdBy: historyCashierId || undefined,
       });
       setHistorySales(rows);
       const userIds = Array.from(new Set(rows.map(row => row.created_by).filter(Boolean)));
@@ -825,13 +834,62 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     finally { setHistoryLoading(false); }
   };
 
-  const openHistory = () => { setHistoryOpen(true); setHistoryPage(1); loadHistory(); };
-  const clearHistoryFilters = () => { setHistoryFrom(''); setHistoryTo(''); setHistorySearch(''); setHistoryPage(1); };
+  const loadHistoryCashiers = useCallback(async () => {
+    setHistoryCashiersLoading(true);
+    try {
+      const [profilesRes, unitsRes, permissionsRes] = await Promise.all([
+        supabase
+          .from('app_user_profiles')
+          .select('id, full_name, username, email, role_key, active')
+          .eq('active', true)
+          .order('full_name'),
+        supabase
+          .from('app_user_business_unit_access')
+          .select('user_id, business_unit')
+          .eq('business_unit', 'vinos'),
+        supabase
+          .from('app_user_permissions')
+          .select('user_id, permission_key, is_allowed')
+          .eq('is_allowed', true)
+          .like('permission_key', 'vinos.%'),
+      ]);
+      if (profilesRes.error) throw profilesRes.error;
+      if (unitsRes.error) throw unitsRes.error;
+      if (permissionsRes.error) throw permissionsRes.error;
+
+      const vinosUnitUsers = new Set((unitsRes.data ?? []).map((row: { user_id: string }) => row.user_id));
+      const vinosPermissionUsers = new Set((permissionsRes.data ?? []).map((row: { user_id: string }) => row.user_id));
+      const cashiers = (profilesRes.data ?? [])
+        .filter((profile: { id: string; role_key: string | null }) => {
+          const roleKey = String(profile.role_key ?? '').toLowerCase();
+          return (
+            roleKey === 'superadmin' ||
+            roleKey === 'admin' ||
+            roleKey === 'vinos_admin' ||
+            vinosUnitUsers.has(profile.id) ||
+            vinosPermissionUsers.has(profile.id)
+          );
+        })
+        .map((profile: { id: string; full_name: string | null; username: string | null; email: string | null }) => ({
+          id: profile.id,
+          name: profile.full_name || profile.username || profile.email || 'Usuario sin nombre',
+        }));
+      setHistoryCashiers(cashiers);
+    } catch (error) {
+      console.error(error);
+      setHistoryCashiers([]);
+    } finally {
+      setHistoryCashiersLoading(false);
+    }
+  }, []);
+
+  const openHistory = () => { setHistoryOpen(true); setHistoryPage(1); loadHistoryCashiers(); loadHistory(); };
+  const clearHistoryFilters = () => { setHistoryFrom(''); setHistoryTo(''); setHistorySearch(''); setHistoryCashierId(''); setHistoryPage(1); };
 
   useEffect(() => {
     if (historyOpen) { loadHistory(); setHistoryPage(1); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [historyFrom, historyTo, historySearch]);
+  }, [historyFrom, historyTo, historySearch, historyCashierId]);
 
   // Al cambiar de cliente, limpiar cupón aplicado (las promociones van por dueño)
   useEffect(() => { removeCoupon(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [customerId]);
@@ -2317,7 +2375,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             </div>
 
             {/* Filtros */}
-            <div className="border-b border-slate-200 bg-slate-50 px-6 py-4 grid grid-cols-1 md:grid-cols-[140px_140px_1fr_auto] gap-3 items-end">
+            <div className="border-b border-slate-200 bg-slate-50 px-6 py-4 grid grid-cols-1 md:grid-cols-[140px_140px_220px_1fr_auto] gap-3 items-end">
               <div>
                 <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Desde</label>
                 <input type="date" value={historyFrom} onChange={e => setHistoryFrom(e.target.value)}
@@ -2327,6 +2385,20 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Hasta</label>
                 <input type="date" value={historyTo} onChange={e => setHistoryTo(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-400"/>
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Cajero</label>
+                <select
+                  value={historyCashierId}
+                  onChange={e => setHistoryCashierId(e.target.value)}
+                  disabled={historyCashiersLoading}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-orange-400 disabled:opacity-60"
+                >
+                  <option value="">{historyCashiersLoading ? 'Cargando...' : 'Todos los cajeros'}</option>
+                  {historyCashiers.map(cashier => (
+                    <option key={cashier.id} value={cashier.id}>{cashier.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Buscar</label>

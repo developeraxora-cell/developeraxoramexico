@@ -88,7 +88,7 @@ const STOCK_EPSILON = 0.000001;
 
 export const vinosSalesService = {
 
-  async list(branchId?: number, opts?: { search?: string; from?: string; to?: string; customerId?: string }): Promise<SaleRow[]> {
+  async list(branchId?: number, opts?: { search?: string; from?: string; to?: string; customerId?: string; createdBy?: string }): Promise<SaleRow[]> {
     if (!isVinosConfigured) return [];
     let query = supabaseVinos
       .from('sales')
@@ -98,6 +98,7 @@ export const vinosSalesService = {
       .limit(500);
     if (branchId) query = query.eq('branch_id', branchId);
     if (opts?.customerId) query = query.eq('customer_id', opts.customerId);
+    if (opts?.createdBy) query = query.eq('created_by', opts.createdBy);
     if (opts?.from) query = query.gte('created_at', `${opts.from}T00:00:00`);
     if (opts?.to) query = query.lte('created_at', `${opts.to}T23:59:59`);
     const { data, error } = await query;
