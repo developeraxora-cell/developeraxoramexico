@@ -364,6 +364,7 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
   const [cashDetailSales, setCashDetailSales] = useState<CashRegisterSaleDetail[]>([]);
   const [cashDetailLoading, setCashDetailLoading] = useState(false);
   const [cashDetailError, setCashDetailError] = useState('');
+  const [cashPrintSessionId, setCashPrintSessionId] = useState<string | null>(null);
 
   const selectedBranch = useMemo(
     () => branches.find((branch) => branch.id === selectedBranchId) ?? null,
@@ -494,6 +495,54 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
     setCashDetailSession(null);
     setCashDetailSales([]);
     setCashDetailError('');
+  };
+
+  const printCashSession = async (session: CashRegisterSession) => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.title = 'Corte de caja';
+      printWindow.blur();
+      window.focus();
+    }
+
+    setCashPrintSessionId(session.id);
+    try {
+      const isOpen = !session.closed_at;
+      const summary = isOpen ? await vinosCashRegisterService.previewClose(session) : null;
+      const sales = await vinosCashRegisterService.listSessionSales(session);
+      const activeSales = sales.filter((sale) => !sale.deleted_at);
+      const printableSession: CashRegisterSession = {
+        ...session,
+        ...(summary ? {
+          cash_sales_total: summary.cash_sales_total,
+          card_sales_total: summary.card_sales_total,
+          transfer_sales_total: summary.transfer_sales_total,
+          credit_sales_total: summary.credit_sales_total,
+          courtesy_total: summary.courtesy_total,
+          discounts_total: summary.discounts_total,
+          cancellations_total: summary.cancellations_total,
+          cancellations_count: summary.cancellations_count,
+          total_sold: summary.total_sold,
+          expected_cash: summary.expected_cash,
+          delivered_cash: null,
+          cash_difference: null,
+        } : {}),
+        closed_at: session.closed_at ?? new Date().toISOString(),
+        ticket_count: activeSales.length,
+        products_sold: activeSales.reduce((sum, sale) => sum + getCashSaleItemCount(sale), 0),
+        returns_total: session.returns_total ?? 0,
+      };
+
+      await generateVinosCashRegisterReceipt(
+        { session: printableSession, branchName },
+        { mode: 'print', targetWindow: printWindow },
+      );
+    } catch (error) {
+      if (printWindow && !printWindow.closed) printWindow.close();
+      console.error(error);
+    } finally {
+      setCashPrintSessionId(null);
+    }
   };
 
   const reportData = data ?? EMPTY_REPORTS_DATA;
@@ -846,14 +895,25 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
                               {observations || '—'}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <button
-                                onClick={() => openCashSessionDetail(session)}
-                                title="Ver detalle"
-                                aria-label="Ver detalle de caja"
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
-                              >
-                                <Eye size={13} />
-                              </button>
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  onClick={() => openCashSessionDetail(session)}
+                                  title="Ver detalle"
+                                  aria-label="Ver detalle de caja"
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                                >
+                                  <Eye size={13} />
+                                </button>
+                                <button
+                                  onClick={() => printCashSession(session)}
+                                  disabled={cashPrintSessionId === session.id}
+                                  title="Imprimir corte"
+                                  aria-label="Imprimir corte de caja"
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 disabled:cursor-wait disabled:opacity-60"
+                                >
+                                  {cashPrintSessionId === session.id ? <Loader2 size={13} className="animate-spin" /> : <Printer size={13} />}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
