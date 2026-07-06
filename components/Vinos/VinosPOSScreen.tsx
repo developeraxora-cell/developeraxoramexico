@@ -272,11 +272,6 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   useEffect(() => { loadCashSession(); }, [loadCashSession]);
 
-  useEffect(() => {
-    if (!cashSessionReady || !branchDbId || cashSession || cashOpenModal || cashCloseModal) return;
-    setCashStartPromptOpen(true);
-  }, [branchDbId, cashCloseModal, cashOpenModal, cashSession, cashSessionReady]);
-
   const openCashOpeningForm = () => {
     setCashStartPromptOpen(false);
     setCashOpenModal(true);
@@ -490,7 +485,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     (isCredito && creditRemainderMethod === 'EFECTIVO' && creditRemainderTotal > 0 && creditRemainderCashReceivedNum < creditRemainderTotal);
   const creditPaymentInvalid = isCredito && (!selectedCustomer || creditAmountRequested <= 0 || creditAmountRequested - creditMaxAllowed > STOCK_EPSILON);
   const isCashRegisterOpen = Boolean(cashSession);
-  const shouldShowCashStartGate = cashSessionReady && !isCashRegisterOpen && !cashOpenModal;
+  const shouldShowCashStartGate = false;
 
   const handleCreditAmountChange = (value: string) => {
     if (value.trim() === '') {
@@ -1362,14 +1357,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             </button>
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5">
-            <div className="mr-auto flex items-center gap-2 text-[11px] font-bold text-slate-600">
-              <Clock size={14} className="text-orange-500" />
-              <span>
-                {cashSession ? `Caja abierta desde ${formatDateTime(cashSession.opened_at)}` : 'Caja sin iniciar'}
-              </span>
-            </div>
-            {cashSession ? (
+          {cashSession && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5">
+              <div className="mr-auto flex items-center gap-2 text-[11px] font-bold text-slate-600">
+                <Clock size={14} className="text-orange-500" />
+                <span>Caja abierta desde {formatDateTime(cashSession.opened_at)}</span>
+              </div>
               <button
                 onClick={openCloseCashModal}
                 className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-700 hover:bg-emerald-100"
@@ -1377,22 +1370,15 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               >
                 <LockKeyhole size={14}/> Cerrar caja
               </button>
-            ) : (
               <button
-                onClick={openCashOpeningForm}
-                className="flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-orange-700 hover:bg-orange-100"
+                onClick={openCashHistory}
+                className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+                title="Historial de caja"
               >
-                <UnlockKeyhole size={14}/> Iniciar caja
+                <History size={14}/> Caja
               </button>
-            )}
-            <button
-              onClick={openCashHistory}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
-              title="Historial de caja"
-            >
-              <History size={14}/> Caja
-            </button>
-          </div>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-3">
