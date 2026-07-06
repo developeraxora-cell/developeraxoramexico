@@ -11,6 +11,7 @@ import { vinosReportsService, type ReportsKPIs } from '../../services/vinos/repo
 import { vinosCustomersService } from '../../services/vinos/customers.service';
 import { vinosCashRegisterService, type CashRegisterSaleDetail, type CashRegisterSession } from '../../services/vinos/cashRegister.service';
 import { generateVinosCashRegisterReceipt } from '../../services/vinos/cashRegisterReceiptPdf';
+import { supabase } from '../../services/supabaseClient';
 
 type DatePreset = 'today' | '7d' | '30d' | '90d' | 'year' | 'custom';
 
@@ -18,6 +19,12 @@ interface Props {
   selectedBranchId: string;
   branches: Branch[];
   currentUser: User;
+}
+
+interface CashierOption {
+  id: string;
+  name: string;
+  roleKey: string;
 }
 
 const EMPTY_REPORTS_DATA: ReportsKPIs = {
@@ -358,8 +365,11 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
   const [customCutOpen, setCustomCutOpen] = useState(false);
   const [customCutStart, setCustomCutStart] = useState('');
   const [customCutEnd, setCustomCutEnd] = useState('');
+  const [customCutCashierId, setCustomCutCashierId] = useState('');
   const [customCutLoading, setCustomCutLoading] = useState(false);
   const [customCutError, setCustomCutError] = useState('');
+  const [cashierOptions, setCashierOptions] = useState<CashierOption[]>([]);
+  const [cashiersLoading, setCashiersLoading] = useState(false);
   const [cashDetailSession, setCashDetailSession] = useState<CashRegisterSession | null>(null);
   const [cashDetailSales, setCashDetailSales] = useState<CashRegisterSaleDetail[]>([]);
   const [cashDetailLoading, setCashDetailLoading] = useState(false);
@@ -418,6 +428,59 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
 
   useEffect(() => { load(); }, [load]);
 
+  const loadCashierOptions = useCallback(async () => {
+    setCashiersLoading(true);
+    try {
+      const [profilesRes, unitsRes, permissionsRes] = await Promise.all([
+        supabase
+          .from('app_user_profiles')
+          .select('id, full_name, username, email, role_key, active')
+          .eq('active', true)
+          .order('full_name'),
+        supabase
+          .from('app_user_business_unit_access')
+          .select('user_id, business_unit')
+          .eq('business_unit', 'vinos'),
+        supabase
+          .from('app_user_permissions')
+          .select('user_id, permission_key, is_allowed')
+          .eq('is_allowed', true)
+          .like('permission_key', 'vinos.%'),
+      ]);
+      if (profilesRes.error) throw profilesRes.error;
+      if (unitsRes.error) throw unitsRes.error;
+      if (permissionsRes.error) throw permissionsRes.error;
+
+      const vinosUnitUsers = new Set((unitsRes.data ?? []).map((row: { user_id: string }) => row.user_id));
+      const vinosPermissionUsers = new Set((permissionsRes.data ?? []).map((row: { user_id: string }) => row.user_id));
+      const rows = (profilesRes.data ?? [])
+        .filter((profile: { id: string; role_key: string | null }) => {
+          const roleKey = String(profile.role_key ?? '').toLowerCase();
+          return (
+            roleKey === 'superadmin' ||
+            roleKey === 'admin' ||
+            roleKey === 'vinos_admin' ||
+            vinosUnitUsers.has(profile.id) ||
+            vinosPermissionUsers.has(profile.id)
+          );
+        })
+        .map((profile: { id: string; full_name: string | null; username: string | null; email: string | null; role_key: string | null }) => ({
+          id: profile.id,
+          name: profile.full_name || profile.username || profile.email || 'Usuario sin nombre',
+          roleKey: profile.role_key ?? '',
+        }));
+
+      setCashierOptions(rows);
+    } catch (error) {
+      console.error(error);
+      setCashierOptions([]);
+    } finally {
+      setCashiersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadCashierOptions(); }, [loadCashierOptions]);
+
   const openCustomCutModal = () => {
     const now = new Date();
     const start = new Date(now);
@@ -425,6 +488,7 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
     if (start > now) start.setDate(start.getDate() - 1);
     setCustomCutStart(toLocalDateTimeInputValue(start));
     setCustomCutEnd(toLocalDateTimeInputValue(now));
+    setCustomCutCashierId('');
     setCustomCutError('');
     setCustomCutOpen(true);
   };
@@ -455,6 +519,7 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
     setCustomCutLoading(true);
     setCustomCutError('');
     try {
+      const selectedCashier = cashierOptions.find((cashier) => cashier.id === customCutCashierId) ?? null;
       const session = await vinosCashRegisterService.buildCustomCut({
         branch_id: branchDbId,
         branch_code: selectedBranch?.code ?? selectedBranchId,
@@ -462,6 +527,8 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
         start_at: customCutStart,
         end_at: customCutEnd,
         generated_by: currentUser.name,
+        cashier_user_id: selectedCashier?.id ?? null,
+        cashier_name: selectedCashier?.name ?? null,
       });
       await generateVinosCashRegisterReceipt(
         { session, branchName },
@@ -974,6 +1041,23 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
                   onChange={(event) => setCustomCutEnd(event.target.value)}
                   className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                 />
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Cajero / empleado</span>
+                <select
+                  value={customCutCashierId}
+                  onChange={(event) => setCustomCutCashierId(event.target.value)}
+                  disabled={cashiersLoading}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:opacity-60"
+                >
+                  <option value="">{cashiersLoading ? 'Cargando empleados...' : 'Todos los cajeros'}</option>
+                  {cashierOptions.map((cashier) => (
+                    <option key={cashier.id} value={cashier.id}>
+                      {cashier.name}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               {customCutError && (

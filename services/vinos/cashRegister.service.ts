@@ -182,6 +182,7 @@ const fetchSalesForRange = async (
   branchId: number,
   startIso: string,
   endIso: string,
+  cashierUserId?: string | null,
 ): Promise<SaleForCashRegister[]> => {
   const rows: SaleForCashRegister[] = [];
   const pageSize = 1000;
@@ -189,14 +190,16 @@ const fetchSalesForRange = async (
 
   while (true) {
     const to = from + pageSize - 1;
-    const { data, error } = await supabaseVinos
+    let query = supabaseVinos
       .from('sales')
       .select('id, payment_method, subtotal, discount_amount, total, credit_used, split_payment_method, split_payment_amount, deleted_at')
       .eq('branch_id', branchId)
       .gte('created_at', startIso)
       .lte('created_at', endIso)
-      .order('created_at', { ascending: true })
-      .range(from, to);
+      .order('created_at', { ascending: true });
+    if (cashierUserId) query = query.eq('created_by', cashierUserId);
+
+    const { data, error } = await query.range(from, to);
     if (error) throw error;
 
     const batch = (data ?? []) as SaleForCashRegister[];
@@ -426,6 +429,8 @@ export const vinosCashRegisterService = {
     start_at: string;
     end_at: string;
     generated_by?: string | null;
+    cashier_user_id?: string | null;
+    cashier_name?: string | null;
   }): Promise<CashRegisterSession> {
     if (!isVinosConfigured) throw new Error('DB vinos no configurada');
 
@@ -438,7 +443,7 @@ export const vinosCashRegisterService = {
       throw new Error('La fecha y hora fin debe ser posterior al inicio.');
     }
 
-    const sales = await fetchSalesForRange(input.branch_id, start.toISOString(), end.toISOString());
+    const sales = await fetchSalesForRange(input.branch_id, start.toISOString(), end.toISOString(), input.cashier_user_id);
     const summary = calculateSummary(sales, 0);
     const activeSaleIds = sales
       .filter((sale) => !sale.deleted_at && sale.id)
@@ -451,8 +456,8 @@ export const vinosCashRegisterService = {
       branch_id: input.branch_id,
       branch_code: input.branch_code ?? null,
       branch_name: input.branch_name ?? null,
-      cashier_user_id: 'custom-range',
-      cashier_name: 'Corte personalizado',
+      cashier_user_id: input.cashier_user_id ?? 'custom-range',
+      cashier_name: input.cashier_name?.trim() || 'Todos los cajeros',
       opened_at: start.toISOString(),
       closed_at: end.toISOString(),
       opening_cash: 0,
