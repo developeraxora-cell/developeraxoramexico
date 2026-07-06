@@ -36,6 +36,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [branchDbId, setBranchDbId] = useState<number | null>(null);
 
@@ -124,6 +125,9 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
   // ── filtered ─────────────────────────────────────────────
   const filtered = useMemo(() => {
     let arr = products;
+    if (showLowStockOnly) {
+      arr = arr.filter(p => p.total_stock <= Number(p.min_stock || 0));
+    }
     if (categoryFilters.length > 0) {
       arr = arr.filter(p => p.category_id && categoryFilters.includes(p.category_id));
     }
@@ -136,7 +140,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
       );
     }
     return arr;
-  }, [products, search, categoryFilters]);
+  }, [products, search, categoryFilters, showLowStockOnly]);
 
   const toggleCategoryFilter = (id: string) => {
     setCategoryFilters(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
@@ -544,16 +548,27 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
         {[
           { label: 'Total productos',  value: stats.total,      icon: Package,        color: 'text-slate-900'  },
           { label: 'Activos',          value: stats.activos,    icon: TrendingUp,     color: 'text-green-600'  },
-          { label: 'Stock bajo',       value: stats.bajos,      icon: AlertTriangle,  color: 'text-orange-500' },
+          { label: 'Stock bajo',       value: stats.bajos,      icon: AlertTriangle,  color: 'text-orange-500', action: () => setShowLowStockOnly(prev => !prev), active: showLowStockOnly },
           { label: 'Unidades totales', value: stats.unidades,   icon: Package,        color: 'text-slate-900'  },
         ].map(s => (
-          <div key={s.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <button
+            key={s.label}
+            type="button"
+            onClick={s.action}
+            className={`rounded-2xl border p-4 text-left shadow-sm transition-colors ${
+              s.active
+                ? 'border-orange-300 bg-orange-50 ring-2 ring-orange-100'
+                : s.action
+                  ? 'border-slate-200 bg-white hover:border-orange-200 hover:bg-orange-50/50'
+                  : 'border-slate-200 bg-white'
+            }`}
+          >
             <div className="flex items-center justify-between">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{s.label}</p>
               <s.icon size={14} className="text-slate-300" />
             </div>
             <p className={`mt-1 text-2xl font-black ${s.color}`}>{s.value}</p>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -623,6 +638,19 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
           <button onClick={() => setCatalogModalOpen(true)} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">
             <Settings size={14} /> Ajustes
           </button>
+          <button
+            type="button"
+            onClick={() => setShowLowStockOnly(prev => !prev)}
+            className={`flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-xs font-black uppercase tracking-wider ${
+              showLowStockOnly
+                ? 'border-orange-300 bg-orange-50 text-orange-700'
+                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+            }`}
+            title="Mostrar productos con stock bajo"
+          >
+            <AlertTriangle size={14} />
+            Stock bajo
+          </button>
           <button onClick={load} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50" title="Recargar">
             <RefreshCw size={14} />
           </button>
@@ -649,10 +677,10 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
           <div className="py-20 text-center">
             <Package size={40} className="mx-auto text-slate-300" />
             <p className="mt-3 text-sm font-black uppercase tracking-widest text-slate-400">
-              {search || categoryFilters.length > 0 ? 'Sin resultados' : 'Sin productos'}
+              {search || categoryFilters.length > 0 || showLowStockOnly ? 'Sin resultados' : 'Sin productos'}
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              {search || categoryFilters.length > 0 ? 'Prueba con otro filtro.' : 'Agrega tu primer producto al catálogo.'}
+              {search || categoryFilters.length > 0 || showLowStockOnly ? 'Prueba con otro filtro.' : 'Agrega tu primer producto al catálogo.'}
             </p>
           </div>
         ) : (
