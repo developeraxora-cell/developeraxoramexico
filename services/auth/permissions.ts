@@ -55,6 +55,7 @@ export const TAB_PERMISSIONS: Record<string, TabPermission> = {
   'vinos-purchases':            { businessUnit: 'vinos', moduleKey: 'purchases' },
   'vinos-audit':                { businessUnit: 'vinos', moduleKey: 'audit' },
   'vinos-reports':              { businessUnit: 'vinos', moduleKey: 'reports' },
+  'vinos-custom-cut':           { businessUnit: 'vinos', moduleKey: 'reports' },
   'vinos-campaigns':            { businessUnit: 'vinos', moduleKey: 'campaigns' },
 };
 

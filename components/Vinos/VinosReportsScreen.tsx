@@ -697,13 +697,6 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
               />
             </label>
           </div>
-          <button
-            onClick={openCustomCutModal}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-700 hover:bg-orange-100"
-          >
-            <Printer size={14} />
-            Corte personalizado
-          </button>
           <button onClick={load} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">
             <RefreshCw size={14}/>
           </button>

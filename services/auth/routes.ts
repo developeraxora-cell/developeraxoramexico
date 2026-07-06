@@ -36,6 +36,7 @@ export const TAB_PATHS: Record<string, string> = {
   'vinos-purchases':           '/vinos/compras',
   'vinos-audit':               '/vinos/auditorias',
   'vinos-reports':             '/vinos/reportes',
+  'vinos-custom-cut':          '/vinos/corte-personalizado',
   'vinos-campaigns':           '/vinos/campanas',
 };
 

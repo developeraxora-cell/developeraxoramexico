@@ -100,6 +100,16 @@ const getMexicoDayCloseDate = (openedAt: string) => {
   return new Date(`${year}-${month}-${day}T23:59:59${MEXICO_UTC_OFFSET}`);
 };
 
+const parseMexicoDateTimeInput = (value: string) => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return new Date(NaN);
+  const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+  const [datePart, timePart = '00:00'] = normalized.split('T');
+  if (!datePart || !timePart) return new Date(NaN);
+  const [hours = '00', minutes = '00'] = timePart.split(':');
+  return new Date(`${datePart}T${hours}:${minutes}:00${MEXICO_UTC_OFFSET}`);
+};
+
 const getAutoCloseObservation = (previous?: string | null) => {
   const autoNote = 'Cierre automático a las 23:59 hora de México.';
   const trimmed = previous?.trim();
@@ -195,7 +205,7 @@ const fetchSalesForRange = async (
       .select('id, payment_method, subtotal, discount_amount, total, credit_used, split_payment_method, split_payment_amount, deleted_at')
       .eq('branch_id', branchId)
       .gte('created_at', startIso)
-      .lte('created_at', endIso)
+      .lt('created_at', endIso)
       .order('created_at', { ascending: true });
     if (cashierUserId) query = query.eq('created_by', cashierUserId);
 
@@ -434,8 +444,8 @@ export const vinosCashRegisterService = {
   }): Promise<CashRegisterSession> {
     if (!isVinosConfigured) throw new Error('DB vinos no configurada');
 
-    const start = new Date(input.start_at);
-    const end = new Date(input.end_at);
+    const start = parseMexicoDateTimeInput(input.start_at);
+    const end = parseMexicoDateTimeInput(input.end_at);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
       throw new Error('Selecciona fechas válidas para el corte.');
     }
@@ -443,7 +453,8 @@ export const vinosCashRegisterService = {
       throw new Error('La fecha y hora fin debe ser posterior al inicio.');
     }
 
-    const sales = await fetchSalesForRange(input.branch_id, start.toISOString(), end.toISOString(), input.cashier_user_id);
+    const endExclusive = new Date(end.getTime() + 60_000);
+    const sales = await fetchSalesForRange(input.branch_id, start.toISOString(), endExclusive.toISOString(), input.cashier_user_id);
     const summary = calculateSummary(sales, 0);
     const activeSaleIds = sales
       .filter((sale) => !sale.deleted_at && sale.id)

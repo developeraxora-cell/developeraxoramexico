@@ -26,6 +26,7 @@ import VinosPOSScreen from './components/Vinos/VinosPOSScreen';
 import VinosPurchasesScreen from './components/Vinos/VinosPurchasesScreen';
 import VinosAuditScreen from './components/Vinos/VinosAuditScreen';
 import VinosReportsScreen from './components/Vinos/VinosReportsScreen';
+import VinosCustomCutScreen from './components/Vinos/VinosCustomCutScreen';
 import VinosCampaignsScreen from './components/Vinos/VinosCampaignsScreen';
 import ExecutiveDashboardScreen from './components/Executive/ExecutiveDashboardScreen';
 import {
@@ -83,6 +84,7 @@ const APP_TAB_ORDER = [
   'vinos-inventory',
   'vinos-customers',
   'vinos-reports',
+  'vinos-custom-cut',
   'vinos-campaigns',
   'vinos-audit',
 ];
@@ -648,6 +650,8 @@ const App: React.FC = () => {
         return <VinosAuditScreen key="audit-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'vinos-reports':
         return <VinosReportsScreen key="reports-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'vinos-custom-cut':
+        return <VinosCustomCutScreen key="custom-cut-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'vinos-campaigns':
         return <VinosCampaignsScreen key="campaigns-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       default:
