@@ -890,7 +890,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
 
       {historyOpen && historyTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-5xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+          <div className="w-full max-w-7xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
                 <h2 className="text-base font-black uppercase tracking-tight text-slate-900">Estadísticas del producto</h2>
@@ -909,7 +909,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                 <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{historyError}</div>
               ) : historyData ? (
                 <>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Último costo compra</p>
                       <p className="mt-1 text-xl font-black text-slate-900">
@@ -931,13 +931,18 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                       <p className="mt-1 text-xl font-black text-blue-600">{formatCurrency(historyData.estimated_profit)}</p>
                       <p className="text-[10px] font-bold text-slate-400">Usando el último costo compra</p>
                     </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stock actual</p>
+                      <p className="mt-1 text-xl font-black text-slate-900">{historyTarget?.total_stock ?? '—'}</p>
+                      <p className="text-[10px] font-bold text-slate-400">Disponible hoy</p>
+                    </div>
                   </div>
 
                   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                     <table className="w-full text-sm">
                       <thead className="bg-slate-50">
                         <tr className="border-b border-slate-200">
-                          {['Fecha', 'Estado', 'Cantidad', 'Precio', 'Total', 'Tipo', 'Ganancia', 'Detalle'].map((h) => (
+                          {['Fecha', 'Estado', 'Movimiento', 'Stock antes', 'Stock después', 'Precio', 'Total', 'Tipo', 'Ganancia', 'Detalle'].map((h) => (
                             <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
                           ))}
                         </tr>
@@ -945,9 +950,32 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                       <tbody className="divide-y divide-slate-100">
                         {historyData.history.length === 0 ? (
                           <tr>
-                            <td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-400">Sin movimientos para este producto.</td>
+                            <td colSpan={10} className="px-4 py-10 text-center text-sm text-slate-400">Sin movimientos para este producto.</td>
                           </tr>
-                        ) : historyData.history.map((row) => {
+                        ) : (() => {
+                          const runningRows = historyData.history.reduce<Array<ProductInsights['history'][number] & { movementQty: number | null; previousQty: number | null; runningQty: number | null }>>((acc, row) => {
+                            const baselineQty = acc[acc.length - 1]?.runningQty ?? 0;
+                            if (row.status === 'ACTUALIZACION') {
+                              const hasStockSnapshot = row.stock_before != null && row.stock_after != null;
+                              acc.push({
+                                ...row,
+                                movementQty: null,
+                                previousQty: hasStockSnapshot ? row.stock_before : null,
+                                runningQty: hasStockSnapshot ? row.stock_after : baselineQty,
+                              });
+                              return acc;
+                            }
+                            const movementQty = row.status === 'INGRESO' ? Number(row.qty ?? 0) : -Number(row.qty ?? 0);
+                            const runningQty = baselineQty + movementQty;
+                            acc.push({
+                              ...row,
+                              movementQty,
+                              previousQty: baselineQty,
+                              runningQty,
+                            });
+                            return acc;
+                          }, []);
+                          return [...runningRows].reverse().map((row) => {
                           const badgeClass =
                             row.status === 'INGRESO' ? 'bg-green-100 text-green-700'
                               : row.status === 'SALIDA' ? 'bg-orange-100 text-orange-700'
@@ -959,7 +987,13 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                                 <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black ${badgeClass}`}>{row.status}</span>
                               </td>
                               <td className="px-4 py-3 text-sm font-bold text-slate-900">
-                                {row.qty != null ? row.qty : '—'}
+                                {row.movementQty != null ? (row.movementQty > 0 ? `+${row.movementQty}` : row.movementQty) : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-bold text-slate-500">
+                                {row.previousQty != null ? row.previousQty : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-black text-slate-900">
+                                {row.runningQty != null ? row.runningQty : '—'}
                               </td>
                               <td className="px-4 py-3 text-sm font-bold text-slate-900">
                                 {row.unit_price != null ? formatCurrency(row.unit_price) : '—'}
@@ -979,7 +1013,8 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                               </td>
                             </tr>
                           );
-                        })}
+                          });
+                        })()}
                       </tbody>
                     </table>
                   </div>

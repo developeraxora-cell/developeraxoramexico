@@ -60,6 +60,8 @@ export interface ProductHistoryRow {
   profit: number | null;
   source: string;
   detail: string | null;
+  stock_before: number | null;
+  stock_after: number | null;
 }
 
 export interface ProductInsights {
@@ -69,6 +71,7 @@ export interface ProductInsights {
   purchased_total: number;
   sold_qty: number;
   sold_total: number;
+  net_qty: number;
   estimated_profit: number;
   history: ProductHistoryRow[];
 }
@@ -415,6 +418,7 @@ export const vinosProductsService = {
         purchased_total: 0,
         sold_qty: 0,
         sold_total: 0,
+        net_qty: 0,
         estimated_profit: 0,
         history: [],
       };
@@ -424,6 +428,7 @@ export const vinosProductsService = {
       id: string;
       product_id: string;
       qty: number;
+      qty_base?: number | null;
       cost_per_unit: number;
       subtotal: number;
       product?: { name: string; sku: string } | { name: string; sku: string }[] | null;
@@ -444,6 +449,7 @@ export const vinosProductsService = {
       id: string;
       product_id: string;
       qty: number;
+      qty_base?: number | null;
       unit_price: number;
       line_total: number;
       price_type: PriceTier;
@@ -470,6 +476,7 @@ export const vinosProductsService = {
         id,
         product_id,
         qty,
+        qty_base,
         cost_per_unit,
         subtotal,
         product:products(name,sku),
@@ -485,6 +492,7 @@ export const vinosProductsService = {
         id,
         product_id,
         qty,
+        qty_base,
         unit_price,
         line_total,
         price_type,
@@ -527,6 +535,17 @@ export const vinosProductsService = {
     if (purchaseRes.error) throw purchaseRes.error;
     if (saleRes.error) throw saleRes.error;
 
+    let currentStockQty = 0;
+    let stockGapQty = 0;
+    const stockQuery = supabaseVinos
+      .from('product_stocks')
+      .select('qty')
+      .eq('product_id', productId);
+    if (branchId) stockQuery.eq('branch_id', branchId);
+    const { data: stockRows, error: stockError } = await stockQuery;
+    if (stockError) throw stockError;
+    currentStockQty = (stockRows ?? []).reduce((sum, row) => sum + Number((row as { qty?: number }).qty ?? 0), 0);
+
     const purchases = (purchaseRes.data ?? []) as PurchaseQueryRow[];
     const sales = (saleRes.data ?? []) as SaleQueryRow[];
 
@@ -537,15 +556,16 @@ export const vinosProductsService = {
         .filter((item) => item.product_id === productId)
         .map((item) => {
           const qty = Number(item.qty ?? 0);
+          const qtyBase = Number(item.qty_base ?? qty);
           const unitPrice = Number(item.cost_per_unit ?? 0);
-          const subtotal = Number(item.subtotal ?? qty * unitPrice);
+          const subtotal = Number(item.subtotal ?? qtyBase * unitPrice);
           const uomWrap = asOne(item.uom);
           const unitName = uomWrap?.uom ? asOne(uomWrap.uom) : null;
           return {
             id: `PUR-${item.id}`,
             status: 'INGRESO' as const,
             created_at: String(purchase.purchase_date ?? purchase.created_at ?? ''),
-            qty,
+            qty: qtyBase,
             unit_price: unitPrice,
             subtotal,
             price_type: null,
@@ -556,6 +576,8 @@ export const vinosProductsService = {
               purchase.notes ? purchase.notes : null,
               unitName?.name ? `Unidad: ${unitName.name}` : null,
             ].filter(Boolean).join(' | ') || null,
+            stock_before: null,
+            stock_after: null,
           } satisfies ProductHistoryRow;
         });
     });
@@ -563,28 +585,33 @@ export const vinosProductsService = {
     const saleRows = sales.flatMap((sale) => {
       const customer = asOne(sale.customer);
       const items = (Array.isArray(sale.items) ? sale.items : sale.items ? [sale.items] : []) as SaleItemRow[];
+      const saleCode = `V-${String(sale.id).replace(/-/g, '').slice(0, 6).toUpperCase()}`;
       return items
         .filter((item) => item.product_id === productId)
         .map((item) => {
           const qty = Number(item.qty ?? 0);
+          const qtyBase = Number(item.qty_base ?? qty);
           const unitPrice = Number(item.unit_price ?? 0);
-          const subtotal = Number(item.line_total ?? qty * unitPrice);
+          const subtotal = Number(item.line_total ?? qtyBase * unitPrice);
           const uomWrap = asOne(item.uom);
           const unitName = uomWrap?.uom ? asOne(uomWrap.uom) : null;
           return {
             id: `SAL-${item.id}`,
             status: 'SALIDA' as const,
             created_at: String(sale.created_at ?? ''),
-            qty,
+            qty: qtyBase,
             unit_price: unitPrice,
             subtotal,
             price_type: (item.price_type ?? null) as PriceTier | null,
             profit: null,
-            source: `Venta · ${sale.payment_method ?? ''}${customer?.name ? ` · ${customer.name}` : ''}`,
+            source: `Venta ${saleCode} · ${sale.payment_method ?? ''}${customer?.name ? ` · ${customer.name}` : ''}`,
             detail: [
+              `Nota de venta: ${saleCode}`,
               item.price_type ? `Tipo: ${item.price_type}` : null,
               unitName?.name ? `Unidad: ${unitName.name}` : null,
             ].filter(Boolean).join(' | ') || null,
+            stock_before: null,
+            stock_after: null,
           } satisfies ProductHistoryRow;
         });
     });
@@ -594,6 +621,9 @@ export const vinosProductsService = {
       .map((row) => {
         const observation = row.observation ?? row.justification ?? null;
         const description = row.description.replace(/\s\[[0-9a-f-]{36}\]/i, '');
+        const stockMatch = description.match(/stock ajustado manualmente.*de\s+([\d.]+)\s+a\s+([\d.]+)/i);
+        const prevStock = row.previous_data?.stock ?? (stockMatch ? Number(stockMatch[1]) : null);
+        const nextStock = row.new_data?.stock ?? (stockMatch ? Number(stockMatch[2]) : null);
         return {
           id: `AUD-${row.log_id}`,
           status: 'ACTUALIZACION' as const,
@@ -609,6 +639,8 @@ export const vinosProductsService = {
               ? 'Ajuste manual de stock'
               : 'Actualización de catálogo',
           detail: [description, observation ? `Obs: ${observation}` : null].filter(Boolean).join(' | ') || null,
+          stock_before: typeof prevStock === 'number' ? prevStock : null,
+          stock_after: typeof nextStock === 'number' ? nextStock : null,
         } satisfies ProductHistoryRow;
       });
 
@@ -625,10 +657,35 @@ export const vinosProductsService = {
     const purchased_total = purchaseRows.reduce((sum, row) => sum + Number(row.subtotal ?? 0), 0);
     const sold_qty = saleRows.reduce((sum, row) => sum + Number(row.qty ?? 0), 0);
     const sold_total = saleRows.reduce((sum, row) => sum + Number(row.subtotal ?? 0), 0);
+    const net_qty = purchased_qty - sold_qty;
     const estimated_profit = enrichedSaleRows.reduce((sum, row) => sum + Number(row.profit ?? 0), 0);
+    const latestKnownCreatedAt = [...purchaseRows, ...enrichedSaleRows, ...updateRows].reduce((latest, row) => {
+      const current = new Date(row.created_at).getTime();
+      return Number.isFinite(current) && current > latest ? current : latest;
+    }, 0);
 
-    const history = [...purchaseRows, ...enrichedSaleRows, ...updateRows]
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    stockGapQty = currentStockQty - net_qty;
+    const lastManualAdjustment = [...updateRows]
+      .filter((row) => row.stock_after != null)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+    const gapExplainedByManualAdjustment = lastManualAdjustment?.stock_after === currentStockQty;
+    const reconciliationRows = stockGapQty === 0 || gapExplainedByManualAdjustment ? [] : [{
+      id: `STOCK-GAP-${productId}-${branchId ?? 'all'}`,
+      status: 'ACTUALIZACION' as const,
+      created_at: new Date((latestKnownCreatedAt > 0 ? latestKnownCreatedAt : Date.now()) + 1000).toISOString(),
+      qty: stockGapQty,
+      unit_price: null,
+      subtotal: null,
+      price_type: null,
+      profit: null,
+      source: 'Ajuste detectado de inventario',
+      detail: `Stock guardado ${currentStockQty} vs movimientos visibles ${net_qty}`,
+      stock_before: net_qty,
+      stock_after: currentStockQty,
+    } satisfies ProductHistoryRow];
+
+    const history = [...purchaseRows, ...enrichedSaleRows, ...updateRows, ...reconciliationRows]
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
     return {
       last_purchase_cost: lastPurchaseCost,
@@ -637,6 +694,7 @@ export const vinosProductsService = {
       purchased_total,
       sold_qty,
       sold_total,
+      net_qty,
       estimated_profit,
       history,
     };
@@ -653,7 +711,7 @@ export const vinosProductsService = {
       // Si la RPC no existe aún, hacer UPSERT directo como fallback
       const { error: upsertErr } = await supabaseVinos
         .from('product_stocks')
-        .upsert({ product_id: productId, branch_id: branchId, qty: newQty });
+        .upsert({ product_id: productId, branch_id: branchId, qty: newQty }, { onConflict: 'product_id,branch_id' });
       if (upsertErr) throw upsertErr;
     }
   },

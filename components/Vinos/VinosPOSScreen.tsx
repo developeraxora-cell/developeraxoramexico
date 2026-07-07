@@ -1162,11 +1162,26 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   };
 
   // pagined slice
-  const totalPages = Math.max(1, Math.ceil(historySales.length / HISTORY_PAGE_SIZE));
-  const pagedSales = useMemo(() => {
+  const filteredHistorySales = useMemo(() => {
+    const q = historySearch.trim().toLowerCase();
+    if (!q) return historySales;
+    return historySales.filter((sale) => {
+      const saleCode = `V-${String(sale.id).replace(/-/g, '').slice(0, 6).toUpperCase()}`;
+      return (
+        saleCode.toLowerCase().includes(q) ||
+        sale.id.toLowerCase().includes(q) ||
+        (sale.customer?.name ?? '').toLowerCase().includes(q) ||
+        (sale.notes ?? '').toLowerCase().includes(q) ||
+        String(sale.total ?? '').includes(q)
+      );
+    });
+  }, [historySales, historySearch]);
+
+  const filteredTotalPages = Math.max(1, Math.ceil(filteredHistorySales.length / HISTORY_PAGE_SIZE));
+  const filteredPagedSales = useMemo(() => {
     const start = (historyPage - 1) * HISTORY_PAGE_SIZE;
-    return historySales.slice(start, start + HISTORY_PAGE_SIZE);
-  }, [historySales, historyPage]);
+    return filteredHistorySales.slice(start, start + HISTORY_PAGE_SIZE);
+  }, [filteredHistorySales, historyPage]);
 
   // ── customer detail ───────────────────────────────────
   const openCustomerDetail = async () => {
@@ -2401,28 +2416,32 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             <div className="flex-1 overflow-y-auto">
               {historyLoading ? (
                 <p className="py-16 text-center text-sm text-slate-400">Cargando…</p>
-              ) : historySales.length === 0 ? (
+              ) : filteredHistorySales.length === 0 ? (
                 <p className="py-16 text-center text-sm text-slate-400">Sin ventas en este rango</p>
               ) : (
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-slate-100 z-10">
                     <tr className="border-b border-slate-200">
-                      {['Fecha','Cliente','Cajero','Tipo','Productos','Total','Notas','Acciones'].map(h => (
+                      {['Fecha','Código','Cliente','Cajero','Tipo','Productos','Total','Notas','Acciones'].map(h => (
                         <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {pagedSales.map(s => {
+                    {filteredPagedSales.map(s => {
                       const itemCount = ((s as unknown as { items?: { id: string }[] }).items ?? []).length;
                       const typeInfo = getSaleTypeInfo(s);
                       const saleCashReceived = Number(s.cash_received ?? 0);
                       const saleCashChange = getCashChange(saleCashReceived, Number(s.total ?? 0));
                       const saleCardCommission = getStoredCardCommission(s);
                       const employeeName = historyEmployeeNames[s.created_by] ?? s.created_by ?? '—';
+                      const saleCode = `V-${String(s.id).replace(/-/g, '').slice(0, 6).toUpperCase()}`;
                       return (
                         <tr key={s.id} className="hover:bg-orange-50/30 border-l-4" style={{ borderLeftColor: typeInfo.color }}>
                           <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{new Date(s.created_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                          <td className="px-4 py-3 text-xs font-mono font-black text-slate-700 whitespace-nowrap" title={saleCode}>
+                            {saleCode}
+                          </td>
                           <td className="px-4 py-3 text-xs font-bold text-slate-800">{s.customer?.name ?? <span className="font-normal text-slate-400">Público general</span>}</td>
                           <td className="max-w-[160px] truncate px-4 py-3 text-xs font-bold text-slate-700" title={employeeName}>
                             {employeeName}
@@ -2479,12 +2498,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             {/* Footer: paginación + leyenda */}
             <div className="border-t border-slate-200 bg-slate-50 px-6 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                <span>{historySales.length} venta{historySales.length !== 1 ? 's' : ''}</span>
-                {historySales.length > 0 && (
+                <span>{filteredHistorySales.length} venta{filteredHistorySales.length !== 1 ? 's' : ''}</span>
+                {filteredHistorySales.length > 0 && (
                   <div className="flex items-center gap-1">
                     <button onClick={() => setHistoryPage(p => Math.max(1, p - 1))} disabled={historyPage <= 1} className="rounded-md border border-slate-200 bg-white px-2 py-1 disabled:opacity-40 hover:bg-slate-100">‹</button>
-                    <span className="px-2">Página {historyPage} / {totalPages}</span>
-                    <button onClick={() => setHistoryPage(p => Math.min(totalPages, p + 1))} disabled={historyPage >= totalPages} className="rounded-md border border-slate-200 bg-white px-2 py-1 disabled:opacity-40 hover:bg-slate-100">›</button>
+                    <span className="px-2">Página {historyPage} / {filteredTotalPages}</span>
+                    <button onClick={() => setHistoryPage(p => Math.min(filteredTotalPages, p + 1))} disabled={historyPage >= filteredTotalPages} className="rounded-md border border-slate-200 bg-white px-2 py-1 disabled:opacity-40 hover:bg-slate-100">›</button>
                   </div>
                 )}
               </div>
