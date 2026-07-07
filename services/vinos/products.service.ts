@@ -1,4 +1,5 @@
 import { supabaseVinos, isVinosConfigured } from '../vinosClient';
+import { supabase } from '../supabaseClient';
 import { fetchAuditLogs } from '../audit/audit.service';
 import type { PriceTier } from './sales.service';
 
@@ -62,6 +63,8 @@ export interface ProductHistoryRow {
   detail: string | null;
   stock_before: number | null;
   stock_after: number | null;
+  user_id: string | null;
+  user_name: string | null;
 }
 
 export interface ProductInsights {
@@ -426,105 +429,99 @@ export const vinosProductsService = {
       };
     }
 
-    type PurchaseItemRow = {
+    type PurchaseItemQueryRow = {
       id: string;
-      product_id: string;
       qty: number;
       qty_base?: number | null;
       cost_per_unit: number;
       subtotal: number;
-      product?: { name: string; sku: string } | { name: string; sku: string }[] | null;
       uom?: { uom?: { name: string; symbol: string | null } | { name: string; symbol: string | null }[] | null } | { uom?: { name: string; symbol: string | null } | { name: string; symbol: string | null }[] | null }[] | null;
+      purchase?: {
+        id: string;
+        purchase_date: string;
+        created_at?: string;
+        reference: string | null;
+        notes: string | null;
+        branch_id: number;
+        deleted_at: string | null;
+        created_by: string | null;
+        supplier?: { name: string } | { name: string }[] | null;
+      } | Array<{
+        id: string;
+        purchase_date: string;
+        created_at?: string;
+        reference: string | null;
+        notes: string | null;
+        branch_id: number;
+        deleted_at: string | null;
+        created_by: string | null;
+        supplier?: { name: string } | { name: string }[] | null;
+      }> | null;
     };
 
-    type PurchaseQueryRow = {
+    type SaleItemQueryRow = {
       id: string;
-      purchase_date: string;
-      created_at?: string;
-      reference: string | null;
-      notes: string | null;
-      supplier?: { name: string } | { name: string }[] | null;
-      items: PurchaseItemRow[] | PurchaseItemRow | null;
-    };
-
-    type SaleItemRow = {
-      id: string;
-      product_id: string;
       qty: number;
       qty_base?: number | null;
       unit_price: number;
       line_total: number;
       price_type: PriceTier;
-      product?: { name: string; sku: string } | { name: string; sku: string }[] | null;
       uom?: { uom?: { name: string; symbol: string | null } | { name: string; symbol: string | null }[] | null } | { uom?: { name: string; symbol: string | null } | { name: string; symbol: string | null }[] | null }[] | null;
+      sale?: {
+        id: string;
+        created_at: string;
+        payment_method: string;
+        branch_id: number;
+        deleted_at: string | null;
+        created_by: string | null;
+        customer?: { name: string } | { name: string }[] | null;
+      } | Array<{
+        id: string;
+        created_at: string;
+        payment_method: string;
+        branch_id: number;
+        deleted_at: string | null;
+        created_by: string | null;
+        customer?: { name: string } | { name: string }[] | null;
+      }> | null;
     };
 
-    type SaleQueryRow = {
-      id: string;
-      created_at: string;
-      payment_method: string;
-      customer?: { name: string } | { name: string }[] | null;
-      items: SaleItemRow[] | SaleItemRow | null;
-    };
-
-    const purchaseSelect = `
+    // Se consulta purchase_items/sale_items filtrando por product_id directamente (no por sucursal)
+    // para no perder movimientos viejos cuando la sucursal supera el limite de filas de la consulta.
+    const purchaseItemSelect = `
       id,
-      purchase_date,
-      created_at,
-      reference,
-      notes,
-      supplier:suppliers(name),
-      items:purchase_items(
-        id,
-        product_id,
-        qty,
-        qty_base,
-        cost_per_unit,
-        subtotal,
-        product:products(name,sku),
-        uom:product_uoms(id, uom:uoms(name,symbol))
-      )
+      qty,
+      qty_base,
+      cost_per_unit,
+      subtotal,
+      uom:product_uoms(id, uom:uoms(name,symbol)),
+      purchase:purchases(id, purchase_date, created_at, reference, notes, branch_id, deleted_at, created_by, supplier:suppliers(name))
     `;
-    const saleSelect = `
+    const saleItemSelect = `
       id,
-      created_at,
-      payment_method,
-      customer:customers(name),
-      items:sale_items(
-        id,
-        product_id,
-        qty,
-        qty_base,
-        unit_price,
-        line_total,
-        price_type,
-        product:products(name,sku),
-        uom:product_uoms(id, uom:uoms(name,symbol))
-      )
+      qty,
+      qty_base,
+      unit_price,
+      line_total,
+      price_type,
+      uom:product_uoms(id, uom:uoms(name,symbol)),
+      sale:sales(id, created_at, payment_method, branch_id, deleted_at, created_by, customer:customers(name))
     `;
 
-    let purchaseQuery = supabaseVinos
-      .from('purchases')
-      .select(purchaseSelect)
-      .is('deleted_at', null)
-      .order('purchase_date', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(200);
-    let saleQuery = supabaseVinos
-      .from('sales')
-      .select(saleSelect)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .limit(200);
-
-    if (branchId) {
-      purchaseQuery = purchaseQuery.eq('branch_id', branchId);
-      saleQuery = saleQuery.eq('branch_id', branchId);
-    }
+    const purchaseItemsQuery = supabaseVinos
+      .from('purchase_items')
+      .select(purchaseItemSelect)
+      .eq('product_id', productId)
+      .limit(2000);
+    const saleItemsQuery = supabaseVinos
+      .from('sale_items')
+      .select(saleItemSelect)
+      .eq('product_id', productId)
+      .limit(2000);
 
     const [purchaseRes, saleRes, auditRes] = await Promise.all([
-      purchaseQuery,
-      saleQuery,
+      purchaseItemsQuery,
+      saleItemsQuery,
       fetchAuditLogs({
         module: 'vinos',
         entity_type: 'producto',
@@ -537,8 +534,6 @@ export const vinosProductsService = {
     if (purchaseRes.error) throw purchaseRes.error;
     if (saleRes.error) throw saleRes.error;
 
-    let currentStockQty = 0;
-    let stockGapQty = 0;
     const stockQuery = supabaseVinos
       .from('product_stocks')
       .select('qty')
@@ -546,77 +541,77 @@ export const vinosProductsService = {
     if (branchId) stockQuery.eq('branch_id', branchId);
     const { data: stockRows, error: stockError } = await stockQuery;
     if (stockError) throw stockError;
-    currentStockQty = (stockRows ?? []).reduce((sum, row) => sum + Number((row as { qty?: number }).qty ?? 0), 0);
+    const currentStockQty = (stockRows ?? []).reduce((sum, row) => sum + Number((row as { qty?: number }).qty ?? 0), 0);
 
-    const purchases = (purchaseRes.data ?? []) as PurchaseQueryRow[];
-    const sales = (saleRes.data ?? []) as SaleQueryRow[];
+    const purchaseItems = (purchaseRes.data ?? []) as PurchaseItemQueryRow[];
+    const saleItems = (saleRes.data ?? []) as SaleItemQueryRow[];
 
-    const purchaseRows = purchases.flatMap((purchase) => {
-      const supplier = asOne(purchase.supplier);
-      const items = (Array.isArray(purchase.items) ? purchase.items : purchase.items ? [purchase.items] : []) as PurchaseItemRow[];
-      return items
-        .filter((item) => item.product_id === productId)
-        .map((item) => {
-          const qty = Number(item.qty ?? 0);
-          const qtyBase = Number(item.qty_base ?? qty);
-          const unitPrice = Number(item.cost_per_unit ?? 0);
-          const subtotal = Number(item.subtotal ?? qtyBase * unitPrice);
-          const uomWrap = asOne(item.uom);
-          const unitName = uomWrap?.uom ? asOne(uomWrap.uom) : null;
-          return {
-            id: `PUR-${item.id}`,
-            status: 'INGRESO' as const,
-            created_at: String(purchase.purchase_date ?? purchase.created_at ?? ''),
-            qty: qtyBase,
-            unit_price: unitPrice,
-            subtotal,
-            price_type: null,
-            profit: null,
-            source: `Compra${supplier?.name ? ` · ${supplier.name}` : ''}`,
-            detail: [
-              purchase.reference ? `Ref: ${purchase.reference}` : null,
-              purchase.notes ? purchase.notes : null,
-              unitName?.name ? `Unidad: ${unitName.name}` : null,
-            ].filter(Boolean).join(' | ') || null,
-            stock_before: null,
-            stock_after: null,
-          } satisfies ProductHistoryRow;
-        });
-    });
+    const purchaseRows = purchaseItems
+      .map((item) => ({ item, purchase: asOne(item.purchase) }))
+      .filter(({ purchase }) => purchase && purchase.deleted_at == null && (!branchId || purchase.branch_id === branchId))
+      .map(({ item, purchase }) => {
+        const supplier = asOne(purchase!.supplier);
+        const qty = Number(item.qty ?? 0);
+        const qtyBase = Number(item.qty_base ?? qty);
+        const unitPrice = Number(item.cost_per_unit ?? 0);
+        const subtotal = Number(item.subtotal ?? qtyBase * unitPrice);
+        const uomWrap = asOne(item.uom);
+        const unitName = uomWrap?.uom ? asOne(uomWrap.uom) : null;
+        return {
+          id: `PUR-${item.id}`,
+          status: 'INGRESO' as const,
+          created_at: String(purchase!.purchase_date ?? purchase!.created_at ?? ''),
+          qty: qtyBase,
+          unit_price: unitPrice,
+          subtotal,
+          price_type: null,
+          profit: null,
+          source: `Compra${supplier?.name ? ` · ${supplier.name}` : ''}`,
+          detail: [
+            purchase!.reference ? `Ref: ${purchase!.reference}` : null,
+            purchase!.notes ? purchase!.notes : null,
+            unitName?.name ? `Unidad: ${unitName.name}` : null,
+          ].filter(Boolean).join(' | ') || null,
+          stock_before: null,
+          stock_after: null,
+          user_id: purchase!.created_by,
+          user_name: null,
+        } satisfies ProductHistoryRow;
+      });
 
-    const saleRows = sales.flatMap((sale) => {
-      const customer = asOne(sale.customer);
-      const items = (Array.isArray(sale.items) ? sale.items : sale.items ? [sale.items] : []) as SaleItemRow[];
-      const saleCode = `V-${String(sale.id).replace(/-/g, '').slice(0, 6).toUpperCase()}`;
-      return items
-        .filter((item) => item.product_id === productId)
-        .map((item) => {
-          const qty = Number(item.qty ?? 0);
-          const qtyBase = Number(item.qty_base ?? qty);
-          const unitPrice = Number(item.unit_price ?? 0);
-          const subtotal = Number(item.line_total ?? qtyBase * unitPrice);
-          const uomWrap = asOne(item.uom);
-          const unitName = uomWrap?.uom ? asOne(uomWrap.uom) : null;
-          return {
-            id: `SAL-${item.id}`,
-            status: 'SALIDA' as const,
-            created_at: String(sale.created_at ?? ''),
-            qty: qtyBase,
-            unit_price: unitPrice,
-            subtotal,
-            price_type: (item.price_type ?? null) as PriceTier | null,
-            profit: null,
-            source: `Venta ${saleCode} · ${sale.payment_method ?? ''}${customer?.name ? ` · ${customer.name}` : ''}`,
-            detail: [
-              `Nota de venta: ${saleCode}`,
-              item.price_type ? `Tipo: ${item.price_type}` : null,
-              unitName?.name ? `Unidad: ${unitName.name}` : null,
-            ].filter(Boolean).join(' | ') || null,
-            stock_before: null,
-            stock_after: null,
-          } satisfies ProductHistoryRow;
-        });
-    });
+    const saleRows = saleItems
+      .map((item) => ({ item, sale: asOne(item.sale) }))
+      .filter(({ sale }) => sale && sale.deleted_at == null && (!branchId || sale.branch_id === branchId))
+      .map(({ item, sale }) => {
+        const customer = asOne(sale!.customer);
+        const qty = Number(item.qty ?? 0);
+        const qtyBase = Number(item.qty_base ?? qty);
+        const unitPrice = Number(item.unit_price ?? 0);
+        const subtotal = Number(item.line_total ?? qtyBase * unitPrice);
+        const uomWrap = asOne(item.uom);
+        const unitName = uomWrap?.uom ? asOne(uomWrap.uom) : null;
+        const saleCode = `V-${String(sale!.id).replace(/-/g, '').slice(0, 6).toUpperCase()}`;
+        return {
+          id: `SAL-${item.id}`,
+          status: 'SALIDA' as const,
+          created_at: String(sale!.created_at ?? ''),
+          qty: qtyBase,
+          unit_price: unitPrice,
+          subtotal,
+          price_type: (item.price_type ?? null) as PriceTier | null,
+          profit: null,
+          source: `Venta ${saleCode} · ${sale!.payment_method ?? ''}${customer?.name ? ` · ${customer.name}` : ''}`,
+          detail: [
+            `Nota de venta: ${saleCode}`,
+            item.price_type ? `Tipo: ${item.price_type}` : null,
+            unitName?.name ? `Unidad: ${unitName.name}` : null,
+          ].filter(Boolean).join(' | ') || null,
+          stock_before: null,
+          stock_after: null,
+          user_id: sale!.created_by,
+          user_name: null,
+        } satisfies ProductHistoryRow;
+      });
 
     const updateRows = (auditRes.rows ?? [])
       .filter((row) => row.action_type === 'CREAR' || row.action_type === 'ACTUALIZAR')
@@ -643,6 +638,8 @@ export const vinosProductsService = {
           detail: [description, observation ? `Obs: ${observation}` : null].filter(Boolean).join(' | ') || null,
           stock_before: typeof prevStock === 'number' ? prevStock : null,
           stock_after: typeof nextStock === 'number' ? nextStock : null,
+          user_id: row.user_id ?? null,
+          user_name: row.user_name ?? null,
         } satisfies ProductHistoryRow;
       });
 
@@ -675,7 +672,7 @@ export const vinosProductsService = {
       return Number(row.stock_after ?? running);
     }, 0);
 
-    stockGapQty = currentStockQty - expectedStockQty;
+    const stockGapQty = currentStockQty - expectedStockQty;
     const reconciliationRows = stockGapQty === 0 ? [] : [{
       id: `STOCK-GAP-${productId}-${branchId ?? 'all'}`,
       status: 'ACTUALIZACION' as const,
@@ -689,10 +686,36 @@ export const vinosProductsService = {
       detail: `Stock guardado ${currentStockQty} vs movimientos visibles ${expectedStockQty}`,
       stock_before: expectedStockQty,
       stock_after: currentStockQty,
+      user_id: null,
+      user_name: null,
     } satisfies ProductHistoryRow];
 
-    const history = [...purchaseRows, ...enrichedSaleRows, ...updateRows, ...reconciliationRows]
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const userIds = Array.from(new Set(
+      [...purchaseRows, ...enrichedSaleRows]
+        .map((row) => row.user_id)
+        .filter((id): id is string => !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+    ));
+    const userNames = new Map<string, string>();
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('app_user_profiles')
+        .select('id, full_name, username')
+        .in('id', userIds);
+      (profiles ?? []).forEach((profile: { id: string; full_name?: string | null; username?: string | null }) => {
+        userNames.set(profile.id, profile.full_name || profile.username || profile.id);
+      });
+    }
+    const withUserNames = (row: ProductHistoryRow): ProductHistoryRow => ({
+      ...row,
+      user_name: row.user_name ?? (row.user_id ? userNames.get(row.user_id) ?? row.user_id : null),
+    });
+
+    const history = [
+      ...purchaseRows.map(withUserNames),
+      ...enrichedSaleRows.map(withUserNames),
+      ...updateRows,
+      ...reconciliationRows,
+    ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
     return {
       last_purchase_cost: lastPurchaseCost,

@@ -942,7 +942,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                     <table className="w-full text-sm">
                       <thead className="bg-slate-50">
                         <tr className="border-b border-slate-200">
-                          {['Fecha', 'Estado', 'Movimiento', 'Stock antes', 'Stock después', 'Precio', 'Total', 'Tipo', 'Ganancia', 'Detalle'].map((h) => (
+                          {['Fecha', 'Estado', 'Movimiento', 'Stock antes', 'Stock después', 'Total', 'Tipo', 'Ganancia', 'Usuario', 'Detalle'].map((h) => (
                             <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
                           ))}
                         </tr>
@@ -982,7 +982,10 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                                 : 'bg-blue-100 text-blue-700';
                           return (
                             <tr key={row.id} className="hover:bg-slate-50">
-                              <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{new Date(row.created_at).toLocaleString('es-MX')}</td>
+                              <td className="px-4 py-3 text-xs text-slate-600">
+                                <p className="whitespace-nowrap">{new Date(row.created_at).toLocaleDateString('es-MX')}</p>
+                                <p className="whitespace-nowrap text-[10px] text-slate-400">{new Date(row.created_at).toLocaleTimeString('es-MX')}</p>
+                              </td>
                               <td className="px-4 py-3">
                                 <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black ${badgeClass}`}>{row.status}</span>
                               </td>
@@ -996,9 +999,6 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                                 {row.runningQty != null ? row.runningQty : '—'}
                               </td>
                               <td className="px-4 py-3 text-sm font-bold text-slate-900">
-                                {row.unit_price != null ? formatCurrency(row.unit_price) : '—'}
-                              </td>
-                              <td className="px-4 py-3 text-sm font-bold text-slate-900">
                                 {row.subtotal != null ? formatCurrency(row.subtotal) : '—'}
                               </td>
                               <td className="px-4 py-3 text-xs text-slate-600">
@@ -1006,6 +1006,9 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                               </td>
                               <td className="px-4 py-3 text-sm font-black text-blue-600">
                                 {row.profit != null ? formatCurrency(row.profit) : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-xs font-bold text-slate-600 max-w-[110px]">
+                                {row.user_name ?? '—'}
                               </td>
                               <td className="px-4 py-3 text-xs text-slate-600">
                                 <p className="font-bold text-slate-800">{row.source}</p>
