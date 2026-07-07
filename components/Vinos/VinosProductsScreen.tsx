@@ -987,7 +987,9 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                                 <p className="whitespace-nowrap text-[10px] text-slate-400">{new Date(row.created_at).toLocaleTimeString('es-MX')}</p>
                               </td>
                               <td className="px-4 py-3">
-                                <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black ${badgeClass}`}>{row.status}</span>
+                                <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black ${badgeClass}`}>
+                                  {row.status === 'INGRESO' ? 'COMPRA' : row.status === 'SALIDA' ? 'VENTA' : row.status}
+                                </span>
                               </td>
                               <td className="px-4 py-3 text-sm font-bold text-slate-900">
                                 {row.movementQty != null ? (row.movementQty > 0 ? `+${row.movementQty}` : row.movementQty) : '—'}
