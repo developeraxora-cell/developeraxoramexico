@@ -658,38 +658,6 @@ export const vinosProductsService = {
     const sold_total = saleRows.reduce((sum, row) => sum + Number(row.subtotal ?? 0), 0);
     const net_qty = purchased_qty - sold_qty;
     const estimated_profit = enrichedSaleRows.reduce((sum, row) => sum + Number(row.profit ?? 0), 0);
-    const latestKnownCreatedAt = [...purchaseRows, ...enrichedSaleRows, ...updateRows].reduce((latest, row) => {
-      const current = new Date(row.created_at).getTime();
-      return Number.isFinite(current) && current > latest ? current : latest;
-    }, 0);
-
-    const chronologicalEvents = [...purchaseRows, ...saleRows, ...updateRows]
-      .filter((row) => row.status !== 'ACTUALIZACION' || (row.stock_before != null && row.stock_after != null))
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    const expectedStockQty = chronologicalEvents.reduce((running, row) => {
-      if (row.status === 'INGRESO') return running + Number(row.qty ?? 0);
-      if (row.status === 'SALIDA') return running - Number(row.qty ?? 0);
-      return Number(row.stock_after ?? running);
-    }, 0);
-
-    const stockGapQty = currentStockQty - expectedStockQty;
-    const reconciliationRows = stockGapQty === 0 ? [] : [{
-      id: `STOCK-GAP-${productId}-${branchId ?? 'all'}`,
-      status: 'ACTUALIZACION' as const,
-      created_at: new Date((latestKnownCreatedAt > 0 ? latestKnownCreatedAt : Date.now()) + 1000).toISOString(),
-      qty: stockGapQty,
-      unit_price: null,
-      subtotal: null,
-      price_type: null,
-      profit: null,
-      source: 'Ajuste detectado de inventario',
-      detail: `Stock guardado ${currentStockQty} vs movimientos visibles ${expectedStockQty}`,
-      stock_before: expectedStockQty,
-      stock_after: currentStockQty,
-      user_id: null,
-      user_name: null,
-    } satisfies ProductHistoryRow];
-
     const userIds = Array.from(new Set(
       [...purchaseRows, ...enrichedSaleRows]
         .map((row) => row.user_id)
@@ -714,7 +682,6 @@ export const vinosProductsService = {
       ...purchaseRows.map(withUserNames),
       ...enrichedSaleRows.map(withUserNames),
       ...updateRows,
-      ...reconciliationRows,
     ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
     return {
