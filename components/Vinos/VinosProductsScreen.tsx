@@ -933,7 +933,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                     </div>
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stock actual</p>
-                      <p className="mt-1 text-xl font-black text-slate-900">{historyTarget?.total_stock ?? '—'}</p>
+                      <p className="mt-1 text-xl font-black text-slate-900">{historyData.current_stock}</p>
                       <p className="text-[10px] font-bold text-slate-400">Disponible hoy</p>
                     </div>
                   </div>

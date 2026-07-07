@@ -73,6 +73,7 @@ export interface ProductInsights {
   sold_total: number;
   net_qty: number;
   estimated_profit: number;
+  current_stock: number;
   history: ProductHistoryRow[];
 }
 
@@ -420,6 +421,7 @@ export const vinosProductsService = {
         sold_total: 0,
         net_qty: 0,
         estimated_profit: 0,
+        current_stock: 0,
         history: [],
       };
     }
@@ -664,12 +666,17 @@ export const vinosProductsService = {
       return Number.isFinite(current) && current > latest ? current : latest;
     }, 0);
 
-    stockGapQty = currentStockQty - net_qty;
-    const lastManualAdjustment = [...updateRows]
-      .filter((row) => row.stock_after != null)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-    const gapExplainedByManualAdjustment = lastManualAdjustment?.stock_after === currentStockQty;
-    const reconciliationRows = stockGapQty === 0 || gapExplainedByManualAdjustment ? [] : [{
+    const chronologicalEvents = [...purchaseRows, ...saleRows, ...updateRows]
+      .filter((row) => row.status !== 'ACTUALIZACION' || (row.stock_before != null && row.stock_after != null))
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const expectedStockQty = chronologicalEvents.reduce((running, row) => {
+      if (row.status === 'INGRESO') return running + Number(row.qty ?? 0);
+      if (row.status === 'SALIDA') return running - Number(row.qty ?? 0);
+      return Number(row.stock_after ?? running);
+    }, 0);
+
+    stockGapQty = currentStockQty - expectedStockQty;
+    const reconciliationRows = stockGapQty === 0 ? [] : [{
       id: `STOCK-GAP-${productId}-${branchId ?? 'all'}`,
       status: 'ACTUALIZACION' as const,
       created_at: new Date((latestKnownCreatedAt > 0 ? latestKnownCreatedAt : Date.now()) + 1000).toISOString(),
@@ -679,8 +686,8 @@ export const vinosProductsService = {
       price_type: null,
       profit: null,
       source: 'Ajuste detectado de inventario',
-      detail: `Stock guardado ${currentStockQty} vs movimientos visibles ${net_qty}`,
-      stock_before: net_qty,
+      detail: `Stock guardado ${currentStockQty} vs movimientos visibles ${expectedStockQty}`,
+      stock_before: expectedStockQty,
       stock_after: currentStockQty,
     } satisfies ProductHistoryRow];
 
@@ -696,6 +703,7 @@ export const vinosProductsService = {
       sold_total,
       net_qty,
       estimated_profit,
+      current_stock: currentStockQty,
       history,
     };
   },
