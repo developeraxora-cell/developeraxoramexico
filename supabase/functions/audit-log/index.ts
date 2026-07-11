@@ -2,7 +2,7 @@ import { MongoClient } from 'npm:mongodb@6.18.0';
 
 type AuditActionType = 'CREAR' | 'ACTUALIZAR' | 'ELIMINAR' | 'VENTA' | 'COMPRA';
 type AuditModule = 'materiales' | 'concretera' | 'transporteria' | 'vinos';
-type AuditEntityType = 'producto' | 'cliente' | 'venta' | 'compra' | 'nota_credito' | 'abono_credito' | 'campania' | 'produccion';
+type AuditEntityType = 'producto' | 'cliente' | 'proveedor' | 'venta' | 'compra' | 'nota_credito' | 'abono_credito' | 'campania' | 'produccion';
 
 interface AuditLogPayload {
   log_id?: string;
@@ -62,6 +62,8 @@ const entityAliases: Record<string, string[]> = {
   product: ['producto', 'product'],
   cliente: ['cliente', 'client'],
   client: ['cliente', 'client'],
+  proveedor: ['proveedor', 'supplier'],
+  supplier: ['proveedor', 'supplier'],
   venta: ['venta', 'sale'],
   sale: ['venta', 'sale'],
   compra: ['compra', 'purchase'],
@@ -129,6 +131,9 @@ const normalizeEntityType = (value: string | null | undefined) => {
     case 'cliente':
     case 'client':
       return 'cliente' as AuditEntityType;
+    case 'proveedor':
+    case 'supplier':
+      return 'proveedor' as AuditEntityType;
     case 'venta':
     case 'sale':
       return 'venta' as AuditEntityType;

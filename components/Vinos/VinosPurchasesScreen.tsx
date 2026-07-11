@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Plus, Search, Trash2, Calendar, Truck, FileText, ArrowDownToLine, X, Loader2, Eye, RefreshCw, Pencil,
+  Plus, Search, Trash2, Calendar, Truck, FileText, ArrowDownToLine, X, Loader2, Eye, RefreshCw, Pencil, Building2, Phone, Mail, MapPin,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
@@ -8,6 +8,7 @@ import { vinosPurchasesService, type PurchaseRow, type PurchaseWithItems, type C
 import { vinosCustomersService } from '../../services/vinos/customers.service';
 import { vinosProductsService, type ProductWithStock } from '../../services/vinos/products.service';
 import { vinosCatalogService, type Category, type Supplier, type Uom } from '../../services/vinos/catalog.service';
+import { logVinosAudit } from '../../services/audit/audit.service';
 import VinosProductModal, { type VinosProductModalSavedPayload } from './VinosProductModal';
 
 interface Props {
@@ -115,7 +116,17 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
   const [newSupplierPhone, setNewSupplierPhone] = useState('');
   const [newSupplierEmail, setNewSupplierEmail] = useState('');
   const [newSupplierRfc, setNewSupplierRfc] = useState('');
+  const [newSupplierNotes, setNewSupplierNotes] = useState('');
   const [supplierModalContext, setSupplierModalContext] = useState<'newPurchase' | 'editPurchase'>('newPurchase');
+  const [supplierFormMode, setSupplierFormMode] = useState<'create' | 'edit'>('create');
+  const [supplierEditingId, setSupplierEditingId] = useState<string | null>(null);
+  const [supplierManagerOpen, setSupplierManagerOpen] = useState(false);
+  const [supplierManagerLoading, setSupplierManagerLoading] = useState(false);
+  const [supplierManagerSearch, setSupplierManagerSearch] = useState('');
+  const [supplierActionLoading, setSupplierActionLoading] = useState<string | null>(null);
+  const [supplierDeleteTarget, setSupplierDeleteTarget] = useState<Supplier | null>(null);
+  const [supplierDeleteNote, setSupplierDeleteNote] = useState('');
+  const [supplierDeleteSaving, setSupplierDeleteSaving] = useState(false);
 
   // product modal
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -142,6 +153,54 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
     const sups = await vinosCatalogService.listSuppliers();
     setSuppliers(sups);
     return sups;
+  };
+
+  const openSupplierManager = async () => {
+    setSupplierManagerOpen(true);
+    setSupplierManagerSearch('');
+    setSupplierManagerLoading(true);
+    try {
+      await loadSuppliers();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSupplierManagerLoading(false);
+    }
+  };
+
+  const openCreateSupplierModal = (context: 'newPurchase' | 'editPurchase' = 'newPurchase') => {
+    setSupplierFormMode('create');
+    setSupplierEditingId(null);
+    setSupplierModalContext(context);
+    setNewSupplierName('');
+    setNewSupplierPhone('');
+    setNewSupplierEmail('');
+    setNewSupplierRfc('');
+    setNewSupplierNotes('');
+    setSupplierModalOpen(true);
+  };
+
+  const closeSupplierModal = () => {
+    setSupplierModalOpen(false);
+    setSupplierFormMode('create');
+    setSupplierEditingId(null);
+    setNewSupplierName('');
+    setNewSupplierPhone('');
+    setNewSupplierEmail('');
+    setNewSupplierRfc('');
+    setNewSupplierNotes('');
+  };
+
+  const openEditSupplierModal = (supplier: Supplier, context: 'newPurchase' | 'editPurchase' = 'newPurchase') => {
+    setSupplierFormMode('edit');
+    setSupplierEditingId(supplier.id);
+    setSupplierModalContext(context);
+    setNewSupplierName(supplier.name ?? '');
+    setNewSupplierPhone(supplier.phone ?? '');
+    setNewSupplierEmail(supplier.email ?? '');
+    setNewSupplierRfc(supplier.rfc ?? '');
+    setNewSupplierNotes('');
+    setSupplierModalOpen(true);
   };
 
   // ── load catálogo al abrir modal nueva compra ───────────
@@ -313,7 +372,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
     setSaving(true);
     setFormError('');
     try {
-      await vinosPurchasesService.create({
+      const purchase = await vinosPurchasesService.create({
         branch_id: branchDbId,
         supplier_id: supplierId || null,
         reference: reference.trim() || null,
@@ -322,6 +381,24 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
         is_credit: isCredit,
         created_by: currentUser.id,
         items: cart,
+      });
+      logVinosAudit({
+        ...supplierAuditContext,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'COMPRA',
+        entity_type: 'proveedor',
+        entity_id: String(purchase.supplier_id ?? supplierId ?? ''),
+        description: `Proveedor vinculado a compra${purchase.reference ? ` ${purchase.reference}` : ''}`,
+        justification: notes.trim() || null,
+        new_data: {
+          purchase_id: purchase.id,
+          supplier_id: purchase.supplier_id ?? null,
+          supplier_name: suppliers.find((supplier) => supplier.id === (purchase.supplier_id ?? supplierId))?.name ?? null,
+          reference: purchase.reference ?? null,
+          purchase_date: purchase.purchase_date ?? null,
+          total: purchase.total ?? null,
+        },
       });
       await load();
       resetForm();
@@ -405,25 +482,145 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
   const createSupplier = async () => {
     const name = newSupplierName.trim();
     if (!name) return;
+    if (supplierFormMode === 'edit' && !newSupplierNotes.trim()) return;
     try {
-      const s = await vinosCatalogService.createSupplier({
+      const previousSupplier = supplierFormMode === 'edit' && supplierEditingId
+        ? suppliers.find((supplier) => supplier.id === supplierEditingId) ?? null
+        : null;
+      const payload = {
         name,
         phone: newSupplierPhone.trim() || null,
         email: newSupplierEmail.trim() || null,
         address: null,
         rfc: newSupplierRfc.trim() || null,
-        notes: null,
+        notes: supplierFormMode === 'edit' ? previousSupplier?.notes ?? null : null,
+      };
+      const s = supplierFormMode === 'edit' && supplierEditingId
+        ? await vinosCatalogService.updateSupplier(supplierEditingId, payload)
+        : await vinosCatalogService.createSupplier(payload);
+      void logVinosAudit({
+        ...supplierAuditContext,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: supplierFormMode === 'edit' ? 'ACTUALIZAR' : 'CREAR',
+        entity_type: 'proveedor',
+        entity_id: s.id,
+        description: supplierFormMode === 'edit' ? 'Proveedor actualizado' : 'Proveedor creado',
+        justification: supplierFormMode === 'edit' ? newSupplierNotes.trim() : null,
+        previous_data: previousSupplier ? {
+          id: previousSupplier.id,
+          name: previousSupplier.name ?? null,
+          phone: previousSupplier.phone ?? null,
+          email: previousSupplier.email ?? null,
+          rfc: previousSupplier.rfc ?? null,
+          notes: previousSupplier.notes ?? null,
+          is_active: previousSupplier.is_active ?? null,
+        } : null,
+        new_data: {
+          id: s.id,
+          name: s.name ?? null,
+          phone: s.phone ?? null,
+          email: s.email ?? null,
+          rfc: s.rfc ?? null,
+          notes: s.notes ?? null,
+          is_active: s.is_active ?? null,
+        },
       });
-      setSuppliers(prev => [...prev, s]);
+      setSuppliers(prev => {
+        const next = prev.filter((supplier) => supplier.id !== s.id);
+        next.push(s);
+        return next.sort((a, b) => a.name.localeCompare(b.name));
+      });
       if (supplierModalContext === 'editPurchase') {
         setEditForm(prev => ({ ...prev, supplier_id: s.id }));
       } else {
         setSupplierId(s.id);
       }
-      setNewSupplierName(''); setNewSupplierPhone(''); setNewSupplierEmail(''); setNewSupplierRfc('');
-      setSupplierModalOpen(false);
+      closeSupplierModal();
     } catch (e) { console.error(e); }
   };
+
+  const openDeleteSupplier = (supplier: Supplier) => {
+    setSupplierDeleteTarget(supplier);
+    setSupplierDeleteNote('');
+  };
+
+  const closeDeleteSupplier = () => {
+    if (supplierDeleteSaving) return;
+    setSupplierDeleteTarget(null);
+    setSupplierDeleteNote('');
+  };
+
+  const deleteSupplier = async () => {
+    if (!supplierDeleteTarget) return;
+    const note = supplierDeleteNote.trim();
+    if (!note) return;
+    setSupplierDeleteSaving(true);
+    setSupplierActionLoading(supplierDeleteTarget.id);
+    try {
+      const previousSupplier = supplierDeleteTarget;
+      const nextNotes = [supplierDeleteTarget.notes?.trim(), `ELIMINADO: ${note}`].filter(Boolean).join(' | ');
+      await vinosCatalogService.updateSupplier(supplierDeleteTarget.id, {
+        is_active: false,
+        notes: nextNotes,
+      });
+      void logVinosAudit({
+        ...supplierAuditContext,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ELIMINAR',
+        entity_type: 'proveedor',
+        entity_id: supplierDeleteTarget.id,
+        description: 'Proveedor eliminado',
+        justification: note,
+        previous_data: {
+          id: previousSupplier.id,
+          name: previousSupplier.name ?? null,
+          phone: previousSupplier.phone ?? null,
+          email: previousSupplier.email ?? null,
+          rfc: previousSupplier.rfc ?? null,
+          notes: previousSupplier.notes ?? null,
+          is_active: previousSupplier.is_active ?? null,
+        },
+        new_data: {
+          id: previousSupplier.id,
+          name: previousSupplier.name ?? null,
+          phone: previousSupplier.phone ?? null,
+          email: previousSupplier.email ?? null,
+          rfc: previousSupplier.rfc ?? null,
+          notes: nextNotes,
+          is_active: false,
+        },
+      });
+      setSuppliers(prev => prev.filter((supplier) => supplier.id !== supplierDeleteTarget.id));
+      if (supplierId === supplierDeleteTarget.id) setSupplierId('');
+      if (editForm.supplier_id === supplierDeleteTarget.id) setEditForm(prev => ({ ...prev, supplier_id: '' }));
+      setSupplierDeleteTarget(null);
+      setSupplierDeleteNote('');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSupplierActionLoading(null);
+      setSupplierDeleteSaving(false);
+    }
+  };
+
+  const visibleSuppliers = useMemo(() => {
+    const q = supplierManagerSearch.trim().toLowerCase();
+    if (!q) return suppliers;
+    return suppliers.filter((supplier) =>
+      supplier.name.toLowerCase().includes(q) ||
+      (supplier.phone ?? '').toLowerCase().includes(q) ||
+      (supplier.email ?? '').toLowerCase().includes(q) ||
+      (supplier.rfc ?? '').toLowerCase().includes(q) ||
+      (supplier.address ?? '').toLowerCase().includes(q)
+    );
+  }, [suppliers, supplierManagerSearch]);
+
+  const supplierAuditContext = useMemo(() => ({
+    branch_id: String(branchDbId ?? selectedBranchId),
+    branch_name: branches.find((branch) => branch.id === selectedBranchId)?.name ?? null,
+  }), [branchDbId, branches, selectedBranchId]);
 
   // ── render ──────────────────────────────────────────────
   return (
@@ -460,21 +657,29 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sucursal activa</p>
           </div>
         </div>
-        {tab === 'historial' ? (
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => { setTab('nueva'); if (cart.length === 0) resetForm(); }}
-            className="flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-700"
+            onClick={openSupplierManager}
+            className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
           >
-            <Plus size={15}/> Registrar compra
+            <Building2 size={15}/> Proveedor
           </button>
-        ) : (
-          <button
-            onClick={() => setTab('historial')}
-            className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
-          >
-            Volver al historial
-          </button>
-        )}
+          {tab === 'historial' ? (
+            <button
+              onClick={() => { setTab('nueva'); if (cart.length === 0) resetForm(); }}
+              className="flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-700"
+            >
+              <Plus size={15}/> Registrar compra
+            </button>
+          ) : (
+            <button
+              onClick={() => setTab('historial')}
+              className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+            >
+              Volver al historial
+            </button>
+          )}
+        </div>
       </div>
 
       {tab === 'historial' && (
@@ -1008,13 +1213,128 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
         onSaved={handleProductSaved}
       />
 
+      {/* ─── MODAL GESTIÓN DE PROVEEDORES ───────────────── */}
+      {supplierManagerOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Gestión de proveedores</h3>
+                <p className="text-[10px] font-bold text-slate-400">Ver, buscar y dar de alta proveedores</p>
+              </div>
+              <button onClick={() => setSupplierManagerOpen(false)} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100">
+                <X size={16}/>
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-4 overflow-y-auto p-6">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="relative w-full max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    placeholder="Buscar por nombre, RFC, teléfono o email..."
+                    value={supplierManagerSearch}
+                    onChange={(e) => setSupplierManagerSearch(e.target.value)}
+                  />
+                </div>
+                <button
+                  onClick={() => openCreateSupplierModal('newPurchase')}
+                  className="flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-700"
+                >
+                  <Plus size={14}/> Nuevo proveedor
+                </button>
+              </div>
+
+              {supplierManagerLoading ? (
+                <div className="py-16 text-center text-sm font-bold text-slate-400">Cargando proveedores…</div>
+              ) : visibleSuppliers.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
+                  <Truck size={32} className="mx-auto text-slate-300" />
+                  <p className="mt-3 text-sm font-black uppercase tracking-widest text-slate-400">Sin proveedores</p>
+                  <p className="mt-1 text-xs text-slate-400">Crea el primer proveedor desde el botón superior.</p>
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50">
+                      <tr className="border-b border-slate-200">
+                        {['Proveedor', 'Contacto', 'RFC', 'Estado', 'Acciones'].map((h) => (
+                          <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {visibleSuppliers.map((supplier) => (
+                        <tr key={supplier.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3">
+                            <div className="flex items-start gap-3">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+                                <Building2 size={15}/>
+                              </div>
+                              <div>
+                                <p className="font-bold text-slate-900">{supplier.name}</p>
+                                <p className="text-[11px] text-slate-400">Creado: {new Date(supplier.created_at).toLocaleDateString('es-MX')}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-slate-600">
+                            <div className="flex items-center gap-2">
+                              <Phone size={12} className="text-slate-400" />
+                              <span>{supplier.phone || '—'}</span>
+                            </div>
+                            <div className="mt-1 flex items-center gap-2">
+                              <Mail size={12} className="text-slate-400" />
+                              <span>{supplier.email || '—'}</span>
+                            </div>
+                            <div className="mt-1 flex items-center gap-2">
+                              <MapPin size={12} className="text-slate-400" />
+                              <span>{supplier.address || '—'}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-xs font-bold text-slate-700">{supplier.rfc || '—'}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black ${supplier.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                              {supplier.is_active ? 'Activo' : 'Inactivo'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => openEditSupplierModal(supplier, 'newPurchase')}
+                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => openDeleteSupplier(supplier)}
+                                disabled={supplierActionLoading === supplier.id || !supplier.is_active}
+                                className="rounded-lg border border-red-200 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-red-600 hover:bg-red-50 disabled:opacity-40"
+                              >
+                                {supplierActionLoading === supplier.id ? '...' : 'Eliminar'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── MODAL NUEVO PROVEEDOR ──────────────────────── */}
       {supplierModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Nuevo proveedor</h3>
-              <button onClick={() => setSupplierModalOpen(false)} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={16}/></button>
+              <h3 className="text-base font-black uppercase tracking-tight text-slate-900">
+                {supplierFormMode === 'edit' ? 'Editar proveedor' : 'Nuevo proveedor'}
+              </h3>
+              <button onClick={closeSupplierModal} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={16}/></button>
             </div>
             <div className="space-y-3">
               <div>
@@ -1035,10 +1355,62 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                 <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Email</label>
                 <input type="email" className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400" value={newSupplierEmail} onChange={e => setNewSupplierEmail(e.target.value)} />
               </div>
+              {supplierFormMode === 'edit' && (
+                <div>
+                  <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Nota de edición *</label>
+                  <textarea
+                    rows={3}
+                    className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400"
+                    value={newSupplierNotes}
+                    onChange={e => setNewSupplierNotes(e.target.value)}
+                    placeholder="Explica el cambio realizado…"
+                  />
+                </div>
+              )}
             </div>
             <div className="mt-5 flex gap-3">
-              <button onClick={() => setSupplierModalOpen(false)} className="flex-1 rounded-2xl border border-slate-200 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">Cancelar</button>
-              <button onClick={createSupplier} disabled={!newSupplierName.trim()} className="flex-1 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-40">Crear</button>
+              <button onClick={closeSupplierModal} className="flex-1 rounded-2xl border border-slate-200 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">Cancelar</button>
+              <button
+                onClick={createSupplier}
+                disabled={
+                  !newSupplierName.trim() ||
+                  (supplierFormMode === 'edit' && !newSupplierNotes.trim())
+                }
+                className="flex-1 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-40"
+              >
+                {supplierFormMode === 'edit' ? 'Guardar cambios' : 'Crear'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL ELIMINAR PROVEEDOR ───────────────────── */}
+      {supplierDeleteTarget && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+                <Trash2 size={22}/>
+              </div>
+              <div>
+                <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Eliminar proveedor</h3>
+                <p className="text-xs text-slate-500">{supplierDeleteTarget.name}</p>
+              </div>
+            </div>
+            <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Nota de eliminación *</label>
+            <textarea
+              rows={3}
+              className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+              value={supplierDeleteNote}
+              onChange={e => setSupplierDeleteNote(e.target.value)}
+              placeholder="Explica por qué se elimina…"
+            />
+            <div className="mt-4 flex gap-3">
+              <button onClick={closeDeleteSupplier} className="flex-1 rounded-2xl border border-slate-200 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">Cancelar</button>
+              <button onClick={deleteSupplier} disabled={supplierDeleteSaving || !supplierDeleteNote.trim()} className="flex-1 rounded-2xl bg-red-500 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-red-600 disabled:opacity-40">
+                {supplierDeleteSaving ? 'Eliminando…' : 'Eliminar'}
+              </button>
             </div>
           </div>
         </div>

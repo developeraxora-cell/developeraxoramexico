@@ -1,6 +1,6 @@
 export type AuditActionType = 'CREAR' | 'ACTUALIZAR' | 'ELIMINAR' | 'VENTA' | 'COMPRA';
 export type AuditModule = 'materiales' | 'concretera' | 'transporteria' | 'vinos';
-export type AuditEntityType = 'producto' | 'cliente' | 'venta' | 'compra' | 'nota_credito' | 'abono_credito' | 'campania' | 'produccion';
+export type AuditEntityType = 'producto' | 'cliente' | 'proveedor' | 'venta' | 'compra' | 'nota_credito' | 'abono_credito' | 'campania' | 'produccion';
 
 export interface AuditLogInput {
   log_id?: string;
@@ -69,7 +69,13 @@ const postAuditDocument = async (document: AuditLogDocument) => {
     keepalive: true,
   });
 
-  return response.ok;
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    console.warn('Audit API rejected event:', payload ?? response.statusText, document);
+    return false;
+  }
+
+  return true;
 };
 
 export const requiresAuditJustification = (actionType: AuditActionType) => {

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Search, ClipboardList, ShoppingCart, Package, Users, Edit, Trash2, Plus, X, FileText, RefreshCw,
+  Search, ClipboardList, ShoppingCart, Package, Users, Edit, Trash2, Plus, X, FileText, RefreshCw, Truck,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { fetchAuditLogs, type AuditQueryRow, type AuditActionType, type AuditEntityType } from '../../services/audit/audit.service';
@@ -25,6 +25,7 @@ const ENTITY_ICON: Record<string, React.ElementType> = {
   producto: Package,
   cliente: Users,
   compra: ClipboardList,
+  proveedor: Truck,
 };
 
 interface DeletedSaleAuditItem {
@@ -190,6 +191,7 @@ const VinosAuditScreen: React.FC<Props> = () => {
             <option value="compra">Compras</option>
             <option value="producto">Productos</option>
             <option value="cliente">Clientes</option>
+            <option value="proveedor">Proveedores</option>
           </select>
         </div>
         <div>
