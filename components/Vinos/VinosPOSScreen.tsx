@@ -14,7 +14,6 @@ import { supabaseVinos } from '../../services/vinosClient';
 import { supabase } from '../../services/supabaseClient';
 import { generateVinosSaleTicket, type VinosSalePdfInput } from '../../services/vinos/saleTicketPdf';
 import { generateVinosCashRegisterReceipt } from '../../services/vinos/cashRegisterReceiptPdf';
-import { openVinosCashDrawer } from '../../services/printing/qzTrayCashDrawer';
 import { logVinosAudit } from '../../services/audit/audit.service';
 import Toast from '../common/Toast';
 
@@ -1315,15 +1314,6 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           notes: notesForSale,
         },
       });
-      let cashDrawerWarning = '';
-      if (isEfectivo || (isCredito && creditRemainderMethod === 'EFECTIVO' && creditRemainderTotal > 0)) {
-        try {
-          await openVinosCashDrawer();
-        } catch (drawerError) {
-          console.error(drawerError);
-          cashDrawerWarning = ' · Cajón no abrió; revisa QZ Tray';
-        }
-      }
       let documentOpened = true;
       try {
         await generateVinosSaleTicket(ticketInput, { mode: 'print', targetWindow: saleDocumentWindow });
@@ -1333,7 +1323,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         if (saleDocumentWindow && !saleDocumentWindow.closed) saleDocumentWindow.close();
         setFeedback({ type: 'error', msg: 'Venta registrada, pero no se pudo abrir el documento.' });
       }
-      if (documentOpened) setFeedback({ type: 'success', msg: `✓ Venta registrada${cashDrawerWarning}` });
+      if (documentOpened) setFeedback({ type: 'success', msg: '✓ Venta registrada' });
       clearCart();
       await load();
     } catch (e: unknown) {
