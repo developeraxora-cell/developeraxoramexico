@@ -75,6 +75,7 @@ const priceTierLabel = (value?: string | null): string => {
   if (key === 'MAYOREO') return 'MAYOREO';
   if (key === 'MEDIO_MAYOREO') return 'MEDIO MAYOREO';
   if (key === 'MENUDEO') return 'MENUDEO';
+  if (key === 'ESPECIAL') return 'ESPECIAL';
   return '';
 };
 

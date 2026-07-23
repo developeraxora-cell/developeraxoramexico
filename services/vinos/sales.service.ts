@@ -1,6 +1,6 @@
 import { supabaseVinos, isVinosConfigured } from '../vinosClient';
 
-export type PriceTier = 'MENUDEO' | 'MEDIO_MAYOREO' | 'MAYOREO';
+export type PriceTier = 'MENUDEO' | 'MEDIO_MAYOREO' | 'MAYOREO' | 'ESPECIAL';
 export type PaymentMethod = 'EFECTIVO' | 'CREDITO' | 'TRANSFERENCIA' | 'TARJETA' | 'CORTESIA';
 
 export interface SaleCartItem {
@@ -10,6 +10,7 @@ export interface SaleCartItem {
   qty: number;
   price_type: PriceTier;
   unit_price: number;
+  special_authorization?: string | null;
   product_name?: string;
   product_sku?: string;
   uom_name?: string;
@@ -428,9 +429,11 @@ export const vinosSalesService = {
     }
 
     // Determine ticket-level price_type (most frequent in items)
-    const tierCount: Record<PriceTier, number> = { MENUDEO: 0, MEDIO_MAYOREO: 0, MAYOREO: 0 };
+    const tierCount: Record<PriceTier, number> = { MENUDEO: 0, MEDIO_MAYOREO: 0, MAYOREO: 0, ESPECIAL: 0 };
     input.items.forEach(it => { tierCount[it.price_type] = (tierCount[it.price_type] || 0) + 1; });
-    const dominantTier = (Object.keys(tierCount) as PriceTier[]).reduce((a, b) => tierCount[a] >= tierCount[b] ? a : b);
+    const dominantTier = tierCount.ESPECIAL > 0
+      ? 'ESPECIAL'
+      : (Object.keys(tierCount) as PriceTier[]).reduce((a, b) => tierCount[a] >= tierCount[b] ? a : b);
 
     const salePayload = {
       branch_id: input.branch_id,

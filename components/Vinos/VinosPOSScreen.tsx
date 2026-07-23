@@ -52,6 +52,7 @@ const PRICE_TIER_LABEL: Record<PriceTier, string> = {
   MENUDEO: 'Menudeo',
   MEDIO_MAYOREO: 'Medio mayoreo',
   MAYOREO: 'Mayoreo',
+  ESPECIAL: 'Especial',
 };
 
 const STOCK_EPSILON = 0.000001;
@@ -121,6 +122,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const [addProductTarget, setAddProductTarget] = useState<ProductFull | null>(null);
   const [stepUomId, setStepUomId] = useState('');
   const [stepQty, setStepQty] = useState('1');
+  const [stepSpecialPriceEnabled, setStepSpecialPriceEnabled] = useState(false);
+  const [stepSpecialPrice, setStepSpecialPrice] = useState('');
+  const [stepSpecialAuthorization, setStepSpecialAuthorization] = useState('');
 
   // pago
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('EFECTIVO');
@@ -530,9 +534,17 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     setAddProductTarget(p);
     setStepUomId(base.id);
     setStepQty('1');
+    setStepSpecialPriceEnabled(false);
+    setStepSpecialPrice('');
+    setStepSpecialAuthorization('');
   };
 
-  const closeAddProduct = () => setAddProductTarget(null);
+  const closeAddProduct = () => {
+    setAddProductTarget(null);
+    setStepSpecialPriceEnabled(false);
+    setStepSpecialPrice('');
+    setStepSpecialAuthorization('');
+  };
 
   const getProductPriceForTier = (product: ProductFull, tier: PriceTier) => {
     if (tier === 'MENUDEO') return Number(product.price_retail || 0);
@@ -664,14 +676,27 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     const uomName = pu.uom?.name ?? '';
     if (!canUseStock(addProductTarget.id, addProductTarget.name, qty, factorToBase, uomName)) return;
     const autoPrice = getAutoPriceForQty(addProductTarget, pu, qty);
+    const specialUnitPrice = Number(stepSpecialPrice);
+    const specialAuthorization = stepSpecialAuthorization.trim();
+    if (stepSpecialPriceEnabled) {
+      if (!Number.isFinite(specialUnitPrice) || specialUnitPrice <= 0) {
+        setFeedback({ type: 'error', msg: 'Ingresa un precio especial válido.' });
+        return;
+      }
+      if (specialAuthorization.length < 3) {
+        setFeedback({ type: 'error', msg: 'Indica quién autoriza el precio especial.' });
+        return;
+      }
+    }
 
     setCart(prev => [...prev, {
       product_id: addProductTarget.id,
       product_uom_id: pu.id,
       factor_to_base: factorToBase,
       qty,
-      price_type: autoPrice.tier,
-      unit_price: autoPrice.unitPrice,
+      price_type: stepSpecialPriceEnabled ? 'ESPECIAL' : autoPrice.tier,
+      unit_price: stepSpecialPriceEnabled ? specialUnitPrice : autoPrice.unitPrice,
+      special_authorization: stepSpecialPriceEnabled ? specialAuthorization : null,
       product_name: addProductTarget.name,
       product_sku: addProductTarget.sku,
       uom_name: uomName,
@@ -679,6 +704,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     setAddProductTarget(null);
     setSearch('');
     setStepQty('1');
+    setStepSpecialPriceEnabled(false);
+    setStepSpecialPrice('');
+    setStepSpecialAuthorization('');
   };
 
   const updateCartItem = (idx: number, patch: Partial<SaleCartItem>) =>
@@ -701,7 +729,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       }
       const product = products.find(p => p.id === next.product_id);
       const productUom = product?.product_uoms.find(u => u.id === next.product_uom_id);
-      if (product && productUom) {
+      if (product && productUom && next.price_type !== 'ESPECIAL') {
         const autoPrice = getAutoPriceForQty(product, productUom, nextQty);
         next.price_type = autoPrice.tier;
         next.unit_price = autoPrice.unitPrice;
@@ -898,6 +926,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   // ── helpers color / type detection ────────────────────
   const getSaleTypeInfo = (s: import('../../services/vinos/sales.service').SaleRow) => {
+    if (s.price_type === 'ESPECIAL') {
+      return { label: 'ESPECIAL', color: '#d97706', bg: 'bg-amber-100', text: 'text-amber-800' };
+    }
     if (Number(s.wallet_used ?? 0) > 0 && Number(s.wallet_used) >= Number(s.total)) {
       return { label: 'SALDO',    color: '#a855f7', bg: 'bg-purple-100', text: 'text-purple-700' };
     }
@@ -917,6 +948,15 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       return { label: 'TRANSF.', color: '#06b6d4', bg: 'bg-cyan-100', text: 'text-cyan-700' };
     }
     return { label: 'EFECTIVO',   color: '#22c55e', bg: 'bg-green-100',  text: 'text-green-700' };
+  };
+
+  const getPaymentMethodLabel = (method: PaymentMethod) => {
+    if (method === 'EFECTIVO') return 'Efectivo';
+    if (method === 'TARJETA') return 'Tarjeta';
+    if (method === 'TRANSFERENCIA') return 'Transferencia';
+    if (method === 'CREDITO') return 'Crédito';
+    if (method === 'CORTESIA') return 'Cortesía';
+    return method;
   };
 
   // ── sale actions ──────────────────────────────────────
@@ -1234,7 +1274,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     const manualDiscountNote = manualDiscountApplied
       ? `Descuento manual ${manualDiscountApplied.percent}%: ${manualDiscountApplied.justification}`
       : null;
-    const notesForSale = [saleNotes.trim(), manualDiscountNote].filter(Boolean).join(' | ') || null;
+    const specialSaleAuthorizations = cart
+      .filter(item => item.price_type === 'ESPECIAL')
+      .map(item => `${item.product_name ?? 'Producto'}: ${item.special_authorization ?? 'Sin autorización capturada'}`);
+    const specialSaleNote = specialSaleAuthorizations.length > 0
+      ? `Venta especial autorizada por ${specialSaleAuthorizations.join('; ')}`
+      : null;
+    const notesForSale = [saleNotes.trim(), manualDiscountNote, specialSaleNote].filter(Boolean).join(' | ') || null;
     const notesForTicket = notesForSale;
     const splitPaymentMethod = isCredito && creditRemainderTotal > 0 ? creditRemainderMethod : null;
     const splitPaymentAmount = isCredito ? creditRemainderTotal : 0;
@@ -1291,12 +1337,28 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         action_type: 'VENTA',
         entity_type: 'venta',
         entity_id: saleId,
-        description: `Venta ${formatCurrency(total)} · ${paymentMethod} · ${cart.length} producto(s)`,
+        description: `${specialSaleAuthorizations.length > 0 ? 'Venta especial' : 'Venta'} ${formatCurrency(total)} · ${paymentMethod} · ${cart.length} producto(s)`,
+        justification: specialSaleNote,
         new_data: {
           payment_method: paymentMethod,
+          subtotal,
           total,
           customer_id: customerId,
+          customer_name: selectedCustomer?.name ?? 'PUBLICO GENERAL',
           items_count: cart.length,
+          is_special_sale: specialSaleAuthorizations.length > 0,
+          special_authorizations: specialSaleAuthorizations,
+          items: cart.map(item => ({
+            product_id: item.product_id,
+            product_name: item.product_name ?? null,
+            product_sku: item.product_sku ?? null,
+            uom_name: item.uom_name ?? null,
+            qty: Number(item.qty),
+            price_type: item.price_type,
+            unit_price: Number(item.unit_price),
+            line_total: Number(item.qty) * Number(item.unit_price),
+            special_authorization: item.special_authorization ?? null,
+          })),
           wallet_used: walletUsedActual,
           credit_used: isCredito ? creditUsedActual : 0,
           split_payment_method: splitPaymentMethod,
@@ -1490,6 +1552,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-bold text-slate-900">{it.product_name}</p>
                       <p className="text-[9px] text-slate-400">{it.uom_name} · {PRICE_TIER_LABEL[it.price_type]}</p>
+                      {it.price_type === 'ESPECIAL' && it.special_authorization && (
+                        <p className="mt-0.5 line-clamp-1 text-[9px] font-bold text-amber-600">Autoriza: {it.special_authorization}</p>
+                      )}
                   </div>
                   <div className="flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 p-1">
                       <button onClick={() => updateCartItem(idx, { qty: Math.max(0.01, it.qty - 1) })} className="rounded-lg p-1 hover:bg-slate-100"><Minus size={12}/></button>
@@ -1853,10 +1918,57 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 />
               </div>
 
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 hover:border-orange-200 hover:bg-orange-50/40">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500"
+                  checked={stepSpecialPriceEnabled}
+                  onChange={e => setStepSpecialPriceEnabled(e.target.checked)}
+                />
+                <span>
+                  <span className="block text-[11px] font-black uppercase tracking-widest text-slate-700">Precio especial</span>
+                  <span className="block text-[10px] font-bold text-slate-500">Usar un precio autorizado solo para esta venta.</span>
+                </span>
+              </label>
+
               {(() => {
                 const pu = addProductTarget.product_uoms.find(u => u.id === stepUomId);
                 if (!pu) return null;
                 const qty = Number(stepQty) || 0;
+                if (stepSpecialPriceEnabled) {
+                  const specialUnitPrice = Number(stepSpecialPrice) || 0;
+                  return (
+                    <div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-amber-700">Precio especial</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            className="w-full rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-black text-slate-900 outline-none focus:border-orange-400"
+                            value={stepSpecialPrice}
+                            onChange={e => setStepSpecialPrice(e.target.value)}
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div className="rounded-xl border border-amber-200 bg-white px-3 py-2">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">Total</p>
+                          <p className="mt-1 text-lg font-black text-orange-600">{formatCurrency(qty * specialUnitPrice)}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-amber-700">¿Quién autoriza?</label>
+                        <textarea
+                          className="min-h-[84px] w-full resize-none rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-orange-400"
+                          value={stepSpecialAuthorization}
+                          onChange={e => setStepSpecialAuthorization(e.target.value)}
+                          placeholder="Nombre o motivo de autorización..."
+                        />
+                      </div>
+                    </div>
+                  );
+                }
                 const autoPrice = getAutoPriceForQty(addProductTarget, pu, qty);
                 const tierRows = getTierRangeRows(addProductTarget, pu);
                 return (
@@ -2444,6 +2556,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                           </td>
                           <td className="px-4 py-3 text-sm font-black text-slate-900 whitespace-nowrap">
                             <div>{formatCurrency(s.total)}</div>
+                            {s.price_type === 'ESPECIAL' && (
+                              <div className="mt-0.5 text-[10px] font-bold text-amber-700">
+                                Pago: {getPaymentMethodLabel(s.payment_method)}
+                              </div>
+                            )}
                             {s.payment_method === 'EFECTIVO' && saleCashReceived > 0 && (
                               <div className="mt-0.5 text-[10px] font-bold text-slate-500">
                                 Pagó {formatCurrency(saleCashReceived)} · Vuelto {formatCurrency(saleCashChange)}

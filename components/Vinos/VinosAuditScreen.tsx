@@ -36,6 +36,7 @@ interface DeletedSaleAuditItem {
   price_type?: string | null;
   unit_price?: number;
   line_total?: number;
+  special_authorization?: string | null;
 }
 
 interface DeletedSaleAuditSnapshot {
@@ -82,6 +83,38 @@ const getDeletedSaleSnapshot = (row: AuditQueryRow): DeletedSaleAuditSnapshot | 
         price_type: typeof item.price_type === 'string' ? item.price_type : null,
         unit_price: Number(item.unit_price ?? 0),
         line_total: Number(item.line_total ?? 0),
+        special_authorization: typeof item.special_authorization === 'string' ? item.special_authorization : null,
+      })),
+  };
+};
+
+const getCreatedSaleSnapshot = (row: AuditQueryRow): DeletedSaleAuditSnapshot | null => {
+  if (row.action_type !== 'VENTA' || row.entity_type !== 'venta') return null;
+  const data = asRecord(row.new_data);
+  if (!data) return null;
+  const items = Array.isArray(data.items) ? data.items : [];
+  return {
+    id: row.entity_id,
+    created_at: row.timestamp,
+    customer_name: typeof data.customer_name === 'string' ? data.customer_name : null,
+    payment_method: typeof data.payment_method === 'string' ? data.payment_method : null,
+    subtotal: Number(data.subtotal ?? data.total ?? 0),
+    discount_amount: Number(data.discount_amount ?? 0),
+    total: Number(data.total ?? 0),
+    wallet_used: Number(data.wallet_used ?? 0),
+    notes: typeof data.notes === 'string' ? data.notes : null,
+    items: items
+      .map((item) => asRecord(item))
+      .filter((item): item is Record<string, unknown> => Boolean(item))
+      .map((item) => ({
+        product_name: typeof item.product_name === 'string' ? item.product_name : 'Producto sin nombre',
+        sku: typeof item.product_sku === 'string' ? item.product_sku : null,
+        uom_name: typeof item.uom_name === 'string' ? item.uom_name : null,
+        qty: Number(item.qty ?? 0),
+        price_type: typeof item.price_type === 'string' ? item.price_type : null,
+        unit_price: Number(item.unit_price ?? 0),
+        line_total: Number(item.line_total ?? 0),
+        special_authorization: typeof item.special_authorization === 'string' ? item.special_authorization : null,
       })),
   };
 };
@@ -317,7 +350,10 @@ const VinosAuditScreen: React.FC<Props> = () => {
                   <p className="text-sm font-bold text-amber-900 italic">{detail.observation ?? detail.justification}</p>
                 </div>
               )}
-              <DeletedSaleDetail snapshot={getDeletedSaleSnapshot(detail)} />
+              <SaleAuditDetail
+                snapshot={getDeletedSaleSnapshot(detail) ?? getCreatedSaleSnapshot(detail)}
+                title={detail.action_type === 'ELIMINAR' ? 'Detalle de venta eliminada' : 'Detalle de venta registrada'}
+              />
             </div>
           </div>
         </div>
@@ -333,7 +369,7 @@ const Field: React.FC<{ label: string; value: string }> = ({ label, value }) => 
   </div>
 );
 
-const DeletedSaleDetail: React.FC<{ snapshot: DeletedSaleAuditSnapshot | null }> = ({ snapshot }) => {
+const SaleAuditDetail: React.FC<{ snapshot: DeletedSaleAuditSnapshot | null; title: string }> = ({ snapshot, title }) => {
   if (!snapshot) return null;
   const items = snapshot.items ?? [];
 
@@ -341,7 +377,7 @@ const DeletedSaleDetail: React.FC<{ snapshot: DeletedSaleAuditSnapshot | null }>
     <div className="rounded-2xl border border-red-100 bg-white p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Detalle de venta eliminada</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-red-500">{title}</p>
           <p className="mt-1 text-sm font-black text-slate-900">{snapshot.customer_name || 'Cliente no registrado'}</p>
           <p className="text-[11px] font-bold text-slate-400">
             {snapshot.created_at ? new Date(snapshot.created_at).toLocaleString('es-MX') : 'Fecha no disponible'} · {snapshot.payment_method || 'Pago no disponible'}
@@ -374,6 +410,9 @@ const DeletedSaleDetail: React.FC<{ snapshot: DeletedSaleAuditSnapshot | null }>
                   <p className="text-[10px] font-bold text-slate-400">
                     {[item.sku, item.uom_name].filter(Boolean).join(' · ') || 'Sin SKU'}
                   </p>
+                  {item.special_authorization && (
+                    <p className="mt-0.5 text-[10px] font-bold text-amber-600">Autoriza: {item.special_authorization}</p>
+                  )}
                 </td>
                 <td className="px-3 py-2 font-bold text-slate-700">{Number(item.qty ?? 0).toLocaleString('es-MX')}</td>
                 <td className="px-3 py-2 text-slate-500">{item.price_type || '-'}</td>
