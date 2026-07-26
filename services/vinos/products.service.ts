@@ -579,7 +579,7 @@ export const vinosProductsService = {
         } satisfies ProductHistoryRow;
       });
 
-    const saleRows = saleItems
+    const saleRowsRaw = saleItems
       .map((item) => ({ item, sale: asOne(item.sale) }))
       .filter(({ sale }) => sale && sale.deleted_at == null && (!branchId || sale.branch_id === branchId))
       .map(({ item, sale }) => {
@@ -612,6 +612,28 @@ export const vinosProductsService = {
           user_name: null,
         } satisfies ProductHistoryRow;
       });
+
+    const saleRows = Array.from(saleRowsRaw.reduce((acc, row) => {
+      const key = [
+        row.source,
+        row.created_at,
+        row.price_type ?? '',
+        Number(row.unit_price ?? 0).toFixed(6),
+        row.detail ?? '',
+      ].join('|');
+      const current = acc.get(key);
+      if (!current) {
+        acc.set(key, { ...row });
+        return acc;
+      }
+      acc.set(key, {
+        ...current,
+        id: `${current.id}+${row.id}`,
+        qty: Number(current.qty ?? 0) + Number(row.qty ?? 0),
+        subtotal: Number(current.subtotal ?? 0) + Number(row.subtotal ?? 0),
+      });
+      return acc;
+    }, new Map<string, ProductHistoryRow>()).values());
 
     const updateRows = (auditRes.rows ?? [])
       .filter((row) => row.action_type === 'CREAR' || row.action_type === 'ACTUALIZAR')

@@ -87,6 +87,31 @@ export interface SaleRow {
 
 const STOCK_EPSILON = 0.000001;
 
+const getSaleItemMergeKey = (item: SaleCartItem) => [
+  item.product_id,
+  item.product_uom_id || '',
+  item.price_type,
+  Number(item.unit_price || 0).toFixed(6),
+  (item.special_authorization ?? '').trim().toLowerCase(),
+].join('|');
+
+const consolidateSaleItems = (items: SaleCartItem[]): SaleCartItem[] => {
+  const byKey = new Map<string, SaleCartItem>();
+  items.forEach((item) => {
+    const key = getSaleItemMergeKey(item);
+    const current = byKey.get(key);
+    if (!current) {
+      byKey.set(key, { ...item, qty: Number(item.qty || 0) });
+      return;
+    }
+    byKey.set(key, {
+      ...current,
+      qty: Number(current.qty || 0) + Number(item.qty || 0),
+    });
+  });
+  return Array.from(byKey.values());
+};
+
 export const vinosSalesService = {
 
   async list(branchId?: number, opts?: { search?: string; from?: string; to?: string; customerId?: string; createdBy?: string }): Promise<SaleRow[]> {
@@ -387,8 +412,9 @@ export const vinosSalesService = {
   async create(input: CreateSaleInput): Promise<string> {
     if (!isVinosConfigured) throw new Error('DB vinos no configurada');
     if (input.items.length === 0) throw new Error('Agrega al menos un producto.');
+    const saleItems = consolidateSaleItems(input.items);
 
-    const requiredByProduct = input.items.reduce<Record<string, number>>((acc, it) => {
+    const requiredByProduct = saleItems.reduce<Record<string, number>>((acc, it) => {
       const qty = Number(it.qty);
       const factor = Number(it.factor_to_base || 1);
       if (!Number.isFinite(qty) || qty <= 0) {
@@ -422,7 +448,7 @@ export const vinosSalesService = {
       const stock = stockByProduct.get(productId);
       const availableQtyBase = Number(stock?.qty ?? 0);
       if (requiredQtyBase - availableQtyBase > STOCK_EPSILON) {
-        const item = input.items.find(it => it.product_id === productId);
+        const item = saleItems.find(it => it.product_id === productId);
         const productName = item?.product_name ?? stock?.name ?? 'producto';
         throw new Error(`Stock insuficiente para "${productName}". Disponible: ${availableQtyBase}, solicitado: ${requiredQtyBase}.`);
       }
@@ -430,7 +456,7 @@ export const vinosSalesService = {
 
     // Determine ticket-level price_type (most frequent in items)
     const tierCount: Record<PriceTier, number> = { MENUDEO: 0, MEDIO_MAYOREO: 0, MAYOREO: 0, ESPECIAL: 0 };
-    input.items.forEach(it => { tierCount[it.price_type] = (tierCount[it.price_type] || 0) + 1; });
+    saleItems.forEach(it => { tierCount[it.price_type] = (tierCount[it.price_type] || 0) + 1; });
     const dominantTier = tierCount.ESPECIAL > 0
       ? 'ESPECIAL'
       : (Object.keys(tierCount) as PriceTier[]).reduce((a, b) => tierCount[a] >= tierCount[b] ? a : b);
@@ -463,7 +489,7 @@ export const vinosSalesService = {
       .single();
     if (sErr) throw sErr;
 
-    const itemsPayload = input.items.map(it => ({
+    const itemsPayload = saleItems.map(it => ({
       sale_id: sale.id,
       product_id: it.product_id,
       product_uom_id: it.product_uom_id || null,

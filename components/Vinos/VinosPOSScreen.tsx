@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import {
   Search, Trash2, User as UserIcon, CreditCard, Banknote, Gift, Tag, Receipt, X, Loader2, Plus, Minus, Wallet, Eye, FileText, Pencil,
@@ -125,6 +125,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const [stepSpecialPriceEnabled, setStepSpecialPriceEnabled] = useState(false);
   const [stepSpecialPrice, setStepSpecialPrice] = useState('');
   const [stepSpecialAuthorization, setStepSpecialAuthorization] = useState('');
+  const addCartLockRef = useRef(false);
 
   // pago
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('EFECTIVO');
@@ -537,6 +538,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     setStepSpecialPriceEnabled(false);
     setStepSpecialPrice('');
     setStepSpecialAuthorization('');
+    addCartLockRef.current = false;
   };
 
   const closeAddProduct = () => {
@@ -544,6 +546,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
     setStepSpecialPriceEnabled(false);
     setStepSpecialPrice('');
     setStepSpecialAuthorization('');
+    addCartLockRef.current = false;
   };
 
   const getProductPriceForTier = (product: ProductFull, tier: PriceTier) => {
@@ -661,6 +664,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   };
 
   const handleAddToCart = () => {
+    if (addCartLockRef.current) return;
     if (!addProductTarget) return;
     if (!isCashRegisterOpen) {
       setAddProductTarget(null);
@@ -688,8 +692,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         return;
       }
     }
+    addCartLockRef.current = true;
 
-    setCart(prev => [...prev, {
+    const nextItem: SaleCartItem = {
       product_id: addProductTarget.id,
       product_uom_id: pu.id,
       factor_to_base: factorToBase,
@@ -700,7 +705,22 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       product_name: addProductTarget.name,
       product_sku: addProductTarget.sku,
       uom_name: uomName,
-    }]);
+    };
+
+    setCart(prev => {
+      const mergeIndex = prev.findIndex(item =>
+        item.product_id === nextItem.product_id &&
+        item.product_uom_id === nextItem.product_uom_id &&
+        item.price_type === nextItem.price_type &&
+        Number(item.unit_price) === Number(nextItem.unit_price) &&
+        (item.special_authorization ?? '').trim() === (nextItem.special_authorization ?? '').trim()
+      );
+      if (mergeIndex === -1) return [...prev, nextItem];
+      return prev.map((item, idx) => idx === mergeIndex
+        ? { ...item, qty: Number(item.qty) + Number(nextItem.qty) }
+        : item
+      );
+    });
     setAddProductTarget(null);
     setSearch('');
     setStepQty('1');
@@ -980,7 +1000,27 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           uom: uomInner ? { name: uomInner.name } : null,
         };
       });
-      setSaleDetailItems(flatten);
+      const grouped = Array.from(flatten.reduce((acc, item) => {
+        const key = [
+          item.product_id,
+          item.uom?.name ?? '',
+          item.price_type,
+          Number(item.unit_price || 0).toFixed(6),
+        ].join('|');
+        const current = acc.get(key);
+        if (!current) {
+          acc.set(key, { ...item, qty: Number(item.qty || 0), line_total: Number(item.line_total || 0) });
+          return acc;
+        }
+        acc.set(key, {
+          ...current,
+          id: `${current.id}-${item.id}`,
+          qty: Number(current.qty || 0) + Number(item.qty || 0),
+          line_total: Number(current.line_total || 0) + Number(item.line_total || 0),
+        });
+        return acc;
+      }, new Map<string, typeof flatten[number]>()).values());
+      setSaleDetailItems(grouped);
     } catch (e) { console.error(e); }
   };
 
