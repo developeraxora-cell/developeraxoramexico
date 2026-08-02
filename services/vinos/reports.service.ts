@@ -41,6 +41,15 @@ export interface ReportsDateRange {
   endDate: string;
 }
 
+export interface ReportsItemAnalytics {
+  gross_profit: number;
+  profit_margin: number;
+  top_products: ReportsKPIs['top_products'];
+  top_profit_products: ReportsKPIs['top_profit_products'];
+  loss_products: ReportsKPIs['loss_products'];
+  profit_periods: ReportsKPIs['profit_periods'];
+}
+
 const parseLocalDateInput = (value: string, endOfDay = false) => {
   const [year, month, day] = value.split('-').map(Number);
   return new Date(
@@ -144,7 +153,7 @@ const fetchSaleItemsBySaleIds = async (saleIds: string[], includeProduct: boolea
 };
 
 export const vinosReportsService = {
-  async getKPIs(branchId: number | null, range: number | ReportsDateRange = 30): Promise<ReportsKPIs> {
+  async getKPIs(branchId: number | null, range: number | ReportsDateRange = 30, options?: { includeItemAnalytics?: boolean }): Promise<ReportsKPIs> {
     const empty: ReportsKPIs = {
       total_sales: 0, total_amount: 0, avg_ticket: 0, gross_profit: 0, profit_margin: 0, inventory_value: 0, new_customers: 0,
       top_customers: [], top_products: [], top_profit_products: [], loss_products: [], low_stock_products: [],
@@ -341,6 +350,15 @@ export const vinosReportsService = {
       .sort((a, b) => b.total - a.total)
       .slice(0, 5);
 
+    let gross_profit = 0;
+    let sold_cost_total = 0;
+    let profit_margin = 0;
+    let top_products: ReportsKPIs['top_products'] = [];
+    let top_profit_products: ReportsKPIs['top_profit_products'] = [];
+    let loss_products: ReportsKPIs['loss_products'] = [];
+    const profit_periods = emptyProfitPeriods();
+
+    if (options?.includeItemAnalytics !== false) {
     // 6. Top products
     const saleIds = sales.map(s => s.id);
     const items = saleIds.length > 0 ? await fetchSaleItemsBySaleIds(saleIds, true) : [];
@@ -351,8 +369,6 @@ export const vinosReportsService = {
     const saleById = new Map(sales.map((sale) => [sale.id, sale]));
 
     const productAgg: Record<string, { name: string; sku: string; qty: number; total: number; profit: number }> = {};
-    let gross_profit = 0;
-    let sold_cost_total = 0;
     items.forEach(it => {
       const product = productMeta.get(it.product_id);
       if (!product) return;
@@ -372,20 +388,20 @@ export const vinosReportsService = {
       gross_profit += profit;
       sold_cost_total += costTotal;
     });
-    const top_products = Object.entries(productAgg)
+    top_products = Object.entries(productAgg)
       .map(([product_id, v]) => ({ product_id, ...v }))
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 5);
-    const top_profit_products = Object.entries(productAgg)
+    top_profit_products = Object.entries(productAgg)
       .map(([product_id, v]) => ({ product_id, ...v }))
       .sort((a, b) => b.profit - a.profit)
       .slice(0, 5);
-    const loss_products = Object.entries(productAgg)
+    loss_products = Object.entries(productAgg)
       .map(([product_id, v]) => ({ product_id, ...v }))
       .filter((row) => row.profit <= 0)
       .sort((a, b) => a.profit - b.profit)
       .slice(0, 5);
-    const profit_margin = sold_cost_total > 0 ? (gross_profit / sold_cost_total) * 100 : 0;
+    profit_margin = sold_cost_total > 0 ? (gross_profit / sold_cost_total) * 100 : 0;
 
     const periodSaleIds = periodSales.map((sale) => sale.id);
     const periodItems = periodSaleIds.length > 0 ? await fetchSaleItemsBySaleIds(periodSaleIds, false) : [];
@@ -406,7 +422,6 @@ export const vinosReportsService = {
       acc[item.sale_id] = (acc[item.sale_id] ?? 0) + profit;
       return acc;
     }, {});
-    const profit_periods = emptyProfitPeriods();
     periodSales.forEach((sale) => {
       const createdAt = new Date(sale.created_at);
       const profit = Number(profitBySale[sale.id] ?? 0);
@@ -415,6 +430,7 @@ export const vinosReportsService = {
       if (createdAt >= monthStart) profit_periods.month += profit;
       if (createdAt >= yearStart) profit_periods.year += profit;
     });
+    }
 
     // 7. Nuevos clientes
     let custQ = supabaseVinos
@@ -458,6 +474,18 @@ export const vinosReportsService = {
       sales_periods, profit_periods,
       payment_distribution, loyalty_distribution,
       at_risk_customers, birthdays_this_month,
+    };
+  },
+
+  async getItemAnalytics(branchId: number | null, range: number | ReportsDateRange = 30): Promise<ReportsItemAnalytics> {
+    const data = await this.getKPIs(branchId, range, { includeItemAnalytics: true });
+    return {
+      gross_profit: data.gross_profit,
+      profit_margin: data.profit_margin,
+      top_products: data.top_products,
+      top_profit_products: data.top_profit_products,
+      loss_products: data.loss_products,
+      profit_periods: data.profit_periods,
     };
   },
 };

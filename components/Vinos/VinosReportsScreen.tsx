@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   TrendingUp, DollarSign, ShoppingBag,
   AlertTriangle, Star, BarChart3, RefreshCw,
@@ -375,6 +375,9 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
   const [cashDetailLoading, setCashDetailLoading] = useState(false);
   const [cashDetailError, setCashDetailError] = useState('');
   const [cashPrintSessionId, setCashPrintSessionId] = useState<string | null>(null);
+  const [itemAnalyticsLoading, setItemAnalyticsLoading] = useState(false);
+  const [itemAnalyticsLoaded, setItemAnalyticsLoaded] = useState(false);
+  const itemAnalyticsAnchorRef = useRef<HTMLDivElement | null>(null);
 
   const selectedBranch = useMemo(
     () => branches.find((branch) => branch.id === selectedBranchId) ?? null,
@@ -419,9 +422,11 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
       return;
     }
     setLoading(true);
+    setItemAnalyticsLoaded(false);
+    setItemAnalyticsLoading(false);
     try {
       const [kpisResult, sessionsResult] = await Promise.allSettled([
-        vinosReportsService.getKPIs(branchDbId, { startDate, endDate }),
+        vinosReportsService.getKPIs(branchDbId, { startDate, endDate }, { includeItemAnalytics: false }),
         vinosCashRegisterService.list(branchDbId, undefined, { closeExpired: false }),
       ]);
 
@@ -444,6 +449,49 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
   }, [branchDbId, startDate, endDate]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadItemAnalytics = useCallback(async () => {
+    if (branchDbId == null || !startDate || !endDate || itemAnalyticsLoaded || itemAnalyticsLoading) return;
+    setItemAnalyticsLoading(true);
+    try {
+      const analytics = await vinosReportsService.getItemAnalytics(branchDbId, { startDate, endDate });
+      setData((previous) => previous ? {
+        ...previous,
+        gross_profit: analytics.gross_profit,
+        profit_margin: analytics.profit_margin,
+        top_products: analytics.top_products,
+        top_profit_products: analytics.top_profit_products,
+        loss_products: analytics.loss_products,
+        profit_periods: analytics.profit_periods,
+      } : previous);
+      setItemAnalyticsLoaded(true);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setItemAnalyticsLoading(false);
+    }
+  }, [branchDbId, endDate, itemAnalyticsLoaded, itemAnalyticsLoading, startDate]);
+
+  useEffect(() => {
+    if (!data || itemAnalyticsLoaded || itemAnalyticsLoading) return;
+    const node = itemAnalyticsAnchorRef.current;
+    if (!node) return;
+
+    if (typeof IntersectionObserver === 'undefined') {
+      void loadItemAnalytics();
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        void loadItemAnalytics();
+        observer.disconnect();
+      }
+    }, { rootMargin: '700px 0px' });
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [data, itemAnalyticsLoaded, itemAnalyticsLoading, loadItemAnalytics]);
 
   const loadCashierOptions = useCallback(async () => {
     setCashiersLoading(true);
@@ -631,6 +679,7 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
 
   const reportData = data ?? EMPTY_REPORTS_DATA;
   const isLoadingView = loading || !data;
+  const isItemAnalyticsViewLoading = isLoadingView || !itemAnalyticsLoaded || itemAnalyticsLoading;
   const maxSalesHour = Math.max(1, ...reportData.sales_by_hour.map(d => d.count));
   const hasHourlySales = reportData.sales_by_hour.some(row => row.count > 0);
   const periodRows = [
@@ -725,8 +774,8 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <KpiCard label="Total ventas" value={reportData.total_sales} icon={ShoppingBag} loading={isLoadingView} />
             <KpiCard label="Ingresos" value={formatCurrency(reportData.total_amount)} icon={DollarSign} loading={isLoadingView} />
-            <KpiCard label="Utilidad estimada" value={formatCurrency(reportData.gross_profit)} icon={TrendingUp} loading={isLoadingView} />
-            <KpiCard label="Margen utilidad" value={`${reportData.profit_margin.toFixed(1)}%`} icon={Activity} loading={isLoadingView} />
+            <KpiCard label="Utilidad estimada" value={formatCurrency(reportData.gross_profit)} icon={TrendingUp} loading={isItemAnalyticsViewLoading} />
+            <KpiCard label="Margen utilidad" value={`${reportData.profit_margin.toFixed(1)}%`} icon={Activity} loading={isItemAnalyticsViewLoading} />
             <KpiCard label="Valor inventario" value={formatCurrency(reportData.inventory_value)} icon={Package} loading={isLoadingView} />
             <KpiCard label="Poco inventario" value={reportData.low_stock_products.length} icon={AlertTriangle} loading={isLoadingView} />
             <KpiCard label="Ticket promedio" value={formatCurrency(reportData.avg_ticket)} icon={TrendingUp} loading={isLoadingView} />
@@ -743,9 +792,13 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
                     <p className="mt-1 text-lg font-black text-slate-900">{formatCurrency(row.amount)}</p>
                     <div className="mt-2 flex items-center justify-between text-[11px] font-bold">
                       <span className="text-slate-500">{row.sales} ventas</span>
-                      <span className={row.profit >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        {formatCurrency(row.profit)}
-                      </span>
+                      {isItemAnalyticsViewLoading ? (
+                        <SkeletonBlock className="h-3 w-16" />
+                      ) : (
+                        <span className={row.profit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                          {formatCurrency(row.profit)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -788,10 +841,11 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
           </div>
 
           {/* Paneles solicitados */}
+          <div ref={itemAnalyticsAnchorRef} className="h-px" aria-hidden="true" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Top productos */}
             <PanelCard title="Productos más vendidos" icon={Star}>
-              {isLoadingView ? (
+              {isItemAnalyticsViewLoading ? (
                 <LoadingRows />
               ) : reportData.top_products.length === 0 ? (
                 <EmptyMini icon={ShoppingBag} text="Sin ventas registradas"/>
@@ -813,7 +867,7 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
 
             {/* Productos con más utilidad */}
             <PanelCard title="Productos con más utilidad" icon={TrendingUp}>
-              {isLoadingView ? (
+              {isItemAnalyticsViewLoading ? (
                 <LoadingRows />
               ) : reportData.top_profit_products.length === 0 ? (
                 <EmptyMini icon={TrendingUp} text="Sin utilidad calculada"/>
@@ -835,7 +889,7 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
 
             {/* Productos sin utilidad */}
             <PanelCard title="Sin utilidad o pérdida" icon={TrendingDown}>
-              {isLoadingView ? (
+              {isItemAnalyticsViewLoading ? (
                 <LoadingRows />
               ) : reportData.loss_products.length === 0 ? (
                 <EmptyMini icon={TrendingDown} text="Sin ventas con pérdida"/>
