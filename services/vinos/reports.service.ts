@@ -88,6 +88,7 @@ const emptyPeriods = () => ({
 
 const emptyProfitPeriods = () => ({ today: 0, week: 0, month: 0, year: 0 });
 const SALE_ITEMS_BATCH_SIZE = 80;
+const SALE_ITEMS_BATCH_CONCURRENCY = 4;
 
 const resolveDateRange = (range: number | ReportsDateRange) => {
   if (typeof range === 'number') {
@@ -116,9 +117,12 @@ interface ItemRow {
 
 const fetchSaleItemsBySaleIds = async (saleIds: string[], includeProduct: boolean): Promise<ItemRow[]> => {
   const uniqueSaleIds = Array.from(new Set(saleIds.filter(Boolean)));
-  const rows: ItemRow[] = [];
+  const batches: string[][] = [];
   for (let index = 0; index < uniqueSaleIds.length; index += SALE_ITEMS_BATCH_SIZE) {
-    const batch = uniqueSaleIds.slice(index, index + SALE_ITEMS_BATCH_SIZE);
+    batches.push(uniqueSaleIds.slice(index, index + SALE_ITEMS_BATCH_SIZE));
+  }
+
+  const fetchBatch = async (batch: string[]) => {
     const { data, error } = await supabaseVinos
       .from('sale_items')
       .select(includeProduct
@@ -127,7 +131,14 @@ const fetchSaleItemsBySaleIds = async (saleIds: string[], includeProduct: boolea
       )
       .in('sale_id', batch);
     if (error) throw error;
-    rows.push(...((data as ItemRow[]) ?? []));
+    return (data as ItemRow[]) ?? [];
+  };
+
+  const rows: ItemRow[] = [];
+  for (let index = 0; index < batches.length; index += SALE_ITEMS_BATCH_CONCURRENCY) {
+    const chunk = batches.slice(index, index + SALE_ITEMS_BATCH_CONCURRENCY);
+    const results = await Promise.all(chunk.map(fetchBatch));
+    results.forEach((batchRows) => rows.push(...batchRows));
   }
   return rows;
 };
