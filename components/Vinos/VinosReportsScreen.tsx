@@ -414,15 +414,32 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
 
   const load = useCallback(async () => {
     if (!startDate || !endDate) return;
+    if (branchDbId == null) {
+      setLoading(true);
+      return;
+    }
     setLoading(true);
     try {
-      const [kpis, sessions] = await Promise.all([
+      const [kpisResult, sessionsResult] = await Promise.allSettled([
         vinosReportsService.getKPIs(branchDbId, { startDate, endDate }),
-        branchDbId ? vinosCashRegisterService.list(branchDbId) : Promise.resolve([]),
+        vinosCashRegisterService.list(branchDbId, undefined, { closeExpired: false }),
       ]);
-      setData(kpis);
-      setCashHistory(sessions.slice(0, 8));
-    } catch (e) { console.error(e); }
+
+      if (kpisResult.status === 'fulfilled') {
+        setData(kpisResult.value);
+      } else {
+        console.error(kpisResult.reason);
+      }
+
+      if (sessionsResult.status === 'fulfilled') {
+        setCashHistory(sessionsResult.value.slice(0, 8));
+      } else {
+        console.error(sessionsResult.reason);
+        setCashHistory([]);
+      }
+    } catch (e) {
+      console.error(e);
+    }
     finally { setLoading(false); }
   }, [branchDbId, startDate, endDate]);
 

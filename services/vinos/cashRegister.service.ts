@@ -323,9 +323,11 @@ export const vinosCashRegisterService = {
     return data as CashRegisterSession | null;
   },
 
-  async list(branchId: number, cashierUserId?: string): Promise<CashRegisterSession[]> {
+  async list(branchId: number, cashierUserId?: string, options?: { closeExpired?: boolean }): Promise<CashRegisterSession[]> {
     if (!isVinosConfigured) return [];
-    await this.closeExpired(branchId);
+    if (options?.closeExpired !== false) {
+      await this.closeExpired(branchId);
+    }
     let query = supabaseVinos
       .from('cash_register_sessions')
       .select('*')

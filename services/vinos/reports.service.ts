@@ -87,6 +87,7 @@ const emptyPeriods = () => ({
 });
 
 const emptyProfitPeriods = () => ({ today: 0, week: 0, month: 0, year: 0 });
+const SALE_ITEMS_BATCH_SIZE = 80;
 
 const resolveDateRange = (range: number | ReportsDateRange) => {
   if (typeof range === 'number') {
@@ -102,6 +103,33 @@ const resolveDateRange = (range: number | ReportsDateRange) => {
     start: parseLocalDateInput(range.startDate),
     end: parseLocalDateInput(range.endDate, true),
   };
+};
+
+interface ItemRow {
+  sale_id: string;
+  product_id: string;
+  qty: number;
+  qty_base: number;
+  line_total: number;
+  product?: { name: string; sku: string } | { name: string; sku: string }[] | null;
+}
+
+const fetchSaleItemsBySaleIds = async (saleIds: string[], includeProduct: boolean): Promise<ItemRow[]> => {
+  const uniqueSaleIds = Array.from(new Set(saleIds.filter(Boolean)));
+  const rows: ItemRow[] = [];
+  for (let index = 0; index < uniqueSaleIds.length; index += SALE_ITEMS_BATCH_SIZE) {
+    const batch = uniqueSaleIds.slice(index, index + SALE_ITEMS_BATCH_SIZE);
+    const { data, error } = await supabaseVinos
+      .from('sale_items')
+      .select(includeProduct
+        ? 'sale_id, product_id, qty, qty_base, line_total, product:products(name, sku)'
+        : 'sale_id, product_id, qty, qty_base, line_total'
+      )
+      .in('sale_id', batch);
+    if (error) throw error;
+    rows.push(...((data as ItemRow[]) ?? []));
+  }
+  return rows;
 };
 
 export const vinosReportsService = {
@@ -304,15 +332,7 @@ export const vinosReportsService = {
 
     // 6. Top products
     const saleIds = sales.map(s => s.id);
-    interface ItemRow { sale_id: string; product_id: string; qty: number; qty_base: number; line_total: number; product?: { name: string; sku: string } | { name: string; sku: string }[] | null }
-    let items: ItemRow[] = [];
-    if (saleIds.length > 0) {
-      const { data: itemsData } = await supabaseVinos
-        .from('sale_items')
-        .select('sale_id, product_id, qty, qty_base, line_total, product:products(name, sku)')
-        .in('sale_id', saleIds);
-      items = (itemsData as ItemRow[]) ?? [];
-    }
+    const items = saleIds.length > 0 ? await fetchSaleItemsBySaleIds(saleIds, true) : [];
     const saleItemsTotal = items.reduce<Record<string, number>>((acc, item) => {
       acc[item.sale_id] = (acc[item.sale_id] ?? 0) + Number(item.line_total ?? 0);
       return acc;
@@ -357,14 +377,7 @@ export const vinosReportsService = {
     const profit_margin = sold_cost_total > 0 ? (gross_profit / sold_cost_total) * 100 : 0;
 
     const periodSaleIds = periodSales.map((sale) => sale.id);
-    let periodItems: ItemRow[] = [];
-    if (periodSaleIds.length > 0) {
-      const { data: periodItemsData } = await supabaseVinos
-        .from('sale_items')
-        .select('sale_id, product_id, qty, qty_base, line_total')
-        .in('sale_id', periodSaleIds);
-      periodItems = (periodItemsData as ItemRow[]) ?? [];
-    }
+    const periodItems = periodSaleIds.length > 0 ? await fetchSaleItemsBySaleIds(periodSaleIds, false) : [];
     const periodSaleById = new Map(periodSales.map((sale) => [sale.id, sale]));
     const periodSaleItemsTotal = periodItems.reduce<Record<string, number>>((acc, item) => {
       acc[item.sale_id] = (acc[item.sale_id] ?? 0) + Number(item.line_total ?? 0);
