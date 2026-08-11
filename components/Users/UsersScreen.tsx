@@ -120,7 +120,7 @@ const BUSINESS_UNIT_DEFAULT_PERMISSIONS: Record<BusinessUnit, string[]> = {
     'concretera.purchases.view', 'concretera.purchases.create', 'concretera.purchases.delete',
     'concretera.products.view',
     'concretera.customers.view', 'concretera.customers.create', 'concretera.customers.edit', 'concretera.customers.delete',
-    'concretera.alerts.view', 'concretera.audit.view', 'concretera.reports.view',
+    'concretera.alerts.view',
   ],
   logistica: ['logistica.diesel.view'],
   transporteria: [
@@ -128,7 +128,7 @@ const BUSINESS_UNIT_DEFAULT_PERMISSIONS: Record<BusinessUnit, string[]> = {
     'transporteria.purchases.view', 'transporteria.purchases.create', 'transporteria.purchases.delete',
     'transporteria.products.view',
     'transporteria.customers.view', 'transporteria.customers.create', 'transporteria.customers.edit', 'transporteria.customers.delete',
-    'transporteria.alerts.view', 'transporteria.audit.view', 'transporteria.reports.view',
+    'transporteria.alerts.view', 'transporteria.audit.view',
   ],
   vinos: [
     'vinos.sales.view', 'vinos.sales.create', 'vinos.sales.delete',
@@ -142,6 +142,11 @@ const BUSINESS_UNIT_DEFAULT_PERMISSIONS: Record<BusinessUnit, string[]> = {
 
 const collectPermissionsForBusinessUnits = (units: BusinessUnit[]) =>
   units.flatMap((unit) => BUSINESS_UNIT_DEFAULT_PERMISSIONS[unit] ?? []);
+
+const permissionBelongsToBusinessUnits = (permissionKey: string, units: BusinessUnit[]) => {
+  const [businessUnit] = permissionKey.split('.');
+  return units.includes(businessUnit as BusinessUnit);
+};
 
 const ROLE_OPTIONS: RoleOption[] = [
   {
@@ -914,8 +919,10 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
 
       // Re-sync permissions based on role defaults
       await supabase.from('app_user_permissions').delete().eq('user_id', userId);
+      const rolePermissions = (ROLE_DEFAULT_PERMISSIONS[form.role_key] ?? [])
+        .filter((permissionKey) => permissionBelongsToBusinessUnits(permissionKey, normalizedBusinessUnits));
       const defaultPerms = Array.from(new Set([
-        ...(ROLE_DEFAULT_PERMISSIONS[form.role_key] ?? []),
+        ...rolePermissions,
         ...collectPermissionsForBusinessUnits(normalizedBusinessUnits),
       ]));
       if (defaultPerms.length > 0) {
