@@ -65,18 +65,6 @@ export const isFullAccessRole = (role?: Role | string | null) =>
 const canUseExecutiveReport = (user: User | null | undefined) =>
   Boolean(user?.active && (user.role === Role.SUPERADMIN || user.role === Role.SOCIO));
 
-const ROLE_ALLOWED_BUSINESS_UNITS: Partial<Record<Role, BusinessUnit[]>> = {
-  [Role.MATERIALS_USER]: ['materiales'],
-  [Role.CONCRETE_USER]: ['concretera'],
-  [Role.TRANSPORT_USER]: ['transporteria', 'logistica'],
-  [Role.VINOS_ADMIN]: ['vinos'],
-};
-
-const roleCanUseBusinessUnit = (role: Role | string | null | undefined, businessUnit: BusinessUnit) => {
-  const allowedUnits = ROLE_ALLOWED_BUSINESS_UNITS[role as Role];
-  return !allowedUnits || allowedUnits.includes(businessUnit);
-};
-
 export const buildPermissionKey = (businessUnit: BusinessUnit, moduleKey: string, action: PermissionAction = 'view') =>
   `${businessUnit}.${moduleKey}.${action}`;
 
@@ -88,8 +76,6 @@ export const userCanAccess = (
 ) => {
   if (!user || !user.active) return false;
   if (isFullAccessRole(user.role)) return true;
-
-  if (!roleCanUseBusinessUnit(user.role, businessUnit)) return false;
 
   // For VINOS_ADMIN: only vinos BU, regardless of DB business_units or permissions
   if (user.role === Role.VINOS_ADMIN) {
