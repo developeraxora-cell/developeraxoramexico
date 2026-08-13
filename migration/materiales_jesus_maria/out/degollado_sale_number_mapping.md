@@ -2,8 +2,8 @@
 
 - Sucursal: Degollado Lopar
 - Alcance: branch_id=1, business_unit=materiales, type=SALE, id>=7175
-- Generado: 2026-08-13 13:18:57
-- Total de ventas mapeadas: 22
+- Generado: 2026-08-13 13:50:13
+- Total de ventas mapeadas: 24
 
 ## Equivalencias
 
@@ -29,6 +29,8 @@
 - 7194 -> 3827
 - 7195 -> 3828
 - 7198 -> 3829
+- 7199 -> 3830
+- 7201 -> 3831
 
 ## Detalle
 
@@ -56,3 +58,5 @@
 | 7194 | 3827 | 2026-08-13 12:24:47 | Roberto Lopez | CREDITO | 5 | $22,583.00 |
 | 7195 | 3828 | 2026-08-13 12:29:25 | FELIPE RODRIGUEZ | CREDITO | 1 | $1,550.00 |
 | 7198 | 3829 | 2026-08-13 12:41:34 | MATERIALES TORRES | CREDITO | 1 | $17,000.00 |
+| 7199 | 3830 | 2026-08-13 13:25:30 | PUBLICO GENERAL | EFECTIVO | 1 | $57.00 |
+| 7201 | 3831 | 2026-08-13 13:39:39 | RICARDO JAIME | CREDITO | 3 | $3,345.00 |

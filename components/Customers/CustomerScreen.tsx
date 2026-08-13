@@ -18,6 +18,7 @@ import { auditService, logAuditForModule } from '../../services/audit/audit.serv
 import { supabase } from '../../services/supabaseClient';
 import { customerSelectionService } from '../../services/shared/customerSelection.service';
 import { paymentEvidenceUploadService, validatePaymentEvidenceFile } from '../../services/paymentEvidenceUpload.service';
+import { getDisplayCreditNoteCode, getDisplaySaleReference, getSaleDisplayNumber } from '../../services/inventory/saleDisplay';
 
 interface CustomerScreenProps {
   selectedBranchId: string;
@@ -134,31 +135,8 @@ const createDefaultPaymentEditForm = () => ({
   justification: '',
 });
 const ALPHABET_FILTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-const getDisplayNoteCode = (note: Pick<CreditNote, 'folio' | 'sale_reference' | 'inventory_transaction_id'>) => {
-  const saleReference = String(note.sale_reference ?? '').trim();
-  const folio = String(note.folio ?? '').trim();
-  const upperSaleReference = saleReference.toUpperCase();
-  const upperFolio = folio.toUpperCase();
-  const isMigratedCode = upperSaleReference.startsWith('LEG-')
-    || upperSaleReference.startsWith('MIG-')
-    || upperFolio.startsWith('REP-')
-    || upperFolio.startsWith('MIG-');
-
-  if (isMigratedCode && note.inventory_transaction_id) {
-    return String(note.inventory_transaction_id);
-  }
-
-  return folio
-    || saleReference
-    || (note.inventory_transaction_id ? String(note.inventory_transaction_id) : '')
-    || '—';
-};
-
-const getDisplaySaleReference = (reference: string | null | undefined) => {
-  const value = String(reference ?? '').trim();
-  const migratedSaleMatch = value.match(/^MIG-[A-Z0-9-]*VENTA-(\d+)$/i);
-  return migratedSaleMatch?.[1] ?? value;
-};
+const getDisplayNoteCode = (note: Pick<CreditNote, 'folio' | 'sale_reference' | 'inventory_transaction_id'>) =>
+  getDisplayCreditNoteCode(note);
 
 const isZeroCostSaleNote = (value: string | null | undefined) =>
   String(value ?? '').toUpperCase().includes('SALIDA SIN COSTO');
@@ -378,7 +356,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         rowKey: `cash:${sale.id}`,
         kind: 'cash' as const,
         saleId: String(sale.id),
-        displayCode: String(sale.id),
+        displayCode: getSaleDisplayNumber(sale, { branchId, businessUnit }),
         issue_date: String(sale.created_at ?? '').slice(0, 10),
         due_date: null,
         total: Number(cashSaleTotalsById[String(sale.id)] ?? noteSaleSummaries[`cash:${sale.id}`]?.total_amount ?? 0),
@@ -394,7 +372,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       const bTime = new Date(`${b.issue_date}T00:00:00Z`).getTime();
       return bTime - aTime;
     });
-  }, [cashSaleHistory, cashSaleTotalsById, historyNoteReferences, historyNotes, noteSaleSummaries]);
+  }, [branchId, businessUnit, cashSaleHistory, cashSaleTotalsById, historyNoteReferences, historyNotes, noteSaleSummaries]);
   const activeHistoryRows = useMemo(
     () => historyModalRows.filter((row) => (historyView === 'CREDIT' ? row.kind === 'credit' : row.kind === 'cash')),
     [historyModalRows, historyView]
@@ -1165,7 +1143,10 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
     const computedTotal = items.reduce((acc, item) => acc + Number(item.line_total ?? (Number(item.qty) * Number(item.unit_price))), 0);
 
     return {
-      saleId: String(saleRow.id),
+      saleId: getSaleDisplayNumber(
+        { id: saleRow.id, reference: saleRow.reference ?? null },
+        { branchId, businessUnit }
+      ),
       created_at: saleRow.created_at,
       nombre_cliente: saleRow.nombre_cliente ?? fallback?.customerName ?? selectedCustomer?.name ?? null,
       direccion_cliente: saleRow.direccion_cliente ?? fallback?.customerAddress ?? selectedCustomer?.address ?? null,

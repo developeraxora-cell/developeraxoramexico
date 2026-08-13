@@ -83,3 +83,20 @@ El documento se crea en:
 ```text
 migration/materiales_jesus_maria/out/degollado_sale_number_mapping.md
 ```
+
+Para proteger el consecutivo de Degollado en base de datos y reparar ventas
+recientes que hayan quedado sin `reference`:
+
+```bash
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f migration/materiales_jesus_maria/10_protect_degollado_sale_references.sql
+```
+
+## Normalizacion de folios migrados en Jesus Maria
+
+Las ventas migradas de Jesus Maria quedaron inicialmente con referencias tipo
+`MIG-JM-VENTA-2801`. Para que todos los modulos muestren el mismo numero de nota
+del sistema anterior, se normalizan a `2801`.
+
+```bash
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f migration/materiales_jesus_maria/09_normalize_jesus_maria_migrated_sale_numbers.sql
+```

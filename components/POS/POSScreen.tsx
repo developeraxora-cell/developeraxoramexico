@@ -7,6 +7,7 @@ import { convert, getPriceForUnit } from '../../services/conversionEngine';
 import { creditService, type CreditCustomer, type CreditNoteWithStatus, type CreditPaymentMethod, type CustomerAddress } from '../../services/credit/credit.service';
 import { catalogService, type Product as CatalogProduct, type ProductUom, type Uom } from '../../services/inventory/catalog.service';
 import { purchasesService } from '../../services/inventory/purchases.service';
+import { getSaleDisplayNumber } from '../../services/inventory/saleDisplay';
 import { walletService, type CustomerWalletSummary } from '../../services/wallet.service';
 import { supabase } from '../../services/supabaseClient';
 import { formatCurrency, formatNumber } from '../../services/currency';
@@ -53,23 +54,6 @@ const getDisplaySaleNotes = (notes: string | null | undefined) => {
   if (isGeneratedMigrationNote(notes)) return null;
   const value = String(notes ?? '').trim();
   return value || null;
-};
-
-const getSaleDisplayNumber = (
-  sale: { id: string | number; reference?: string | null },
-  scope?: { branchId?: string | number | null; businessUnit?: string | null }
-) => {
-  const reference = String(sale.reference ?? '').trim();
-  const saleId = Number(sale.id);
-  const isDegolladoMaterials =
-    String(scope?.branchId ?? '') === '1' &&
-    String(scope?.businessUnit ?? 'materiales') === 'materiales';
-
-  if (isDegolladoMaterials && Number.isFinite(saleId) && saleId < 7175) {
-    return String(sale.id);
-  }
-
-  return reference || String(sale.id);
 };
 
 const getWatermarkPngBytes = async () => {
@@ -465,6 +449,13 @@ const POSScreen: React.FC<POSProps> = ({
         setSalesHistoryTotal(0);
         return;
       }
+      const saleNumberFilter = saleNumberRaw
+        ? [
+            `id.eq.${parsedSaleNumber}`,
+            `reference.eq.${saleNumberRaw}`,
+            `reference.eq.MIG-JM-VENTA-${parsedSaleNumber}`,
+          ].join(',')
+        : '';
 
       let countQuery = supabase
         .from('inventory_transactions')
@@ -481,7 +472,7 @@ const POSScreen: React.FC<POSProps> = ({
         countQuery = countQuery.lte('created_at', `${salesHistoryDateTo}T23:59:59.999`);
       }
       if (saleNumberRaw) {
-        countQuery = countQuery.or(`id.eq.${parsedSaleNumber},reference.eq.${saleNumberRaw}`);
+        countQuery = countQuery.or(saleNumberFilter);
       }
 
       const { count, error: countError } = await countQuery;
@@ -505,7 +496,7 @@ const POSScreen: React.FC<POSProps> = ({
         transactionsQuery = transactionsQuery.lte('created_at', `${salesHistoryDateTo}T23:59:59.999`);
       }
       if (saleNumberRaw) {
-        transactionsQuery = transactionsQuery.or(`id.eq.${parsedSaleNumber},reference.eq.${saleNumberRaw}`);
+        transactionsQuery = transactionsQuery.or(saleNumberFilter);
       }
 
       const { data: transactions, error: txError } = await transactionsQuery
