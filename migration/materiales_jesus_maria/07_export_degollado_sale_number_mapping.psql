@@ -1,0 +1,93 @@
+-- Genera un documento Markdown con el mapeo de folios visibles corregidos
+-- para DEGOLLADO LOPAR.
+--
+-- Alcance intencional:
+--   branch_id = 1
+--   business_unit = 'materiales'
+--   type = 'SALE'
+--
+-- Ejecutar despues de 06_repair_degollado_sale_numbers.sql:
+--   psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f migration/materiales_jesus_maria/07_export_degollado_sale_number_mapping.psql
+
+\set ON_ERROR_STOP on
+\pset pager off
+
+begin;
+
+create temporary table migration_degollado_sale_number_mapping_report on commit drop as
+with affected_sales as (
+  select
+    tx.id as old_sale_number,
+    (3807 + row_number() over (order by tx.created_at, tx.id))::bigint as new_sale_number,
+    tx.created_at,
+    tx.nombre_cliente,
+    tx.payment_type,
+    tx.reference,
+    coalesce(items.item_count, 0) as item_count,
+    coalesce(items.total_amount, 0) as total_amount
+  from public.inventory_transactions tx
+  cross join first_jump jump
+  cross join base_number
+  left join lateral (
+    select
+      count(*) as item_count,
+      sum(coalesce(item.line_total, item.qty * item.unit_price, 0)) as total_amount
+    from public.inventory_transaction_items item
+    where item.transaction_id = tx.id
+  ) items on true
+  where tx.branch_id = 1
+    and tx.business_unit = 'materiales'
+    and tx.type = 'SALE'
+    and coalesce(tx.is_deleted, false) = false
+    and tx.id >= 7175
+)
+select *
+from affected_sales
+order by created_at, old_sale_number;
+
+\pset format unaligned
+\pset tuples_only on
+\pset footer off
+\o migration/materiales_jesus_maria/out/degollado_sale_number_mapping.md
+
+select '# Mapeo de folios de venta - Degollado Lopar';
+select '';
+select '- Sucursal: Degollado Lopar';
+select '- Alcance: branch_id=1, business_unit=materiales, type=SALE';
+select '- Generado: ' || to_char(now() at time zone 'America/Mexico_City', 'YYYY-MM-DD HH24:MI:SS');
+select '- Total de ventas mapeadas: ' || count(*) from migration_degollado_sale_number_mapping_report;
+select '';
+select '## Equivalencias';
+select '';
+select format('- %s -> %s', old_sale_number, new_sale_number)
+from migration_degollado_sale_number_mapping_report
+order by created_at, old_sale_number;
+select '';
+select '## Detalle';
+select '';
+select '| Folio antes | Folio nuevo | Fecha | Cliente | Tipo | Productos | Total |';
+select '|---:|---:|---|---|---|---:|---:|';
+select format(
+  '| %s | %s | %s | %s | %s | %s | $%s |',
+  old_sale_number,
+  new_sale_number,
+  to_char(created_at at time zone 'America/Mexico_City', 'YYYY-MM-DD HH24:MI:SS'),
+  replace(coalesce(nullif(trim(nombre_cliente), ''), 'SIN CLIENTE'), '|', '/'),
+  replace(coalesce(nullif(trim(payment_type), ''), 'SIN TIPO'), '|', '/'),
+  item_count,
+  to_char(total_amount, 'FM999,999,999,990.00')
+)
+from migration_degollado_sale_number_mapping_report
+order by created_at, old_sale_number;
+
+\o
+\pset tuples_only off
+\pset format aligned
+\pset footer on
+
+select
+  'migration/materiales_jesus_maria/out/degollado_sale_number_mapping.md' as generated_file,
+  count(*) as mapped_sales
+from migration_degollado_sale_number_mapping_report;
+
+commit;

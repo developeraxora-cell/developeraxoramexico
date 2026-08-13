@@ -51,3 +51,35 @@ Totales revisados:
 - Saldo de credito esperado: `2,014,594.83`
 
 Los `abonos` que pertenecen a ventas liquidadas/no credito se omiten de `credit_payments`; quedan representados en la venta como pago en efectivo.
+
+## Reparacion de folios visibles en Degollado
+
+La migracion de Jesus Maria usa la misma secuencia global de `inventory_transactions.id`.
+Para que Degollado no muestre el salto global como folio de venta, se corrige solo:
+
+- `branches.id = 1`
+- `business_unit = materiales`
+- `type = SALE`
+- `inventory_transactions.id >= 7175`
+
+Si se ejecuto una version anterior del script que cambio folios antes del `7175`, primero restaura el alcance:
+
+```bash
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f migration/materiales_jesus_maria/08_restore_degollado_sale_numbers_scope.sql
+```
+
+```bash
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f migration/materiales_jesus_maria/06_repair_degollado_sale_numbers.sql
+```
+
+Para generar el documento con equivalencias tipo `7175 -> 3808`:
+
+```bash
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f migration/materiales_jesus_maria/07_export_degollado_sale_number_mapping.psql
+```
+
+El documento se crea en:
+
+```text
+migration/materiales_jesus_maria/out/degollado_sale_number_mapping.md
+```

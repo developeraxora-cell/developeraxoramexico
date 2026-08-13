@@ -55,6 +55,23 @@ const getDisplaySaleNotes = (notes: string | null | undefined) => {
   return value || null;
 };
 
+const getSaleDisplayNumber = (
+  sale: { id: string | number; reference?: string | null },
+  scope?: { branchId?: string | number | null; businessUnit?: string | null }
+) => {
+  const reference = String(sale.reference ?? '').trim();
+  const saleId = Number(sale.id);
+  const isDegolladoMaterials =
+    String(scope?.branchId ?? '') === '1' &&
+    String(scope?.businessUnit ?? 'materiales') === 'materiales';
+
+  if (isDegolladoMaterials && Number.isFinite(saleId) && saleId < 7175) {
+    return String(sale.id);
+  }
+
+  return reference || String(sale.id);
+};
+
 const getWatermarkPngBytes = async () => {
   if (!watermarkPngBytesPromise) {
     watermarkPngBytesPromise = fetch('/lopar-watermark.png')
@@ -162,6 +179,7 @@ const POSScreen: React.FC<POSProps> = ({
   const [salesHistorySaleNumber, setSalesHistorySaleNumber] = useState('');
   const [saleToDelete, setSaleToDelete] = useState<{
     id: string;
+    reference: string | null;
     created_at: string;
     nombre_cliente: string | null;
     items_count: number;
@@ -173,6 +191,7 @@ const POSScreen: React.FC<POSProps> = ({
   const [isSaleDetailOpen, setIsSaleDetailOpen] = useState(false);
   const [saleDetail, setSaleDetail] = useState<{
     id: string;
+    reference: string | null;
     created_at: string;
     nombre_cliente: string | null;
   } | null>(null);
@@ -192,6 +211,7 @@ const POSScreen: React.FC<POSProps> = ({
   const [isSaleDetailLoading, setIsSaleDetailLoading] = useState(false);
   const [salePaymentEditTarget, setSalePaymentEditTarget] = useState<null | {
     id: string;
+    reference: string | null;
     created_at: string;
     nombre_cliente: string | null;
     total_amount: number;
@@ -365,6 +385,11 @@ const POSScreen: React.FC<POSProps> = ({
     if (match?.dbId !== undefined) return String(match.dbId);
     return selectedBranchId || '';
   }, [branches, selectedBranchId]);
+  const getScopedSaleDisplayNumber = useCallback(
+    (sale: { id: string | number; reference?: string | null }) =>
+      getSaleDisplayNumber(sale, { branchId, businessUnit }),
+    [branchId, businessUnit]
+  );
   const selectedBranch = useMemo(
     () => branches.find((b) => b.id === selectedBranchId) ?? null,
     [branches, selectedBranchId]
@@ -456,7 +481,7 @@ const POSScreen: React.FC<POSProps> = ({
         countQuery = countQuery.lte('created_at', `${salesHistoryDateTo}T23:59:59.999`);
       }
       if (saleNumberRaw) {
-        countQuery = countQuery.eq('id', parsedSaleNumber);
+        countQuery = countQuery.or(`id.eq.${parsedSaleNumber},reference.eq.${saleNumberRaw}`);
       }
 
       const { count, error: countError } = await countQuery;
@@ -480,7 +505,7 @@ const POSScreen: React.FC<POSProps> = ({
         transactionsQuery = transactionsQuery.lte('created_at', `${salesHistoryDateTo}T23:59:59.999`);
       }
       if (saleNumberRaw) {
-        transactionsQuery = transactionsQuery.eq('id', parsedSaleNumber);
+        transactionsQuery = transactionsQuery.or(`id.eq.${parsedSaleNumber},reference.eq.${saleNumberRaw}`);
       }
 
       const { data: transactions, error: txError } = await transactionsQuery
@@ -822,12 +847,15 @@ const POSScreen: React.FC<POSProps> = ({
           throw new Error('La venta debe tener un cliente identificado para cambiarla a crédito.');
         }
 
+        const displaySaleNumber = getScopedSaleDisplayNumber(salePaymentEditTarget);
         await creditService.createCreditNote({
           branch_id: branchId,
           business_unit: businessUnit,
           customer_id: customer.id,
           total: newCreditAmount,
           credit_days_applied: customer.default_credit_days,
+          folio: displaySaleNumber,
+          sale_reference: displaySaleNumber,
           inventory_transaction_id: salePaymentEditTarget.id,
           issue_date: salePaymentEditTarget.created_at.slice(0, 10),
           notes: salePaymentUseWalletDraft
@@ -852,7 +880,7 @@ const POSScreen: React.FC<POSProps> = ({
         action_type: 'UPDATE',
         entity_type: 'venta',
         entity_id: String(salePaymentEditTarget.id),
-        description: `Tipo de venta actualizado para la venta #${salePaymentEditTarget.id}`,
+        description: `Tipo de venta actualizado para la venta #${getScopedSaleDisplayNumber(salePaymentEditTarget)}`,
         justification,
         previous_data: {
           payment_method: salePaymentEditTarget.payment_method,
@@ -879,7 +907,7 @@ const POSScreen: React.FC<POSProps> = ({
         : finalPaymentMethod === 'HIBRIDA'
           ? (newCreditAmount > 0 ? 'VENTA HIBRIDA (SALDO A FAVOR + CREDITO)' : 'VENTA HIBRIDA (SALDO A FAVOR + EFECTIVO)')
           : finalPaymentMethod;
-      showFeedback('success', 'Tipo de venta actualizado', `La venta #${salePaymentEditTarget.id} ahora está en ${paymentMethodLabel}.`);
+      showFeedback('success', 'Tipo de venta actualizado', `La venta #${getScopedSaleDisplayNumber(salePaymentEditTarget)} ahora está en ${paymentMethodLabel}.`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo actualizar el tipo de venta.';
       setSalePaymentError(message);
@@ -915,7 +943,7 @@ const POSScreen: React.FC<POSProps> = ({
         action_type: 'ELIMINAR',
         entity_type: 'venta',
         entity_id: String(saleToDelete.id),
-        description: `Venta eliminada #${saleToDelete.id}`,
+        description: `Venta eliminada #${getScopedSaleDisplayNumber(saleToDelete)}`,
         justification: normalizedNote,
         previous_data: {
           sale_id: saleToDelete.id,
@@ -1307,6 +1335,7 @@ const POSScreen: React.FC<POSProps> = ({
   };
   const handleDownloadSalePdf = async (sale: {
     id: string;
+    reference: string | null;
     created_at: string;
     nombre_cliente: string | null;
     direccion_cliente: string | null;
@@ -1369,8 +1398,9 @@ const POSScreen: React.FC<POSProps> = ({
         linkedCreditNote = noteData as typeof linkedCreditNote;
       }
 
+      const displaySaleNumber = getScopedSaleDisplayNumber(sale);
       await generateSalePdf({
-        saleId: sale.id,
+        saleId: displaySaleNumber,
         createdAt: sale.created_at,
         items: lines,
         paymentMethod: sale.payment_method,
@@ -1870,14 +1900,15 @@ const POSScreen: React.FC<POSProps> = ({
       });
 
       if (creditAmountSnapshot > 0 && customerSnapshot) {
+        const displaySaleNumber = getScopedSaleDisplayNumber(transaction);
         await creditService.createCreditNote({
           branch_id: branchId,
           business_unit: businessUnit,
           customer_id: customerSnapshot.id,
           total: creditAmountSnapshot,
           credit_days_applied: saleCreditDays,
-          folio: String(transaction.id),
-          sale_reference: String(transaction.id),
+          folio: displaySaleNumber,
+          sale_reference: displaySaleNumber,
           inventory_transaction_id: transaction.id,
         });
       }
@@ -1941,9 +1972,10 @@ const POSScreen: React.FC<POSProps> = ({
       setSelectedCustomerAddressId('');
 
       window.setTimeout(() => {
+        const displaySaleNumber = getScopedSaleDisplayNumber(transaction);
         void generateSalePdf({
           ...pdfPayload,
-          saleId: String(transaction.id),
+          saleId: displaySaleNumber,
           createdAt: transaction.created_at ?? new Date().toISOString(),
         }).catch((pdfError) => {
           console.error('Error generating sale PDF:', pdfError);
@@ -3273,7 +3305,7 @@ const POSScreen: React.FC<POSProps> = ({
               <div>
                 <h3 className="text-xl font-black uppercase tracking-tighter">Detalle de venta</h3>
                 <p className="text-slate-400 text-xs">
-                  {saleDetail.nombre_cliente || '—'} · {formatLocalDateTime(saleDetail.created_at)}
+                  Venta #{getScopedSaleDisplayNumber(saleDetail)} · {saleDetail.nombre_cliente || '—'} · {formatLocalDateTime(saleDetail.created_at)}
                 </p>
               </div>
               <button
@@ -3428,7 +3460,7 @@ const POSScreen: React.FC<POSProps> = ({
                     )}
                     {!isSalesHistoryLoading && salesHistory.map((sale) => (
                       <tr key={sale.id} className="hover:bg-slate-50">
-                        <td className="p-4 text-center text-xs font-black text-slate-700">#{sale.id}</td>
+                        <td className="p-4 text-center text-xs font-black text-slate-700">#{getScopedSaleDisplayNumber(sale)}</td>
                         <td className="p-4 text-xs font-bold text-slate-700">{formatLocalDateTime(sale.created_at)}</td>
                         <td className="p-4 text-xs font-bold text-slate-700">{sale.nombre_cliente || 'Público General'}</td>
                         <td className="p-4 text-xs font-semibold text-slate-500">{sale.notes?.trim() || '—'}</td>
@@ -3671,7 +3703,7 @@ const POSScreen: React.FC<POSProps> = ({
       <ConfirmModal
         isOpen={Boolean(saleToDelete)}
         title="Eliminar venta"
-        description={`La venta #${saleToDelete?.id ?? '—'} será eliminada del historial activo, se restaurará el stock y dejará de contar en reportes.`}
+        description={`La venta #${saleToDelete ? getScopedSaleDisplayNumber(saleToDelete) : '—'} será eliminada del historial activo, se restaurará el stock y dejará de contar en reportes.`}
         confirmText="Eliminar venta"
         cancelText="Cancelar"
         noteLabel="Observación obligatoria"
@@ -3699,7 +3731,7 @@ const POSScreen: React.FC<POSProps> = ({
             <div className="bg-slate-900 p-6 text-white">
               <h3 className="text-xl font-black uppercase tracking-tighter">Editar tipo de venta</h3>
               <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-300">
-                Venta #{salePaymentEditTarget.id} · {salePaymentEditTarget.nombre_cliente || 'Público General'}
+                Venta #{getScopedSaleDisplayNumber(salePaymentEditTarget)} · {salePaymentEditTarget.nombre_cliente || 'Público General'}
               </p>
             </div>
             <div className="space-y-4 p-6">

@@ -224,6 +224,50 @@ const cleanupUnusedProductUoms = async (productId: string, nextUomIds: string[])
   }
 };
 
+const isNumericText = (value: string | null | undefined) => /^\d+$/.test(String(value ?? '').trim());
+
+const getNextSaleReference = async (branchId: string, businessUnit?: string | null) => {
+  const { data, error } = await supabase
+    .from('inventory_transactions')
+    .select('id, reference, created_at')
+    .eq('branch_id', branchId)
+    .eq('business_unit', businessUnit ?? 'materiales')
+    .eq('type', 'SALE')
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(500);
+
+  if (error) throw error;
+
+  const rows = data ?? [];
+  const latest = rows[0];
+  if (!latest) return '1';
+
+  if (isNumericText(latest.reference)) {
+    return String(Number(String(latest.reference).trim()) + 1);
+  }
+
+  const chronologicalRows = [...rows].reverse();
+  let current = Number(latest.id ?? 0);
+
+  for (let index = 1; index < chronologicalRows.length; index += 1) {
+    const previous = chronologicalRows[index - 1];
+    const row = chronologicalRows[index];
+    const previousId = Number(previous.id ?? 0);
+    const rowId = Number(row.id ?? 0);
+    if (Number.isFinite(previousId) && Number.isFinite(rowId) && rowId - previousId > 1000) {
+      const base = isNumericText(previous.reference)
+        ? Number(String(previous.reference).trim())
+        : previousId;
+      current = base + (chronologicalRows.length - index);
+      break;
+    }
+  }
+
+  return String((Number.isFinite(current) ? current : 0) + 1);
+};
+
 export const purchasesService = {
   async clearPurchaseHistory(branchId: string) {
     const { data: transactions, error: txError } = await supabase
@@ -412,14 +456,17 @@ export const purchasesService = {
       payment_notes,
     } = input;
 
+    const normalizedBusinessUnit = business_unit ?? 'materiales';
+    const saleReference = reference?.trim() || await getNextSaleReference(branch_id, normalizedBusinessUnit);
+
     const { data: transaction, error: txError } = await supabase
       .from('inventory_transactions')
       .insert([
         {
           type: 'SALE',
           branch_id,
-          business_unit: business_unit ?? 'materiales',
-          reference: reference || null,
+          business_unit: normalizedBusinessUnit,
+          reference: saleReference,
           notes: notes || null,
           created_by,
           nombre_cliente: nombre_cliente || null,
@@ -432,7 +479,7 @@ export const purchasesService = {
           payment_notes: payment_notes || null,
         },
       ])
-      .select('id, created_at')
+      .select('id, reference, created_at')
       .single();
 
     if (txError) throw txError;
