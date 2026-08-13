@@ -38,6 +38,7 @@ export interface Product {
   purchase_price?: number | null;
   wholesale_price?: number | null;
   retail_price?: number | null;
+  stock?: number | null;
   min_stock?: number | null;
   description: string | null;
   category_id: string | null;
@@ -128,6 +129,36 @@ const getMovementTime = (value: string) => {
   return Number.isFinite(timestamp) ? timestamp : 0;
 };
 
+const SUPABASE_PAGE_SIZE = 1000;
+const SUPABASE_IN_CHUNK_SIZE = 300;
+
+const fetchAllPages = async <T>(
+  queryPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>
+) => {
+  const rows: T[] = [];
+
+  for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
+    const to = from + SUPABASE_PAGE_SIZE - 1;
+    const { data, error } = await queryPage(from, to);
+    if (error) throw error;
+
+    const page = data ?? [];
+    rows.push(...page);
+
+    if (page.length < SUPABASE_PAGE_SIZE) break;
+  }
+
+  return rows;
+};
+
+const chunkValues = <T>(values: T[], chunkSize = SUPABASE_IN_CHUNK_SIZE) => {
+  const chunks: T[][] = [];
+  for (let index = 0; index < values.length; index += chunkSize) {
+    chunks.push(values.slice(index, index + chunkSize));
+  }
+  return chunks;
+};
+
 export const catalogService = {
   async listUoms() {
     const { data, error } = await supabase
@@ -199,17 +230,17 @@ export const catalogService = {
   },
 
   async listProductsByBranch(branchId: string, businessUnit?: string) {
-    let query = supabase
-      .from('products')
-      .select('id, branch_id, business_unit, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, peso_unitario, is_active, created_at, updated_at')
-      .eq('branch_id', branchId)
-      .eq('is_active', true);
+    return fetchAllPages<Product>((from, to) => {
+      let query = supabase
+        .from('products')
+        .select('id, branch_id, business_unit, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, stock, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, peso_unitario, is_active, created_at, updated_at')
+        .eq('branch_id', branchId)
+        .eq('is_active', true);
 
-    if (businessUnit) query = query.eq('business_unit', businessUnit);
+      if (businessUnit) query = query.eq('business_unit', businessUnit);
 
-    const { data, error } = await query.order('name');
-    if (error) throw error;
-    return (data ?? []) as Product[];
+      return query.order('name').range(from, to);
+    });
   },
 
   async searchProductsByBranch(branchId: string, businessUnit: string | undefined, term: string, limit = 20) {
@@ -219,7 +250,7 @@ export const catalogService = {
     const escapedTerm = normalizedTerm.replace(/[%_]/g, (match) => `\\${match}`);
     let query = supabase
       .from('products')
-      .select('id, branch_id, business_unit, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, peso_unitario, is_active, created_at, updated_at')
+      .select('id, branch_id, business_unit, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, stock, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, peso_unitario, is_active, created_at, updated_at')
       .eq('branch_id', branchId)
       .eq('is_active', true)
       .or(`name.ilike.%${escapedTerm}%,sku.ilike.%${escapedTerm}%,barcode.ilike.%${escapedTerm}%`)
@@ -283,13 +314,14 @@ export const catalogService = {
   },
 
   async listStockByBranch(branchId: string) {
-    const { data, error } = await supabase
-      .from('inventory_stock')
-      .select('product_id, qty_base')
-      .eq('branch_id', branchId);
-
-    if (error) throw error;
-    return (data ?? []) as { product_id: string; qty_base: number }[];
+    return fetchAllPages<{ product_id: string; qty_base: number }>((from, to) =>
+      supabase
+        .from('inventory_stock')
+        .select('product_id, qty_base')
+        .eq('branch_id', branchId)
+        .order('product_id')
+        .range(from, to)
+    );
   },
 
   async deactivateProduct(productId: string) {
@@ -429,15 +461,24 @@ export const catalogService = {
 
   async listDefaultSaleUoms(productIds: string[]) {
     if (productIds.length === 0) return [] as ProductUom[];
-    const { data, error } = await supabase
-      .from('product_uoms')
-      .select('id, product_id, uom_id, purpose, factor_to_base, wholesale_price, retail_price, is_default_purchase, is_default_sale, uoms (id, code, name)')
-      .in('product_id', productIds)
-      .eq('is_default_sale', true);
+    const uniqueProductIds = Array.from(new Set(productIds.map(String)));
+    const rows = (
+      await Promise.all(
+        chunkValues(uniqueProductIds).map((chunk) =>
+          fetchAllPages<ProductUom & { uoms?: Uom }>((from, to) =>
+            supabase
+              .from('product_uoms')
+              .select('id, product_id, uom_id, purpose, factor_to_base, wholesale_price, retail_price, is_default_purchase, is_default_sale, uoms (id, code, name)')
+              .in('product_id', chunk)
+              .eq('is_default_sale', true)
+              .order('product_id')
+              .range(from, to)
+          )
+        )
+      )
+    ).flat();
 
-    if (error) throw error;
-
-    return (data ?? []).map((row) => ({
+    return rows.map((row) => ({
       ...row,
       uom: row.uoms as Uom,
     })) as ProductUom[];

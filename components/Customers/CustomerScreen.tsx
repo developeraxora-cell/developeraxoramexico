@@ -137,8 +137,14 @@ const ALPHABET_FILTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const getDisplayNoteCode = (note: Pick<CreditNote, 'folio' | 'sale_reference' | 'inventory_transaction_id'>) => {
   const saleReference = String(note.sale_reference ?? '').trim();
   const folio = String(note.folio ?? '').trim();
+  const upperSaleReference = saleReference.toUpperCase();
   const upperFolio = folio.toUpperCase();
-  if ((saleReference.toUpperCase().startsWith('LEG-') || upperFolio.startsWith('REP-')) && note.inventory_transaction_id) {
+  const isMigratedCode = upperSaleReference.startsWith('LEG-')
+    || upperSaleReference.startsWith('MIG-')
+    || upperFolio.startsWith('REP-')
+    || upperFolio.startsWith('MIG-');
+
+  if (isMigratedCode && note.inventory_transaction_id) {
     return String(note.inventory_transaction_id);
   }
 
@@ -146,6 +152,12 @@ const getDisplayNoteCode = (note: Pick<CreditNote, 'folio' | 'sale_reference' | 
     || saleReference
     || (note.inventory_transaction_id ? String(note.inventory_transaction_id) : '')
     || '—';
+};
+
+const getDisplaySaleReference = (reference: string | null | undefined) => {
+  const value = String(reference ?? '').trim();
+  const migratedSaleMatch = value.match(/^MIG-[A-Z0-9-]*VENTA-(\d+)$/i);
+  return migratedSaleMatch?.[1] ?? value;
 };
 
 const isZeroCostSaleNote = (value: string | null | undefined) =>
@@ -3761,7 +3773,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                                       </div>
                                       <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Referencia</p>
-                                        <p className="mt-1 text-sm font-black text-slate-800">{summary.reference || '—'}</p>
+                                        <p className="mt-1 text-sm font-black text-slate-800">{getDisplaySaleReference(summary.reference) || '—'}</p>
                                       </div>
                                       <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total</p>

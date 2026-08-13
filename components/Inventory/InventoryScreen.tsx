@@ -96,6 +96,15 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     return formatNumber(Number(value || 0), undefined, { maximumFractionDigits: 3 });
   }, []);
 
+  const formatUomLabel = useCallback((uom?: Uom) => {
+    const name = String(uom?.name ?? '').trim().toUpperCase();
+    const code = String(uom?.code ?? '').trim().toUpperCase();
+    if (name === 'PIEZAS' || code === 'PZA') return 'Pieza(s)';
+    if (name === 'KILOS' || code === 'KG') return 'Kilo(s)';
+    if (name === 'METROS' || code === 'M') return 'Metro(s)';
+    return uom?.name || uom?.code || '—';
+  }, []);
+
   const formatDateTime = useCallback((value: string) => {
     if (!value) return '—';
     const cleanValue = String(value).trim();
@@ -146,7 +155,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     } finally {
       setIsLoading(false);
     }
-  }, [branchId]);
+  }, [branchId, productBusinessUnit]);
 
   useEffect(() => {
     loadProducts();
@@ -558,12 +567,12 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
               )}
               {!isLoading && paginatedProducts.map((product) => {
                 const isActive = product.is_active !== false;
-                const stock = Number((product as any).stock ?? stockByProduct[product.id] ?? 0);
+                const stock = Number(stockByProduct[String(product.id)] ?? (product as any).stock ?? 0);
                 const minStock = Number((product as any).min_stock ?? 0);
                 const stockLabel = Number.isFinite(stock)
                   ? formatNumber(Number(stock), undefined, { maximumFractionDigits: 3 })
                   : '0';
-                const baseCode = uomById[product.base_uom_id]?.code || '—';
+                const baseLabel = formatUomLabel(uomById[product.base_uom_id]);
                 const stockStatus = stock <= minStock
                   ? 'low'
                   : stock <= minStock + Math.max(1, minStock * 0.1)
@@ -583,7 +592,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                   </td>
                   <td className="p-5 text-xs font-mono text-slate-500">{product.sku || '—'}</td>
                   <td className="p-5 text-xs font-mono text-slate-500">{product.barcode || '—'}</td>
-                  <td className="p-5 text-xs font-bold text-slate-600">{baseCode}</td>
+                  <td className="p-5 text-xs font-bold text-slate-600">{baseLabel}</td>
                   <td className="p-5 text-right text-xs font-black text-slate-900">
                     {formatCurrency(Number((product as any).retail_price ?? (product as any).precio ?? 0))}
                   </td>
@@ -597,12 +606,12 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                             : 'bg-emerald-100 text-emerald-700'
                       }`}
                     >
-                      {stockLabel} <span className="text-[9px] font-black">{baseCode}</span>
+                      {stockLabel} <span className="text-[9px] font-black">{baseLabel}</span>
                     </span>
                   </td>
                   <td className="p-5 text-right text-xs font-black text-slate-600">
                     {formatNumber(Number(minStock), undefined, { maximumFractionDigits: 3 })}{' '}
-                    <span className="text-[9px] font-black text-slate-400">{baseCode}</span>
+                    <span className="text-[9px] font-black text-slate-400">{baseLabel}</span>
                   </td>
                   <td className="p-5 text-center">
                     <div className="flex items-center justify-center gap-2">

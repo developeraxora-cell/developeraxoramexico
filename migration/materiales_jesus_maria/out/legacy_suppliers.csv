@@ -1,0 +1,34 @@
+legacy_id,branch_legacy_id,name,phone,email,address,notes,is_active,created_at
+28,branch:jesus-maria,DEMO,(000) 000-00-00,,0000,Razon social origen: 0000 | RFC origen: 000 | CP origen: 0,false,2025-06-05 00:00:00
+29,branch:jesus-maria,ESTRIBADORA DEGOLLADO,(348) 121-49-96,AIMEEGLEZ93@HOTMAIL.COM,KM 4.5,Razon social origen: GORA930604IA8 | CP origen: 47980,true,2025-07-09 00:00:00
+30,branch:jesus-maria,APLOZA,(111) 111-11-11,,ZAMORA,Razon social origen: CPL080121L67 | Correo origen: COMERCIALPLOCER | CP origen: 59698,true,2025-07-09 00:00:00
+31,branch:jesus-maria,TRUPER 25/24,(477) 763-70-52,AIMEEGLEZ93@HOTMAIL.COM,ZAMORA,Razon social origen: PEPETRUPER | CP origen: 876789,true,2025-07-09 00:00:00
+32,branch:jesus-maria,POLITUBO,(348) 788-47-05,POLITUBO@POLITUBO.COM,KM 2 CARRETERA ARANDAS LEON SN,Razon social origen: TPA941226462 | CP origen: 47180,true,2025-07-18 00:00:00
+33,branch:jesus-maria,SURTIDORA GONZALEZ,(378) 888-55-80,,CD MEX,Razon social origen: 0000000000000000 | Correo origen: AIMEEGKEZ93@JJHDSYF | CP origen: 0,true,2025-07-18 00:00:00
+34,branch:jesus-maria,EL TORNILLO,(477) 788-85-00,AIMEEGLEZ93@HOTMAIL.COM,DEGOLLADO JAL,Razon social origen: TOR920811LC2 | CP origen: 47980,true,2025-07-18 00:00:00
+35,branch:jesus-maria,MAYOREO CARDENAS,(477) 266-28-18,,JESUS MARIA,Razon social origen: MAYOREO CARDENAS | CP origen: 47950,true,2025-07-22 00:00:00
+36,branch:jesus-maria,ACEROS AYOTLAN,(348) 918-03-63,,AYOTLAN,Razon social origen: ACEROS AYOTLAN | CP origen: 47930,true,2025-07-22 00:00:00
+37,branch:jesus-maria,FERRUSA,(378) 712-16-80,,CAPILLA DE GUADALUPE,Razon social origen: FERRUSA | CP origen: 47700,true,2025-07-26 00:00:00
+38,branch:jesus-maria,SERVI CASA,(477) 707-26-04,,LEON GUANAJUATO,Razon social origen: SERVI CASA | CP origen: 37530,true,2025-07-29 00:00:00
+39,branch:jesus-maria,LION TOOLS,(331) 304-49-66,,LEON,Razon social origen: LION TOOLS | CP origen: 37000,true,2025-09-03 00:00:00
+40,branch:jesus-maria,EL CARACOL,(348) 100-26-95,,AYOTLAN,Razon social origen: EL CARACOL | CP origen: 0,true,2025-10-03 00:00:00
+41,branch:jesus-maria,GRUPO GOL,(332) 600-06-77,,"LEON, GUANAJUATO",Razon social origen: DISTRIBUIDORA CRUZ AZUL D/LEON | CP origen: 37536,true,2025-10-03 00:00:00
+42,branch:jesus-maria,TORNILLOS Y ESPARRAGOS,(013) 336-01-57,,LOMAS DE CAMICHIN,Razon social origen: TORNILLOS Y ESPARRAGOS | CP origen: 45403,true,2025-10-24 00:00:00
+43,branch:jesus-maria,MARCASI,(477) 774-03-89,,LEON,Razon social origen: MARCASI | CP origen: 37200,true,2025-10-24 00:00:00
+44,branch:jesus-maria,BANCO DE JAL PENJAMO,(000) 000-00-0_,,PENJAMO,Razon social origen: BANCO DE JAL DE PENJAMO | CP origen: 36900,true,2025-10-31 00:00:00
+45,branch:jesus-maria,GUANTERA,(348) 106-67-89,,JESUS MARIA,Razon social origen: GUANTERA | CP origen: 47950,true,2025-11-06 00:00:00
+46,branch:jesus-maria,BANCO ARENA CHUY MIRANDA,(348) 125-13-56,,ACUMBARO,Razon social origen: BANCO DE JAL DE PENJAMO | CP origen: 47950,true,2025-11-07 00:00:00
+47,branch:jesus-maria,KEBRALKABA,(348) 129-52-56,,ARANDAS,Razon social origen: KEBRALKABA | CP origen: 47950,true,2025-11-17 00:00:00
+48,branch:jesus-maria,ARENA DE GUADALAJARA,(000) 000-00-00,,GUADALAJARA,Razon social origen: ARENA DE GUADALAJARA | CP origen: 0,true,2025-11-21 00:00:00
+49,branch:jesus-maria,BASE PARA TINACO,(000) 000-00-__,,JESUS MARIA,Razon social origen: BASE PARA TINACO | CP origen: 47950,true,2025-11-28 00:00:00
+50,branch:jesus-maria,ESCOBA Y TRAPEADOR,(348) 121-08-97,,ARANDAS,Razon social origen: ESCOBAS Y TRAPEADORES | CP origen: 47950,true,2025-12-01 00:00:00
+51,branch:jesus-maria,FERRETERIA CAMARENA,(348) 106-60-30,,JESUS MARIA,Razon social origen: EL CARPO | CP origen: 47950,true,2025-12-12 00:00:00
+52,branch:jesus-maria,CONCRETERA LOPAR,(348) 148-82-71,,JESUS MARIA,Razon social origen: CONCRETERA LOPAR | CP origen: 47950,true,2026-01-14 00:00:00
+53,branch:jesus-maria,FELIPE HUERTA,(348) 104-66-88,,EL RANERO,Razon social origen: FELIPE HUERTA | CP origen: 47950,true,2026-03-31 00:00:00
+54,branch:jesus-maria,QUEBRADORA,(000) 000-00-00,,JESUS MARIA,Razon social origen: QUEBRADORA | CP origen: 47950,true,2026-04-11 00:00:00
+55,branch:jesus-maria,JICAMO,(348) 125-27-93,,JESUS MARIA,Razon social origen: JICAMO | CP origen: 47950,true,2026-05-29 00:00:00
+56,branch:jesus-maria,BANCO DE DE TANHUATO,(000) 000-00-00,,TANHUATO,Razon social origen: BANCO DE TANHUATO | CP origen: 47950,true,2026-05-29 00:00:00
+57,branch:jesus-maria,CEMEXSA CALHIDRA,(013) 787-15-59,,TEPATITLAN,Razon social origen: CAL | CP origen: 47950,true,2026-06-15 00:00:00
+58,branch:jesus-maria,CALERO,(348) 704-07-79,,JESUS MARIA,Razon social origen: CALERO | CP origen: 47950,true,2026-06-29 00:00:00
+59,branch:jesus-maria,KW AMARILLO FLETES,(000) 000-00-00,,JESUS MARIA,Razon social origen: KW AMARILLO | CP origen: 47950,true,2026-06-30 00:00:00
+60,branch:jesus-maria,LOGONZA PRETENSADO,(348) 148-83-26,,ARANDAS,Razon social origen: LOGONZA | CP origen: 47950,true,2026-07-31 00:00:00

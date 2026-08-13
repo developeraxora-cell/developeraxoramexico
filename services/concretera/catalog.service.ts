@@ -114,6 +114,36 @@ export interface ProductMovementHistory {
   rows: ProductMovementRow[];
 }
 
+const SUPABASE_PAGE_SIZE = 1000;
+const SUPABASE_IN_CHUNK_SIZE = 300;
+
+const fetchAllPages = async <T>(
+  queryPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>
+) => {
+  const rows: T[] = [];
+
+  for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
+    const to = from + SUPABASE_PAGE_SIZE - 1;
+    const { data, error } = await queryPage(from, to);
+    if (error) throw error;
+
+    const page = data ?? [];
+    rows.push(...page);
+
+    if (page.length < SUPABASE_PAGE_SIZE) break;
+  }
+
+  return rows;
+};
+
+const chunkValues = <T>(values: T[], chunkSize = SUPABASE_IN_CHUNK_SIZE) => {
+  const chunks: T[][] = [];
+  for (let index = 0; index < values.length; index += chunkSize) {
+    chunks.push(values.slice(index, index + chunkSize));
+  }
+  return chunks;
+};
+
 export const catalogService = {
   async listUoms() {
     const { data, error } = await concreteDb
@@ -185,14 +215,14 @@ export const catalogService = {
   },
 
   async listProductsByBranch(branchId: string) {
-    const { data, error } = await concreteDb
-      .from('concrete_products')
-      .select('id, branch_id, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, is_active, created_at, updated_at')
-      .eq('branch_id', branchId)
-      .order('name');
-
-    if (error) throw error;
-    return (data ?? []) as Product[];
+    return fetchAllPages<Product>((from, to) =>
+      concreteDb
+        .from('concrete_products')
+        .select('id, branch_id, sku, barcode, name, precio, purchase_price, wholesale_price, retail_price, min_stock, description, category_id, brand_id, base_uom_id, is_divisible, attrs, is_active, created_at, updated_at')
+        .eq('branch_id', branchId)
+        .order('name')
+        .range(from, to)
+    );
   },
 
   async updateProductPrice(productId: string, retail_price: number) {
@@ -245,13 +275,14 @@ export const catalogService = {
   },
 
   async listStockByBranch(branchId: string) {
-    const { data, error } = await concreteDb
-      .from('concrete_inventory_stock')
-      .select('product_id, qty_base')
-      .eq('branch_id', branchId);
-
-    if (error) throw error;
-    return (data ?? []) as { product_id: string; qty_base: number }[];
+    return fetchAllPages<{ product_id: string; qty_base: number }>((from, to) =>
+      concreteDb
+        .from('concrete_inventory_stock')
+        .select('product_id, qty_base')
+        .eq('branch_id', branchId)
+        .order('product_id')
+        .range(from, to)
+    );
   },
 
   async deactivateProduct(productId: string) {
@@ -391,15 +422,24 @@ export const catalogService = {
 
   async listDefaultSaleUoms(productIds: string[]) {
     if (productIds.length === 0) return [] as ProductUom[];
-    const { data, error } = await concreteDb
-      .from('concrete_product_uoms')
-      .select('id, product_id, uom_id, purpose, factor_to_base, wholesale_price, retail_price, is_default_purchase, is_default_sale, concrete_uoms (id, code, name)')
-      .in('product_id', productIds)
-      .eq('is_default_sale', true);
+    const uniqueProductIds = Array.from(new Set(productIds.map(String)));
+    const rows = (
+      await Promise.all(
+        chunkValues(uniqueProductIds).map((chunk) =>
+          fetchAllPages<ProductUom & { concrete_uoms?: Uom }>((from, to) =>
+            concreteDb
+              .from('concrete_product_uoms')
+              .select('id, product_id, uom_id, purpose, factor_to_base, wholesale_price, retail_price, is_default_purchase, is_default_sale, concrete_uoms (id, code, name)')
+              .in('product_id', chunk)
+              .eq('is_default_sale', true)
+              .order('product_id')
+              .range(from, to)
+          )
+        )
+      )
+    ).flat();
 
-    if (error) throw error;
-
-    return (data ?? []).map((row) => ({
+    return rows.map((row) => ({
       ...row,
       uom: row.concrete_uoms as Uom,
     })) as ProductUom[];

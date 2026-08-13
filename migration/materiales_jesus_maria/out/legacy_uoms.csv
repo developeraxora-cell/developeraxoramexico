@@ -1,0 +1,664 @@
+legacy_id,code,name
+presentation-uom:001_12,001_12,001-12
+presentation-uom:0085,0085,0085
+presentation-uom:01_003_1_4X1,01_003_1_4X1,01-003-1/4X1
+presentation-uom:01_003_1_4X1_1_2,01_003_1_4X1_1_2,01-003-1/4X1-1/2
+presentation-uom:01_003_1_4X1_1_4,01_003_1_4X1_1_4,01-003-1/4X1-1/4
+presentation-uom:01_003_1_4X1_2,01_003_1_4X1_2,01-003-1/4X1/2
+presentation-uom:01_003_1_4X1_3_4,01_003_1_4X1_3_4,01-003-1/4X1-3/4
+presentation-uom:01_003_1_4X2,01_003_1_4X2,01-003-1/4X2
+presentation-uom:01_003_1_4X2_1_2,01_003_1_4X2_1_2,01-003-1/4X2-1/2
+presentation-uom:01_003_1_4X3,01_003_1_4X3,01-003-1/4X3
+presentation-uom:01_003_1_4X3_4,01_003_1_4X3_4,01-003-1/4X3/4
+presentation-uom:01_003_1_4X5_8,01_003_1_4X5_8,01-003-1/4X5/8
+presentation-uom:01_003_3_8X1,01_003_3_8X1,01-003-3/8X1
+presentation-uom:01_003_3_8X1_1_2,01_003_3_8X1_1_2,01-003-3/8X1-1/2
+presentation-uom:01_003_3_8X1_1_4,01_003_3_8X1_1_4,01-003-3/8X1-1/4
+presentation-uom:01_003_3_8X1_3_4,01_003_3_8X1_3_4,01-003-3/8X1-3/4
+presentation-uom:01_003_3_8X2,01_003_3_8X2,01-003-3/8X2
+presentation-uom:01_003_3_8X2_1_2,01_003_3_8X2_1_2,01-003-3/8X2-1/2
+presentation-uom:01_003_3_8X3,01_003_3_8X3,01-003-3/8X3
+presentation-uom:01_003_5_16X1,01_003_5_16X1,01-003-5/16X1
+presentation-uom:01_003_5_16X1_1_2,01_003_5_16X1_1_2,01-003-5/16X1-1/2
+presentation-uom:01_003_5_16X1_1_4,01_003_5_16X1_1_4,01-003-5/16X1-1/4
+presentation-uom:01_003_5_16X2,01_003_5_16X2,01-003-5/16X2
+presentation-uom:01_003_5_16X2_1_2,01_003_5_16X2_1_2,01-003-5/16X2-1/2
+presentation-uom:01_003_5_16X3,01_003_5_16X3,01-003-5/16X3
+presentation-uom:01_003_5_16X3_4,01_003_5_16X3_4,01-003-5/16X3/4
+presentation-uom:01_009_1_2X1,01_009_1_2X1,01-009-1/2X1
+presentation-uom:01_009_1_2X1_1_2,01_009_1_2X1_1_2,01-009-1/2X1-1/2
+presentation-uom:01_009_1_2X1_1_4,01_009_1_2X1_1_4,01-009-1/2X1-1/4
+presentation-uom:01_009_1_4X1,01_009_1_4X1,01-009-1/4X1
+presentation-uom:01_009_1_4X1_1_2,01_009_1_4X1_1_2,01-009-1/4X1-1/2
+presentation-uom:01_009_1_4X1_1_4,01_009_1_4X1_1_4,01-009-1/4X1-1/4
+presentation-uom:01_009_1_4X1_2,01_009_1_4X1_2,01-009-1/4X1/2
+presentation-uom:01_009_1_4X1_3_4,01_009_1_4X1_3_4,01-009-1/4X1-3/4
+presentation-uom:01_009_1_4X2,01_009_1_4X2,01-009-1/4X2
+presentation-uom:01_009_1_4X3_4,01_009_1_4X3_4,01-009-1/4X3/4
+presentation-uom:01_009_1_4X5_8,01_009_1_4X5_8,01-009-1/4X5/8
+presentation-uom:01_009_3_4X2,01_009_3_4X2,01-009-3/4X2
+presentation-uom:01_009_3_4X2_1_2,01_009_3_4X2_1_2,01-009-3/4X2-1/2
+presentation-uom:01_009_3_8X1,01_009_3_8X1,01-009-3/8X1
+presentation-uom:01_009_3_8X1_1_2,01_009_3_8X1_1_2,01-009-3/8X1-1/2
+presentation-uom:01_009_3_8X1_1_4,01_009_3_8X1_1_4,01-009-3/8X1-1/4
+presentation-uom:01_009_3_8X1_2,01_009_3_8X1_2,01-009-3/8X1/2
+presentation-uom:01_009_3_8X1_3_4,01_009_3_8X1_3_4,01-009-3/8X1-3/4
+presentation-uom:01_009_3_8X2,01_009_3_8X2,01-009-3/8X2
+presentation-uom:01_009_3_8X3_4,01_009_3_8X3_4,01-009-3/8X3/4
+presentation-uom:01_009_5_16X1,01_009_5_16X1,01-009-5/16X1
+presentation-uom:01_009_5_16X1_1_2,01_009_5_16X1_1_2,01-009-5/16X1-1/2
+presentation-uom:01_009_5_16X1_1_4,01_009_5_16X1_1_4,01-009-5/16X1-1/4
+presentation-uom:01_009_5_16X1_2,01_009_5_16X1_2,01-009-5/16X1/2
+presentation-uom:01_009_5_16X1_3_4,01_009_5_16X1_3_4,01-009-5/16X1-3/4
+presentation-uom:01_009_5_16X2,01_009_5_16X2,01-009-5/16X2
+presentation-uom:01_009_5_16X3_4,01_009_5_16X3_4,01-009-5/16X3/4
+presentation-uom:01_009_5_8X1_3_4,01_009_5_8X1_3_4,01-009-5/8X1-3/4
+presentation-uom:01_009_5_8X2,01_009_5_8X2,01-009-5/8X2
+presentation-uom:01_009_7_16X1,01_009_7_16X1,01-009-7/16X1
+presentation-uom:01_009_7_16X1_1_2,01_009_7_16X1_1_2,01-009-7/16X1-1/2
+presentation-uom:01_009_7_16X1_1_4,01_009_7_16X1_1_4,01-009-7/16X1-1/4
+presentation-uom:01_009_7_16X1_3_4,01_009_7_16X1_3_4,01-009-7/16X1-3/4
+presentation-uom:01_009_7_16X2,01_009_7_16X2,01-009-7/16X2
+presentation-uom:01_009_9_16X1_1_2,01_009_9_16X1_1_2,01-009-9/16X1-1/2
+presentation-uom:01_009_9_16X1_3_4,01_009_9_16X1_3_4,01-009-9/16X1-3/4
+presentation-uom:01_009_9_16X2,01_009_9_16X2,01-009-9/16X2
+presentation-uom:01_010_1_2X2,01_010_1_2X2,01-010-1/2X2
+presentation-uom:01_010_1_2X2_1_2,01_010_1_2X2_1_2,01-010-1/2X2-1/2
+presentation-uom:01_010_1_2X2_1_4,01_010_1_2X2_1_4,01-010-1/2X2-1/4
+presentation-uom:01_010_1_2X3,01_010_1_2X3,01-010-1/2X3
+presentation-uom:01_010_1_2X3_1_2,01_010_1_2X3_1_2,01-010-1/2X3-1/2
+presentation-uom:01_010_1_2X4,01_010_1_2X4,01-010-1/2X4
+presentation-uom:01_010_1_4X2_1_2,01_010_1_4X2_1_2,01-010-1/4X2-1/2
+presentation-uom:01_010_1_4X3,01_010_1_4X3,01-010-1/4X3
+presentation-uom:01_010_1_4X4_1_2,01_010_1_4X4_1_2,01-010-1/4X4-1/2
+presentation-uom:01_010_1_4X5,01_010_1_4X5,01-010-1/4X5
+presentation-uom:01_010_3_4X3_1_2,01_010_3_4X3_1_2,01-010-3/4X3-1/2
+presentation-uom:01_010_3_4X4,01_010_3_4X4,01-010-3/4X4
+presentation-uom:01_010_3_4X4_1_2,01_010_3_4X4_1_2,01-010-3/4X4-1/2
+presentation-uom:01_010_3_4X5,01_010_3_4X5,01-010-3/4X5
+presentation-uom:01_010_3_4X5_1_2,01_010_3_4X5_1_2,01-010-3/4X5-1/2
+presentation-uom:01_010_3_4X6,01_010_3_4X6,01-010-3/4X6
+presentation-uom:01_010_3_4X6_1_2,01_010_3_4X6_1_2,01-010-3/4X6-1/2
+presentation-uom:01_010_3_4X7,01_010_3_4X7,01-010-3/4X7
+presentation-uom:01_010_3_4X8,01_010_3_4X8,01-010-3/4X8
+presentation-uom:01_010_3_8X2_1_2,01_010_3_8X2_1_2,01-010-3/8X2-1/2
+presentation-uom:01_010_3_8X3,01_010_3_8X3,01-010-3/8X3
+presentation-uom:01_010_5_16X2_1_2,01_010_5_16X2_1_2,01-010-5/16X2-1/2
+presentation-uom:01_010_5_16X3,01_010_5_16X3,01-010-5/16X3
+presentation-uom:01_010_5_8X3,01_010_5_8X3,01-010-5/8X3
+presentation-uom:01_010_5_8X3_1_2,01_010_5_8X3_1_2,01-010-5/8X3-1/2
+presentation-uom:01_010_5_8X31_2,01_010_5_8X31_2,01-010-5/8X31/2
+presentation-uom:01_010_5_8X4,01_010_5_8X4,01-010-5/8X4
+presentation-uom:01_010_5_8X7,01_010_5_8X7,01-010-5/8X7
+presentation-uom:01_010_5_8X8,01_010_5_8X8,01-010-5/8X8
+presentation-uom:01_010_7_16X2_1_2,01_010_7_16X2_1_2,01-010-7/16X2-1/2
+presentation-uom:01_010_7_16X3,01_010_7_16X3,01-010-7/16X3
+presentation-uom:01_010_7_16X3_1_2,01_010_7_16X3_1_2,01-010-7/16X3-1/2
+presentation-uom:01_010_7_16X4,01_010_7_16X4,01-010-7/16X4
+presentation-uom:01_010_9_16X2_1_2,01_010_9_16X2_1_2,01-010-9/16X2-1/2
+presentation-uom:01_010_9_16X3,01_010_9_16X3,01-010-9/16X3
+presentation-uom:01_010_9_16X3_1_2,01_010_9_16X3_1_2,01-010-9/16X3-1/2
+presentation-uom:01_010_9_16X4,01_010_9_16X4,01-010-9/16X4
+presentation-uom:01_010_9_16X4_1_2,01_010_9_16X4_1_2,01-010-9/16X4-1/2
+presentation-uom:01_010_9_16X5,01_010_9_16X5,01-010-9/16X5
+presentation-uom:01_023_6X20,01_023_6X20,01-023-6X20
+presentation-uom:01_023_6X25,01_023_6X25,01-023-6X25
+presentation-uom:01_023_6X30,01_023_6X30,01-023-6X30
+presentation-uom:01_023_6X35,01_023_6X35,01-023-6X35
+presentation-uom:01_023_6X40,01_023_6X40,01-023-6X40
+presentation-uom:01_023_6X45,01_023_6X45,01-023-6X45
+presentation-uom:01_023_6X50,01_023_6X50,01-023-6X50
+presentation-uom:01_023_6X55,01_023_6X55,01-023-6X55
+presentation-uom:01_023_8X12,01_023_8X12,01-023-8X12
+presentation-uom:01_023_8X16,01_023_8X16,01-023-8X16
+presentation-uom:01_023_8X20,01_023_8X20,01-023-8X20
+presentation-uom:01_023_8X25,01_023_8X25,01-023-8X25
+presentation-uom:01_023_8X30,01_023_8X30,01-023-8X30
+presentation-uom:01_023_8X35,01_023_8X35,01-023-8X35
+presentation-uom:01_023_8X45,01_023_8X45,01-023-8X45
+presentation-uom:01_0238X40,01_0238X40,01-0238X40
+presentation-uom:02_002_1_4,02_002_1_4,02-002-1/4
+presentation-uom:02_002_1_8,02_002_1_8,02-002-1/8
+presentation-uom:02_002_3_16,02_002_3_16,02-002-3/16
+presentation-uom:02_002_3_8,02_002_3_8,02-002-3/8
+presentation-uom:02_002_5_16,02_002_5_16,02-002-5/16
+presentation-uom:02_002_5_32,02_002_5_32,02-002-5/32
+presentation-uom:02_008_1_4,02_008_1_4,02-008-1/4
+presentation-uom:02_008_3_8,02_008_3_8,02-008-3/8
+presentation-uom:02_020_6,02_020_6,02-020-6
+presentation-uom:02_020_8,02_020_8,02-020-8
+presentation-uom:02_035_1_2,02_035_1_2,02-035-1/2
+presentation-uom:02_035_1_4,02_035_1_4,02-035-1/4
+presentation-uom:02_035_3_8,02_035_3_8,02-035-3/8
+presentation-uom:02_035_5_16,02_035_5_16,02-035-5/16
+presentation-uom:02_035_7_16,02_035_7_16,02-035-7/16
+presentation-uom:03_002_5_8,03_002_5_8,03-002-5/8
+presentation-uom:03_002_9_16,03_002_9_16,03-002-9/16
+presentation-uom:03_012_1_4,03_012_1_4,03-012-1/4
+presentation-uom:03_012_9_16,03_012_9_16,03-012-9/16
+presentation-uom:04_1812,04_1812,04-1812
+presentation-uom:05_002_1_4X1,05_002_1_4X1,05-002-1/4X1
+presentation-uom:05_002_1_4X1_1_2,05_002_1_4X1_1_2,05-002-1/4X1-1/2
+presentation-uom:05_002_1_4X1_1_4,05_002_1_4X1_1_4,05-002-1/4X1-1/4
+presentation-uom:05_002_1_4X1_3_4,05_002_1_4X1_3_4,05-002-1/4X1-3/4
+presentation-uom:05_002_1_4X2,05_002_1_4X2,05-002-1/4X2
+presentation-uom:05_002_1_4X2_1_2,05_002_1_4X2_1_2,05-002-1/4X2-1/2
+presentation-uom:05_002_1_4X3,05_002_1_4X3,05-002-1/4X3
+presentation-uom:05_002_1_4X3_1_2,05_002_1_4X3_1_2,05-002-1/4X3-1/2
+presentation-uom:05_002_1_4X4,05_002_1_4X4,05-002-1/4X4
+presentation-uom:05_002_1_4X4_1_2,05_002_1_4X4_1_2,05-002-1/4X4-1/2
+presentation-uom:05_002_1_4X5,05_002_1_4X5,05-002-1/4X5
+presentation-uom:05_002_3_8X1,05_002_3_8X1,05-002-3/8X1
+presentation-uom:05_002_3_8X1_1_2,05_002_3_8X1_1_2,05-002-3/8X1-1/2
+presentation-uom:05_002_3_8X1_1_4,05_002_3_8X1_1_4,05-002-3/8X1-1/4
+presentation-uom:05_002_3_8X1_3_4,05_002_3_8X1_3_4,05-002-3/8X1-3/4
+presentation-uom:05_002_3_8X2,05_002_3_8X2,05-002-3/8X2
+presentation-uom:05_002_3_8X2_1_2,05_002_3_8X2_1_2,05-002-3/8X2-1/2
+presentation-uom:05_002_3_8X3,05_002_3_8X3,05-002-3/8X3
+presentation-uom:05_002_3_8X3_1_2,05_002_3_8X3_1_2,05-002-3/8X3-1/2
+presentation-uom:05_002_3_8X4,05_002_3_8X4,05-002-3/8X4
+presentation-uom:05_002_5_16X1,05_002_5_16X1,05-002-5/16X1
+presentation-uom:05_002_5_16X1_1_2,05_002_5_16X1_1_2,05-002-5/16X1-1/2
+presentation-uom:05_002_5_16X1_1_4,05_002_5_16X1_1_4,05-002-5/16X1-1/4
+presentation-uom:05_002_5_16X1_3_4,05_002_5_16X1_3_4,05-002-5/16X1-3/4
+presentation-uom:05_002_5_16X2,05_002_5_16X2,05-002-5/16X2
+presentation-uom:05_002_5_16X2_1_2,05_002_5_16X2_1_2,05-002-5/16X2-1/2
+presentation-uom:05_002_5_16X3,05_002_5_16X3,05-002-5/16X3
+presentation-uom:05_002_5_16X3_1_2,05_002_5_16X3_1_2,05-002-5/16X3-1/2
+presentation-uom:05_002_5_16X4,05_002_5_16X4,05-002-5/16X4
+presentation-uom:06_001_1_8X1,06_001_1_8X1,06-001-1/8X1
+presentation-uom:06_001_1_8X1_1_2,06_001_1_8X1_1_2,06-001-1/8X1-1/2
+presentation-uom:06_001_1_8X1_1_4,06_001_1_8X1_1_4,06-001-1/8X1-1/4
+presentation-uom:06_001_1_8X1_2,06_001_1_8X1_2,06-001-1/8X1/2
+presentation-uom:06_001_1_8X2,06_001_1_8X2,06-001-1/8X2
+presentation-uom:06_001_1_8X3_4,06_001_1_8X3_4,06-001-1/8X3/4
+presentation-uom:06_001_1_8X5_8,06_001_1_8X5_8,06-001-1/8X5/8
+presentation-uom:06_001_3_16X1,06_001_3_16X1,06-001-3/16X1
+presentation-uom:06_001_3_16X1_1_2,06_001_3_16X1_1_2,06-001-3/16X1-1/2
+presentation-uom:06_001_3_16X1_1_4,06_001_3_16X1_1_4,06-001-3/16X1-1/4
+presentation-uom:06_001_3_16X1_2,06_001_3_16X1_2,06-001-3/16X1/2
+presentation-uom:06_001_3_16X2,06_001_3_16X2,06-001-3/16X2
+presentation-uom:06_001_3_16X2_1_2,06_001_3_16X2_1_2,06-001-3/16X2-1/2
+presentation-uom:06_001_3_16X3,06_001_3_16X3,06-001-3/16X3
+presentation-uom:06_001_3_16X3_4,06_001_3_16X3_4,06-001-3/16X3/4
+presentation-uom:06_001_3_16X5_8,06_001_3_16X5_8,06-001-3/16X5/8
+presentation-uom:06_001_5_32X1,06_001_5_32X1,06-001-5/32X1
+presentation-uom:06_001_5_32X1_1_2,06_001_5_32X1_1_2,06-001-5/32X1-1/2
+presentation-uom:06_001_5_32X1_1_4,06_001_5_32X1_1_4,06-001-5/32X1-1/4
+presentation-uom:06_001_5_32X1_2,06_001_5_32X1_2,06-001-5/32X1/2
+presentation-uom:06_001_5_32X2,06_001_5_32X2,06-001-5/32X2
+presentation-uom:06_001_5_32X2_1_2,06_001_5_32X2_1_2,06-001-5/32X2-1/2
+presentation-uom:06_001_5_32X3,06_001_5_32X3,06-001-5/32X3
+presentation-uom:06_001_5_32X3_4,06_001_5_32X3_4,06-001-5/32X3/4
+presentation-uom:06_001_5_32X5_8,06_001_5_32X5_8,06-001-5/32X5/8
+presentation-uom:08_010_6,08_010_6,08-010-6
+presentation-uom:08_010_8,08_010_8,08-010-8
+presentation-uom:08_1812,08_1812,08-1812
+presentation-uom:0859,0859,0859
+presentation-uom:09_016_1_4X1,09_016_1_4X1,09-016-1/4X1
+presentation-uom:09_016_1_4X1_1_2,09_016_1_4X1_1_2,09-016-1/4X1-1/2
+presentation-uom:09_016_1_4X2,09_016_1_4X2,09-016-1/4X2
+presentation-uom:09_016_1_4X3_4,09_016_1_4X3_4,09-016-1/4X3/4
+presentation-uom:09_018_1_4X1,09_018_1_4X1,09-018-1/4X1
+presentation-uom:09_018_1_4X1_1_2,09_018_1_4X1_1_2,09-018-1/4X1-1/2
+presentation-uom:09_018_1_4X1_1_4,09_018_1_4X1_1_4,09-018-1/4X1-1/4
+presentation-uom:09_021_8X1,09_021_8X1,09-021-8X1
+presentation-uom:09_021_8X1_2,09_021_8X1_2,09-021-8X1/2
+presentation-uom:09_021_8X3_4,09_021_8X3_4,09-021-8X3/4
+presentation-uom:1_2_METRO,1_2_METRO,1/2 METRO
+presentation-uom:1_2_TON,1_2_TON,1/2 TON
+presentation-uom:10IN_1,10IN_1,"10IN-1"""
+presentation-uom:11_0908,11_0908,11-0908
+presentation-uom:11866CM,11866CM,11866CM
+presentation-uom:14_METROS_TOBAL_JM,14_METROS_TOBAL_JM,14 METROS TOBAL JM
+presentation-uom:15596,15596,15596
+presentation-uom:16_0212,16_0212,16-0212
+presentation-uom:16_0213,16_0213,16-0213
+presentation-uom:20_011_2X2,20_011_2X2,20-011-2X2
+presentation-uom:20_021_3_8X1_3_4,20_021_3_8X1_3_4,20-021-3/8X1-3/4
+presentation-uom:21000,21000,21000
+presentation-uom:21531,21531,21531
+presentation-uom:222,222,222
+presentation-uom:22201,22201,22201
+presentation-uom:2259,2259,2259
+presentation-uom:2556,2556,2556
+presentation-uom:26_001_6X12,26_001_6X12,26-001-6X12
+presentation-uom:26_001_6X16,26_001_6X16,26-001-6X16
+presentation-uom:26_001_6X20,26_001_6X20,26-001-6X20
+presentation-uom:26_001_6X25,26_001_6X25,26-001-6X25
+presentation-uom:26_001_6X30,26_001_6X30,26-001-6X30
+presentation-uom:26_001_8X16,26_001_8X16,26-001-8X16
+presentation-uom:26_001_8X20,26_001_8X20,26-001-8X20
+presentation-uom:26_001_8X25,26_001_8X25,26-001-8X25
+presentation-uom:26_001_8X30,26_001_8X30,26-001-8X30
+presentation-uom:2783,2783,2783
+presentation-uom:2784,2784,2784
+presentation-uom:34_017_1_4,34_017_1_4,34-017-1/4
+presentation-uom:34_017_316,34_017_316,34-017-316
+presentation-uom:34_017_5_16,34_017_5_16,34-017-5/16
+presentation-uom:3504,3504,3504
+presentation-uom:3553C_13,3553C_13,3553C.13
+presentation-uom:3553C_19,3553C_19,3553C.19
+presentation-uom:3553C_25,3553C_25,3553C.25
+presentation-uom:3554G_1310,3554G_1310,3554G.1310
+presentation-uom:37_001_1_2X2,37_001_1_2X2,37-001-1/2X2
+presentation-uom:37_001_1_8X1,37_001_1_8X1,37-001-1/8X1
+presentation-uom:37_001_1_8X1_1_2,37_001_1_8X1_1_2,37-001-1/8X1-1/2
+presentation-uom:37_001_3_16X1_1_2,37_001_3_16X1_1_2,37-001-3/16X1-1/2
+presentation-uom:37_001_3_16X2,37_001_3_16X2,37-001-3/16X2
+presentation-uom:4004_13,4004_13,4004.13
+presentation-uom:4111_1,4111_1,4111.1
+presentation-uom:4111_3,4111_3,4111.3
+presentation-uom:4120,4120,4120
+presentation-uom:4135VP,4135VP,4135VP
+presentation-uom:4140VP,4140VP,4140VP
+presentation-uom:4555,4555,4555
+presentation-uom:564_060NI,564_060NI,564-060NI
+presentation-uom:5880,5880,5880
+presentation-uom:5880_12,5880_12,5880-12
+presentation-uom:7_METROS,7_METROS,7 METROS
+presentation-uom:7_METROS_CHAMY,7_METROS_CHAMY,7 METROS CHAMY
+presentation-uom:777078,777078,777078
+presentation-uom:779728,779728,779728
+presentation-uom:79097,79097,79097
+presentation-uom:7M_TOBAL,7M_TOBAL,7M TOBAL
+presentation-uom:8623,8623,8623
+presentation-uom:AB_24,AB_24,AB-24
+presentation-uom:ABT_742,ABT_742,ABT-742
+presentation-uom:ACES_2,ACES_2,ACES-2
+presentation-uom:ACES_20,ACES_20,ACES-20
+presentation-uom:AD_2P,AD_2P,AD-2P
+presentation-uom:ALL_P8P,ALL_P8P,ALL-P8P
+presentation-uom:ALRE_151,ALRE_151,ALRE-151
+presentation-uom:AQF_82,AQF_82,AQF-82
+presentation-uom:AQF_88,AQF_88,AQF-88
+presentation-uom:AQM_52N,AQM_52N,AQM-52N
+presentation-uom:ARMEX_REFORZADO_10X10,ARMEX_REFORZADO_10X10,ARMEX REFORZADO 10X10
+presentation-uom:ASPRO_11X,ASPRO_11X,ASPRO-11X
+presentation-uom:ASVE_11,ASVE_11,ASVE-11
+presentation-uom:ATM,ATM,ATM
+presentation-uom:BA01,BA01,BA01
+presentation-uom:BA01_3,BA01_3,BA01/3
+presentation-uom:BA02,BA02,BA02
+presentation-uom:BA02_3B,BA02_3B,BA02/3B
+presentation-uom:BA06,BA06,BA06
+presentation-uom:BA07_3,BA07_3,BA07/3
+presentation-uom:BA07_B,BA07_B,BA07-B
+presentation-uom:BA09,BA09,BA09
+presentation-uom:BA09_B,BA09_B,BA09-B
+presentation-uom:BA11,BA11,BA11
+presentation-uom:BA1200,BA1200,BA1200
+presentation-uom:BA18,BA18,BA18
+presentation-uom:BARBO_B,BARBO_B,BARBO-B
+presentation-uom:BCIN_1000,BCIN_1000,BCIN-1000
+presentation-uom:BCT001,BCT001,BCT001
+presentation-uom:BOAP_1_2,BOAP_1_2,BOAP-1/2
+presentation-uom:BOLSA_CON_10,BOLSA_CON_10,BOLSA CON 10
+presentation-uom:BOLSA_CON_5,BOLSA_CON_5,BOLSA CON 5
+presentation-uom:BOSCH,BOSCH,BOSCH
+presentation-uom:BOTA,BOTA,BOTA
+presentation-uom:BP01,BP01,BP01
+presentation-uom:BP01_M_P,BP01_M_P,BP01-M/P
+presentation-uom:BP02_M_P,BP02_M_P,BP02 M/P
+presentation-uom:BP06_CEN,BP06_CEN,BP06-CEN
+presentation-uom:BP07_CNN,BP07_CNN,BP07-CNN
+presentation-uom:BP07_M_P,BP07_M_P,BP07-M/P
+presentation-uom:BP08_CNN,BP08_CNN,BP08-CNN
+presentation-uom:BP11_M_P,BP11_M_P,BP11-M/P
+presentation-uom:BP20_CNN,BP20_CNN,BP20-CNN
+presentation-uom:BPO1_3,BPO1_3,BPO1/3
+presentation-uom:BRP_1,BRP_1,BRP-1
+presentation-uom:BRP_2,BRP_2,BRP-2
+presentation-uom:BRP_3,BRP_3,BRP-3
+presentation-uom:BRP_4,BRP_4,BRP-4
+presentation-uom:BRT_2,BRT_2,BRT-2
+presentation-uom:BRT_2S,BRT_2S,BRT-2S
+presentation-uom:BRT_3S,BRT_3S,BRT-3S
+presentation-uom:BRT_4,BRT_4,BRT-4
+presentation-uom:BULTO,BULTO,BULTO
+presentation-uom:CAJA,CAJA,CAJA
+presentation-uom:CAL64,CAL64,CAL64
+presentation-uom:CAN_1020,CAN_1020,CAN-1020
+presentation-uom:CAS_RI,CAS_RI,CAS-RI
+presentation-uom:CAT_133,CAT_133,CAT-133
+presentation-uom:CAT_15FF,CAT_15FF,CAT-15FF
+presentation-uom:CAT_60ND,CAT_60ND,CAT-60ND
+presentation-uom:CAT_60X,CAT_60X,CAT 60X
+presentation-uom:CC01S,CC01S,CC01S
+presentation-uom:CC02S,CC02S,CC02S
+presentation-uom:CC04E,CC04E,CC04E
+presentation-uom:CEPP_52,CEPP_52,CEPP-52
+presentation-uom:CEPP_55,CEPP_55,CEPP-55
+presentation-uom:CFM_1_2A,CFM_1_2A,CFM-1/2A
+presentation-uom:CFM_1_2P,CFM_1_2P,CFM-1/2P
+presentation-uom:CH_30P,CH_30P,CH-30P
+presentation-uom:CH_38,CH_38,CH-38
+presentation-uom:CH_40P,CH_40P,CH-40P
+presentation-uom:CH_45L,CH_45L,CH-45L
+presentation-uom:CH_50,CH_50,CH-50
+presentation-uom:CHMA_3,CHMA_3,CHMA-3
+presentation-uom:CHS_800N_L,CHS_800N_L,CHS-800N-L
+presentation-uom:CL_COH,CL_COH,CL-COH
+presentation-uom:CL_H,CL_H,CL-H
+presentation-uom:CL_HR,CL_HR,CL-HR
+presentation-uom:CLC_1_2N,CLC_1_2N,CLC-1/2N
+presentation-uom:CLR_SG,CLR_SG,CLR-SG
+presentation-uom:COAZ_1_1_2,COAZ_1_1_2,COAZ-1-1/2
+presentation-uom:COAZ_2,COAZ_2,COAZ-2
+presentation-uom:COR_60P,COR_60P,COR-60P
+presentation-uom:COR_75ZP,COR_75ZP,COR-75ZP
+presentation-uom:COT_P,COT_P,COT-P
+presentation-uom:CP_14X,CP_14X,CP-14X
+presentation-uom:CP_24X,CP_24X,CP-24X
+presentation-uom:CP_30X,CP_30X,CP-30X
+presentation-uom:CS_851,CS_851,CS-851
+presentation-uom:CS_85D,CS_85D,CS-85D
+presentation-uom:CT_10C,CT_10C,CT-10C
+presentation-uom:CT_12B,CT_12B,CT-12B
+presentation-uom:CT_6,CT_6,CT-6
+presentation-uom:CT_8P,CT_8P,CT-8P
+presentation-uom:CT_9GP,CT_9GP,CT-9GP
+presentation-uom:CT_9P,CT_9P,CT-9P
+presentation-uom:CTF_1_2,CTF_1_2,CTF-1/2
+presentation-uom:CTF_3_4,CTF_3_4,CTF-3/4
+presentation-uom:CTF_3_4X13,CTF_3_4X13,CTF-3/4X13
+presentation-uom:CUE_041K,CUE_041K,CUE-041K
+presentation-uom:CUE_061K,CUE_061K,CUE-061K
+presentation-uom:CUE_081K,CUE_081K,CUE-081K
+presentation-uom:CUE_101K,CUE_101K,CUE-101K
+presentation-uom:CUE_111K,CUE_111K,CUE-111K
+presentation-uom:CUE_131K,CUE_131K,CUE-131K
+presentation-uom:CVLG_C55,CVLG_C55,CVLG-C55
+presentation-uom:DCD_108,DCD_108,DCD-108
+presentation-uom:DCD109,DCD109,DCD109
+presentation-uom:DL10115,DL10115,DL10115
+presentation-uom:E_2R,E_2R,E-2R
+presentation-uom:E_3R,E_3R,E-3R
+presentation-uom:ED13_10B,ED13_10B,ED13-10B
+presentation-uom:ED13_3B,ED13_3B,ED13-3B
+presentation-uom:ED13_5B,ED13_5B,ED13-5B
+presentation-uom:EMX_22,EMX_22,EMX-22
+presentation-uom:EP_26F,EP_26F,EP-26F
+presentation-uom:EP_30,EP_30,EP-30
+presentation-uom:ER13_30NA,ER13_30NA,ER13-30NA
+presentation-uom:ER13_3NA,ER13_3NA,ER13-3NA
+presentation-uom:ESEX_300,ESEX_300,ESEX-300
+presentation-uom:ESMA_4580N,ESMA_4580N,ESMA-4580N
+presentation-uom:ESTUCO_PERDURA,ESTUCO_PERDURA,ESTUCO PERDURA
+presentation-uom:ET_3F,ET_3F,ET-3F
+presentation-uom:ET_3FX,ET_3FX,ET-3FX
+presentation-uom:ET_4F,ET_4F,ET-4F
+presentation-uom:ET_6FX,ET_6FX,ET-6FX
+presentation-uom:EXTM_12,EXTM_12,EXTM-12
+presentation-uom:EZ32200,EZ32200,EZ32200
+presentation-uom:EZ32700,EZ32700,EZ32700
+presentation-uom:FAJA_LN,FAJA_LN,FAJA-LN
+presentation-uom:FAJA_MN,FAJA_MN,FAJA-MN
+presentation-uom:FAJA_MX,FAJA_MX,FAJA-MX
+presentation-uom:FAJA_S,FAJA_S,FAJA-S
+presentation-uom:FAJA_SN,FAJA_SN,FAJA-SN
+presentation-uom:FAJA_XL,FAJA_XL,FAJA-XL
+presentation-uom:FCN_55M,FCN_55M,FCN-55M
+presentation-uom:FH_5M,FH_5M,FH-5M
+presentation-uom:FL_9NP,FL_9NP,FL-9NP
+presentation-uom:GEN_2G,GEN_2G,GEN-2G
+presentation-uom:GEN_2S,GEN_2S,GEN-2S
+presentation-uom:GON_ARANDAS_TOBAL,GON_ARANDAS_TOBAL,GON ARANDAS TOBAL
+presentation-uom:GON_TOBAL_ARANDAS,GON_TOBAL_ARANDAS,GON TOBAL ARANDAS
+presentation-uom:GONDOLA,GONDOLA,GONDOLA
+presentation-uom:GONDOLA_30_METROS,GONDOLA_30_METROS,GONDOLA 30 METROS
+presentation-uom:GONDOLA_GRAVA_AYOTLAN,GONDOLA_GRAVA_AYOTLAN,GONDOLA GRAVA AYOTLAN
+presentation-uom:GONDOLA_GRAVA_JESUS_MARIA,GONDOLA_GRAVA_JESUS_MARIA,GONDOLA GRAVA JESUS MARIA
+presentation-uom:GONDOLA_TOBAL,GONDOLA_TOBAL,GONDOLA TOBAL
+presentation-uom:GPVC_2,GPVC_2,GPVC-2
+presentation-uom:GU_122P,GU_122P,GU-122P
+presentation-uom:GU_123P,GU_123P,GU-123P
+presentation-uom:GU_323,GU_323,GU-323
+presentation-uom:GU_331,GU_331,GU-331
+presentation-uom:GU_343,GU_343,GU-343
+presentation-uom:GU_442,GU_442,GU-442
+presentation-uom:HDU_12_105,HDU_12_105,HDU-12-105
+presentation-uom:HIL_165,HIL_165,HIL-165
+presentation-uom:HORA,HORA,HORA
+presentation-uom:HTA_105B,HTA_105B,HTA-105B
+presentation-uom:HTA_80B,HTA_80B,HTA-80B
+presentation-uom:HTA_95B,HTA_95B,HTA-95B
+presentation-uom:JD_4TP,JD_4TP,JD-4TP
+presentation-uom:JD_6BP,JD_6BP,JD-6BP
+presentation-uom:JD_8BP,JD_8BP,JD-8BP
+presentation-uom:JD_8TP,JD_8TP,JD-8TP
+measure:1,KG,KILOS
+presentation-uom:KILO_ALEVA,KILO_ALEVA,KILO ALEVA
+presentation-uom:LD_06,LD_06,LD-06
+presentation-uom:LD_08,LD_08,LD-08
+presentation-uom:LD_12,LD_12,LD-12
+presentation-uom:LD_16,LD_16,LD-16
+presentation-uom:LD_36,LD_36,LD-36
+presentation-uom:LED_100FB,LED_100FB,LED-100FB
+presentation-uom:LED_125FB,LED_125FB,LED-125FB
+presentation-uom:LED_150FB,LED_150FB,LED-150FB
+presentation-uom:LED_450,LED_450,LED-450
+presentation-uom:LED_60F,LED_60F,LED-60F
+presentation-uom:LED_75F,LED_75F,LED-75F
+presentation-uom:LEN_2000N,LEN_2000N,LEN-2000N
+presentation-uom:LEN_SA_P,LEN_SA_P,LEN-SA-P
+presentation-uom:LEN_SN_P,LEN_SN_P,LEN-SN-P
+presentation-uom:LEN_ST_P,LEN_ST_P,LEN-ST-P
+presentation-uom:LIAG_1500,LIAG_1500,LIAG-1500
+presentation-uom:LIAG_2000,LIAG_2000,LIAG-2000
+presentation-uom:LIAG_500,LIAG_500,LIAG-500
+presentation-uom:LIAG_600,LIAG_600,LIAG-600
+presentation-uom:LIMER_120,LIMER_120,LIMER-120
+presentation-uom:LIMER_36,LIMER_36,LIMER-36
+presentation-uom:LIMER_50,LIMER_50,LIMER-50
+presentation-uom:LIMER_80,LIMER_80,LIMER-80
+presentation-uom:LITRO,LITRO,LITRO
+presentation-uom:LL_2008M,LL_2008M,LL-2008M
+presentation-uom:LL_2010M,LL_2010M,LL-2010M
+presentation-uom:LL_2011MP,LL_2011MP,LL-2011MP
+presentation-uom:LL_2013M,LL_2013M,LL-2013M
+presentation-uom:LL_2013MP,LL_2013MP,LL-2013MP
+presentation-uom:LL_2014,LL_2014,LL-2014
+presentation-uom:LL_2014P,LL_2014P,LL-2014P
+presentation-uom:LL_2016,LL_2016,LL-2016
+presentation-uom:LL_2016P,LL_2016P,LL-2016P
+presentation-uom:LL_2018P,LL_2018P,LL-2018P
+presentation-uom:LL_2024,LL_2024,LL-2024
+presentation-uom:LL_21P,LL_21P,LL-21P
+presentation-uom:LL_JAR_PB,LL_JAR_PB,LL-JAR-PB
+presentation-uom:LLA_11,LLA_11,LLA-11
+presentation-uom:LLA_24,LLA_24,LLA-24
+presentation-uom:LLJ_140B,LLJ_140B,LLJ-140B
+presentation-uom:LLJ_140T,LLJ_140T,LLJ-140T
+presentation-uom:LLM_11,LLM_11,LLM-11
+presentation-uom:LLM_6C,LLM_6C,LLM-6C
+presentation-uom:LLM_6L,LLM_6L,LLM-6L
+presentation-uom:LLSS,LLSS,LLSS
+presentation-uom:LP_23,LP_23,LP-23
+presentation-uom:LP_33,LP_33,LP-33
+presentation-uom:LP_43,LP_43,LP-43
+presentation-uom:LP_46,LP_46,LP-46
+measure:3,M,METROS
+presentation-uom:M_33,M_33,M-33
+presentation-uom:M_33B,M_33B,M-33B
+presentation-uom:M_33R,M_33R,M-33R
+presentation-uom:M_33V,M_33V,M-33V
+presentation-uom:MA_16,MA_16,MA-16
+presentation-uom:MAN_10X1_2PA,MAN_10X1_2PA,MAN-10X1/2PA
+presentation-uom:MAR_16,MAR_16,MAR-16
+presentation-uom:MAR_16P,MAR_16P,MAR-16P
+presentation-uom:MAS_B,MAS_B,MAS-B
+presentation-uom:MD_3M,MD_3M,MD-3M
+presentation-uom:MD_4M,MD_4M,MD-4M
+presentation-uom:MEDIO_KILO,MEDIO_KILO,MEDIO KILO
+presentation-uom:MEDIO_VIAJE,MEDIO_VIAJE,MEDIO VIAJE
+presentation-uom:MEDIO_VIAJE_QUEBRADA,MEDIO_VIAJE_QUEBRADA,MEDIO VIAJE QUEBRADA
+presentation-uom:METROS_CHAMY,METROS_CHAMY,METROS CHAMY
+presentation-uom:METROS_LIMPIA,METROS_LIMPIA,METROS LIMPIA
+presentation-uom:METROS_REVUELTA,METROS_REVUELTA,METROS REVUELTA
+presentation-uom:METROS_TOBAL,METROS_TOBAL,METROS TOBAL
+presentation-uom:METROS_TOBAL_ARANDAS,METROS_TOBAL_ARANDAS,METROS TOBAL ARANDAS
+presentation-uom:MG_PDP_Y,MG_PDP_Y,MG-PDP-Y
+presentation-uom:MG_PY_P,MG_PY_P,MG-PY-P
+presentation-uom:MG_ZP_5M,MG_ZP_5M,MG-ZP-5M
+presentation-uom:MH_16_P,MH_16_P,MH-16-P
+presentation-uom:MH_24P,MH_24P,MH-24P
+presentation-uom:MLPF_04,MLPF_04,MLPF-04
+presentation-uom:MP_060,MP_060,MP-060
+presentation-uom:MP_060P,MP_060P,MP-060P
+presentation-uom:MP_16,MP_16,MP-16
+presentation-uom:MSK_1_1_2,MSK_1_1_2,MSK-1-1/2
+presentation-uom:MSK_1_2,MSK_1_2,MSK-1/2
+presentation-uom:MSK_1A,MSK_1A,MSK-1A
+presentation-uom:MSK_2,MSK_2,MSK-2
+presentation-uom:MSK_2A,MSK_2A,MSK-2A
+presentation-uom:MSK_3_4,MSK_3_4,MSK-3/4
+presentation-uom:MSK_3_4A,MSK_3_4A,MSK-3/4A
+presentation-uom:MX22904,MX22904,MX22904
+presentation-uom:MX22905,MX22905,MX22905
+presentation-uom:MX22908,MX22908,MX22908
+presentation-uom:MXC_16,MXC_16,MXC-16
+presentation-uom:MXR_16,MXR_16,MXR-16
+presentation-uom:NM_6,NM_6,NM-6
+presentation-uom:NP_14,NP_14,NP-14
+presentation-uom:NP_18,NP_18,NP-18
+presentation-uom:NP_24,NP_24,NP-24
+presentation-uom:PA_BM,PA_BM,PA-BM
+presentation-uom:PA_NM,PA_NM,PA-NM
+presentation-uom:PB_150,PB_150,PB-150
+presentation-uom:PB_200,PB_200,PB-200
+presentation-uom:PCD_8P,PCD_8P,PCD-8P
+presentation-uom:PCD_P,PCD_P,PCD-P
+presentation-uom:PCD_X,PCD_X,PCD-X
+presentation-uom:PCY_P,PCY_P,PCY-P
+presentation-uom:PCY_PL,PCY_PL,PCY-PL
+presentation-uom:PEL_8P,PEL_8P,PEL-8P
+presentation-uom:PET_10C,PET_10C,PET-10C
+presentation-uom:PET_10P,PET_10P,PET-10P
+presentation-uom:PET_10PP,PET_10PP,PET-10PP
+presentation-uom:PIBR_1_1_2R,PIBR_1_1_2R,PIBR-1-1/2R
+presentation-uom:PIBR_1R,PIBR_1R,PIBR-1R
+presentation-uom:PIEDRA_GRANDE,PIEDRA_GRANDE,PIEDRA GRANDE
+presentation-uom:PIEZA,PIEZA,´PIEZA
+presentation-uom:PIEZA_JAVIER_GARCIA_MEDINA,PIEZA_JAVIER_GARCIA_MEDINA,PIEZA JAVIER GARCIA MEDINA
+presentation-uom:PIEZA_PRECIO_NUEVO,PIEZA_PRECIO_NUEVO,PIEZA PRECIO NUEVO
+presentation-uom:PIEZA_TOBAL,PIEZA_TOBAL,PIEZA TOBAL
+presentation-uom:PIEZA1,PIEZA1,PIEZA1
+presentation-uom:PIJ_1038,PIJ_1038,PIJ-1038
+presentation-uom:PIJ_1050,PIJ_1050,PIJ-1050
+presentation-uom:PIJ_1063,PIJ_1063,PIJ-1063
+presentation-uom:PIJ_625,PIJ_625,PIJ-625
+presentation-uom:PIJ_632,PIJ_632,PIJ-632
+presentation-uom:PIJ_638,PIJ_638,PIJ-638
+presentation-uom:PIJ_650,PIJ_650,PIJ-650
+presentation-uom:PIJ_819,PIJ_819,PIJ-819
+presentation-uom:PIJ_825,PIJ_825,PIJ-825
+presentation-uom:PIJ_832,PIJ_832,PIJ-832
+presentation-uom:PIJ_838,PIJ_838,PIJ-838
+presentation-uom:PIJ_850,PIJ_850,PIJ-850
+presentation-uom:PIJ_863,PIJ_863,PIJ-863
+presentation-uom:PILA_10X1,PILA_10X1,PILA-10X1
+presentation-uom:PILA_10X1_1_2,PILA_10X1_1_2,PILA-10X1-1/2
+presentation-uom:PILA_10X2,PILA_10X2,PILA-10X2
+presentation-uom:PILA_6X1_1_2,PILA_6X1_1_2,PILA-6X1-1/2
+presentation-uom:PILA_8X1,PILA_8X1,PILA-8X1
+presentation-uom:PILA_8X1_1_2,PILA_8X1_1_2,PILA-8X1-1/2
+presentation-uom:PILA_8X2,PILA_8X2,PILA 8X2
+presentation-uom:PIM_55PG,PIM_55PG,PIM-55PG
+presentation-uom:PP010_KB,PP010_KB,PP010-KB
+presentation-uom:PPT_10C,PPT_10C,PPT-10C
+presentation-uom:PPT_10R,PPT_10R,PPT-10R
+presentation-uom:PR_101,PR_101,PR-101
+presentation-uom:PR_102,PR_102,PR-102
+presentation-uom:PRCIO_CALERO,PRCIO_CALERO,PRCIO CALERO
+presentation-uom:PRECIO_ALEVA_RESIDENCIAL,PRECIO_ALEVA_RESIDENCIAL,PRECIO ALEVA RESIDENCIAL
+presentation-uom:PRECIO_ARQ_ENRIQUE_HERRERA,PRECIO_ARQ_ENRIQUE_HERRERA,PRECIO ARQ ENRIQUE HERRERA
+presentation-uom:PRECIO_ARQ_TOBAL,PRECIO_ARQ_TOBAL,PRECIO ARQ TOBAL
+presentation-uom:PRECIO_CALERO,PRECIO_CALERO,PRECIO CALERO
+presentation-uom:PRECIO_CARLOS_CAMARENA,PRECIO_CARLOS_CAMARENA,PRECIO CARLOS CAMARENA
+presentation-uom:PRECIO_CHEPE,PRECIO_CHEPE,PRECIO CHEPE
+presentation-uom:PRECIO_DEGOLLADO,PRECIO_DEGOLLADO,PRECIO DEGOLLADO
+presentation-uom:PRECIO_ESPECIAL,PRECIO_ESPECIAL,PRECIO ESPECIAL
+presentation-uom:PRECIO_ESPECIAL_ARQ_ENRIQUE_H,PRECIO_ESPECIAL_ARQ_ENRIQUE_H,PRECIO ESPECIAL ARQ. ENRIQUE H
+presentation-uom:PRECIO_ESPECIAL_ARQ_TOBAL,PRECIO_ESPECIAL_ARQ_TOBAL,PRECIO ESPECIAL ARQ TOBAL
+presentation-uom:PRECIO_ESPECIAL_CHEPE,PRECIO_ESPECIAL_CHEPE,PRECIO ESPECIAL CHEPE
+presentation-uom:PRECIO_ESPECIAL_INMOBILIARIA,PRECIO_ESPECIAL_INMOBILIARIA,PRECIO ESPECIAL INMOBILIARIA
+presentation-uom:PRECIO_ESPECIAL_METROS_TOBAL,PRECIO_ESPECIAL_METROS_TOBAL,PRECIO ESPECIAL METROS TOBAL
+presentation-uom:PRECIO_ESPECIAL_SAMUEL_ALVAREZ,PRECIO_ESPECIAL_SAMUEL_ALVAREZ,PRECIO ESPECIAL SAMUEL ALVAREZ
+presentation-uom:PRECIO_ESPECIAL_TOBAL_PIEZA,PRECIO_ESPECIAL_TOBAL_PIEZA,PRECIO ESPECIAL TOBAL PIEZA
+presentation-uom:PRECIO_ESTRIBADORA_DEG,PRECIO_ESTRIBADORA_DEG,PRECIO ESTRIBADORA DEG
+presentation-uom:PRECIO_FELIPE_GUZMAN,PRECIO_FELIPE_GUZMAN,PRECIO FELIPE GUZMAN
+presentation-uom:PRECIO_GOND_ESPECIAL_LOPAR,PRECIO_GOND_ESPECIAL_LOPAR,PRECIO GOND. ESPECIAL LOPAR
+presentation-uom:PRECIO_GUILLERMO,PRECIO_GUILLERMO,PRECIO GUILLERMO
+presentation-uom:PRECIO_IDEA,PRECIO_IDEA,PRECIO IDEA
+presentation-uom:PRECIO_JAIME,PRECIO_JAIME,PRECIO JAIME
+presentation-uom:PRECIO_JAVIER_GARCIA_MEDINA,PRECIO_JAVIER_GARCIA_MEDINA,PRECIO JAVIER GARCIA MEDINA
+presentation-uom:PRECIO_JAVIER_MEDINA,PRECIO_JAVIER_MEDINA,PRECIO JAVIER MEDINA
+presentation-uom:PRECIO_JOSE_DE_JESUS,PRECIO_JOSE_DE_JESUS,PRECIO JOSE DE JESUS
+presentation-uom:PRECIO_JOSE_VILLARUEL,PRECIO_JOSE_VILLARUEL,PRECIO JOSE VILLARUEL
+presentation-uom:PRECIO_KILO_JOSE_VILLARUEL,PRECIO_KILO_JOSE_VILLARUEL,PRECIO KILO JOSE VILLARUEL
+presentation-uom:PRECIO_MIGUEL,PRECIO_MIGUEL,PRECIO MIGUEL
+presentation-uom:PRECIO_MIGUEL_GUZMAN,PRECIO_MIGUEL_GUZMAN,PRECIO MIGUEL GUZMAN
+presentation-uom:PRECIO_RAUL,PRECIO_RAUL,PRECIO RAUL
+presentation-uom:PRECIO_RAUL_CASA_K,PRECIO_RAUL_CASA_K,PRECIO RAUL CASA K
+presentation-uom:PRECIO_RAUL_K,PRECIO_RAUL_K,PRECIO RAUL K
+presentation-uom:PRECIO_SAMUEL_ALV,PRECIO_SAMUEL_ALV,PRECIO SAMUEL ALV
+presentation-uom:PRECIO_SANTIAGO_DE_LA_TORRE,PRECIO_SANTIAGO_DE_LA_TORRE,PRECIO SANTIAGO DE LA TORRE
+presentation-uom:PRECIO_TON_JOSE_VILLARUEL,PRECIO_TON_JOSE_VILLARUEL,PRECIO TON JOSE VILLARUEL
+presentation-uom:PRL_P,PRL_P,PRL-P
+presentation-uom:PRO_55MEC,PRO_55MEC,PRO-55MEC
+presentation-uom:PRO_8MEC,PRO_8MEC,PRO-8MEC
+measure:2,PZA,PIEZAS
+presentation-uom:R_PL,R_PL,R-PL
+presentation-uom:RAUL_SANTA_MARIA,RAUL_SANTA_MARIA,RAUL SANTA MARIA
+presentation-uom:RN,RN,RN
+presentation-uom:RN_X,RN_X,RN-X
+presentation-uom:ROLLO,ROLLO,ROLLO
+presentation-uom:ROPI_915,ROPI_915,ROPI-915
+presentation-uom:ROPI_925,ROPI_925,ROPI-925
+presentation-uom:SELO_20,SELO_20,SELO-20
+presentation-uom:SELO_30,SELO_30,SELO-30
+presentation-uom:SELO_50,SELO_50,SELO-50
+presentation-uom:SPV50023,SPV50023,SPV50023
+presentation-uom:STI_14P,STI_14P,STI-14P
+presentation-uom:STI_18P,STI_18P,STI-18P
+presentation-uom:T200_9,T200_9,T200-9
+presentation-uom:T201_9,T201_9,T201-9
+presentation-uom:T210_9,T210_9,T210-9
+presentation-uom:T210_9X,T210_9X,T210-9X
+presentation-uom:TAQ_1_4P,TAQ_1_4P,TAQ-1/4P
+presentation-uom:TAQ_3_8P,TAQ_3_8P,TAQ-3/8P
+presentation-uom:TAQ_5_16P,TAQ_5_16P,TAQ-5/16P
+presentation-uom:TAV_D,TAV_D,TAV-D
+presentation-uom:TAV_I,TAV_I,TAV-I
+presentation-uom:TAV_R,TAV_R,TAV-R
+presentation-uom:TON,TON,TON
+presentation-uom:TON_ESTRIBADORA,TON_ESTRIBADORA,TON ESTRIBADORA
+presentation-uom:TON_JOSE_VILLARUEL,TON_JOSE_VILLARUEL,TON JOSE VILLARUEL
+presentation-uom:TONELADA,TONELADA,TONELADA
+presentation-uom:TP_5MM,TP_5MM,TP-5MM
+presentation-uom:TUN100,TUN100,TUN100
+presentation-uom:VIAJE,VIAJE,VIAJE
+presentation-uom:VIAJE_14_M_ARANDAS,VIAJE_14_M_ARANDAS,VIAJE 14 M ARANDAS
+presentation-uom:VIAJE_14_METROS,VIAJE_14_METROS,VIAJE 14 METROS
+presentation-uom:VIAJE_20M_TOBAL_JM,VIAJE_20M_TOBAL_JM,VIAJE 20M TOBAL JM
+presentation-uom:VIAJE_5_METROS,VIAJE_5_METROS,VIAJE 5 METROS
+presentation-uom:VIAJE_6_METROS,VIAJE_6_METROS,VIAJE 6 METROS
+presentation-uom:VIAJE_7_METROS,VIAJE_7_METROS,VIAJE 7 METROS
+presentation-uom:VIAJE_7_METROS_LIMPIA,VIAJE_7_METROS_LIMPIA,VIAJE 7 METROS LIMPIA
+presentation-uom:VIAJE_7_METROS_P_ESPECIAL,VIAJE_7_METROS_P_ESPECIAL,VIAJE 7 METROS P ESPECIAL
+presentation-uom:VIAJE_7_METROS_REVUELTA,VIAJE_7_METROS_REVUELTA,VIAJE 7 METROS REVUELTA
+presentation-uom:VIAJE_7M_ARANDAS,VIAJE_7M_ARANDAS,VIAJE 7M ARANDAS
+presentation-uom:VIAJE_7MTS_PRECIO_QUEB,VIAJE_7MTS_PRECIO_QUEB,VIAJE 7MTS PRECIO QUEB.
+presentation-uom:VIAJE_7MTS_RAUL,VIAJE_7MTS_RAUL,VIAJE 7MTS RAUL
+presentation-uom:VIAJE_DE_14_METROS,VIAJE_DE_14_METROS,VIAJE DE 14 METROS
+presentation-uom:VIAJE_DE_14_METROS_LIMPIA,VIAJE_DE_14_METROS_LIMPIA,VIAJE DE 14 METROS LIMPIA
+presentation-uom:VIAJE_DE_14_METROS_REVUELTA,VIAJE_DE_14_METROS_REVUELTA,VIAJE DE 14 METROS REVUELTA
+presentation-uom:VIAJE_DE_7_METROS,VIAJE_DE_7_METROS,VIAJE DE 7 METROS
+presentation-uom:WT_175,WT_175,WT-175
+presentation-uom:WT_240,WT_240,WT-240
+presentation-uom:WT_240F,WT_240F,WT-240F
+presentation-uom:WT_350,WT_350,WT-350
+presentation-uom:WT_400F,WT_400F,WT-400F
+presentation-uom:WT_550,WT_550,WT-550
+presentation-uom:ZP_5MM,ZP_5MM,ZP-5MM

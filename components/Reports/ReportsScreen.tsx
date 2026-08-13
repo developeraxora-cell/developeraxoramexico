@@ -441,7 +441,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
       const stockCandidates = products
         .filter((product) => matchesFilters(product.id))
         .map((product) => {
-          const stockValue = Number(product.stock ?? stockByProduct[String(product.id)] ?? 0);
+          const stockValue = Number(stockByProduct[String(product.id)] ?? product.stock ?? 0);
           const minValue = Number(product.min_stock ?? 0);
           let status = 'ok';
           if (minValue > 0 && stockValue <= minValue) status = 'critical';

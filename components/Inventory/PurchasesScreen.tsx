@@ -75,6 +75,51 @@ interface PendingUomSelection {
   uoms: ProductUom[];
 }
 
+const SUPABASE_PAGE_SIZE = 1000;
+const SUPABASE_IN_CHUNK_SIZE = 300;
+
+const fetchAllPages = async <T,>(
+  queryPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>
+) => {
+  const rows: T[] = [];
+
+  for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
+    const to = from + SUPABASE_PAGE_SIZE - 1;
+    const { data, error } = await queryPage(from, to);
+    if (error) throw error;
+
+    const page = data ?? [];
+    rows.push(...page);
+
+    if (page.length < SUPABASE_PAGE_SIZE) break;
+  }
+
+  return rows;
+};
+
+const chunkValues = <T,>(values: T[], chunkSize = SUPABASE_IN_CHUNK_SIZE) => {
+  const chunks: T[][] = [];
+  for (let index = 0; index < values.length; index += chunkSize) {
+    chunks.push(values.slice(index, index + chunkSize));
+  }
+  return chunks;
+};
+
+const isGeneratedMigrationPurchaseNote = (notes: string | null | undefined) => {
+  const value = String(notes ?? '').trim();
+  if (!value) return false;
+  return (
+    /^Entrada origen:\s*/i.test(value) &&
+    /\|\s*(Usuario|Total|Liquidado|Credito abonado|Status) origen:/i.test(value)
+  );
+};
+
+const getDisplayPurchaseNotes = (notes: string | null | undefined) => {
+  if (isGeneratedMigrationPurchaseNote(notes)) return null;
+  const value = String(notes ?? '').trim();
+  return value || null;
+};
+
 const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, currentUser, branches, businessUnit = 'materiales' }) => {
   const _purBranchBu = branches.find(b => b.id === selectedBranchId)?.businessUnit;
   const isTransportBranch = businessUnit === 'transporteria';
@@ -179,7 +224,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     } finally {
       setIsCatalogLoading(false);
     }
-  }, [branchId]);
+  }, [branchId, productBusinessUnit]);
 
   useEffect(() => {
     if (!barcodeInput.trim() || !branchId) {
@@ -216,51 +261,62 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     } catch {
       setSuppliers([]);
     }
-  }, [branchId]);
+  }, [branchId, productBusinessUnit]);
 
   const loadHistory = useCallback(async () => {
     if (!branchId) return;
     setIsLoadingHistory(true);
     try {
-      const { data: transactions, error: txError } = await supabase
-        .from('inventory_transactions')
-        .select('id, reference, notes, created_at, purchase_date, is_credit, supplier_id, suppliers ( name )')
-        .eq('branch_id', branchId)
-        .eq('type', 'PURCHASE')
-        .eq('business_unit', productBusinessUnit)
-        .order('created_at', { ascending: false });
-      if (txError) throw txError;
-      const transactionIds = (transactions ?? []).map((tx) => tx.id);
+      const transactions = await fetchAllPages<any>((from, to) =>
+        supabase
+          .from('inventory_transactions')
+          .select('id, reference, notes, created_at, purchase_date, is_credit, supplier_id, suppliers ( name )')
+          .eq('branch_id', branchId)
+          .eq('type', 'PURCHASE')
+          .eq('business_unit', productBusinessUnit)
+          .order('created_at', { ascending: false })
+          .range(from, to)
+      );
+      const transactionIds = transactions.map((tx) => String(tx.id));
 
       let itemsSummary: Record<string, { count: number; total: number }> = {};
 
       if (transactionIds.length > 0) {
-        const { data: items, error: itemsError } = await supabase
-          .from('inventory_transaction_items')
-          .select('transaction_id, qty, unit_price')
-          .in('transaction_id', transactionIds);
+        const items = (
+          await Promise.all(
+            chunkValues(transactionIds).map((chunk) =>
+              fetchAllPages<any>((from, to) =>
+                supabase
+                  .from('inventory_transaction_items')
+                  .select('transaction_id, qty, unit_price, line_total')
+                  .in('transaction_id', chunk)
+                  .order('transaction_id')
+                  .range(from, to)
+              )
+            )
+          )
+        ).flat();
 
-        if (itemsError) throw itemsError;
-
-        itemsSummary = (items ?? []).reduce<Record<string, { count: number; total: number }>>((acc, item) => {
-          const current = acc[item.transaction_id] ?? { count: 0, total: 0 };
+        itemsSummary = items.reduce<Record<string, { count: number; total: number }>>((acc, item) => {
+          const key = String(item.transaction_id);
+          const current = acc[key] ?? { count: 0, total: 0 };
           current.count += 1;
-          current.total += Number(item.qty) * Number(item.unit_price || 0);
-          acc[item.transaction_id] = current;
+          current.total += Number(item.line_total ?? Number(item.qty) * Number(item.unit_price || 0));
+          acc[key] = current;
           return acc;
         }, {});
       }
 
-      const formatted = (transactions ?? []).map((tx: any) => ({
+      const formatted = transactions.map((tx: any) => ({
         id: tx.id,
         reference: tx.reference,
-        notes: tx.notes,
+        notes: getDisplayPurchaseNotes(tx.notes),
         created_at: tx.created_at,
         purchase_date: tx.purchase_date ?? null,
         is_credit: tx.is_credit ?? false,
         supplier_name: tx.suppliers?.name ?? null,
-        items_count: itemsSummary[tx.id]?.count ?? 0,
-        total_amount: itemsSummary[tx.id]?.total ?? 0,
+        items_count: itemsSummary[String(tx.id)]?.count ?? 0,
+        total_amount: itemsSummary[String(tx.id)]?.total ?? 0,
       }));
 
       setHistory(formatted);
@@ -270,7 +326,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     } finally {
       setIsLoadingHistory(false);
     }
-  }, [branchId]);
+  }, [branchId, productBusinessUnit]);
 
   useEffect(() => {
     loadCatalog();

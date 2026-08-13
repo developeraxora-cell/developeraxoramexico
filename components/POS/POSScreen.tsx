@@ -40,6 +40,21 @@ const ZERO_COST_NOTE_PREFIX = 'SALIDA SIN COSTO:';
 const isZeroCostSale = (notes: string | null | undefined) =>
   String(notes ?? '').trim().toUpperCase().startsWith(ZERO_COST_NOTE_PREFIX);
 
+const isGeneratedMigrationNote = (notes: string | null | undefined) => {
+  const value = String(notes ?? '').trim();
+  if (!value) return false;
+  return (
+    /^Venta origen:\s*/i.test(value) &&
+    /\|\s*(Usuario|Total|Liquidado|Credito abonado|Status) origen:/i.test(value)
+  );
+};
+
+const getDisplaySaleNotes = (notes: string | null | undefined) => {
+  if (isGeneratedMigrationNote(notes)) return null;
+  const value = String(notes ?? '').trim();
+  return value || null;
+};
+
 const getWatermarkPngBytes = async () => {
   if (!watermarkPngBytesPromise) {
     watermarkPngBytesPromise = fetch('/lopar-watermark.png')
@@ -388,7 +403,7 @@ const POSScreen: React.FC<POSProps> = ({
     const wallet = await walletService.getWalletByCustomer(branchId, customer.id);
 
     return { customer, wallet };
-  }, [branchId]);
+  }, [branchId, businessUnit]);
 
   const updateSalePaymentBreakdown = useCallback(async (input: {
     sale_id: string;
@@ -517,7 +532,7 @@ const POSScreen: React.FC<POSProps> = ({
         return {
           id: tx.id,
           reference: tx.reference,
-          notes: tx.notes,
+          notes: getDisplaySaleNotes(tx.notes),
           direccion_cliente: tx.direccion_cliente ?? null,
           nombre_cliente: tx.nombre_cliente ?? null,
           created_by: tx.created_by ?? null,
@@ -1364,7 +1379,7 @@ const POSScreen: React.FC<POSProps> = ({
         cashierName,
         branchName: selectedBranch?.name ?? selectedBranchId ?? 'SUCURSAL',
         branchId: selectedBranchId,
-        saleNotes: sale.notes,
+        saleNotes: getDisplaySaleNotes(sale.notes),
         creditAmount: Number(linkedCreditNote?.total ?? sale.credit_amount ?? 0),
         dueDate: linkedCreditNote?.due_date ?? null,
         creditDaysApplied: linkedCreditNote?.credit_days_applied ?? null,
@@ -1394,7 +1409,7 @@ const POSScreen: React.FC<POSProps> = ({
     } finally {
       setIsCustomerSearchLoading(false);
     }
-  }, [branchId]);
+  }, [branchId, isTransportBranch]);
 
   useEffect(() => {
     if (!selectedCustomer?.id) {

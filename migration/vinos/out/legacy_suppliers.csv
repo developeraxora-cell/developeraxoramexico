@@ -1,0 +1,34 @@
+legacy_id,name,phone,email,address,rfc,notes,is_active
+28,DEMO,(000) 000-00-00,,0000,000,Razon social origen: 0000 | CP origen: 0 | Fecha alta origen: 2025-06-05,false
+29,ESTRIBADORA DEGOLLADO,(348) 121-49-96,AIMEEGLEZ93@HOTMAIL.COM,KM 4.5,,Razon social origen: GORA930604IA8 | CP origen: 47980 | Fecha alta origen: 2025-07-09,true
+30,APLOZA,(111) 111-11-11,,ZAMORA,,Razon social origen: CPL080121L67 | Correo origen: COMERCIALPLOCER | CP origen: 59698 | Fecha alta origen: 2025-07-09,true
+31,TRUPER 25/24,(477) 763-70-52,AIMEEGLEZ93@HOTMAIL.COM,ZAMORA,,Razon social origen: PEPETRUPER | CP origen: 876789 | Fecha alta origen: 2025-07-09,true
+32,POLITUBO,(348) 788-47-05,POLITUBO@POLITUBO.COM,KM 2 CARRETERA ARANDAS LEON SN,,Razon social origen: TPA941226462 | CP origen: 47180 | Fecha alta origen: 2025-07-18,true
+33,SURTIDORA GONZALEZ,(378) 888-55-80,,CD MEX,,Razon social origen: 0000000000000000 | Correo origen: AIMEEGKEZ93@JJHDSYF | CP origen: 0 | Fecha alta origen: 2025-07-18,true
+34,EL TORNILLO,(477) 788-85-00,AIMEEGLEZ93@HOTMAIL.COM,DEGOLLADO JAL,,Razon social origen: TOR920811LC2 | CP origen: 47980 | Fecha alta origen: 2025-07-18,true
+35,MAYOREO CARDENAS,(477) 266-28-18,,JESUS MARIA,,Razon social origen: MAYOREO CARDENAS | CP origen: 47950 | Fecha alta origen: 2025-07-22,true
+36,ACEROS AYOTLAN,(348) 918-03-63,,AYOTLAN,,Razon social origen: ACEROS AYOTLAN | CP origen: 47930 | Fecha alta origen: 2025-07-22,true
+37,FERRUSA,(378) 712-16-80,,CAPILLA DE GUADALUPE,,Razon social origen: FERRUSA | CP origen: 47700 | Fecha alta origen: 2025-07-26,true
+38,SERVI CASA,(477) 707-26-04,,LEON GUANAJUATO,,Razon social origen: SERVI CASA | CP origen: 37530 | Fecha alta origen: 2025-07-29,true
+39,LION TOOLS,(331) 304-49-66,,LEON,,Razon social origen: LION TOOLS | CP origen: 37000 | Fecha alta origen: 2025-09-03,true
+40,EL CARACOL,(348) 100-26-95,,AYOTLAN,,Razon social origen: EL CARACOL | CP origen: 0 | Fecha alta origen: 2025-10-03,true
+41,GRUPO GOL,(332) 600-06-77,,"LEON, GUANAJUATO",,Razon social origen: DISTRIBUIDORA CRUZ AZUL D/LEON | CP origen: 37536 | Fecha alta origen: 2025-10-03,true
+42,TORNILLOS Y ESPARRAGOS,(013) 336-01-57,,LOMAS DE CAMICHIN,,Razon social origen: TORNILLOS Y ESPARRAGOS | CP origen: 45403 | Fecha alta origen: 2025-10-24,true
+43,MARCASI,(477) 774-03-89,,LEON,,Razon social origen: MARCASI | CP origen: 37200 | Fecha alta origen: 2025-10-24,true
+44,BANCO DE JAL PENJAMO,(000) 000-00-0_,,PENJAMO,,Razon social origen: BANCO DE JAL DE PENJAMO | CP origen: 36900 | Fecha alta origen: 2025-10-31,true
+45,GUANTERA,(348) 106-67-89,,JESUS MARIA,,Razon social origen: GUANTERA | CP origen: 47950 | Fecha alta origen: 2025-11-06,true
+46,BANCO ARENA CHUY MIRANDA,(348) 125-13-56,,ACUMBARO,,Razon social origen: BANCO DE JAL DE PENJAMO | CP origen: 47950 | Fecha alta origen: 2025-11-07,true
+47,KEBRALKABA,(348) 129-52-56,,ARANDAS,,Razon social origen: KEBRALKABA | CP origen: 47950 | Fecha alta origen: 2025-11-17,true
+48,ARENA DE GUADALAJARA,(000) 000-00-00,,GUADALAJARA,,Razon social origen: ARENA DE GUADALAJARA | CP origen: 0 | Fecha alta origen: 2025-11-21,true
+49,BASE PARA TINACO,(000) 000-00-__,,JESUS MARIA,,Razon social origen: BASE PARA TINACO | CP origen: 47950 | Fecha alta origen: 2025-11-28,true
+50,ESCOBA Y TRAPEADOR,(348) 121-08-97,,ARANDAS,,Razon social origen: ESCOBAS Y TRAPEADORES | CP origen: 47950 | Fecha alta origen: 2025-12-01,true
+51,FERRETERIA CAMARENA,(348) 106-60-30,,JESUS MARIA,,Razon social origen: EL CARPO | CP origen: 47950 | Fecha alta origen: 2025-12-12,true
+52,CONCRETERA LOPAR,(348) 148-82-71,,JESUS MARIA,,Razon social origen: CONCRETERA LOPAR | CP origen: 47950 | Fecha alta origen: 2026-01-14,true
+53,FELIPE HUERTA,(348) 104-66-88,,EL RANERO,,Razon social origen: FELIPE HUERTA | CP origen: 47950 | Fecha alta origen: 2026-03-31,true
+54,QUEBRADORA,(000) 000-00-00,,JESUS MARIA,,Razon social origen: QUEBRADORA | CP origen: 47950 | Fecha alta origen: 2026-04-11,true
+55,JICAMO,(348) 125-27-93,,JESUS MARIA,,Razon social origen: JICAMO | CP origen: 47950 | Fecha alta origen: 2026-05-29,true
+56,BANCO DE DE TANHUATO,(000) 000-00-00,,TANHUATO,,Razon social origen: BANCO DE TANHUATO | CP origen: 47950 | Fecha alta origen: 2026-05-29,true
+57,CEMEXSA CALHIDRA,(013) 787-15-59,,TEPATITLAN,,Razon social origen: CAL | CP origen: 47950 | Fecha alta origen: 2026-06-15,true
+58,CALERO,(348) 704-07-79,,JESUS MARIA,,Razon social origen: CALERO | CP origen: 47950 | Fecha alta origen: 2026-06-29,true
+59,KW AMARILLO FLETES,(000) 000-00-00,,JESUS MARIA,,Razon social origen: KW AMARILLO | CP origen: 47950 | Fecha alta origen: 2026-06-30,true
+60,LOGONZA PRETENSADO,(348) 148-83-26,,ARANDAS,,Razon social origen: LOGONZA | CP origen: 47950 | Fecha alta origen: 2026-07-31,true

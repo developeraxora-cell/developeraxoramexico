@@ -622,17 +622,6 @@ export const creditService = {
 
 
   async listCashSalesByCustomer(_customerId: string, branchId: string, customerName?: string | null, businessUnit?: string) {
-    let query = supabase
-      .from('inventory_transactions')
-      .select('id, branch_id, type, payment_type, reference, notes, nombre_cliente, direccion_cliente, created_by, created_at')
-      .eq('branch_id', branchId)
-      .eq('type', 'SALE')
-      .eq('is_deleted', false);
-    query = applyBusinessUnitFilter(query, businessUnit);
-    const { data, error } = await query.order('created_at', { ascending: false }).limit(500);
-
-    if (error) throw error;
-
     const normalizeCustomerName = (value: string | null | undefined) =>
       String(value ?? '')
         .normalize('NFD')
@@ -643,6 +632,27 @@ export const creditService = {
         .toLowerCase();
 
     const normalizedName = normalizeCustomerName(customerName);
+
+    let query = supabase
+      .from('inventory_transactions')
+      .select('id, branch_id, type, payment_type, reference, notes, nombre_cliente, direccion_cliente, created_by, created_at')
+      .eq('branch_id', branchId)
+      .eq('type', 'SALE')
+      .eq('is_deleted', false);
+    query = applyBusinessUnitFilter(query, businessUnit);
+
+    if (normalizedName) {
+      const pattern = `%${normalizedName
+        .split(' ')
+        .filter(Boolean)
+        .map((token) => token.replace(/[%_\\]/g, (match) => `\\${match}`))
+        .join('%')}%`;
+      query = query.ilike('nombre_cliente', pattern);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(normalizedName ? 10000 : 500);
+
+    if (error) throw error;
     if (!normalizedName) return (data ?? []) as CashSaleHistory[];
 
     return (data ?? []).filter((sale) => {

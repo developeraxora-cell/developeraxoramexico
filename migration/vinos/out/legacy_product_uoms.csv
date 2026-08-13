@@ -1,0 +1,1457 @@
+legacy_id,product_legacy_id,uom_legacy_id,uom_name,factor_to_base,price_retail,price_mid_wholesale,price_wholesale,is_active
+presentacion:1,4,presentacion_uom:ton,TON,20,4800,4800,4800,true
+presentacion:2,4,presentacion_uom:bulto,BULTO,1,240,240,240,true
+presentacion:3,5,presentacion_uom:ton,TON,40,4700,4700,4700,true
+presentacion:4,5,presentacion_uom:bulto,BULTO,1,118,118,118,true
+presentacion:5,6,presentacion_uom:ton,TON,20,3900,3900,3900,true
+presentacion:6,6,presentacion_uom:bulto,BULTO,1,195,195,195,true
+presentacion:7,7,presentacion_uom:ton,TON,40,3900,3900,3900,true
+presentacion:8,7,presentacion_uom:bulto,BULTO,1,98,98,98,true
+presentacion:9,8,presentacion_uom:ton,TON,40,3600,3600,3600,true
+presentacion:10,8,presentacion_uom:bulto,BULTO,1,90,90,90,false
+presentacion:11,11,presentacion_uom:brt-2,BRT-2,1,17,16,16,true
+presentacion:12,12,presentacion_uom:brt-4,BRT-4,1,52,51,51,true
+presentacion:13,10,presentacion_uom:pieza,PIEZA,1,33,33,33,true
+presentacion:14,14,presentacion_uom:boap-1-2,BOAP-1/2,1,865,864,864,true
+presentacion:15,10,presentacion_uom:pieza,PIEZA,1,13,12,12,false
+presentacion:16,9,presentacion_uom:pieza,PIEZA,1,37,36,36,true
+presentacion:17,15,presentacion_uom:cepp-52,CEPP-52,1,70,69,69,true
+presentacion:18,13,presentacion_uom:pieza,PIEZA,1,27,26,26,true
+presentacion:19,16,presentacion_uom:pieza,PIEZA,1,27,26,26,true
+presentacion:20,18,presentacion_uom:cepp-55,CEPP-55,1,46,45,45,true
+presentacion:21,17,presentacion_uom:pieza,PIEZA,1,1677,1676,1676,true
+presentacion:22,21,presentacion_uom:boap-1-2,BOAP-1/2,1,87,86,86,true
+presentacion:23,23,presentacion_uom:atm,ATM,1,331,330,330,true
+presentacion:24,25,presentacion_uom:pieza,PIEZA,1,55,55,55,true
+presentacion:25,26,presentacion_uom:fcn-55m,FCN-55M,1,158,157,157,true
+presentacion:26,27,presentacion_uom:pieza,PIEZA,1,85,85,85,true
+presentacion:27,28,presentacion_uom:pieza,PIEZA,1,5,5,5,true
+presentacion:28,29,presentacion_uom:cat-60nd,CAT-60ND,1,1677,1676,1676,true
+presentacion:29,31,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:30,30,presentacion_uom:fh-5m,FH-5M,1,87,86,86,true
+presentacion:31,32,presentacion_uom:msk-1-2,MSK-1/2,1,18,17,17,true
+presentacion:32,33,presentacion_uom:pieza,PIEZA,1,14,14,14,true
+presentacion:33,34,presentacion_uom:pieza,PIEZA,1,26,25,25,false
+presentacion:34,35,presentacion_uom:msk-3-4,MSK-3/4,1,26,25,25,true
+presentacion:35,36,presentacion_uom:llm-11,LLM-11,1,128,127,127,true
+presentacion:36,37,presentacion_uom:msk-1-1-2,MSK-1-1/2,1,49,48,48,true
+presentacion:37,38,presentacion_uom:llm-6l,LLM-6L,1,111,110,110,true
+presentacion:38,39,presentacion_uom:pieza,PIEZA,1,140,139,139,true
+presentacion:39,40,presentacion_uom:llm-6c,LLM-6C,1,111,110,110,true
+presentacion:40,42,presentacion_uom:pieza,PIEZA,1,33,32,32,true
+presentacion:41,41,presentacion_uom:pieza,PIEZA,1,11,11,11,true
+presentacion:42,43,presentacion_uom:pet-10c,PET-10C,1,231,230,230,true
+presentacion:43,44,presentacion_uom:pieza,PIEZA,1,7,7,7,true
+presentacion:44,45,presentacion_uom:msk-2,MSK-2,1,65,64,64,true
+presentacion:45,46,presentacion_uom:pieza,PIEZA,1,27,27,27,true
+presentacion:46,47,presentacion_uom:ll-2014,LL-2014,1,64,63,63,true
+presentacion:47,49,presentacion_uom:pieza,PIEZA,1,12,12,12,true
+presentacion:48,48,presentacion_uom:msk-3-4a,MSK-3/4A,1,46,45,45,true
+presentacion:49,50,presentacion_uom:ll-2016,LL-2016,1,76,75,75,true
+presentacion:50,51,presentacion_uom:pieza,PIEZA,1,3,3,3,true
+presentacion:51,52,presentacion_uom:pieza,PIEZA,1,22,22,22,true
+presentacion:52,53,presentacion_uom:ll-2024,LL-2024,1,122,121,121,true
+presentacion:53,54,presentacion_uom:msk-1a,MSK-1A,1,57,56,56,true
+presentacion:54,55,presentacion_uom:pieza,PIEZA,1,2,2,2,true
+presentacion:55,56,presentacion_uom:ll-2008m,LL-2008M,1,53,52,52,true
+presentacion:56,45,presentacion_uom:pieza,PIEZA,1,110,109,109,false
+presentacion:57,59,presentacion_uom:chma-3,CHMA-3,1,64,63,63,true
+presentacion:58,58,presentacion_uom:ll-2010m,LL-2010M,1,57,56,56,true
+presentacion:59,60,presentacion_uom:ll-2013m,LL-2013M,1,76,75,75,true
+presentacion:60,61,presentacion_uom:brt-2s,BRT-2S,1,34,33,33,true
+presentacion:61,63,presentacion_uom:brt-3s,BRT-3S,1,55,54,54,true
+presentacion:62,64,presentacion_uom:wt-240,WT-240,1,45,44,44,true
+presentacion:63,62,presentacion_uom:et-3fx,ET-3FX,1,78,77,77,true
+presentacion:64,55,presentacion_uom:pieza,PIEZA,1,2,2,2,false
+presentacion:65,66,presentacion_uom:pieza,PIEZA,1,11,11,11,true
+presentacion:66,67,presentacion_uom:pieza,PIEZA,1,25,25,25,true
+presentacion:67,69,presentacion_uom:et-6fx,ET-6FX,1,107,106,106,true
+presentacion:68,70,presentacion_uom:pieza,PIEZA,1,35,35,35,true
+presentacion:69,68,presentacion_uom:wt-350,WT-350,1,58,57,57,true
+presentacion:70,72,presentacion_uom:pieza,PIEZA,1,8,8,8,true
+presentacion:71,71,presentacion_uom:hdu-12-105,HDU-12-105,1,40,39,39,true
+presentacion:72,73,presentacion_uom:wt-550,WT-550,1,87,86,86,true
+presentacion:73,76,presentacion_uom:ropi-915,ROPI-915,1,49,48,48,true
+presentacion:74,74,presentacion_uom:pieza,PIEZA,1,8,8,8,true
+presentacion:75,77,presentacion_uom:ropi-925,ROPI-925,1,52,51,51,true
+presentacion:76,78,presentacion_uom:pieza,PIEZA,1,25,25,25,true
+presentacion:77,75,presentacion_uom:md-3m,MD-3M,1,196,195,195,true
+presentacion:78,79,presentacion_uom:pieza,PIEZA,1,5,5,5,true
+presentacion:79,81,presentacion_uom:pieza,PIEZA,1,3,3,3,true
+presentacion:80,82,presentacion_uom:pieza,PIEZA,1,10,10,10,true
+presentacion:81,80,presentacion_uom:md-4m,MD-4M,1,244,243,243,true
+presentacion:82,83,presentacion_uom:pieza,PIEZA,1,14,14,14,true
+presentacion:83,84,presentacion_uom:pieza,PIEZA,1,3,3,3,true
+presentacion:84,85,presentacion_uom:pieza,PIEZA,1,20,20,20,true
+presentacion:85,87,presentacion_uom:pieza,PIEZA,1,11,11,11,true
+presentacion:86,86,presentacion_uom:esma-4580n,ESMA-4580N,1,1100,1100,1100,true
+presentacion:87,88,presentacion_uom:emx-22,EMX-22,1,139,138,138,true
+presentacion:88,89,presentacion_uom:pieza,PIEZA,1,2,2,2,true
+presentacion:89,91,presentacion_uom:et-3f,ET-3F,1,57,56,56,true
+presentacion:90,92,presentacion_uom:ma-16,MA-16,1,104,103,103,true
+presentacion:91,93,presentacion_uom:pieza,PIEZA,1,13,13,13,true
+presentacion:92,95,presentacion_uom:mar-16,MAR-16,1,104,103,103,true
+presentacion:93,90,presentacion_uom:et-4f,ET-4F,1,87,87,87,true
+presentacion:94,96,presentacion_uom:pieza,PIEZA,1,3,3,3,true
+presentacion:95,97,presentacion_uom:hta-80b,HTA-80B,1,25,24,24,true
+presentacion:96,24,presentacion_uom:pieza,PIEZA,1,23,23,23,true
+presentacion:97,99,presentacion_uom:hta-95b,HTA-95B,1,26,25,25,true
+presentacion:98,100,presentacion_uom:pieza,PIEZA,1,184,183,183,false
+presentacion:99,101,presentacion_uom:hta-105b,HTA-105B,1,30,29,29,true
+presentacion:100,98,presentacion_uom:pieza,PIEZA,1,4,4,4,true
+presentacion:101,102,presentacion_uom:np-14,NP-14,1,115,114,114,true
+presentacion:102,103,presentacion_uom:jd-8bp,JD-8BP,1,182,182,182,true
+presentacion:103,104,presentacion_uom:pieza,PIEZA,1,19,19,19,true
+presentacion:104,105,presentacion_uom:np-18,NP-18,1,157,156,156,true
+presentacion:105,106,presentacion_uom:jd-6bp,JD-6BP,1,142,142,142,true
+presentacion:106,107,presentacion_uom:np-24,NP-24,1,185,184,184,true
+presentacion:107,108,presentacion_uom:len-st-p,LEN-ST-P,1,23,23,23,true
+presentacion:108,109,presentacion_uom:pieza,PIEZA,1,5,5,5,true
+presentacion:109,110,presentacion_uom:pcy-p,PCY-P,1,231,231,231,true
+presentacion:110,111,presentacion_uom:len-sn-p,LEN-SN-P,1,23,22,22,true
+presentacion:111,112,presentacion_uom:pieza,PIEZA,1,8,8,8,true
+presentacion:112,113,presentacion_uom:len-sa-p,LEN-SA-P,1,23,22,22,true
+presentacion:113,114,presentacion_uom:prl-p,PRL-P,1,261,260,260,true
+presentacion:114,116,presentacion_uom:mh-16-p,MH-16-P,1,72,72,72,true
+presentacion:115,115,presentacion_uom:pieza,PIEZA,1,4,4,4,true
+presentacion:116,117,presentacion_uom:t201-9,T201-9,1,191,190,190,true
+presentacion:117,118,presentacion_uom:t210-9,T210-9,1,215,214,214,true
+presentacion:118,120,presentacion_uom:ppt-10c,PPT-10C,1,168,168,168,true
+presentacion:119,119,presentacion_uom:pieza,PIEZA,1,5,5,5,true
+presentacion:120,121,presentacion_uom:ppt-10r,PPT-10R,1,168,168,168,true
+presentacion:121,122,presentacion_uom:pieza,PIEZA,1,3,3,3,true
+presentacion:122,123,presentacion_uom:pieza,PIEZA,1,12,12,12,true
+presentacion:123,124,presentacion_uom:e-2r,E-2R,1,22,22,22,true
+presentacion:124,125,presentacion_uom:pr-102,PR-102,1,122,121,121,true
+presentacion:125,126,presentacion_uom:pr-101,PR-101,1,103,102,102,true
+presentacion:126,127,presentacion_uom:e-3r,E-3R,1,26,26,26,true
+presentacion:127,24,presentacion_uom:pieza,PIEZA,1,19,19,19,true
+presentacion:128,129,presentacion_uom:aces-20,ACES-20,1,101,100,100,true
+presentacion:129,130,presentacion_uom:brp-1,BRP-1,1,9,8,8,true
+presentacion:130,131,presentacion_uom:pieza,PIEZA,1,2,2,2,true
+presentacion:131,133,presentacion_uom:pieza,PIEZA,1,51,51,51,true
+presentacion:132,132,presentacion_uom:mxc-16,MXC-16,1,319,318,318,true
+presentacion:133,134,presentacion_uom:pieza,PIEZA,1,13,12,12,false
+presentacion:134,135,presentacion_uom:mxr-16,MXR-16,1,319,318,318,true
+presentacion:135,136,presentacion_uom:pieza,PIEZA,1,120,120,120,true
+presentacion:136,134,presentacion_uom:brp-2,BRP-2,1,13,13,13,true
+presentacion:137,137,presentacion_uom:ep-26f,EP-26F,1,122,121,121,true
+presentacion:138,138,presentacion_uom:pieza,PIEZA,1,27,27,27,true
+presentacion:139,139,presentacion_uom:ad-2p,AD-2P,1,27,26,26,true
+presentacion:140,140,presentacion_uom:brp-3,BRP-3,1,21,21,21,true
+presentacion:141,141,presentacion_uom:pieza,PIEZA,1,30,30,30,true
+presentacion:142,142,presentacion_uom:aspro-11x,ASPRO-11X,1,55,54,54,true
+presentacion:143,143,presentacion_uom:brp-4,BRP-4,1,30,29,29,true
+presentacion:144,144,presentacion_uom:asve-11,ASVE-11,1,67,66,66,true
+presentacion:145,145,presentacion_uom:pro-55mec,PRO-55MEC,1,56,56,56,true
+presentacion:146,146,presentacion_uom:pieza,PIEZA,1,47,47,47,true
+presentacion:147,147,presentacion_uom:jd-4tp,JD-4TP,1,96,95,95,true
+presentacion:148,148,presentacion_uom:pro-8mec,PRO-8MEC,1,80,79,79,true
+presentacion:149,149,presentacion_uom:pieza,PIEZA,1,5,5,5,true
+presentacion:150,150,presentacion_uom:pet-10p,PET-10P,1,139,138,138,true
+presentacion:151,151,presentacion_uom:pet-10pp,PET-10PP,1,139,138,138,true
+presentacion:152,152,presentacion_uom:pieza,PIEZA,1,8,8,8,true
+presentacion:153,154,presentacion_uom:ll-2014p,LL-2014P,1,26,25,25,true
+presentacion:154,153,presentacion_uom:led-150fb,LED-150FB,1,35,34,34,true
+presentacion:155,155,presentacion_uom:ll-2016p,LL-2016P,1,27,27,27,true
+presentacion:156,157,presentacion_uom:ll-2018p,LL-2018P,1,34,34,34,true
+presentacion:157,156,presentacion_uom:pieza,PIEZA,1,25,25,25,true
+presentacion:158,158,presentacion_uom:ll-2011mp,LL-2011MP,1,27,27,27,true
+presentacion:159,159,presentacion_uom:ll-2013mp,LL-2013MP,1,29,29,29,true
+presentacion:160,160,presentacion_uom:pieza,PIEZA,1,5,5,5,true
+presentacion:161,161,presentacion_uom:pieza,PIEZA,1,23,23,23,true
+presentacion:162,162,presentacion_uom:sti-14p,STI-14P,1,209,209,209,true
+presentacion:163,163,presentacion_uom:led-100fb,LED-100FB,1,19,18,18,true
+presentacion:164,164,presentacion_uom:sti-18p,STI-18P,1,313,313,313,true
+presentacion:165,166,presentacion_uom:led-125fb,LED-125FB,1,26,25,25,true
+presentacion:166,165,presentacion_uom:pieza,PIEZA,1,3,3,3,true
+presentacion:167,167,presentacion_uom:pieza,PIEZA,1,115,116,116,true
+presentacion:168,169,presentacion_uom:cue-041k,CUE-041K,1,103,102,102,true
+presentacion:169,168,presentacion_uom:pieza,PIEZA,1,8,8,8,true
+presentacion:170,170,presentacion_uom:mp-16,MP-16,1,92,92,92,true
+presentacion:171,172,presentacion_uom:cue-061k,CUE-061K,1,103,102,102,true
+presentacion:172,171,presentacion_uom:pieza,PIEZA,1,7,7,7,true
+presentacion:173,173,presentacion_uom:pieza,PIEZA,1,74,74,74,true
+presentacion:174,174,presentacion_uom:cue-081k,CUE-081K,1,103,102,102,true
+presentacion:175,176,presentacion_uom:pcd-p,PCD-P,1,168,167,167,true
+presentacion:176,175,presentacion_uom:pieza,PIEZA,1,196,196,196,true
+presentacion:177,177,presentacion_uom:cue-101k,CUE-101K,1,103,102,102,true
+presentacion:178,178,presentacion_uom:pcd-x,PCD-X,1,157,157,157,true
+presentacion:179,179,presentacion_uom:cue-111k,CUE-111K,1,103,102,102,true
+presentacion:180,180,presentacion_uom:pel-8p,PEL-8P,1,80,80,80,true
+presentacion:181,181,presentacion_uom:pieza,PIEZA,1,4,4,4,true
+presentacion:182,182,presentacion_uom:cue-131k,CUE-131K,1,103,102,102,true
+presentacion:183,183,presentacion_uom:pcd-8p,PCD-8P,1,78,78,78,true
+presentacion:184,185,presentacion_uom:pieza,PIEZA,1,7,7,7,true
+presentacion:185,187,presentacion_uom:cs-851,CS-851,1,284,283,283,true
+presentacion:186,184,presentacion_uom:pieza,PIEZA,1,104,103,103,true
+presentacion:187,188,presentacion_uom:pieza,PIEZA,1,11,11,11,true
+presentacion:188,186,presentacion_uom:pieza,PIEZA,1,104,103,103,true
+presentacion:189,189,presentacion_uom:pieza,PIEZA,1,3,3,3,true
+presentacion:190,191,presentacion_uom:ll-21p,LL-21P,1,43,43,43,true
+presentacion:191,192,presentacion_uom:cs-85d,CS-85D,1,284,283,283,true
+presentacion:192,190,presentacion_uom:pieza,PIEZA,1,11,11,11,true
+presentacion:193,194,presentacion_uom:taq-1-4p,TAQ-1/4P,1,0.5,0.5,0.5,true
+presentacion:194,195,presentacion_uom:ch-40p,CH-40P,1,27,27,27,true
+presentacion:195,193,presentacion_uom:pieza,PIEZA,1,4,4,4,true
+presentacion:196,196,presentacion_uom:taq-5-16p,TAQ-5/16P,1,0.5,0.5,0.5,true
+presentacion:197,197,presentacion_uom:ch-30p,CH-30P,1,21,21,21,true
+presentacion:198,198,presentacion_uom:taq-3-8p,TAQ-3/8P,1,0.5,0.5,0.5,true
+presentacion:199,200,presentacion_uom:cor-75zp,COR-75ZP,1,185,185,185,true
+presentacion:200,199,presentacion_uom:pieza,PIEZA,1,16,16,16,true
+presentacion:201,201,presentacion_uom:pibr-1r,PIBR-1R,1,1,1,1,true
+presentacion:202,202,presentacion_uom:lp-23,LP-23,1,85,85,85,true
+presentacion:203,203,presentacion_uom:pieza,PIEZA,1,6,6,6,true
+presentacion:204,204,presentacion_uom:pibr-1-1-2r,PIBR-1-1/2R,1,1.5,1.5,1.5,true
+presentacion:205,205,presentacion_uom:lp-33,LP-33,1,85,84,84,true
+presentacion:206,206,presentacion_uom:lp-43,LP-43,1,120,120,120,true
+presentacion:207,207,presentacion_uom:lp-46,LP-46,1,298,298,298,true
+presentacion:208,208,presentacion_uom:mar-16p,MAR-16P,1,92,92,92,true
+presentacion:209,210,presentacion_uom:man-10x1-2pa,MAN-10X1/2PA,1,85,85,85,true
+presentacion:210,209,presentacion_uom:alre-151,ALRE-151,1,37,36,36,true
+presentacion:211,211,presentacion_uom:pieza,PIEZA,1,3,3,3,true
+presentacion:212,213,presentacion_uom:aqm-52n,AQM-52N,1,760,759,759,true
+presentacion:213,214,presentacion_uom:cfm-1-2p,CFM-1/2P,1,43,43,43,true
+presentacion:214,216,presentacion_uom:pim-55pg,PIM-55PG,1,34,34,34,true
+presentacion:215,215,presentacion_uom:pieza,PIEZA,1,8,8,8,true
+presentacion:216,217,presentacion_uom:mp-060p,MP-060P,1,173,172,172,true
+presentacion:217,219,presentacion_uom:led-450,LED-450,1,168,167,167,true
+presentacion:218,218,presentacion_uom:pieza,PIEZA,1,3,3,3,true
+presentacion:219,220,presentacion_uom:led-60f,LED-60F,1,19,18,18,true
+presentacion:220,221,presentacion_uom:led-75f,LED-75F,1,22,21,21,true
+presentacion:221,222,presentacion_uom:pieza,PIEZA,1,3,3,3,true
+presentacion:222,223,presentacion_uom:mp-060,MP-060,1,173,172,172,true
+presentacion:223,224,presentacion_uom:pieza,PIEZA,1,10,10,10,true
+presentacion:224,225,presentacion_uom:aqf-82,AQF-82,1,528,527,527,true
+presentacion:225,226,presentacion_uom:pieza,PIEZA,1,33,33,33,true
+presentacion:226,227,presentacion_uom:aqf-88,AQF-88,1,632,631,631,true
+presentacion:227,226,presentacion_uom:pieza,PIEZA,1,20,20,20,true
+presentacion:228,228,presentacion_uom:cat-60x,CAT 60X,1,1915,1915,1915,true
+presentacion:229,229,presentacion_uom:pieza,PIEZA,1,45,45,45,true
+presentacion:230,230,presentacion_uom:pieza,PIEZA,1,13,12,12,true
+presentacion:231,231,presentacion_uom:t200-9,T200-9,1,150,150,150,true
+presentacion:232,232,presentacion_uom:pieza,PIEZA,1,310,310,310,true
+presentacion:233,234,presentacion_uom:pieza,PIEZA,1,808,807,807,true
+presentacion:234,233,presentacion_uom:pieza,PIEZA,1,10,10,10,true
+presentacion:235,235,presentacion_uom:llj-140t,LLJ-140T,1,75,74,74,true
+presentacion:236,236,presentacion_uom:pieza,PIEZA,1,16,15,15,true
+presentacion:237,235,presentacion_uom:pieza,PIEZA,1,75,74,74,false
+presentacion:238,237,presentacion_uom:pieza,PIEZA,1,251,250,250,true
+presentacion:239,238,presentacion_uom:pieza,PIEZA,1,31,31,31,true
+presentacion:240,239,presentacion_uom:cfm-1-2a,CFM-1/2A,1,43,42,42,true
+presentacion:241,241,presentacion_uom:pieza,PIEZA,1,1302,1301,1301,true
+presentacion:242,240,presentacion_uom:pieza,PIEZA,1,69,69,69,true
+presentacion:243,242,presentacion_uom:t210-9x,T210-9X,1,231,230,230,true
+presentacion:244,243,presentacion_uom:pieza,PIEZA,1,595,594,594,true
+presentacion:245,244,presentacion_uom:pieza,PIEZA,1,13,13,13,true
+presentacion:246,245,presentacion_uom:pieza,PIEZA,1,153,152,152,true
+presentacion:247,246,presentacion_uom:pieza,PIEZA,1,26,26,26,true
+presentacion:248,247,presentacion_uom:pieza,PIEZA,1,1302,1301,1301,true
+presentacion:249,248,presentacion_uom:pieza,PIEZA,1,10,9,9,true
+presentacion:250,249,presentacion_uom:pieza,PIEZA,1,35,35,35,true
+presentacion:251,250,presentacion_uom:pieza,PIEZA,1,5,5,5,true
+presentacion:252,252,presentacion_uom:pieza,PIEZA,1,41,41,41,true
+presentacion:253,251,presentacion_uom:pieza,PIEZA,1,75,74,74,true
+presentacion:254,253,presentacion_uom:metro,METRO,1,8,8,8,true
+presentacion:255,254,presentacion_uom:pieza,PIEZA,1,5,4,4,true
+presentacion:256,255,presentacion_uom:pieza,PIEZA,1,2,2,2,true
+presentacion:257,256,presentacion_uom:pieza,PIEZA,1,970,969,969,true
+presentacion:258,258,presentacion_uom:pieza,PIEZA,1,74,74,74,true
+presentacion:259,257,presentacion_uom:pieza,PIEZA,1,3,3,3,true
+presentacion:260,259,presentacion_uom:pieza,PIEZA,100,862,861,861,true
+presentacion:261,260,presentacion_uom:pieza,PIEZA,1,11,11,11,true
+presentacion:262,262,presentacion_uom:pieza,PIEZA,1,1302,1301,1301,true
+presentacion:263,263,presentacion_uom:pieza,PIEZA,1,2183,2182,2182,true
+presentacion:264,265,presentacion_uom:pieza,PIEZA,1,15,15,15,true
+presentacion:265,264,presentacion_uom:pieza,PIEZA,1,808,807,807,false
+presentacion:266,261,presentacion_uom:pieza,PIEZA,1,26,26,26,true
+presentacion:267,267,presentacion_uom:pieza,PIEZA,1,808,807,807,true
+presentacion:268,266,presentacion_uom:pieza,PIEZA,1,14,14,14,true
+presentacion:269,268,presentacion_uom:pieza,PIEZA,1,1302,1301,1301,true
+presentacion:270,269,presentacion_uom:pieza,PIEZA,1,130,130,130,true
+presentacion:271,270,presentacion_uom:pieza,PIEZA,1,14,14,14,true
+presentacion:272,265,presentacion_uom:pieza,PIEZA,1,12,11,11,false
+presentacion:273,272,presentacion_uom:pieza,PIEZA,1,190,189,189,true
+presentacion:274,273,presentacion_uom:pieza,PIEZA,1,280,279,279,true
+presentacion:275,274,presentacion_uom:pieza,PIEZA,1,6,6,6,true
+presentacion:276,275,presentacion_uom:pieza,PIEZA,1,808,807,807,true
+presentacion:277,276,presentacion_uom:pieza,PIEZA,1,867,866,866,true
+presentacion:278,277,presentacion_uom:pieza,PIEZA,1,83,82,82,true
+presentacion:279,278,presentacion_uom:pieza,PIEZA,1,8,7,7,true
+presentacion:280,279,presentacion_uom:pieza,PIEZA,100,880,880,880,true
+presentacion:281,280,presentacion_uom:pieza,PIEZA,1,1143,1142,1142,true
+presentacion:282,281,medida:3,METROS,1,16,15,15,true
+presentacion:283,282,presentacion_uom:pieza,PIEZA,1,1450,1450,1450,true
+presentacion:284,283,medida:1,KILOS,1,20,20,20,false
+presentacion:285,8,presentacion_uom:bulto,BULTO,1,90,90,90,true
+presentacion:286,283,medida:1,KILOS,1,27,27,27,true
+presentacion:287,284,medida:1,KILOS,1,28,28,28,true
+presentacion:288,285,medida:1,KILOS,1,27,27,27,true
+presentacion:289,286,medida:1,KILOS,1,27,27,27,true
+presentacion:290,287,medida:1,KILOS,1,25,25,25,true
+presentacion:291,288,presentacion_uom:pieza,PIEZA,1,200,200,200,true
+presentacion:292,289,presentacion_uom:pieza,PIEZA,1,330,330,330,true
+presentacion:293,290,presentacion_uom:pieza,PIEZA,1,1624,1623,1623,true
+presentacion:294,34,presentacion_uom:aces-2,ACES-2,1,26,26,26,true
+presentacion:295,19,presentacion_uom:cat-15ff,CAT-15FF,1,1676,1675,1675,true
+presentacion:296,100,presentacion_uom:jd-8tp,JD-8TP,1,185,185,185,true
+presentacion:297,57,presentacion_uom:msk-2a,MSK-2A,1,110,109,109,true
+presentacion:298,253,presentacion_uom:rollo,ROLLO,1,676,675,675,true
+presentacion:299,291,medida:1,KILOS,1,33,32,32,true
+presentacion:300,292,medida:1,KILOS,1,60,59,59,true
+presentacion:301,293,medida:1,KILOS,1,37,36,36,true
+presentacion:302,294,medida:1,KILOS,1,60,59,59,true
+presentacion:303,295,medida:1,KILOS,1,37,36,36,true
+presentacion:304,296,medida:1,KILOS,1,38,38,38,true
+presentacion:305,297,medida:1,KILOS,1,60,59,59,true
+presentacion:306,298,medida:1,KILOS,1,52,51,51,true
+presentacion:307,300,presentacion_uom:08-1812,08-1812,1,15,14,14,true
+presentacion:308,301,presentacion_uom:04-1812,04-1812,1,16,15,15,true
+presentacion:309,302,presentacion_uom:m-33,M-33,1,19,18,18,true
+presentacion:310,303,presentacion_uom:ld-08,LD-08,1,8,7,7,true
+presentacion:311,304,presentacion_uom:m-33v,M-33V,1,18,17,17,true
+presentacion:312,305,presentacion_uom:ld-12,LD-12,1,8,7,7,true
+presentacion:313,306,presentacion_uom:ld-16,LD-16,1,8,7,7,true
+presentacion:314,304,presentacion_uom:m-33v,M-33V,1,14,13,13,false
+presentacion:315,308,presentacion_uom:ld-36,LD-36,1,10,9,9,true
+presentacion:316,309,presentacion_uom:ld-06,LD-06,1,8,7,7,true
+presentacion:317,310,presentacion_uom:esex-300,ESEX-300,1,89,88,88,true
+presentacion:318,311,presentacion_uom:m-33r,M-33R,1,18,17,17,true
+presentacion:319,312,presentacion_uom:liag-2000,LIAG-2000,1,13,12,12,true
+presentacion:320,314,presentacion_uom:liag-1500,LIAG-1500,1,13,12,12,true
+presentacion:321,315,presentacion_uom:liag-500,LIAG-500,1,7,7,7,true
+presentacion:322,313,presentacion_uom:bcin-1000,BCIN-1000,1,0.5,0.5,0.5,true
+presentacion:323,316,presentacion_uom:liag-600,LIAG-600,1,7,7,7,true
+presentacion:324,317,presentacion_uom:limer-36,LIMER-36,1,18,17,17,true
+presentacion:325,318,presentacion_uom:clc-1-2n,CLC-1/2N,1,68,67,67,true
+presentacion:326,319,presentacion_uom:pij-625,PIJ-625,1,17,16,16,true
+presentacion:327,320,presentacion_uom:limer-50,LIMER-50,1,16,15,15,true
+presentacion:328,322,presentacion_uom:limer-80,LIMER-80,1,14,13,13,true
+presentacion:329,321,presentacion_uom:pij-632,PIJ-632,1,0.5,0.5,0.5,true
+presentacion:330,323,presentacion_uom:limer-120,LIMER-120,1,13,12,12,true
+presentacion:331,324,presentacion_uom:pij-638,PIJ-638,1,0.5,0.5,0.5,true
+presentacion:332,325,presentacion_uom:ctf-1-2,CTF-1/2,1,4,4,4,true
+presentacion:333,326,presentacion_uom:pij-650,PIJ-650,1,0.5,0.5,0.5,true
+presentacion:334,327,presentacion_uom:ctf-3-4,CTF-3/4,1,5,5,5,true
+presentacion:335,328,presentacion_uom:pij-819,PIJ-819,1,16,15,15,true
+presentacion:336,329,presentacion_uom:zp-5mm,ZP-5MM,1,299,298,298,true
+presentacion:337,330,presentacion_uom:pij-825,PIJ-825,1,0.5,0.5,0.5,true
+presentacion:338,331,presentacion_uom:tp-5mm,TP-5MM,1,325,324,324,true
+presentacion:339,333,presentacion_uom:m-33b,M-33B,1,18,18,18,true
+presentacion:340,334,presentacion_uom:pa-nm,PA-NM,1,50,49,49,true
+presentacion:341,332,presentacion_uom:pij-832,PIJ-832,1,23,22,22,false
+presentacion:342,335,presentacion_uom:pa-bm,PA-BM,1,50,49,49,true
+presentacion:343,332,presentacion_uom:pij-838,PIJ-838,1,0.5,0.5,0.5,true
+presentacion:344,336,presentacion_uom:pij-850,PIJ-850,1,0.5,0.5,0.5,true
+presentacion:345,337,presentacion_uom:pila-8x1-1-2,PILA-8X1-1/2,1,0.5,0.5,0.5,true
+presentacion:346,339,presentacion_uom:pij-1038,PIJ-1038,1,0.5,0.5,0.5,true
+presentacion:347,338,presentacion_uom:pila-8x2,PILA 8X2,1,0.5,0.5,0.5,true
+presentacion:348,340,presentacion_uom:pij-1050,PIJ-1050,1,0.5,0.5,0.5,true
+presentacion:349,341,presentacion_uom:pila-10x1,PILA-10X1,1,0.5,0.5,0.5,true
+presentacion:350,342,presentacion_uom:pila-10x1-1-2,PILA-10X1-1/2,1,0.5,0.5,0.5,true
+presentacion:351,340,presentacion_uom:pij-1063,PIJ-1063,1,55,54,54,false
+presentacion:352,344,presentacion_uom:pila-10x2,PILA-10X2,1,0.5,0.5,0.5,true
+presentacion:353,345,presentacion_uom:pij-863,PIJ-863,1,0.5,0.5,0.5,true
+presentacion:354,347,presentacion_uom:pila-6x1-1-2,PILA-6X1-1/2,1,0.5,0.5,0.5,true
+presentacion:355,343,presentacion_uom:pij-1063,PIJ-1063,1,0.5,0.5,0.5,true
+presentacion:356,350,presentacion_uom:r-pl,R-PL,1,245,244,244,true
+presentacion:357,349,presentacion_uom:pila-8x1,PILA-8X1,1,0.5,0.5,0.5,true
+presentacion:358,348,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:359,346,presentacion_uom:pij-1063,PIJ-1063,1,0.5,0.5,0.5,true
+presentacion:360,351,presentacion_uom:06-001-1-8x1-2,06-001-1/8X1/2,1,0.5,0.5,0.5,true
+presentacion:361,352,presentacion_uom:01-023-6x20,01-023-6X20,1,0.5,0.5,0.5,true
+presentacion:362,353,presentacion_uom:01-023-6x25,01-023-6X25,1,0.5,0.5,0.5,true
+presentacion:363,355,presentacion_uom:01-023-6x30,01-023-6X30,1,1,1,1,true
+presentacion:364,354,presentacion_uom:06-001-1-8x5-8,06-001-1/8X5/8,1,0.5,0.5,0.5,true
+presentacion:365,357,presentacion_uom:06-001-1-8x3-4,06-001-1/8X3/4,1,0.5,0.5,0.5,true
+presentacion:366,358,presentacion_uom:06-001-1-8x1,06-001-1/8X1,1,0.5,0.5,0.5,true
+presentacion:367,359,presentacion_uom:06-001-1-8x1-1-4,06-001-1/8X1-1/4,1,0.5,0.5,0.5,true
+presentacion:368,360,presentacion_uom:06-001-1-8x1-1-2,06-001-1/8X1-1/2,1,0.5,0.5,0.5,true
+presentacion:369,361,presentacion_uom:06-001-1-8x2,06-001-1/8X2,1,0.5,0.5,0.5,true
+presentacion:370,362,presentacion_uom:06-001-5-32x1-2,06-001-5/32X1/2,1,0.5,0.5,0.5,true
+presentacion:371,363,presentacion_uom:06-001-5-32x5-8,06-001-5/32X5/8,1,0.5,0.5,0.5,true
+presentacion:372,364,presentacion_uom:06-001-5-32x3-4,06-001-5/32X3/4,1,0.5,0.5,0.5,true
+presentacion:373,365,presentacion_uom:06-001-5-32x1,06-001-5/32X1,1,0.5,0.5,0.5,true
+presentacion:374,366,presentacion_uom:06-001-5-32x1-1-4,06-001-5/32X1-1/4,1,0.5,0.5,0.5,true
+presentacion:375,367,presentacion_uom:06-001-5-32x1-1-2,06-001-5/32X1-1/2,1,0.5,0.5,0.5,true
+presentacion:376,368,presentacion_uom:01-023-6x35,01-023-6X35,1,1,1,1,true
+presentacion:377,369,presentacion_uom:06-001-5-32x2,06-001-5/32X2,1,0.5,0.5,0.5,true
+presentacion:378,370,presentacion_uom:01-023-6x40,01-023-6X40,1,1,1,1,true
+presentacion:379,372,presentacion_uom:01-023-6x45,01-023-6X45,1,1,1,1,true
+presentacion:380,371,presentacion_uom:06-001-5-32x2-1-2,06-001-5/32X2-1/2,1,0.5,0.5,0.5,true
+presentacion:381,373,presentacion_uom:01-023-6x50,01-023-6X50,1,1,1,1,true
+presentacion:382,374,presentacion_uom:06-001-5-32x3,06-001-5/32X3,1,0.5,0.5,0.5,true
+presentacion:383,375,presentacion_uom:01-023-6x55,01-023-6X55,1,1,1,1,true
+presentacion:384,376,presentacion_uom:06-001-3-16x1-2,06-001-3/16X1/2,1,0.5,0.5,0.5,true
+presentacion:385,377,presentacion_uom:01-023-8x12,01-023-8X12,1,1,1,1,true
+presentacion:386,378,presentacion_uom:06-001-3-16x5-8,06-001-3/16X5/8,1,0.5,0.5,0.5,true
+presentacion:387,379,presentacion_uom:01-023-8x16,01-023-8X16,1,1,1,1,true
+presentacion:388,380,presentacion_uom:01-023-8x20,01-023-8X20,1,1,1,1,true
+presentacion:389,378,presentacion_uom:06-001-3-16x3-4,06-001-3/16X3/4,1,0.5,0.5,0.5,true
+presentacion:390,382,presentacion_uom:01-023-8x25,01-023-8X25,1,1.5,1.5,1.5,true
+presentacion:391,383,presentacion_uom:06-001-3-16x1,06-001-3/16X1,1,0.5,0.5,0.5,true
+presentacion:392,384,presentacion_uom:01-023-8x30,01-023-8X30,1,1,1,1,true
+presentacion:393,383,presentacion_uom:06-001-3-16x1,06-001-3/16X1,1,0.5,0.5,0.5,true
+presentacion:394,385,presentacion_uom:01-023-8x35,01-023-8X35,1,1.5,1.5,1.5,true
+presentacion:395,386,presentacion_uom:06-001-3-16x1-1-4,06-001-3/16X1-1/4,1,0.5,0.5,0.5,true
+presentacion:396,387,presentacion_uom:01-0238x40,01-0238X40,1,2,2,2,true
+presentacion:397,388,presentacion_uom:06-001-3-16x1-1-2,06-001-3/16X1-1/2,1,0.5,0.5,0.5,true
+presentacion:398,389,presentacion_uom:01-023-8x45,01-023-8X45,1,2,2,2,true
+presentacion:399,390,presentacion_uom:06-001-3-16x2,06-001-3/16X2,1,0.5,0.5,0.5,true
+presentacion:400,391,presentacion_uom:01-023-8x45,01-023-8X45,1,1,1,1,true
+presentacion:401,392,presentacion_uom:06-001-3-16x2-1-2,06-001-3/16X2-1/2,1,0.5,0.5,0.5,true
+presentacion:402,394,presentacion_uom:06-001-3-16x3,06-001-3/16X3,1,1,1,1,true
+presentacion:403,395,presentacion_uom:02-002-1-8,02-002-1/8,1,0.5,0.5,0.5,true
+presentacion:404,393,presentacion_uom:02-020-6,02-020-6,1,0.5,0.5,0.5,true
+presentacion:405,397,presentacion_uom:02-002-5-32,02-002-5/32,1,0.5,0.5,0.5,true
+presentacion:406,398,presentacion_uom:02-020-8,02-020-8,1,0.5,0.5,0.5,true
+presentacion:407,399,presentacion_uom:02-002-3-16,02-002-3/16,1,0.5,0.5,0.5,true
+presentacion:408,400,presentacion_uom:34-017-316,34-017-316,1,15,14,14,true
+presentacion:409,401,presentacion_uom:01-009-1-4x1-2,01-009-1/4X1/2,1,1,1,1,true
+presentacion:410,402,presentacion_uom:34-017-1-4,34-017-1/4,1,13.5,13,13,true
+presentacion:411,403,presentacion_uom:01-009-1-4x5-8,01-009-1/4X5/8,1,1,1,1,true
+presentacion:412,404,presentacion_uom:34-017-5-16,34-017-5/16,1,14,13,13,true
+presentacion:413,405,presentacion_uom:01-009-1-4x3-4,01-009-1/4X3/4,1,1,1,1,true
+presentacion:414,406,presentacion_uom:37-001-1-8x1,37-001-1/8X1,1,1,1,1,true
+presentacion:415,407,presentacion_uom:01-009-1-4x1,01-009-1/4X1,1,1,1,1,true
+presentacion:416,408,presentacion_uom:37-001-1-8x1-1-2,37-001-1/8X1-1/2,1,1,1,1,true
+presentacion:417,409,presentacion_uom:01-009-1-4x1-1-4,01-009-1/4X1-1/4,1,1,1,1,true
+presentacion:418,410,presentacion_uom:37-001-1-2x2,37-001-1/2X2,1,1.5,1.5,1.5,true
+presentacion:419,411,presentacion_uom:37-001-3-16x1-1-2,37-001-3/16X1-1/2,1,2.5,2.5,2.5,true
+presentacion:420,412,presentacion_uom:01-009-1-4x1-1-2,01-009-1/4X1-1/2,1,1,1,1,true
+presentacion:421,413,presentacion_uom:37-001-3-16x2,37-001-3/16X2,1,3,3,3,true
+presentacion:422,414,presentacion_uom:01-009-1-4x1-3-4,01-009-1/4X1-3/4,1,1,1,1,true
+presentacion:423,415,presentacion_uom:01-003-1-4x1-2,01-003-1/4X1/2,1,0.5,0.5,0.5,true
+presentacion:424,416,presentacion_uom:01-009-1-4x2,01-009-1/4X2,1,1.5,1.5,1.5,true
+presentacion:425,418,presentacion_uom:01-010-1-4x2-1-2,01-010-1/4X2-1/2,1,2,2,2,true
+presentacion:426,417,presentacion_uom:01-003-1-4x5-8,01-003-1/4X5/8,1,0.5,0.5,0.5,true
+presentacion:427,420,presentacion_uom:01-010-1-4x3,01-010-1/4X3,1,2,2,2,true
+presentacion:428,421,presentacion_uom:01-003-1-4x3-4,01-003-1/4X3/4,1,0.5,0.5,0.5,true
+presentacion:429,422,presentacion_uom:01-009-5-16x1-2,01-009-5/16X1/2,1,1,1,1,true
+presentacion:430,423,presentacion_uom:01-003-1-4x1,01-003-1/4X1,1,0.5,0.5,0.5,true
+presentacion:431,424,presentacion_uom:01-009-5-16x3-4,01-009-5/16X3/4,1,1,1,1,true
+presentacion:432,425,presentacion_uom:01-003-1-4x1-1-4,01-003-1/4X1-1/4,1,1,1,1,true
+presentacion:433,426,presentacion_uom:01-009-5-16x1,01-009-5/16X1,1,1,1,1,true
+presentacion:434,427,presentacion_uom:01-003-1-4x1-1-2,01-003-1/4X1-1/2,1,1,1,1,true
+presentacion:435,428,presentacion_uom:01-009-5-16x1-1-4,01-009-5/16X1-1/4,1,1,1,1,true
+presentacion:436,430,presentacion_uom:01-009-5-16x1-1-2,01-009-5/16X1-1/2,1,1.5,1.5,1.5,true
+presentacion:437,429,presentacion_uom:01-003-1-4x1-3-4,01-003-1/4X1-3/4,1,1,1,1,true
+presentacion:438,431,presentacion_uom:01-009-5-16x1-3-4,01-009-5/16X1-3/4,1,2,2,2,true
+presentacion:439,432,presentacion_uom:01-009-5-16x2,01-009-5/16X2,1,2,2,2,true
+presentacion:440,433,presentacion_uom:01-003-1-4x2,01-003-1/4X2,1,1,1,1,true
+presentacion:441,434,presentacion_uom:01-003-1-4x2-1-2,01-003-1/4X2-1/2,1,1,1,1,true
+presentacion:442,435,presentacion_uom:01-003-1-4x3,01-003-1/4X3,1,2,2,2,true
+presentacion:443,436,presentacion_uom:01-003-5-16x3-4,01-003-5/16X3/4,1,1,1,1,true
+presentacion:444,437,presentacion_uom:01-003-5-16x1,01-003-5/16X1,1,1,1,1,true
+presentacion:445,438,presentacion_uom:01-003-5-16x1-1-4,01-003-5/16X1-1/4,1,1,1,1,true
+presentacion:446,439,presentacion_uom:01-003-5-16x1-1-2,01-003-5/16X1-1/2,1,1,1,1,true
+presentacion:447,440,presentacion_uom:01-003-5-16x2,01-003-5/16X2,1,1.5,1.5,1.5,true
+presentacion:448,441,presentacion_uom:01-003-5-16x2-1-2,01-003-5/16X2-1/2,1,2,2,2,true
+presentacion:449,442,presentacion_uom:01-010-5-16x2-1-2,01-010-5/16X2-1/2,1,2.5,2.5,2.5,true
+presentacion:450,443,presentacion_uom:01-003-5-16x3,01-003-5/16X3,1,2,2,2,true
+presentacion:451,444,presentacion_uom:01-010-5-16x3,01-010-5/16X3,1,3,3,3,true
+presentacion:452,445,presentacion_uom:01-003-3-8x1,01-003-3/8X1,1,1,1,1,true
+presentacion:453,446,presentacion_uom:01-009-3-8x1-2,01-009-3/8X1/2,1,1,1,1,true
+presentacion:454,447,presentacion_uom:01-003-3-8x1-1-4,01-003-3/8X1-1/4,1,1.5,1.5,1.5,true
+presentacion:455,448,presentacion_uom:01-009-3-8x3-4,01-009-3/8X3/4,1,1,1,1,true
+presentacion:456,449,presentacion_uom:01-003-3-8x1-1-2,01-003-3/8X1-1/2,1,2,2,2,true
+presentacion:457,450,presentacion_uom:01-009-3-8x1,01-009-3/8X1,1,1,1,1,true
+presentacion:458,451,presentacion_uom:01-003-3-8x1-3-4,01-003-3/8X1-3/4,1,2,2,2,true
+presentacion:459,452,presentacion_uom:01-009-3-8x1-1-4,01-009-3/8X1-1/4,1,2,2,2,true
+presentacion:460,453,presentacion_uom:01-003-3-8x2,01-003-3/8X2,1,2,2,2,true
+presentacion:461,454,presentacion_uom:01-003-3-8x2-1-2,01-003-3/8X2-1/2,1,2.5,2.5,2.5,true
+presentacion:462,455,presentacion_uom:01-009-3-8x1-1-2,01-009-3/8X1-1/2,1,2,2,2,true
+presentacion:463,456,presentacion_uom:01-003-3-8x3,01-003-3/8X3,1,3,3,3,true
+presentacion:464,457,presentacion_uom:02-002-1-4,02-002-1/4,1,0.5,0.5,0.5,true
+presentacion:465,458,presentacion_uom:02-002-5-16,02-002-5/16,1,0.5,0.5,0.5,true
+presentacion:466,459,presentacion_uom:01-009-3-8x1-3-4,01-009-3/8X1-3/4,1,3,3,3,true
+presentacion:467,461,presentacion_uom:01-009-3-8x2,01-009-3/8X2,1,2,2,2,true
+presentacion:468,460,presentacion_uom:02-002-3-8,02-002-3/8,1,0.5,0.5,0.5,true
+presentacion:469,462,presentacion_uom:08-010-6,08-010-6,1,14,13,13,true
+presentacion:470,463,presentacion_uom:01-010-3-8x2-1-2,01-010-3/8X2-1/2,1,3,3,3,true
+presentacion:471,464,presentacion_uom:08-010-8,08-010-8,1,24,23,23,true
+presentacion:472,465,presentacion_uom:01-010-3-8x3,01-010-3/8X3,1,4.5,4.5,4.5,true
+presentacion:473,466,presentacion_uom:05-002-1-4x1,05-002-1/4X1,1,1,1,1,true
+presentacion:474,467,presentacion_uom:05-002-1-4x1-1-4,05-002-1/4X1-1/4,1,1,1,1,true
+presentacion:475,468,presentacion_uom:05-002-1-4x1-1-2,05-002-1/4X1-1/2,1,1,1,1,true
+presentacion:476,469,presentacion_uom:05-002-1-4x1-3-4,05-002-1/4X1-3/4,1,1,1,1,true
+presentacion:477,470,presentacion_uom:01-009-7-16x1,01-009-7/16X1,1,2,2,2,true
+presentacion:478,471,presentacion_uom:05-002-1-4x2,05-002-1/4X2,1,1,1,1,true
+presentacion:479,472,presentacion_uom:05-002-1-4x2-1-2,05-002-1/4X2-1/2,1,1.5,1.5,1.5,true
+presentacion:480,473,presentacion_uom:05-002-1-4x3,05-002-1/4X3,1,2,2,2,true
+presentacion:481,474,presentacion_uom:01-009-7-16x1-1-4,01-009-7/16X1-1/4,1,3,3,3,true
+presentacion:482,475,presentacion_uom:05-002-1-4x3-1-2,05-002-1/4X3-1/2,1,2,2,2,true
+presentacion:483,476,presentacion_uom:05-002-1-4x4,05-002-1/4X4,1,2,2,2,true
+presentacion:484,477,presentacion_uom:05-002-1-4x4-1-2,05-002-1/4X4-1/2,1,2,2,2,true
+presentacion:485,478,presentacion_uom:05-002-1-4x5,05-002-1/4X5,1,3.5,3.5,3.5,true
+presentacion:486,480,presentacion_uom:05-002-5-16x1,05-002-5/16X1,1,1,1,1,true
+presentacion:487,479,presentacion_uom:01-009-7-16x1-1-2,01-009-7/16X1-1/2,1,3,3,3,true
+presentacion:488,481,presentacion_uom:05-002-5-16x1-1-4,05-002-5/16X1-1/4,1,1,1,1,true
+presentacion:489,482,presentacion_uom:05-002-5-16x1-1-2,05-002-5/16X1-1/2,1,1,1,1,true
+presentacion:490,483,presentacion_uom:01-009-7-16x1-3-4,01-009-7/16X1-3/4,1,3,3,3,true
+presentacion:491,485,presentacion_uom:01-009-7-16x2,01-009-7/16X2,1,4,4,4,true
+presentacion:492,484,presentacion_uom:05-002-5-16x1-3-4,05-002-5/16X1-3/4,1,6,6,6,true
+presentacion:493,486,presentacion_uom:05-002-5-16x2,05-002-5/16X2,1,1.5,1.5,1.5,true
+presentacion:494,487,presentacion_uom:01-010-7-16x2-1-2,01-010-7/16X2-1/2,1,5,5,5,true
+presentacion:495,488,presentacion_uom:05-002-5-16x2-1-2,05-002-5/16X2-1/2,1,3,3,3,true
+presentacion:496,489,presentacion_uom:01-010-7-16x3,01-010-7/16X3,1,6,6,6,true
+presentacion:497,490,presentacion_uom:05-002-5-16x3,05-002-5/16X3,1,2,2,2,true
+presentacion:498,491,presentacion_uom:05-002-5-16x3-1-2,05-002-5/16X3-1/2,1,2,2,2,true
+presentacion:499,492,presentacion_uom:01-010-7-16x3-1-2,01-010-7/16X3-1/2,1,7,7,7,true
+presentacion:500,493,presentacion_uom:05-002-5-16x4,05-002-5/16X4,1,4,4,4,true
+presentacion:501,494,presentacion_uom:01-010-7-16x4,01-010-7/16X4,1,7,7,7,true
+presentacion:502,495,presentacion_uom:05-002-3-8x1,05-002-3/8X1,1,1,1,1,true
+presentacion:503,496,presentacion_uom:01-009-1-2x1,01-009-1/2X1,1,3,3,3,true
+presentacion:504,497,presentacion_uom:05-002-3-8x1-1-4,05-002-3/8X1-1/4,1,2,2,2,true
+presentacion:505,499,presentacion_uom:05-002-3-8x1-1-2,05-002-3/8X1-1/2,1,2,2,2,true
+presentacion:506,498,presentacion_uom:01-009-1-2x1-1-4,01-009-1/2X1-1/4,1,4,4,4,true
+presentacion:507,500,presentacion_uom:05-002-3-8x1-3-4,05-002-3/8X1-3/4,1,3,3,3,true
+presentacion:508,501,presentacion_uom:01-009-1-2x1-1-2,01-009-1/2X1-1/2,1,5,5,5,true
+presentacion:509,502,presentacion_uom:05-002-3-8x2,05-002-3/8X2,1,3.5,3.5,3.5,true
+presentacion:510,503,presentacion_uom:05-002-3-8x2-1-2,05-002-3/8X2-1/2,1,2,2,2,true
+presentacion:511,504,presentacion_uom:01-010-1-2x2,01-010-1/2X2,1,6,6,6,true
+presentacion:512,505,presentacion_uom:05-002-3-8x3,05-002-3/8X3,1,3,3,3,true
+presentacion:513,506,presentacion_uom:01-010-1-2x2-1-4,01-010-1/2X2-1/4,1,8,8,8,true
+presentacion:514,507,presentacion_uom:05-002-3-8x3-1-2,05-002-3/8X3-1/2,1,3,3,3,true
+presentacion:515,508,presentacion_uom:01-010-1-2x2-1-2,01-010-1/2X2-1/2,1,7,7,7,true
+presentacion:516,509,presentacion_uom:05-002-3-8x4,05-002-3/8X4,1,5,5,5,true
+presentacion:517,510,presentacion_uom:01-010-1-2x3,01-010-1/2X3,1,9,9,9,true
+presentacion:518,512,presentacion_uom:01-010-1-2x3-1-2,01-010-1/2X3-1/2,1,10,10,10,true
+presentacion:519,513,presentacion_uom:01-010-1-2x4,01-010-1/2X4,1,11,11,11,true
+presentacion:520,511,presentacion_uom:02-035-1-4,02-035-1/4,1,0.5,0.5,0.5,true
+presentacion:521,514,presentacion_uom:01-010-1-4x4-1-2,01-010-1/4X4-1/2,1,2,2,2,true
+presentacion:522,515,presentacion_uom:01-010-1-4x5,01-010-1/4X5,1,3,3,3,true
+presentacion:523,516,presentacion_uom:01-009-9-16x1-1-2,01-009-9/16X1-1/2,1,5,5,5,true
+presentacion:524,518,presentacion_uom:01-009-9-16x1-3-4,01-009-9/16X1-3/4,1,11,11,11,true
+presentacion:525,517,presentacion_uom:02-035-5-16,02-035-5/16,1,0.5,0.5,0.5,true
+presentacion:526,520,presentacion_uom:01-009-9-16x2,01-009-9/16X2,1,7,7,7,true
+presentacion:527,521,presentacion_uom:02-035-3-8,02-035-3/8,1,1,1,1,true
+presentacion:528,523,presentacion_uom:02-035-7-16,02-035-7/16,1,1,1,1,true
+presentacion:529,524,presentacion_uom:02-035-1-2,02-035-1/2,1,2,2,2,true
+presentacion:530,525,presentacion_uom:26-001-6x12,26-001-6X12,1,1,1,1,true
+presentacion:531,526,presentacion_uom:26-001-6x16,26-001-6X16,1,1,1,1,true
+presentacion:532,527,presentacion_uom:26-001-6x20,26-001-6X20,1,1,1,1,true
+presentacion:533,528,presentacion_uom:26-001-6x25,26-001-6X25,1,2,2,2,true
+presentacion:534,529,presentacion_uom:26-001-6x30,26-001-6X30,1,1,1,1,true
+presentacion:535,530,presentacion_uom:26-001-8x16,26-001-8X16,1,1.5,1.5,1.5,true
+presentacion:536,531,presentacion_uom:26-001-8x20,26-001-8X20,1,2,2,2,true
+presentacion:537,532,presentacion_uom:26-001-8x25,26-001-8X25,1,2,2,2,true
+presentacion:538,533,presentacion_uom:26-001-8x30,26-001-8X30,1,2,2,2,true
+presentacion:539,534,presentacion_uom:09-021-8x1-2,09-021-8X1/2,1,0.5,0.5,0.5,true
+presentacion:540,535,presentacion_uom:09-021-8x3-4,09-021-8X3/4,1,0.5,0.5,0.5,true
+presentacion:541,536,presentacion_uom:09-021-8x1,09-021-8X1,1,0.5,0.5,0.5,true
+presentacion:542,537,presentacion_uom:09-016-1-4x3-4,09-016-1/4X3/4,1,0.5,0.5,0.5,true
+presentacion:543,538,presentacion_uom:09-016-1-4x1,09-016-1/4X1,1,0.5,0.5,0.5,true
+presentacion:544,539,presentacion_uom:09-016-1-4x1-1-2,09-016-1/4X1-1/2,1,1,1,1,true
+presentacion:545,540,presentacion_uom:pieza,PIEZA,1,865,865,865,true
+presentacion:546,541,presentacion_uom:pieza,PIEZA,1,225,225,225,true
+presentacion:547,542,presentacion_uom:pieza,PIEZA,1,175,175,175,true
+presentacion:548,543,presentacion_uom:pieza,PIEZA,1,219,219,219,true
+presentacion:549,544,presentacion_uom:pieza,PIEZA,1,323,323,323,true
+presentacion:550,545,presentacion_uom:pieza,PIEZA,1,366,366,366,true
+presentacion:551,552,presentacion_uom:09-016-1-4x2,09-016-1/4X2,1,1,1,1,true
+presentacion:552,546,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:553,547,presentacion_uom:litro,LITRO,1,30,30,30,true
+presentacion:554,548,presentacion_uom:pieza,PIEZA,1,280,280,280,true
+presentacion:555,558,presentacion_uom:09-018-1-4x1,09-018-1/4X1,1,1,1,1,true
+presentacion:556,549,presentacion_uom:pieza,PIEZA,1,115,115,115,true
+presentacion:557,522,presentacion_uom:01-010-9-16x2-1-2,01-010-9/16X2-1/2,1,7,7,7,true
+presentacion:558,559,presentacion_uom:01-010-9-16x3,01-010-9/16X3,1,10,10,10,true
+presentacion:559,560,presentacion_uom:01-010-9-16x3,01-010-9/16X3,1,10,10,10,true
+presentacion:560,561,presentacion_uom:01-010-9-16x3-1-2,01-010-9/16X3-1/2,1,11,11,11,true
+presentacion:561,550,presentacion_uom:pieza,PIEZA,1,130,130,130,true
+presentacion:562,562,presentacion_uom:01-010-9-16x4,01-010-9/16X4,1,11,11,11,true
+presentacion:563,551,presentacion_uom:pieza,PIEZA,1,72,72,72,true
+presentacion:564,553,presentacion_uom:pieza,PIEZA,1,55,55,55,true
+presentacion:565,554,presentacion_uom:pieza,PIEZA,1,82,82,82,true
+presentacion:566,555,presentacion_uom:pieza,PIEZA,1,91,91,91,true
+presentacion:567,563,presentacion_uom:01-010-9-16x4-1-2,01-010-9/16X4-1/2,1,15,14,14,true
+presentacion:568,564,presentacion_uom:01-010-9-16x5,01-010-9/16X5,1,18,17,17,true
+presentacion:569,557,presentacion_uom:pieza,PIEZA,1,37,37,37,true
+presentacion:570,556,presentacion_uom:pieza,PIEZA,1,70,70,70,true
+presentacion:571,565,presentacion_uom:01-009-5-8x1-3-4,01-009-5/8X1-3/4,1,9,9,9,true
+presentacion:572,566,presentacion_uom:01-009-5-8x2,01-009-5/8X2,1,9,9,9,true
+presentacion:573,567,presentacion_uom:09-018-1-4x1-1-4,09-018-1/4X1-1/4,1,1,1,1,true
+presentacion:574,569,presentacion_uom:01-010-5-8x3,01-010-5/8X3,1,11.5,11.5,11.5,true
+presentacion:575,568,presentacion_uom:01-010-5-8x31-2,01-010-5/8X31/2,1,12,12,12,true
+presentacion:576,570,presentacion_uom:09-018-1-4x1-1-2,09-018-1/4X1-1/2,1,1,1,1,true
+presentacion:577,571,presentacion_uom:pieza,PIEZA,1,15,15,15,true
+presentacion:578,572,presentacion_uom:20-021-3-8x1-3-4,20-021-3/8X1-3/4,1,9.5,9.5,9.5,true
+presentacion:579,573,presentacion_uom:03-012-9-16,03-012-9/16,1,1,1,1,true
+presentacion:580,574,presentacion_uom:20-011-2x2,20-011-2X2,1,4,4,4,true
+presentacion:581,575,presentacion_uom:01-010-5-8x7,01-010-5/8X7,1,23,22,22,true
+presentacion:582,576,presentacion_uom:01-010-5-8x8,01-010-5/8X8,1,28,27,27,true
+presentacion:583,577,presentacion_uom:01-009-3-4x2,01-009-3/4X2,1,13,12,12,true
+presentacion:584,578,presentacion_uom:01-009-3-4x2-1-2,01-009-3/4X2-1/2,1,19,19,19,true
+presentacion:585,579,presentacion_uom:01-010-3-4x3-1-2,01-010-3/4X3-1/2,1,23,22,22,true
+presentacion:586,580,presentacion_uom:pieza,´PIEZA,1,17,16,16,true
+presentacion:587,582,presentacion_uom:pieza,PIEZA,1,21,20,20,true
+presentacion:588,581,presentacion_uom:01-010-3-4x4,01-010-3/4X4,1,25,24,24,true
+presentacion:589,583,presentacion_uom:pieza,PIEZA,1,20,19,19,true
+presentacion:590,584,presentacion_uom:01-010-3-4x4-1-2,01-010-3/4X4-1/2,1,30,30,30,true
+presentacion:591,585,presentacion_uom:pieza,PIEZA,1,25,24,24,true
+presentacion:592,586,presentacion_uom:01-010-3-4x5,01-010-3/4X5,1,31,30,30,true
+presentacion:593,587,presentacion_uom:02-008-1-4,02-008-1/4,1,0.56,0.5,0.5,true
+presentacion:594,588,presentacion_uom:01-010-3-4x5-1-2,01-010-3/4X5-1/2,1,34,33,33,true
+presentacion:595,590,presentacion_uom:01-010-3-4x6,01-010-3/4X6,1,34,33,33,true
+presentacion:596,589,presentacion_uom:02-008-1-4,02-008-1/4,1,0.5,0.5,0.5,true
+presentacion:597,591,presentacion_uom:01-010-3-4x6-1-2,01-010-3/4X6-1/2,1,35,34,34,true
+presentacion:598,593,presentacion_uom:01-010-3-4x7,01-010-3/4X7,1,42,41,41,true
+presentacion:599,592,presentacion_uom:02-008-3-8,02-008-3/8,1,1,1,1,true
+presentacion:600,595,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:601,597,presentacion_uom:pieza,PIEZA,1,1.5,1.5,1.5,true
+presentacion:602,599,presentacion_uom:pieza,PIEZA,1,2,2,2,true
+presentacion:603,598,presentacion_uom:01-010-3-4x8,01-010-3/4X8,1,47,46,46,true
+presentacion:604,600,presentacion_uom:pieza,PIEZA,1,2.5,2.5,2.5,true
+presentacion:605,601,presentacion_uom:pieza,PIEZA,1,4,4,4,true
+presentacion:606,602,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:607,603,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:608,604,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:609,605,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:610,606,presentacion_uom:pieza,PIEZA,1,2,2,2,true
+presentacion:611,607,presentacion_uom:pieza,PIEZA,1,3,3,3,true
+presentacion:612,608,presentacion_uom:pieza,PIEZA,1,4,4,4,true
+presentacion:613,609,presentacion_uom:pieza,PIEZA,1,5,5,5,true
+presentacion:614,610,presentacion_uom:pieza,PIEZA,1,1.5,1.5,1.5,true
+presentacion:615,612,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:616,613,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:617,614,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:618,615,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:619,616,presentacion_uom:03-002-9-16,03-002-9/16,1,1.5,1.5,1.5,true
+presentacion:620,594,presentacion_uom:pieza,PIEZA,1,275,275,275,true
+presentacion:621,617,presentacion_uom:03-002-5-8,03-002-5/8,1,2,2,2,true
+presentacion:622,618,presentacion_uom:03-012-1-4,03-012-1/4,1,0.5,0.5,0.5,true
+presentacion:623,619,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:624,620,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:625,619,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:626,621,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:627,622,presentacion_uom:pieza,PIEZA,1,1.5,1.5,1.5,true
+presentacion:628,623,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:629,625,presentacion_uom:pieza,PIEZA,1,14,13,13,true
+presentacion:630,624,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:631,626,presentacion_uom:pieza,PIEZA,1,20.5,20,20,true
+presentacion:632,627,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:633,628,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:634,629,presentacion_uom:pieza,PIEZA,1,23,22,22,true
+presentacion:635,630,presentacion_uom:pieza,PIEZA,1,97,98,98,true
+presentacion:636,631,presentacion_uom:pieza,PIEZA,1,43,42,42,true
+presentacion:637,632,presentacion_uom:pieza,PIEZA,1,42,41,41,true
+presentacion:638,633,presentacion_uom:tun100,TUN100,1,322,322,322,true
+presentacion:639,634,presentacion_uom:pieza,PIEZA,1,9,8,8,true
+presentacion:640,635,presentacion_uom:pieza,PIEZA,1,13.5,13,13,true
+presentacion:641,636,presentacion_uom:pieza,PIEZA,1,6.5,6,6,true
+presentacion:642,637,presentacion_uom:4140vp,4140VP,1,20,19,19,true
+presentacion:643,638,presentacion_uom:pieza,PIEZA,1,5,5,5,true
+presentacion:644,639,presentacion_uom:pieza,PIEZA,1,9,8,8,true
+presentacion:645,640,presentacion_uom:4135vp,4135VP,1,20,19,19,true
+presentacion:646,641,presentacion_uom:pieza,PIEZA,1,8,8,8,true
+presentacion:647,642,presentacion_uom:pieza,PIEZA,1,4,4,4,true
+presentacion:648,644,presentacion_uom:pieza,PIEZA,1,14,13,13,true
+presentacion:649,643,presentacion_uom:04-1812,04-1812,1,21,20,20,true
+presentacion:650,645,presentacion_uom:pieza,PIEZA,1,5.5,5,5,true
+presentacion:651,646,presentacion_uom:pieza,PIEZA,1,17,16,16,true
+presentacion:652,647,presentacion_uom:pieza,PIEZA,1,60,59,59,true
+presentacion:653,648,presentacion_uom:pieza,PIEZA,1,19,18,18,true
+presentacion:654,649,presentacion_uom:pieza,PIEZA,1,31,30,30,true
+presentacion:655,650,presentacion_uom:cat-133,CAT-133,1,20,19,19,true
+presentacion:656,651,presentacion_uom:pieza,PIEZA,1,14,13,13,true
+presentacion:657,652,presentacion_uom:pieza,PIEZA,1,20,19,19,true
+presentacion:658,653,presentacion_uom:pieza,PIEZA,1,6,5,5,true
+presentacion:659,654,presentacion_uom:pieza,PIEZA,1,27,26,26,true
+presentacion:660,655,presentacion_uom:spv50023,SPV50023,1,55,54,54,true
+presentacion:661,656,presentacion_uom:pieza,PIEZA,1,5,10,10,true
+presentacion:662,657,presentacion_uom:pieza,PIEZA,1,11,10,10,true
+presentacion:663,658,presentacion_uom:pieza,PIEZA,1,59,58,58,true
+presentacion:664,659,presentacion_uom:pieza,PIEZA,1,8,7,7,true
+presentacion:665,660,presentacion_uom:cc01s,CC01S,1,105,104,104,true
+presentacion:666,661,presentacion_uom:pieza,PIEZA,1,15,14,14,true
+presentacion:667,662,presentacion_uom:pieza,PIEZA,1,24,23,23,true
+presentacion:668,663,presentacion_uom:pieza,PIEZA,1,36,35,35,true
+presentacion:669,664,presentacion_uom:pieza,PIEZA,1,9,8,8,true
+presentacion:670,665,presentacion_uom:564-060ni,564-060NI,1,23,22,22,true
+presentacion:671,666,presentacion_uom:pieza,PIEZA,1,20,19,19,true
+presentacion:672,668,presentacion_uom:pieza,PIEZA,1,12,12,12,true
+presentacion:673,669,presentacion_uom:dcd109,DCD109,1,9,8,8,true
+presentacion:674,670,presentacion_uom:pieza,PIEZA,1,18,17,17,true
+presentacion:675,671,presentacion_uom:pieza,PIEZA,1,7,6,6,true
+presentacion:676,673,presentacion_uom:pieza,PIEZA,1,7,6,6,true
+presentacion:677,672,presentacion_uom:ba02-3b,BA02/3B,1,43,42,42,true
+presentacion:678,674,presentacion_uom:cc02s,CC02S,1,112,111,111,true
+presentacion:679,675,presentacion_uom:pieza,PIEZA,1,5.5,5,5,true
+presentacion:680,676,presentacion_uom:pieza,PIEZA,1,10,9,9,true
+presentacion:681,677,presentacion_uom:pieza,PIEZA,1,161,160,160,true
+presentacion:682,678,presentacion_uom:pieza,PIEZA,1,12.5,12,12,true
+presentacion:683,679,presentacion_uom:cc04e,CC04E,1,280,279,279,true
+presentacion:684,680,presentacion_uom:pieza,PIEZA,1,13,12,12,true
+presentacion:685,681,presentacion_uom:bp08-cnn,BP08-CNN,1,144,143,143,true
+presentacion:686,682,presentacion_uom:pieza,PIEZA,1,22,21,21,true
+presentacion:687,683,presentacion_uom:dcd-108,DCD-108,1,7,6,6,true
+presentacion:688,684,presentacion_uom:bp20-cnn,BP20-CNN,1,143,142,142,true
+presentacion:689,685,presentacion_uom:777078,777078,1,181,180,180,true
+presentacion:690,686,presentacion_uom:bp06-cen,BP06-CEN,1,114,113,113,true
+presentacion:691,687,presentacion_uom:8623,8623,1,29,28,28,true
+presentacion:692,688,presentacion_uom:pieza,PIEZA,1,79,78,78,true
+presentacion:693,689,presentacion_uom:pieza,PIEZA,1,18,17,17,true
+presentacion:694,690,presentacion_uom:pieza,PIEZA,1,67,66,66,true
+presentacion:695,691,presentacion_uom:pieza,PIEZA,1,517,516,516,true
+presentacion:696,692,presentacion_uom:bp01-m-p,BP01-M/P,1,78,77,77,true
+presentacion:697,693,presentacion_uom:001-12,001-12,1,60,59,59,true
+presentacion:698,694,presentacion_uom:ba06,BA06,1,42,41,41,true
+presentacion:699,695,presentacion_uom:pieza,PIEZA,1,62,61,61,true
+presentacion:700,697,presentacion_uom:pieza,PIEZA,1,153,153,153,true
+presentacion:701,696,presentacion_uom:pieza,PIEZA,1,853,852,852,true
+presentacion:702,696,presentacion_uom:metro,METRO,1,19,19,19,true
+presentacion:703,698,presentacion_uom:tonelada,TONELADA,1,3800,3800,3800,true
+presentacion:704,698,presentacion_uom:bulto,BULTO,1,145,85,85,false
+presentacion:705,699,presentacion_uom:tonelada,TONELADA,40,4950,4950,4950,true
+presentacion:706,699,presentacion_uom:bulto,BULTO,1,125,125,125,true
+presentacion:707,698,presentacion_uom:bulto,BULTO,1,190,190,190,true
+presentacion:708,700,presentacion_uom:pieza,PIEZA,1,2262,2262,2262,true
+presentacion:709,701,presentacion_uom:pieza,PIEZA,1,3118,3118,3118,true
+presentacion:710,702,presentacion_uom:pieza,PIEZA,1,3324,3324,3324,true
+presentacion:711,703,presentacion_uom:gondola,GONDOLA,30,17500,17500,17500,true
+presentacion:712,704,presentacion_uom:cal64,CAL64,1,34,33,33,true
+presentacion:713,705,presentacion_uom:pieza,PIEZA,1,9,9,9,true
+presentacion:714,706,presentacion_uom:pieza,PIEZA,1,10,9,9,true
+presentacion:715,708,presentacion_uom:10in-1,"10IN-1""",1,100,99,99,false
+presentacion:716,709,presentacion_uom:cvlg-c55,CVLG-C55,1,70,69,69,true
+presentacion:717,710,presentacion_uom:bp11-m-p,BP11-M/P,1,85,84,84,true
+presentacion:718,707,presentacion_uom:mx22905,MX22905,1,218,217,217,true
+presentacion:719,711,presentacion_uom:mx22904,MX22904,1,218,217,217,true
+presentacion:720,712,presentacion_uom:mx22908,MX22908,1,356,355,355,true
+presentacion:721,713,presentacion_uom:mx22908,MX22908,1,356,355,355,true
+presentacion:722,714,presentacion_uom:bpo1-3,BPO1/3,1,78,77,77,true
+presentacion:723,715,presentacion_uom:pieza,PIEZA,1,11,11,11,true
+presentacion:724,716,presentacion_uom:10in-1,10IN-1,1,100,99,99,true
+presentacion:725,717,medida:3,METROS,1,11,11,11,true
+presentacion:726,719,medida:3,METROS,1,50,49,49,true
+presentacion:727,720,presentacion_uom:rollo,ROLLO,1,5009,5008,5008,true
+presentacion:728,721,medida:3,METROS,1,11,10,10,true
+presentacion:729,722,presentacion_uom:pieza,PIEZA,1,1108,1107,1107,true
+presentacion:730,723,medida:3,METROS,1,15,14,14,true
+presentacion:731,724,presentacion_uom:pieza,PIEZA,1,1562,1561,1561,true
+presentacion:732,725,presentacion_uom:pieza,PIEZA,1,2459,2458,2458,true
+presentacion:733,726,medida:3,METROS,1,25,24,24,true
+presentacion:734,727,medida:1,KILOS,1,49,48,48,true
+presentacion:735,728,presentacion_uom:can-1020,CAN-1020,1,21,20,20,true
+presentacion:736,729,medida:3,METROS,1,11,10,10,true
+presentacion:737,730,presentacion_uom:caja,CAJA,100,1108,1107,1107,true
+presentacion:738,731,medida:3,METROS,1,16,16,16,true
+presentacion:739,732,presentacion_uom:pieza,PIEZA,1,1562,1562,1562,true
+presentacion:740,733,presentacion_uom:armex-reforzado-10x10,ARMEX REFORZADO 10X10,1,308,308,308,true
+presentacion:741,735,presentacion_uom:pieza,PIEZA,1,2200,2200,2200,true
+presentacion:742,736,medida:1,KILOS,1,104,103,103,true
+presentacion:743,737,medida:3,METROS,1,47,47,47,true
+presentacion:744,738,medida:3,METROS,1,16,16,16,true
+presentacion:745,739,presentacion_uom:pieza,PIEZA,1,1562,1562,1562,true
+presentacion:746,740,medida:3,METROS,1,34,34,34,true
+presentacion:747,741,presentacion_uom:pieza,PIEZA,1,30,29,29,true
+presentacion:748,742,medida:3,METROS,1,70,70,70,true
+presentacion:749,743,medida:1,KILOS,1,103,102,102,true
+presentacion:750,744,presentacion_uom:pieza,PIEZA,1,31,30,30,true
+presentacion:751,745,presentacion_uom:bp02-m-p,BP02 M/P,1,96,95,95,true
+presentacion:752,746,presentacion_uom:mlpf-04,MLPF-04,1,48,47,47,true
+presentacion:753,596,presentacion_uom:ton,TON,1,19500,19500,19500,false
+presentacion:754,596,presentacion_uom:pieza,PIEZA,1,155,155,155,true
+presentacion:755,594,presentacion_uom:ton,TON,84,23140,23140,23140,true
+presentacion:756,279,medida:3,METROS,1,9,8,8,true
+presentacion:757,747,presentacion_uom:caja,CAJA,1,3750,3750,3750,true
+presentacion:758,747,medida:3,METROS,1,42,42,42,true
+presentacion:759,748,presentacion_uom:caja,CAJA,100,3750,3750,3750,true
+presentacion:760,749,medida:3,METROS,1,10,9,9,true
+presentacion:761,748,medida:3,METROS,1,42,42,42,true
+presentacion:762,750,presentacion_uom:caja,CAJA,100,1035,1035,1035,true
+presentacion:763,751,presentacion_uom:caja,CAJA,1,3750,3750,3750,true
+presentacion:764,751,medida:3,METROS,1,42,42,42,true
+presentacion:765,752,medida:3,METROS,1,12,12,12,true
+presentacion:766,753,presentacion_uom:caja,CAJA,100,3750,3750,3750,true
+presentacion:767,754,presentacion_uom:pieza,PIEZA,1,993,992,992,true
+presentacion:768,753,medida:3,METROS,1,42,42,42,true
+presentacion:769,756,medida:3,METROS,1,10,9,9,true
+presentacion:770,755,presentacion_uom:caja,CAJA,100,2257,2256,2256,true
+presentacion:771,757,presentacion_uom:caja,CAJA,100,1035,1035,1035,true
+presentacion:772,755,medida:3,METROS,1,26,25,25,true
+presentacion:773,758,medida:3,METROS,1,10,9,9,true
+presentacion:774,759,presentacion_uom:caja,CAJA,100,2326,2326,2326,true
+presentacion:775,760,presentacion_uom:caja,CAJA,1,1035,1035,1035,true
+presentacion:776,759,medida:3,METROS,1,26,26,26,true
+presentacion:777,761,presentacion_uom:pieza,PIEZA,1,17,16,16,true
+presentacion:778,762,presentacion_uom:pieza,PIEZA,1,50,50,50,true
+presentacion:779,763,medida:3,METROS,1,16,15,15,true
+presentacion:780,764,presentacion_uom:caja,CAJA,1,1348,1347,1347,true
+presentacion:781,765,medida:3,METROS,1,17,16,16,true
+presentacion:782,766,presentacion_uom:caja,CAJA,1,1390,1389,1389,false
+presentacion:783,768,medida:3,METROS,1,17,17,17,true
+presentacion:784,767,presentacion_uom:caja,CAJA,1,2326,2326,2326,true
+presentacion:785,767,medida:3,METROS,1,26,26,26,true
+presentacion:786,769,presentacion_uom:caja,CAJA,1,1390,1390,1390,true
+presentacion:787,770,presentacion_uom:caja,CAJA,100,2326,2326,2326,true
+presentacion:788,770,medida:3,METROS,1,26,26,26,true
+presentacion:789,730,medida:3,METROS,1,11,10,10,true
+presentacion:790,726,presentacion_uom:caja,CAJA,100,2459,2458,2458,true
+presentacion:791,738,presentacion_uom:caja,CAJA,1,1562,1561,1561,true
+presentacion:792,731,presentacion_uom:caja,CAJA,1,1562,1561,1561,false
+presentacion:793,738,presentacion_uom:caja,CAJA,1,1390,1389,1389,false
+presentacion:794,723,presentacion_uom:caja,CAJA,100,1562,1561,1561,true
+presentacion:795,717,presentacion_uom:caja,CAJA,100,1108,1107,1107,true
+presentacion:796,721,presentacion_uom:caja,CAJA,100,1108,1107,1107,true
+presentacion:797,282,medida:3,METROS,1,17,17,17,true
+presentacion:798,765,presentacion_uom:caja,CAJA,1,1450,1450,1450,true
+presentacion:799,768,presentacion_uom:caja,CAJA,1,1450,1389,1389,true
+presentacion:800,763,presentacion_uom:caja,CAJA,1,1405,1405,1405,true
+presentacion:801,771,presentacion_uom:pieza,PIEZA,1,18,17,17,true
+presentacion:802,772,presentacion_uom:lla-24,LLA-24,1,330,329,329,true
+presentacion:803,773,presentacion_uom:16-0213,16-0213,1,121,120,120,true
+presentacion:804,774,presentacion_uom:16-0212,16-0212,1,121,120,120,true
+presentacion:805,775,presentacion_uom:pieza,PIEZA,1,1300,1299,1299,true
+presentacion:806,776,presentacion_uom:pieza,PIEZA,1,72,71,71,true
+presentacion:807,777,presentacion_uom:5880,5880,1,157.5,156.5,156.5,true
+presentacion:808,778,presentacion_uom:5880-12,5880-12,1,210,209,209,true
+presentacion:809,779,presentacion_uom:779728,779728,1,58,57,57,true
+presentacion:810,780,presentacion_uom:viaje-6-metros,VIAJE 6 METROS,1,2500,2500,2500,false
+presentacion:811,780,presentacion_uom:viaje-14-metros,VIAJE 14 METROS,14,7560,7560,7560,true
+presentacion:812,780,presentacion_uom:gondola-30-metros,GONDOLA 30 METROS,30,13500,13500,13500,true
+presentacion:813,292,presentacion_uom:medio-kilo,MEDIO KILO,0.5,30,30,30,true
+presentacion:814,757,medida:3,METROS,1,12,12,12,true
+presentacion:815,750,medida:3,METROS,1,12,11,11,true
+presentacion:816,752,presentacion_uom:caja,CAJA,1,1035,1035,1035,true
+presentacion:817,760,medida:3,METROS,1,12,12,12,true
+presentacion:818,781,presentacion_uom:bulto,BULTO,1,89,88,88,true
+presentacion:819,782,presentacion_uom:bulto,BULTO,1,190,189,189,true
+presentacion:820,736,presentacion_uom:medio-kilo,MEDIO KILO,1,52,52,52,false
+presentacion:821,783,presentacion_uom:dl10115,DL10115,1,54,53,53,true
+presentacion:822,784,presentacion_uom:ez32700,EZ32700,1,32,31,31,true
+presentacion:823,785,presentacion_uom:ez32200,EZ32200,1,30,29,29,true
+presentacion:824,786,presentacion_uom:pieza,PIEZA,1,43,42,42,true
+presentacion:825,787,presentacion_uom:4111-1,4111.1,1,4,4,4,true
+presentacion:826,788,presentacion_uom:pieza,PIEZA,1,58,57,57,true
+presentacion:827,789,presentacion_uom:pieza,PIEZA,1,80,79,79,true
+presentacion:828,790,presentacion_uom:pieza,PIEZA,1,45,44,44,true
+presentacion:829,791,presentacion_uom:pieza,PIEZA,1,65,64,64,true
+presentacion:830,792,presentacion_uom:4111-3,4111.3,1,6,5,5,true
+presentacion:831,793,presentacion_uom:gpvc-2,GPVC-2,1,33,32,32,true
+presentacion:832,794,presentacion_uom:pieza,PIEZA,1,1116,1115,1115,true
+presentacion:833,795,presentacion_uom:pieza,PIEZA,1,1275,1274,1274,true
+presentacion:834,796,presentacion_uom:pieza,PIEZA,1,1029,1028,1028,true
+presentacion:835,259,medida:3,METROS,1,9,9,9,true
+presentacion:836,797,presentacion_uom:pieza,PIEZA,1,145,144,144,true
+presentacion:837,798,presentacion_uom:pieza,PIEZA,1,49,48,48,true
+presentacion:838,799,medida:1,KILOS,1,85,84,84,true
+presentacion:839,800,medida:1,KILOS,1,86,85,85,true
+presentacion:840,801,medida:1,KILOS,1,85,84,84,true
+presentacion:841,802,presentacion_uom:gen-2s,GEN-2S,1,64,63,63,true
+presentacion:842,803,presentacion_uom:gen-2g,GEN-2G,1,74,73,73,true
+presentacion:843,804,presentacion_uom:pieza,PIEZA,1,3,3,3,true
+presentacion:844,703,medida:3,METROS,1,600,600,600,true
+presentacion:845,805,medida:1,KILOS,1,20.5,20.5,20.5,true
+presentacion:846,806,presentacion_uom:pieza,PIEZA,1,20,20,20,true
+presentacion:847,807,presentacion_uom:pieza,PIEZA,1,28,27,27,true
+presentacion:848,808,presentacion_uom:pieza,PIEZA,1,34,33,33,true
+presentacion:849,809,presentacion_uom:pieza,PIEZA,1,47,46,46,true
+presentacion:850,810,presentacion_uom:pieza,PIEZA,1,71,70,70,true
+presentacion:851,811,presentacion_uom:pieza,PIEZA,1,159,158,158,true
+presentacion:852,813,presentacion_uom:pieza,PIEZA,1,221,220,220,true
+presentacion:853,814,presentacion_uom:pieza,PIEZA,1,40,40,40,true
+presentacion:854,815,presentacion_uom:pieza,PIEZA,1,51,50,50,true
+presentacion:855,816,presentacion_uom:pieza,PIEZA,1,23,22,22,true
+presentacion:856,817,presentacion_uom:pieza,PIEZA,1,45,44,44,true
+presentacion:857,818,presentacion_uom:pieza,PIEZA,1,29,29,29,true
+presentacion:858,819,presentacion_uom:pieza,PIEZA,1,62,61,61,true
+presentacion:859,820,presentacion_uom:pieza,PIEZA,1,886,885,885,true
+presentacion:860,821,presentacion_uom:pieza,PIEZA,1,1460,1459,1459,true
+presentacion:861,822,presentacion_uom:pieza,PIEZA,1,25,24,24,true
+presentacion:862,823,presentacion_uom:pieza,PIEZA,1,33,32,32,true
+presentacion:863,812,presentacion_uom:pieza,PIEZA,1,380,379,379,true
+presentacion:864,824,presentacion_uom:pieza,PIEZA,1,23,22,22,true
+presentacion:865,825,presentacion_uom:ton,TON,1,3900,3900,3900,true
+presentacion:866,826,presentacion_uom:pb-150,PB-150,1,130,129,129,true
+presentacion:867,827,presentacion_uom:pb-150,PB-150,1,160,159,159,true
+presentacion:868,828,presentacion_uom:ed13-10b,ED13-10B,1,52,51,51,true
+presentacion:869,829,presentacion_uom:ed13-5b,ED13-5B,1,31,30,30,true
+presentacion:870,830,presentacion_uom:ed13-3b,ED13-3B,1,22,21,21,true
+presentacion:871,831,presentacion_uom:er13-3na,ER13-3NA,1,31,30,30,true
+presentacion:872,832,presentacion_uom:er13-30na,ER13-30NA,1,493,493,493,true
+presentacion:873,833,presentacion_uom:ba07-b,BA07-B,1,40,39,39,true
+presentacion:874,834,presentacion_uom:bp07-m-p,BP07-M/P,1,97,96,96,true
+presentacion:875,835,presentacion_uom:pieza,PIEZA,1,157,156,156,true
+presentacion:876,836,presentacion_uom:pieza,PIEZA,1,41,40,40,true
+presentacion:877,837,presentacion_uom:pieza,PIEZA,1,55,54,54,true
+presentacion:878,838,presentacion_uom:pieza,PIEZA,1,196,195,195,true
+presentacion:879,839,presentacion_uom:pieza,PIEZA,1,38,37,37,true
+presentacion:880,840,presentacion_uom:pieza,PIEZA,1,40,39,39,true
+presentacion:881,841,presentacion_uom:pieza,PIEZA,1,59,58,58,true
+presentacion:882,842,presentacion_uom:pieza,PIEZA,1,35,34,34,true
+presentacion:883,843,presentacion_uom:pieza,PIEZA,1,75,74,74,true
+presentacion:884,844,presentacion_uom:pieza,PIEZA,1,207,206,206,true
+presentacion:885,845,presentacion_uom:pieza,PIEZA,1,78,77,77,true
+presentacion:886,846,presentacion_uom:pb-200,PB-200,1,158,157,157,true
+presentacion:887,847,presentacion_uom:pieza,PIEZA,1,81,80,80,true
+presentacion:888,848,presentacion_uom:bp07-cnn,BP07-CNN,1,113,112,112,true
+presentacion:889,849,presentacion_uom:pieza,PIEZA,1,46,45,45,true
+presentacion:890,850,presentacion_uom:pieza,PIEZA,1,6,5,5,true
+presentacion:891,851,medida:1,KILOS,1,103,102,102,true
+presentacion:892,852,medida:3,METROS,1,450,450,450,true
+presentacion:893,853,medida:3,METROS,1,650,650,650,true
+presentacion:894,854,presentacion_uom:pieza,PIEZA,1,1936,1935,1935,true
+presentacion:895,855,presentacion_uom:pieza,PIEZA,1,2431,2430,2430,true
+presentacion:896,856,presentacion_uom:pieza,PIEZA,1,1736,1735,1735,true
+presentacion:897,857,presentacion_uom:pieza,PIEZA,1,13,12,12,true
+presentacion:898,858,presentacion_uom:pieza,PIEZA,1,16,15,15,true
+presentacion:899,859,presentacion_uom:pieza,PIEZA,1,17,16,16,true
+presentacion:900,860,presentacion_uom:pieza,PIEZA,1,21,20,20,true
+presentacion:901,861,presentacion_uom:pieza,PIEZA,1,32,31,31,true
+presentacion:902,862,presentacion_uom:pieza,PIEZA,1,43,42,42,true
+presentacion:903,863,presentacion_uom:pieza,PIEZA,1,11.5,11.5,11.5,true
+presentacion:904,864,presentacion_uom:pieza,PIEZA,1,16,15,15,false
+presentacion:905,865,presentacion_uom:pieza,PIEZA,1,21,20,20,true
+presentacion:906,865,presentacion_uom:pieza,PIEZA,1,25,24,24,false
+presentacion:907,866,presentacion_uom:pieza,PIEZA,1,25,24,24,true
+presentacion:908,868,presentacion_uom:selo-20,SELO-20,1,25,24,24,true
+presentacion:909,869,presentacion_uom:selo-30,SELO-30,1,29,28,28,true
+presentacion:910,870,presentacion_uom:selo-50,SELO-50,1,31,30,30,true
+presentacion:911,871,presentacion_uom:ct-6,CT-6,1,150,149,149,true
+presentacion:912,872,presentacion_uom:cot-p,COT-P,1,110,109,109,true
+presentacion:913,873,presentacion_uom:ct-8p,CT-8P,1,66,65,65,true
+presentacion:914,874,presentacion_uom:ct-9p,CT-9P,1,72,71,71,true
+presentacion:915,875,presentacion_uom:ct-9gp,CT-9GP,1,83,82,82,true
+presentacion:916,876,presentacion_uom:cor-60p,COR-60P,1,191,190,190,true
+presentacion:917,877,presentacion_uom:ch-38,CH-38,1,47,46,46,true
+presentacion:918,878,presentacion_uom:ch-50,CH-50,1,73,72,72,true
+presentacion:919,879,presentacion_uom:ch-45l,CH-45L,1,60,59,59,true
+presentacion:920,880,presentacion_uom:hil-165,HIL-165,1,21,20,20,true
+presentacion:921,881,presentacion_uom:pieza,PIEZA,1,10,10,10,true
+presentacion:922,882,presentacion_uom:pieza,PIEZA,1,10,10,10,true
+presentacion:923,883,presentacion_uom:bulto,BULTO,1,115,114,114,true
+presentacion:924,884,presentacion_uom:pieza,PIEZA,1,150,149,149,true
+presentacion:925,886,presentacion_uom:pieza,PIEZA,1,150,149,149,true
+presentacion:926,885,presentacion_uom:bosch,BOSCH,1,175,174,174,true
+presentacion:927,887,presentacion_uom:pieza,PIEZA,1,150,149,149,true
+presentacion:928,888,presentacion_uom:pieza,PIEZA,1,150,149,149,true
+presentacion:929,889,presentacion_uom:pieza,PIEZA,1,170,169,169,true
+presentacion:930,890,presentacion_uom:pieza,PIEZA,1,170,169,169,true
+presentacion:931,891,presentacion_uom:pieza,PIEZA,1,170,169,169,true
+presentacion:932,892,presentacion_uom:pieza,PIEZA,1,170,169,169,true
+presentacion:933,893,presentacion_uom:pieza,PIEZA,1,170,169,169,true
+presentacion:934,894,presentacion_uom:pieza,PIEZA,1,68,67,67,true
+presentacion:935,895,presentacion_uom:pieza,PIEZA,1,133,132,132,true
+presentacion:936,896,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:937,735,medida:3,METROS,1,49,49,49,false
+presentacion:938,897,presentacion_uom:3504,3504,1,34,33,33,true
+presentacion:939,898,presentacion_uom:2783,2783,1,22,21,21,true
+presentacion:940,899,presentacion_uom:2784,2784,1,22,21,21,true
+presentacion:941,900,presentacion_uom:0859,0859,1,17,16,16,true
+presentacion:942,901,presentacion_uom:4555,4555,1,42,41,41,true
+presentacion:943,902,presentacion_uom:0085,0085,1,15,14,14,true
+presentacion:944,903,presentacion_uom:pieza,PIEZA,1,150,150,150,true
+presentacion:945,904,presentacion_uom:pieza,PIEZA,1,170,170,170,true
+presentacion:946,905,presentacion_uom:pieza,PIEZA,1,78,77,77,true
+presentacion:947,906,medida:1,KILOS,1,25,25,25,true
+presentacion:948,907,presentacion_uom:pieza,PIEZA,1,48,47,47,true
+presentacion:949,908,presentacion_uom:3553c-25,3553C.25,1,195,194,194,true
+presentacion:950,909,presentacion_uom:3553c-19,3553C.19,1,114,113,113,true
+presentacion:951,910,presentacion_uom:3553c-13,3553C.13,1,79,78,78,true
+presentacion:952,911,presentacion_uom:ba01-3,BA01/3,1,28,27,27,true
+presentacion:953,912,presentacion_uom:ba01,BA01,1,26,25,25,true
+presentacion:954,913,presentacion_uom:metros-limpia,METROS LIMPIA,1,530,530,530,true
+presentacion:955,914,presentacion_uom:pieza,PIEZA,1,73,73,73,true
+presentacion:956,915,presentacion_uom:pieza,PIEZA,1,158,158,158,true
+presentacion:957,916,presentacion_uom:pieza,PIEZA,1,37,36,36,true
+presentacion:958,917,presentacion_uom:pieza,PIEZA,1,30,29,29,true
+presentacion:959,918,presentacion_uom:ba09-b,BA09-B,1,42,41,41,true
+presentacion:960,919,presentacion_uom:ba07-3,BA07/3,1,42,41,41,true
+presentacion:961,920,presentacion_uom:pp010-kb,PP010-KB,1,64,63,63,true
+presentacion:962,921,presentacion_uom:pieza,PIEZA,1,73,73,73,true
+presentacion:963,922,presentacion_uom:mar-16,MAR-16,1,104,103,103,true
+presentacion:964,923,presentacion_uom:viaje-7-metros,VIAJE 7 METROS,7,2300,2300,2300,true
+presentacion:965,923,presentacion_uom:metro,METRO,1,330,330,330,true
+presentacion:966,924,presentacion_uom:pieza,PIEZA,1,191,190,190,true
+presentacion:967,925,presentacion_uom:coaz-1-1-2,COAZ-1-1/2,1,284,283,283,true
+presentacion:968,926,presentacion_uom:faja-sn,FAJA-SN,1,197,196,196,true
+presentacion:969,927,presentacion_uom:coaz-2,COAZ-2,1,365,364,364,true
+presentacion:970,928,presentacion_uom:faja-mn,FAJA-MN,1,209,209,209,true
+presentacion:971,929,presentacion_uom:faja-ln,FAJA-LN,1,197,196,196,true
+presentacion:972,930,presentacion_uom:faja-s,FAJA-S,1,208,208,208,true
+presentacion:973,931,presentacion_uom:faja-xl,FAJA-XL,1,186,185,185,true
+presentacion:974,932,presentacion_uom:pieza,PIEZA,1,114,113,113,true
+presentacion:975,780,presentacion_uom:viaje-de-7-metros,VIAJE DE 7 METROS,7,3780,3780,3780,true
+presentacion:976,780,presentacion_uom:metro,METRO,1,540,540,540,true
+presentacion:977,933,presentacion_uom:pieza,PIEZA,1,1888,1887,1887,true
+presentacion:978,935,presentacion_uom:hora,HORA,1,700,700,700,true
+presentacion:979,934,presentacion_uom:hora,HORA,1,1000,1000,1000,true
+presentacion:980,936,presentacion_uom:viaje-de-7-metros,VIAJE DE 7 METROS,7,2500,2500,2500,true
+presentacion:981,937,presentacion_uom:pieza,PIEZA,1,27,26,26,true
+presentacion:982,938,presentacion_uom:pieza,PIEZA,1,11,10,10,true
+presentacion:983,939,presentacion_uom:pieza,PIEZA,1,15,14,14,true
+presentacion:984,940,presentacion_uom:pieza,PIEZA,1,20,19,19,true
+presentacion:985,941,presentacion_uom:2259,2259,1,57,56,56,true
+presentacion:986,942,presentacion_uom:22201,22201,1,62,61,61,true
+presentacion:987,943,presentacion_uom:pieza,PIEZA,1,29,28,28,true
+presentacion:988,944,medida:3,METROS,1,7,6,6,true
+presentacion:989,945,presentacion_uom:pieza,PIEZA,1,565,565,565,true
+presentacion:990,946,presentacion_uom:pieza,PIEZA,1,543,542,542,true
+presentacion:991,947,presentacion_uom:cor-60p,COR-60P,1,191,190,190,true
+presentacion:992,948,presentacion_uom:bp01,BP01,1,78,77,77,true
+presentacion:993,949,presentacion_uom:ma-16,MA-16,1,104,103,103,true
+presentacion:994,950,presentacion_uom:pieza,PIEZA,1,17,17,17,true
+presentacion:995,951,presentacion_uom:pieza,PIEZA,1,49,49,49,true
+presentacion:996,936,presentacion_uom:viaje-14-metros,VIAJE 14 METROS,14,4400,4400,4400,true
+presentacion:997,952,presentacion_uom:ba02,BA02,1,39,38,38,true
+presentacion:998,953,presentacion_uom:pieza,PIEZA,1,230,229,229,true
+presentacion:999,954,presentacion_uom:11-0908,11-0908,1,28,27,27,true
+presentacion:1000,955,presentacion_uom:4004-13,4004.13,1,129,128,128,true
+presentacion:1001,956,presentacion_uom:4120,4120,1,68,67,67,true
+presentacion:1002,957,presentacion_uom:viaje,VIAJE,1,3000,3000,3000,false
+presentacion:1003,957,presentacion_uom:viaje-de-14-metros,VIAJE DE 14 METROS,14,3200,3200,3200,true
+presentacion:1004,959,presentacion_uom:pieza,PIEZA,1,867,867,867,true
+presentacion:1005,960,presentacion_uom:pieza,PIEZA,1,35,35,35,true
+presentacion:1006,961,presentacion_uom:pieza,PIEZA,1,2,2,2,true
+presentacion:1007,962,presentacion_uom:pieza,PIEZA,1,185,185,185,true
+presentacion:1008,963,presentacion_uom:pieza,PIEZA,1,234,233,233,true
+presentacion:1009,964,presentacion_uom:pieza,PIEZA,1,98,97,97,true
+presentacion:1010,965,presentacion_uom:pieza,PIEZA,1,72,71,71,true
+presentacion:1011,959,medida:3,METROS,1,100,100,100,false
+presentacion:1012,340,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:1013,339,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:1014,968,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:1015,336,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:1016,970,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:1017,971,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:1018,972,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:1019,973,presentacion_uom:pieza,PIEZA,1,0.5,0.5,0.5,true
+presentacion:1020,974,presentacion_uom:01-009-5-8x1-3-4,01-009-5/8X1-3/4,1,9,8,8,true
+presentacion:1021,975,presentacion_uom:01-010-5-8x3,01-010-5/8X3,1,14,14,14,true
+presentacion:1022,976,presentacion_uom:01-010-5-8x3-1-2,01-010-5/8X3-1/2,1,12,11,11,true
+presentacion:1023,977,presentacion_uom:01-010-5-8x4,01-010-5/8X4,1,19,19,19,true
+presentacion:1024,978,presentacion_uom:01-010-5-8x7,01-010-5/8X7,1,32,32,32,true
+presentacion:1025,979,presentacion_uom:bulto,BULTO,1,72,71,71,true
+presentacion:1026,980,presentacion_uom:bulto,BULTO,1,146,146,146,true
+presentacion:1027,981,presentacion_uom:bulto,BULTO,1,99,99,99,true
+presentacion:1028,982,presentacion_uom:bulto,BULTO,1,132,131,131,true
+presentacion:1029,983,presentacion_uom:all-p8p,ALL-P8P,1,23,22,22,true
+presentacion:1030,984,presentacion_uom:pieza,PIEZA,1,168,167,167,true
+presentacion:1031,985,presentacion_uom:pieza,PIEZA,1,99,98,98,true
+presentacion:1032,945,medida:3,METROS,1,86,85,85,true
+presentacion:1033,232,medida:3,METROS,1,20,20,20,false
+presentacion:1034,986,presentacion_uom:pieza,PIEZA,1,324,324,324,true
+presentacion:1035,987,medida:1,KILOS,1,4.23,4.23,4.23,true
+presentacion:1036,852,presentacion_uom:gondola-grava-jesus-maria,GONDOLA GRAVA JESUS MARIA,30,11000,11000,11000,true
+presentacion:1037,852,presentacion_uom:gondola-grava-ayotlan,GONDOLA GRAVA AYOTLAN,30,13000,13000,13000,true
+presentacion:1038,703,presentacion_uom:gon-tobal-arandas,GON TOBAL ARANDAS,30,17300,17300,17300,true
+presentacion:1039,853,presentacion_uom:gondola,GONDOLA,1,16000,16000,16000,true
+presentacion:1040,988,presentacion_uom:gondola,GONDOLA,30,8000,8000,8000,true
+presentacion:1041,989,presentacion_uom:pieza,PIEZA,1,346,346,346,true
+presentacion:1042,987,presentacion_uom:tonelada,TONELADA,1000,4230,4230,4230,true
+presentacion:1043,7,presentacion_uom:precio-especial-chepe,PRECIO ESPECIAL CHEPE,40,3550,3550,3550,true
+presentacion:1044,4,presentacion_uom:precio-idea,PRECIO IDEA,20,4500,4500,4500,false
+presentacion:1045,991,medida:3,METROS,1,6,5,5,true
+presentacion:1046,992,medida:3,METROS,1,7.5,7.5,7.5,true
+presentacion:1047,992,medida:3,METROS,1,7,6,6,false
+presentacion:1048,993,medida:3,METROS,1,10,9,9,false
+presentacion:1049,237,medida:3,METROS,0.5,42,42,42,true
+presentacion:1050,994,medida:1,KILOS,1,56,55,55,true
+presentacion:1051,995,medida:1,KILOS,1,56,55,55,true
+presentacion:1052,996,presentacion_uom:pieza,PIEZA,1,3,3,3,true
+presentacion:1053,997,presentacion_uom:pieza,PIEZA,1,4,4,4,true
+presentacion:1054,703,presentacion_uom:1-2-metro,1/2 METRO,1,300,300,300,false
+presentacion:1055,966,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:1056,998,presentacion_uom:faja-mx,FAJA-MX,1,209,208,208,true
+presentacion:1057,999,presentacion_uom:pieza,PIEZA,1,1380,1380,1380,true
+presentacion:1058,1000,presentacion_uom:pieza,PIEZA,1,75,75,75,true
+presentacion:1059,1001,presentacion_uom:pieza,PIEZA,1,34,33,33,true
+presentacion:1060,1002,presentacion_uom:pieza,PIEZA,1,34,33,33,true
+presentacion:1061,1003,presentacion_uom:pieza,PIEZA,1,34,33,33,true
+presentacion:1062,1004,presentacion_uom:pieza,PIEZA,1,39,38,38,true
+presentacion:1063,1005,presentacion_uom:pieza,PIEZA,1,53,52,52,true
+presentacion:1064,1006,presentacion_uom:pieza,PIEZA,1,13,12,12,true
+presentacion:1065,1007,presentacion_uom:pieza,PIEZA,1,30,29,29,true
+presentacion:1066,1008,presentacion_uom:pieza,PIEZA,1,32,31,31,true
+presentacion:1067,1008,presentacion_uom:pieza,PIEZA,1,32,31,31,false
+presentacion:1068,1009,presentacion_uom:pieza,PIEZA,1,45,44,44,true
+presentacion:1069,1010,presentacion_uom:pieza,PIEZA,1,9,9,9,true
+presentacion:1070,1011,presentacion_uom:pieza,PIEZA,1,11,11,11,true
+presentacion:1071,1012,presentacion_uom:pieza,PIEZA,1,136,135,135,true
+presentacion:1072,1013,presentacion_uom:pieza,PIEZA,1,170,169,169,true
+presentacion:1073,1014,presentacion_uom:pieza,PIEZA,1,100,100,100,true
+presentacion:1074,1014,presentacion_uom:pieza,PIEZA,1,97,96,96,false
+presentacion:1075,1015,presentacion_uom:pieza,PIEZA,1,182,181,181,true
+presentacion:1076,1016,presentacion_uom:pieza,PIEZA,1,54,53,53,true
+presentacion:1077,1017,presentacion_uom:pieza,PIEZA,2,60,59,59,true
+presentacion:1078,1018,presentacion_uom:pieza,PIEZA,1,58,57,57,true
+presentacion:1079,1019,presentacion_uom:pieza,PIEZA,1,65,64,64,true
+presentacion:1080,1020,presentacion_uom:pieza,PIEZA,1,51,50,50,true
+presentacion:1081,1021,presentacion_uom:pieza,PIEZA,1,27,27,27,true
+presentacion:1082,1022,presentacion_uom:pieza,PIEZA,1,825,824,824,true
+presentacion:1083,6,presentacion_uom:precio-especial-chepe,PRECIO ESPECIAL CHEPE,20,3550,3550,3550,true
+presentacion:1084,703,presentacion_uom:viaje-de-7-metros,VIAJE DE 7 METROS,7,4200,4200,4200,true
+presentacion:1085,1023,presentacion_uom:pieza,PIEZA,1,1665,1664,1664,true
+presentacion:1086,4,presentacion_uom:precio-carlos-camarena,PRECIO CARLOS CAMARENA,1,4300,4300,4300,false
+presentacion:1087,1024,presentacion_uom:pieza,PIEZA,1,100,100,100,true
+presentacion:1088,957,presentacion_uom:7-metros,7 METROS,7,1600,1600,1600,true
+presentacion:1089,5,presentacion_uom:precio-calero,PRECIO CALERO,1,3950,3950,3950,false
+presentacion:1090,1025,presentacion_uom:pieza,PIEZA,1,79,78,78,true
+presentacion:1091,1026,presentacion_uom:pieza,PIEZA,1,38,37,37,true
+presentacion:1092,1027,presentacion_uom:pieza,PIEZA,1,42,41,41,true
+presentacion:1093,1028,presentacion_uom:lla-11,LLA-11,1,148,147,147,true
+presentacion:1094,1029,presentacion_uom:222,222,1,93,93,93,true
+presentacion:1095,1030,presentacion_uom:79097,79097,1,37,37,37,true
+presentacion:1096,1031,presentacion_uom:pieza,PIEZA,1,0.1,0.1,0.1,true
+presentacion:1097,1032,presentacion_uom:pieza,PIEZA,1,19,18,18,true
+presentacion:1098,264,medida:1,KILOS,1,37,36,36,true
+presentacion:1099,271,presentacion_uom:pieza,PIEZA,1,7,6,6,true
+presentacion:1100,1033,medida:3,METROS,1,16,15,15,true
+presentacion:1101,1033,presentacion_uom:rollo,ROLLO,1,1570,1569,1569,true
+presentacion:1102,1034,presentacion_uom:ct-12b,CT-12B,1,215,214,214,true
+presentacion:1103,1035,presentacion_uom:ct-10c,CT-10C,1,192,191,191,true
+presentacion:1104,1036,presentacion_uom:mg-py-p,MG-PY-P,1,80,79,79,true
+presentacion:1105,1037,presentacion_uom:mg-pdp-y,MG-PDP-Y,1,57,56,56,true
+presentacion:1106,1038,presentacion_uom:mh-24p,MH-24P,1,103,102,102,true
+presentacion:1107,1039,presentacion_uom:21531,21531,1,45,44,44,true
+presentacion:1108,988,presentacion_uom:viaje-14-metros,VIAJE 14 METROS,1,3800,3800,3800,true
+presentacion:1109,988,presentacion_uom:viaje-7-metros,VIAJE 7 METROS,7,1800,1800,1800,true
+presentacion:1110,987,presentacion_uom:precio-miguel,PRECIO MIGUEL,1,4.23,4.23,4.23,true
+presentacion:1111,1040,presentacion_uom:pieza,PIEZA,1,127,126,126,true
+presentacion:1112,419,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:1113,853,presentacion_uom:precio-gond-especial-lopar,PRECIO GOND. ESPECIAL LOPAR,1,14000,14000,14000,true
+presentacion:1114,852,presentacion_uom:precio-guillermo,PRECIO GUILLERMO,1,420,420,420,true
+presentacion:1115,913,presentacion_uom:precio-guillermo,PRECIO GUILLERMO,1,500,500,500,true
+presentacion:1116,1041,presentacion_uom:pieza,PIEZA,1,228,227,227,true
+presentacion:1117,1042,presentacion_uom:pieza,PIEZA,1,204,205,205,true
+presentacion:1118,1043,presentacion_uom:pieza,PIEZA,1,160,159,159,true
+presentacion:1119,1044,presentacion_uom:pieza,PIEZA,1,216,215,215,true
+presentacion:1120,1046,presentacion_uom:pieza,PIEZA,1,130,129,129,true
+presentacion:1121,1047,presentacion_uom:pieza,PIEZA,1,100,99,99,true
+presentacion:1122,1048,presentacion_uom:pieza,PIEZA,1,220,220,220,true
+presentacion:1123,1049,presentacion_uom:pieza,PIEZA,1,228,227,227,true
+presentacion:1124,1050,presentacion_uom:pieza,PIEZA,1,100,100,100,true
+presentacion:1125,1051,presentacion_uom:mg-zp-5m,MG-ZP-5M,1,156,155,155,true
+presentacion:1126,1052,presentacion_uom:pieza,PIEZA,1,9,8,8,true
+presentacion:1127,1053,presentacion_uom:pieza,PIEZA,1,7,6,6,true
+presentacion:1128,284,presentacion_uom:precio-especial,PRECIO ESPECIAL,1,26.5,26.5,26.5,true
+presentacion:1129,1054,medida:1,KILOS,1,90,90,90,true
+presentacion:1130,596,presentacion_uom:precio-especial-arq-tobal,PRECIO ESPECIAL ARQ TOBAL,150,22640,22640,22640,true
+presentacion:1131,284,presentacion_uom:precio-especial,PRECIO ESPECIAL,1,24.5,24.5,24.5,false
+presentacion:1132,287,presentacion_uom:precio-arq-tobal,PRECIO ARQ TOBAL,1,24.5,24.5,24.5,true
+presentacion:1133,1055,medida:1,KILOS,1,48,48,48,true
+presentacion:1134,1056,medida:3,METROS,1,3300,2200,2200,false
+presentacion:1135,1056,presentacion_uom:viaje-7-metros,VIAJE 7 METROS,1,2400,2400,2400,false
+presentacion:1136,1056,presentacion_uom:7-metros-chamy,7 METROS CHAMY,7,2200,2200,2200,false
+presentacion:1137,913,presentacion_uom:viaje-7-metros-p-especial,VIAJE 7 METROS P ESPECIAL,7,3200,3200,3200,false
+presentacion:1138,1057,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:1139,1058,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:1140,1059,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:1141,1060,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:1142,1061,presentacion_uom:pieza1,PIEZA1,1,1.5,1.5,1.5,true
+presentacion:1143,1063,presentacion_uom:pieza,PIEZA,1,29,28,28,true
+presentacion:1144,1064,presentacion_uom:pieza,PIEZA,1,12,11,11,true
+presentacion:1145,1065,presentacion_uom:pieza,PIEZA,1,12,11,11,true
+presentacion:1146,1066,presentacion_uom:pieza,PIEZA,1,12,11,11,true
+presentacion:1147,1067,presentacion_uom:pieza,PIEZA,1,12,11,11,true
+presentacion:1148,1069,presentacion_uom:pieza,PIEZA,1,25,24,24,true
+presentacion:1149,1070,presentacion_uom:pieza,PIEZA,1,29,28,28,true
+presentacion:1150,1071,presentacion_uom:pieza,PIEZA,1,33,32,32,true
+presentacion:1151,1072,presentacion_uom:pieza,PIEZA,1,37,36,36,true
+presentacion:1152,1073,presentacion_uom:pieza,PIEZA,1,42,41,41,true
+presentacion:1153,1074,presentacion_uom:pieza,PIEZA,1,50,49,49,true
+presentacion:1154,1075,presentacion_uom:pieza,PIEZA,1,58,57,57,true
+presentacion:1155,1076,presentacion_uom:pieza,PIEZA,1,67,66,66,true
+presentacion:1156,1077,presentacion_uom:pieza,PIEZA,1,10,9,9,true
+presentacion:1157,1077,presentacion_uom:pieza,PIEZA,1,3,3,3,false
+presentacion:1158,1077,presentacion_uom:pieza,PIEZA,1,3,3,3,false
+presentacion:1159,5,presentacion_uom:precio-especial,PRECIO ESPECIAL,40,4650,4650,4650,true
+presentacion:1160,5,presentacion_uom:precio-arq-tobal,PRECIO ARQ TOBAL,40,4500,4500,4500,true
+presentacion:1161,1079,presentacion_uom:pieza,PIEZA,1,105,105,105,true
+presentacion:1162,6,presentacion_uom:precio-arq-tobal,PRECIO ARQ TOBAL,20,3600,3600,3600,true
+presentacion:1163,1080,presentacion_uom:pieza,PIEZA,1,40,39,39,true
+presentacion:1164,691,medida:3,METROS,1,13,13,13,true
+presentacion:1165,735,presentacion_uom:precio-especial,PRECIO ESPECIAL,1,2070,2070,2070,true
+presentacion:1166,1081,presentacion_uom:ep-30,EP-30,1,173,172,172,true
+presentacion:1167,1082,presentacion_uom:ep-26f,EP-26F,1,122,121,121,true
+presentacion:1168,1083,presentacion_uom:pieza,PIEZA,1,68,67,67,true
+presentacion:1169,1085,presentacion_uom:pieza,PIEZA,1,22,22,22,true
+presentacion:1170,1084,presentacion_uom:11866cm,11866CM,1,43,42,42,true
+presentacion:1171,1086,presentacion_uom:rn-x,RN-X,1,493,492,492,true
+presentacion:1172,1087,presentacion_uom:pieza,PIEZA,1,132,131,131,true
+presentacion:1173,1088,presentacion_uom:rn,RN,1,342,341,341,true
+presentacion:1174,1089,presentacion_uom:llss,LLSS,1,319,318,318,true
+presentacion:1175,1090,presentacion_uom:cp-14x,CP-14X,1,365,364,364,true
+presentacion:1176,1091,presentacion_uom:cp-24x,CP-24X,1,609,608,608,true
+presentacion:1177,1092,presentacion_uom:cp-30x,CP-30X,1,841,840,840,true
+presentacion:1178,1093,presentacion_uom:pieza,PIEZA,1,140,139,139,true
+presentacion:1179,1094,presentacion_uom:pieza,PIEZA,1,180,179,179,true
+presentacion:1180,1095,presentacion_uom:pieza,PIEZA,1,32,31,31,true
+presentacion:1181,1096,presentacion_uom:pieza,PIEZA,1,11,11,11,true
+presentacion:1182,1097,presentacion_uom:pieza,PIEZA,1,46,45,45,true
+presentacion:1183,1098,presentacion_uom:pieza,PIEZA,1,215,214,214,true
+presentacion:1184,1099,presentacion_uom:pieza,PIEZA,1,56,55,55,true
+presentacion:1185,957,medida:3,METROS,1,230,230,230,true
+presentacion:1186,1056,presentacion_uom:metros-chamy,METROS CHAMY,1,315,315,315,false
+presentacion:1187,633,presentacion_uom:metro,METRO,0.5,54,54,54,true
+presentacion:1188,1101,presentacion_uom:len-2000n,LEN-2000N,1,29,28,28,true
+presentacion:1189,1102,presentacion_uom:mas-b,MAS-B,1,4,4,4,true
+presentacion:1190,1103,presentacion_uom:pieza,PIEZA,1,10,9,9,true
+presentacion:1191,7,presentacion_uom:precio-arq-tobal,PRECIO ARQ TOBAL,40,3600,3600,3600,true
+presentacion:1192,7,presentacion_uom:precio-estribadora-deg,PRECIO ESTRIBADORA DEG,1,3300,3300,3300,false
+presentacion:1193,1056,medida:3,METROS,1,415,415,415,false
+presentacion:1194,957,presentacion_uom:gondola-tobal,GONDOLA TOBAL,30,5900,5900,5900,true
+presentacion:1195,1104,presentacion_uom:pieza,PIEZA,1,56,55,55,true
+presentacion:1196,1106,presentacion_uom:ab-24,AB-24,1,10,9,9,true
+presentacion:1197,1105,presentacion_uom:pieza,PIEZA,1,156,155,155,true
+presentacion:1198,1107,medida:1,KILOS,1,27,27,27,true
+presentacion:1199,1108,presentacion_uom:pieza,PIEZA,1,42,42,42,true
+presentacion:1200,1109,presentacion_uom:pieza,PIEZA,1,170,170,170,true
+presentacion:1201,913,presentacion_uom:gondola-tobal,GONDOLA TOBAL,14,16000,16000,16000,true
+presentacion:1202,703,presentacion_uom:gondola-tobal,GONDOLA TOBAL,30,16500,16500,16500,true
+presentacion:1203,852,presentacion_uom:gondola-tobal,GONDOLA TOBAL,30,11500,11500,11500,true
+presentacion:1204,1110,medida:3,METROS,1,4,4,4,true
+presentacion:1205,1111,medida:3,METROS,1,3,3,3,true
+presentacion:1206,1112,presentacion_uom:bct001,BCT001,1,8,8,8,true
+presentacion:1207,1113,presentacion_uom:pieza,PIEZA,1,25,25,25,true
+presentacion:1208,5,presentacion_uom:precio-chepe,PRECIO CHEPE,40,4600,4600,4600,true
+presentacion:1209,852,presentacion_uom:precio-especial-metros-tobal,PRECIO ESPECIAL METROS TOBAL,1,383,383,383,true
+presentacion:1210,596,presentacion_uom:ton,TON,150,23140,23140,23140,true
+presentacion:1211,1114,presentacion_uom:pieza,PIEZA,1,100,99,99,true
+presentacion:1212,1115,presentacion_uom:pieza,PIEZA,1,520,520,520,true
+presentacion:1213,957,presentacion_uom:14-metros-tobal-jm,14 METROS TOBAL JM,14,2740,2740,2740,true
+presentacion:1214,864,presentacion_uom:pieza,PIEZA,1,16,15,15,true
+presentacion:1215,913,presentacion_uom:metros-revuelta,METROS REVUELTA,1,480,480,480,true
+presentacion:1216,993,presentacion_uom:rollo,ROLLO,1,1225,1225,1225,true
+presentacion:1217,992,presentacion_uom:rollo,ROLLO,1,720,720,720,true
+presentacion:1218,1116,presentacion_uom:pieza,PIEZA,1,219,218,218,true
+presentacion:1219,1117,presentacion_uom:pieza,PIEZA,1,128,128,128,true
+presentacion:1220,1118,presentacion_uom:pieza,PIEZA,1,11,11,11,true
+presentacion:1221,1119,presentacion_uom:pieza,PIEZA,1,15,15,15,true
+presentacion:1222,4,presentacion_uom:precio-arq-tobal,PRECIO ARQ TOBAL,1,3500,3500,3500,false
+presentacion:1223,1120,medida:3,METROS,1,370,370,370,true
+presentacion:1224,1121,presentacion_uom:pieza,PIEZA,1,62,61,61,true
+presentacion:1225,1122,presentacion_uom:pieza,PIEZA,1,35,34,34,true
+presentacion:1226,1123,presentacion_uom:pieza,PIEZA,1,8,8,8,true
+presentacion:1227,1125,presentacion_uom:pieza,PIEZA,1,146,146,146,true
+presentacion:1228,1126,presentacion_uom:pieza,PIEZA,1,74,73,73,true
+presentacion:1229,1127,presentacion_uom:pieza,PIEZA,1,507,506,506,true
+presentacion:1230,128,presentacion_uom:pieza,PIEZA,1,45,44,44,true
+presentacion:1231,1129,presentacion_uom:ba1200,BA1200,1,16,15,15,true
+presentacion:1232,1130,presentacion_uom:ba11,BA11,1,30,29,29,true
+presentacion:1233,1131,presentacion_uom:ba18,BA18,1,30,29,29,true
+presentacion:1234,780,presentacion_uom:viaje-7mts-raul,VIAJE 7MTS RAUL,7,3000,3000,3000,true
+presentacion:1235,5,presentacion_uom:precio-raul,PRECIO RAUL,40,4600,4600,4600,true
+presentacion:1236,7,presentacion_uom:precio-raul,PRECIO RAUL,40,3700,3700,3700,true
+presentacion:1237,1132,presentacion_uom:gondola,GONDOLA,30,8500,8500,8500,true
+presentacion:1238,1133,presentacion_uom:ba09,BA09,1,44,43,43,true
+presentacion:1239,1134,presentacion_uom:pieza,PIEZA,1,78,77,77,true
+presentacion:1240,5,presentacion_uom:precio-calero,PRECIO CALERO,40,4350,4350,4350,true
+presentacion:1241,1135,presentacion_uom:gu-323,GU-323,1,122,121,121,true
+presentacion:1242,1136,presentacion_uom:gu-331,GU-331,1,41,40,40,true
+presentacion:1243,1137,presentacion_uom:barbo-b,BARBO-B,1,20,19,19,true
+presentacion:1244,1138,presentacion_uom:pieza,PIEZA,1,180,179,179,true
+presentacion:1245,1139,presentacion_uom:pieza,PIEZA,1,267,267,267,true
+presentacion:1246,1139,presentacion_uom:pieza,PIEZA,1,274,273,273,false
+presentacion:1247,1139,presentacion_uom:pieza,PIEZA,1,274,273,273,false
+presentacion:1248,1140,presentacion_uom:pieza,PIEZA,1,274,273,273,true
+presentacion:1249,923,presentacion_uom:viaje-14-metros,VIAJE 14 METROS,14,4500,4500,4500,true
+presentacion:1250,1141,presentacion_uom:tonelada,TONELADA,40,4800,4800,4800,true
+presentacion:1251,1141,presentacion_uom:bulto,BULTO,1,120,120,120,true
+presentacion:1252,1141,presentacion_uom:precio-arq-tobal,PRECIO ARQ TOBAL,40,4600,4600,4600,true
+presentacion:1253,1141,presentacion_uom:precio-calero,PRECIO CALERO,40,4550,4550,4550,true
+presentacion:1254,1141,presentacion_uom:precio-chepe,PRECIO CHEPE,40,4500,4500,4500,true
+presentacion:1255,1141,presentacion_uom:precio-especial,PRECIO ESPECIAL,40,4750,4750,4750,true
+presentacion:1256,1141,presentacion_uom:precio-raul-k,PRECIO RAUL K,40,4700,4700,4700,true
+presentacion:1257,1141,presentacion_uom:tonelada,TONELADA,40,4700,4700,4700,false
+presentacion:1258,1142,presentacion_uom:cas-ri,CAS-RI,1,103,102,102,true
+presentacion:1259,1143,presentacion_uom:tav-r,TAV-R,1,215,214,214,true
+presentacion:1260,1144,presentacion_uom:tav-i,TAV-I,1,215,214,214,true
+presentacion:1261,1145,presentacion_uom:tav-d,TAV-D,1,215,214,214,true
+presentacion:1262,1146,presentacion_uom:chs-800n-l,CHS-800N-L,1,261,260,260,true
+presentacion:1263,1147,presentacion_uom:bota,BOTA,1,806,805,805,true
+presentacion:1264,1148,presentacion_uom:gondola-tobal,GONDOLA TOBAL,30,11300,11300,11300,true
+presentacion:1265,1149,presentacion_uom:pieza,PIEZA,1,2598,2598,2598,true
+presentacion:1266,913,presentacion_uom:viaje-7-metros-limpia,VIAJE 7 METROS LIMPIA,7,3700,3700,3700,true
+presentacion:1267,913,presentacion_uom:viaje-7-metros-revuelta,VIAJE 7 METROS REVUELTA,7,3360,3360,3360,true
+presentacion:1268,913,presentacion_uom:viaje-de-14-metros-limpia,VIAJE DE 14 METROS LIMPIA,14,7420,7420,7420,true
+presentacion:1269,913,presentacion_uom:viaje-de-14-metros-revuelta,VIAJE DE 14 METROS REVUELTA,14,6720,6720,6720,true
+presentacion:1270,1150,presentacion_uom:pieza,PIEZA,1,145,144,144,true
+presentacion:1271,1151,presentacion_uom:pieza,PIEZA,1,19,18,18,true
+presentacion:1272,1152,presentacion_uom:pieza,PIEZA,1,270,269,269,true
+presentacion:1273,1153,presentacion_uom:3554g-1310,3554G.1310,1,87,86,86,true
+presentacion:1274,1154,presentacion_uom:pieza,PIEZA,1,90,89,89,true
+presentacion:1275,1155,presentacion_uom:pieza,PIEZA,1,39,38,38,true
+presentacion:1276,1156,presentacion_uom:pieza,PIEZA,1,97,96,96,true
+presentacion:1277,1157,presentacion_uom:pieza,PIEZA,1,32,31,31,true
+presentacion:1278,1158,presentacion_uom:pieza,PIEZA,1,87,86,86,true
+presentacion:1279,1159,medida:3,METROS,1,129,128,128,true
+presentacion:1280,596,presentacion_uom:precio-especial-tobal-pieza,PRECIO ESPECIAL TOBAL PIEZA,1,150,150,150,true
+presentacion:1281,1160,presentacion_uom:ba01-3,BA01/3,1,29,29,29,true
+presentacion:1282,1161,presentacion_uom:ctf-3-4x13,CTF-3/4X13,1,9,8,8,true
+presentacion:1283,1162,medida:3,METROS,1,480,480,480,true
+presentacion:1284,289,presentacion_uom:pieza,PIEZA,1,310,310,310,false
+presentacion:1285,1141,presentacion_uom:precio-especial-arq-enrique-h,PRECIO ESPECIAL ARQ. ENRIQUE H,40,4600,4600,4600,false
+presentacion:1286,1141,presentacion_uom:ton-estribadora,TON ESTRIBADORA,40,4370,4370,4370,false
+presentacion:1287,987,presentacion_uom:raul-santa-maria,RAUL SANTA MARIA,1000,3800,3800,3800,true
+presentacion:1288,1163,presentacion_uom:pieza,PIEZA,1,114,114,114,true
+presentacion:1289,1164,presentacion_uom:pieza,PIEZA,1,25,24,24,true
+presentacion:1290,273,medida:3,METROS,1,4,3,3,true
+presentacion:1291,251,medida:3,METROS,1,20,20,20,true
+presentacion:1292,269,medida:3,METROS,1,24,24,24,true
+presentacion:1293,1165,presentacion_uom:pieza,PIEZA,1,41,40,40,true
+presentacion:1294,1167,presentacion_uom:pieza,PIEZA,1,10,10,10,true
+presentacion:1295,1168,presentacion_uom:pieza,PIEZA,1,39,38,38,true
+presentacion:1296,1169,presentacion_uom:pieza,PIEZA,1,4,4,4,true
+presentacion:1297,1170,presentacion_uom:15596,15596,1,104,104,104,true
+presentacion:1298,1171,presentacion_uom:pieza,PIEZA,1,22,22,22,true
+presentacion:1299,1172,presentacion_uom:pieza,PIEZA,1,41,40,40,true
+presentacion:1300,1173,presentacion_uom:pieza,PIEZA,1,8,8,8,true
+presentacion:1301,1174,presentacion_uom:pieza,PIEZA,1,4,4,4,true
+presentacion:1302,1175,presentacion_uom:pieza,PIEZA,1,9,9,9,true
+presentacion:1303,7,presentacion_uom:precio-calero,PRECIO CALERO,40,3550,3550,3550,true
+presentacion:1304,1176,presentacion_uom:pieza,PIEZA,1,16,16,16,true
+presentacion:1305,1177,presentacion_uom:pieza,PIEZA,1,8,8,8,true
+presentacion:1306,1141,presentacion_uom:precio-miguel-guzman,PRECIO MIGUEL GUZMAN,40,4550,4550,4550,true
+presentacion:1307,8,presentacion_uom:precio-miguel-guzman,PRECIO MIGUEL GUZMAN,40,3040,3040,3040,true
+presentacion:1308,4,presentacion_uom:precio-especial-chepe,PRECIO ESPECIAL CHEPE,20,4500,4500,4500,true
+presentacion:1309,1178,presentacion_uom:gondola,GONDOLA,30,14000,14000,14000,true
+presentacion:1310,1179,presentacion_uom:pieza,PIEZA,1,342,341,341,true
+presentacion:1311,1180,presentacion_uom:gu-122p,GU-122P,1,33,32,32,true
+presentacion:1312,1181,presentacion_uom:fl-9np,FL-9NP,1,68,67,67,true
+presentacion:1313,1182,presentacion_uom:bolsa-con-5,BOLSA CON 5,5,63,63,63,true
+presentacion:1314,1183,presentacion_uom:bolsa-con-10,BOLSA CON 10,10,75,75,75,true
+presentacion:1315,1184,presentacion_uom:bolsa-con-10,BOLSA CON 10,10,80,80,80,true
+presentacion:1316,1185,presentacion_uom:bolsa-con-10,BOLSA CON 10,10,80,80,80,true
+presentacion:1317,1141,presentacion_uom:precio-santiago-de-la-torre,PRECIO SANTIAGO DE LA TORRE,40,4650,4650,4650,true
+presentacion:1318,7,presentacion_uom:precio-santiago-de-la-torre,PRECIO SANTIAGO DE LA TORRE,40,3800,3800,3800,true
+presentacion:1319,4,presentacion_uom:precio-arq-tobal,PRECIO ARQ TOBAL,20,4600,4600,4600,true
+presentacion:1320,4,presentacion_uom:precio-calero,PRECIO CALERO,20,4550,4550,4550,true
+presentacion:1321,4,presentacion_uom:precio-especial,PRECIO ESPECIAL,20,4750,4750,4750,true
+presentacion:1322,4,presentacion_uom:precio-arq-enrique-herrera,PRECIO ARQ ENRIQUE HERRERA,20,4600,4600,4600,false
+presentacion:1323,4,presentacion_uom:precio-miguel-guzman,PRECIO MIGUEL GUZMAN,20,4550,4550,4550,true
+presentacion:1324,4,presentacion_uom:precio-raul-k,PRECIO RAUL K,20,4600,4600,4600,true
+presentacion:1325,4,presentacion_uom:precio-santiago-de-la-torre,PRECIO SANTIAGO DE LA TORRE,20,4650,4650,4650,true
+presentacion:1326,4,presentacion_uom:ton-estribadora,TON ESTRIBADORA,20,4370,4370,4370,false
+presentacion:1327,1182,presentacion_uom:pieza,PIEZA,1,13,13,13,true
+presentacion:1328,1185,presentacion_uom:pieza,PIEZA,1,8,8,8,true
+presentacion:1329,1183,presentacion_uom:pieza,PIEZA,1,8,8,8,true
+presentacion:1330,1184,presentacion_uom:pieza,PIEZA,1,8,8,8,true
+presentacion:1331,1186,presentacion_uom:pieza,PIEZA,1,575,575,575,true
+presentacion:1332,733,presentacion_uom:precio-jaime,PRECIO JAIME,1,294,294,294,false
+presentacion:1333,1187,medida:3,METROS,1,430,430,430,true
+presentacion:1334,294,presentacion_uom:medio-kilo,MEDIO KILO,0.5,30,30,30,true
+presentacion:1335,297,presentacion_uom:medio-kilo,MEDIO KILO,0.5,30,30,30,true
+presentacion:1336,298,presentacion_uom:medio-kilo,MEDIO KILO,0.5,26,26,26,true
+presentacion:1337,264,presentacion_uom:medio-kilo,MEDIO KILO,0.5,19,19,19,true
+presentacion:1338,1188,presentacion_uom:222,222,1,30,30,30,true
+presentacion:1339,936,presentacion_uom:precio-jose-de-jesus,PRECIO JOSE DE JESUS,7,2000,2000,2000,true
+presentacion:1340,936,presentacion_uom:piedra-grande,PIEDRA GRANDE,1,1500,1500,1500,true
+presentacion:1341,936,presentacion_uom:medio-viaje,MEDIO VIAJE,3.5,1300,1300,1300,false
+presentacion:1342,1056,presentacion_uom:viaje-7mts-precio-queb,VIAJE 7MTS PRECIO QUEB.,7,3000,3000,3000,true
+presentacion:1343,957,presentacion_uom:gon-arandas-tobal,GON ARANDAS TOBAL,30,6400,6400,6400,true
+presentacion:1344,987,presentacion_uom:precio-raul-casa-k,PRECIO RAUL CASA K,1000,3700,3700,3700,true
+presentacion:1345,1178,medida:3,METROS,1,500,500,500,true
+presentacion:1346,1189,medida:1,KILOS,1,27,27,27,true
+presentacion:1347,269,presentacion_uom:pieza-precio-nuevo,PIEZA PRECIO NUEVO,1,126,126,126,false
+presentacion:1348,959,medida:3,METROS,0.5,145,145,145,true
+presentacion:1349,1191,presentacion_uom:bulto,BULTO,1,130,130,130,true
+presentacion:1350,1192,presentacion_uom:pieza,PIEZA,1,3.2,3.2,3.2,true
+presentacion:1351,6,presentacion_uom:prcio-calero,PRCIO CALERO,20,3550,3550,3550,true
+presentacion:1352,1193,presentacion_uom:pieza,PIEZA,1,430,430,430,true
+presentacion:1353,1193,presentacion_uom:ton,TON,53,23140,23140,23140,true
+presentacion:1354,1024,presentacion_uom:viaje,VIAJE,1,2200,2200,2200,true
+presentacion:1355,1056,medida:3,METROS,1,430,430,430,true
+presentacion:1356,1194,presentacion_uom:pieza,PIEZA,1,650,650,650,true
+presentacion:1357,594,presentacion_uom:precio-arq-tobal,PRECIO ARQ TOBAL,84,22640,22640,22640,true
+presentacion:1358,594,presentacion_uom:precio-arq-tobal,PRECIO ARQ TOBAL,84,23140,23140,23140,false
+presentacion:1359,594,presentacion_uom:pieza-tobal,PIEZA TOBAL,1,270,270,270,true
+presentacion:1360,987,presentacion_uom:precio-especial-inmobiliaria,PRECIO ESPECIAL INMOBILIARIA,1,4,4,4,true
+presentacion:1361,284,presentacion_uom:precio-felipe-guzman,PRECIO FELIPE GUZMAN,1,30,30,30,true
+presentacion:1362,1195,presentacion_uom:bulto,BULTO,1,240,240,240,true
+presentacion:1363,1196,presentacion_uom:2556,2556,1,96,95,95,true
+presentacion:1364,1197,presentacion_uom:wt-400f,WT-400F,1,68,67,67,true
+presentacion:1365,1198,presentacion_uom:wt-240f,WT-240F,1,47,46,46,true
+presentacion:1366,1199,presentacion_uom:wt-175,WT-175,1,39,38,38,true
+presentacion:1367,596,presentacion_uom:precio-samuel-alv,PRECIO SAMUEL ALV,155,21800,21800,21800,true
+presentacion:1368,594,presentacion_uom:precio-samuel-alv,PRECIO SAMUEL ALV,84,21800,21800,21800,true
+presentacion:1369,4,presentacion_uom:precio-samuel-alv,PRECIO SAMUEL ALV,20,4500,4500,4500,true
+presentacion:1370,1141,presentacion_uom:precio-samuel-alv,PRECIO SAMUEL ALV,40,4600,4600,4600,true
+presentacion:1371,1200,medida:1,KILOS,1,27,27,27,true
+presentacion:1372,1201,medida:1,KILOS,1,27,27,27,true
+presentacion:1373,1202,medida:1,KILOS,1,27,27,27,true
+presentacion:1374,287,presentacion_uom:precio-especial-samuel-alvarez,PRECIO ESPECIAL SAMUEL ALVAREZ,1,22,22,22,true
+presentacion:1375,1203,presentacion_uom:pieza,PIEZA,1,161,161,161,true
+presentacion:1376,1204,presentacion_uom:pieza,PIEZA,1,359,359,359,true
+presentacion:1377,1203,presentacion_uom:pieza,PIEZA,1,359,359,359,true
+presentacion:1378,1078,presentacion_uom:pieza,PIEZA,1,7,7,7,true
+presentacion:1379,1056,presentacion_uom:gondola-tobal,GONDOLA TOBAL,30,11300,11300,11300,true
+presentacion:1380,957,presentacion_uom:viaje-20m-tobal-jm,VIAJE 20M TOBAL JM,20,3500,3500,3500,false
+presentacion:1381,957,presentacion_uom:metros-tobal,METROS TOBAL,1,193,193,193,false
+presentacion:1382,957,presentacion_uom:metros-tobal-arandas,METROS TOBAL ARANDAS,1,213,213,213,true
+presentacion:1383,1205,presentacion_uom:pieza,PIEZA,1,11,11,11,true
+presentacion:1384,1205,presentacion_uom:bolsa-con-10,BOLSA CON 10,10,106,106,106,true
+presentacion:1385,1206,presentacion_uom:llj-140b,LLJ-140B,1,80,79,79,true
+presentacion:1386,1207,presentacion_uom:ll-jar-pb,LL-JAR-PB,1,57,56,56,true
+presentacion:1387,1208,presentacion_uom:extm-12,EXTM-12,1,41,40,40,true
+presentacion:1388,1209,presentacion_uom:pieza,PIEZA,1,191,191,191,true
+presentacion:1389,1210,presentacion_uom:pieza,PIEZA,1,675,675,675,true
+presentacion:1390,1211,medida:1,KILOS,1,27,27,27,true
+presentacion:1391,936,presentacion_uom:medio-viaje-quebrada,MEDIO VIAJE QUEBRADA,3.5,1500,1500,1500,true
+presentacion:1392,697,presentacion_uom:precio-aleva-residencial,PRECIO ALEVA RESIDENCIAL,1,170,170,170,true
+presentacion:1393,8,presentacion_uom:precio-aleva-residencial,PRECIO ALEVA RESIDENCIAL,40,3120,3120,3120,true
+presentacion:1394,7,presentacion_uom:precio-aleva-residencial,PRECIO ALEVA RESIDENCIAL,40,3640,3640,3640,true
+presentacion:1395,288,presentacion_uom:precio-aleva-residencial,PRECIO ALEVA RESIDENCIAL,1,190,190,190,true
+presentacion:1396,596,presentacion_uom:precio-aleva-residencial,PRECIO ALEVA RESIDENCIAL,150,23300,23300,23300,true
+presentacion:1397,289,presentacion_uom:precio-aleva-residencial,PRECIO ALEVA RESIDENCIAL,1,340,340,340,true
+presentacion:1398,288,presentacion_uom:precio-aleva-residencial,PRECIO ALEVA RESIDENCIAL,1,190,190,190,false
+presentacion:1399,697,presentacion_uom:precio-aleva-residencial,PRECIO ALEVA RESIDENCIAL,1,170,170,170,false
+presentacion:1400,1212,presentacion_uom:pieza,PIEZA,1,670,670,670,true
+presentacion:1401,1213,presentacion_uom:pieza,PIEZA,1,70,70,70,true
+presentacion:1402,1214,presentacion_uom:pcy-pl,PCY-PL,1,249,248,248,true
+presentacion:1403,1215,presentacion_uom:pieza,PIEZA,1,42,41,41,true
+presentacion:1404,1132,presentacion_uom:viaje-7-metros,VIAJE 7 METROS,1,2000,2000,2000,true
+presentacion:1405,284,presentacion_uom:precio-aleva-residencial,PRECIO ALEVA RESIDENCIAL,1,27,27,27,true
+presentacion:1406,1216,presentacion_uom:pieza,PIEZA,1,1270,1270,1270,true
+presentacion:1407,1217,presentacion_uom:pieza,PIEZA,1,27,27,27,true
+presentacion:1408,396,presentacion_uom:pieza,PIEZA,1,2,2,2,true
+presentacion:1409,1218,presentacion_uom:pieza,PIEZA,1,49,49,49,true
+presentacion:1410,8,presentacion_uom:precio-degollado,PRECIO DEGOLLADO,40,2780,2780,2780,true
+presentacion:1411,1219,presentacion_uom:abt-742,ABT-742,1,98,98,98,true
+presentacion:1412,1220,presentacion_uom:gu-442,GU-442,1,45,45,45,true
+presentacion:1413,1221,presentacion_uom:nm-6,NM-6,1,133,133,133,true
+presentacion:1414,1222,presentacion_uom:gu-123p,GU-123P,1,34,34,34,true
+presentacion:1415,1223,presentacion_uom:21000,21000,1,191,190,190,true
+presentacion:1416,1224,presentacion_uom:gu-343,GU-343,1,23,23,23,true
+presentacion:1417,1226,presentacion_uom:clr-sg,CLR-SG,1,11,11,11,true
+presentacion:1418,1227,presentacion_uom:cl-h,CL-H,1,17,16,16,true
+presentacion:1419,1228,presentacion_uom:cl-hr,CL-HR,1,21,20,20,true
+presentacion:1420,1229,presentacion_uom:cl-coh,CL-COH,1,18,18,18,true
+presentacion:1421,923,presentacion_uom:viaje-14-m-arandas,VIAJE 14 M ARANDAS,14,4900,4900,4900,true
+presentacion:1422,980,presentacion_uom:estuco-perdura,ESTUCO PERDURA,1,166,166,166,true
+presentacion:1423,1141,presentacion_uom:precio-ton-jose-villaruel,PRECIO TON JOSE VILLARUEL,40,4600,4600,4600,true
+presentacion:1424,8,presentacion_uom:precio-ton-jose-villaruel,PRECIO TON JOSE VILLARUEL,40,3409,3409,3409,true
+presentacion:1425,6,presentacion_uom:precio-ton-jose-villaruel,PRECIO TON JOSE VILLARUEL,20,3600,3600,3600,true
+presentacion:1426,4,presentacion_uom:precio-ton-jose-villaruel,PRECIO TON JOSE VILLARUEL,20,4500,4500,4500,true
+presentacion:1427,594,presentacion_uom:precio-jose-villaruel,PRECIO JOSE VILLARUEL,1,260,260,260,true
+presentacion:1428,283,presentacion_uom:precio-kilo-jose-villaruel,PRECIO KILO JOSE VILLARUEL,1,24,24,24,true
+presentacion:1429,596,presentacion_uom:precio-jose-villaruel,PRECIO JOSE VILLARUEL,1,145,145,145,true
+presentacion:1430,1230,presentacion_uom:pieza,PIEZA,1,148,147,147,true
+presentacion:1431,1231,presentacion_uom:pieza,PIEZA,1,72,72,72,true
+presentacion:1432,936,presentacion_uom:viaje-5-metros,VIAJE 5 METROS,5,1900,1900,1900,true
+presentacion:1433,1232,presentacion_uom:kilo-aleva,KILO ALEVA,1,21.5,21.5,21.5,true
+presentacion:1434,1233,presentacion_uom:kilo-aleva,KILO ALEVA,1,21.5,21.5,21.5,true
+presentacion:1435,1193,presentacion_uom:kilo-aleva,KILO ALEVA,1,21.5,21.5,21.5,true
+presentacion:1436,1234,presentacion_uom:pieza,PIEZA,1,640,640,640,true
+presentacion:1437,969,presentacion_uom:pieza,PIEZA,1,1,1,1,true
+presentacion:1438,7,presentacion_uom:ton-jose-villaruel,TON JOSE VILLARUEL,40,3600,3600,3600,true
+presentacion:1439,1236,presentacion_uom:pieza,PIEZA,1,108,108,108,true
+presentacion:1440,1237,presentacion_uom:pieza,PIEZA,1,40,40,40,true
+presentacion:1441,957,presentacion_uom:7m-tobal,7M TOBAL,7,1400,1400,1400,true
+presentacion:1442,1238,presentacion_uom:pieza,PIEZA,1,35,35,35,true
+presentacion:1443,1239,presentacion_uom:pieza,PIEZA,1,910,910,910,true
+presentacion:1444,1240,presentacion_uom:pieza,PIEZA,1,22,22,22,true
+presentacion:1445,1241,presentacion_uom:pieza,PIEZA,1,47,47,47,true
+presentacion:1446,1242,presentacion_uom:pieza,PIEZA,1,60,60,60,true
+presentacion:1447,1162,presentacion_uom:gondola-tobal,GONDOLA TOBAL,30,11500,11500,11500,true
+presentacion:1448,1243,presentacion_uom:precio-jose-villaruel,PRECIO JOSE VILLARUEL,1,25,25,25,true
+presentacion:1449,735,medida:3,METROS,1,60,60,60,true
+presentacion:1450,596,presentacion_uom:precio-javier-garcia-medina,PRECIO JAVIER GARCIA MEDINA,1,21000,19500,19500,true
+presentacion:1451,594,presentacion_uom:pieza-javier-garcia-medina,PIEZA JAVIER GARCIA MEDINA,1,250,250,250,true
+presentacion:1452,923,presentacion_uom:viaje-7m-arandas,VIAJE 7M ARANDAS,7,2450,2450,2450,true
+presentacion:1453,594,presentacion_uom:1-2-ton,1/2 TON,42,9925.5,9925.5,9925.5,true
+presentacion:1454,284,presentacion_uom:precio-javier-medina,PRECIO JAVIER MEDINA,1,27,27,27,true
+presentacion:1455,287,presentacion_uom:precio-javier-garcia-medina,PRECIO JAVIER GARCIA MEDINA,1,21.5,21.5,21.5,true
+presentacion:1456,1244,medida:1,KILOS,1,27,27,27,true

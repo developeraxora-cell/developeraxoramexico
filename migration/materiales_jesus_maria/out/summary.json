@@ -1,0 +1,59 @@
+{
+  "dump": "/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/concre45_crm2.sql",
+  "outDir": "/home/carlos-calderon/Escritorio/FreeLancer/developeraxoramexico/migration/materiales_jesus_maria/out",
+  "target": {
+    "module": "materiales",
+    "branchCode": "B2",
+    "branchName": "JESUS MARIA LOPAR",
+    "branchAddress": "Calle 45 x 10"
+  },
+  "sourceCounts": {
+    "abonos": 2009,
+    "abonosentradas": 33,
+    "clientes": 121,
+    "entradas": 557,
+    "listaentradas": 1168,
+    "listaventas": 5208,
+    "medidas": 3,
+    "presentaciones": 1456,
+    "productos": 1243,
+    "producto_imagenes": 508,
+    "proveedores": 33,
+    "ventas": 2805
+  },
+  "stagingCounts": {
+    "legacy_branches": 1,
+    "legacy_categories": 1,
+    "legacy_uoms": 663,
+    "legacy_suppliers": 33,
+    "legacy_products": 1243,
+    "legacy_product_uoms": 1488,
+    "legacy_credit_customers": 121,
+    "legacy_inventory_transactions": 3362,
+    "legacy_inventory_transaction_items": 6376,
+    "legacy_credit_notes": 2805,
+    "legacy_credit_payments": 2543
+  },
+  "totals": {
+    "sourceSalesTotal": 13353003.06,
+    "sourcePurchasesTotal": 10279866.16,
+    "sourceCreditSalesCount": 2805,
+    "sourceCreditSalesTotal": 13353003.06,
+    "stagedCreditPaymentsCount": 2543,
+    "stagedCreditPaymentsTotal": 11340946.23,
+    "expectedCreditBalance": 2012056.83
+  },
+  "warnings": {
+    "saleItemsSkippedMissingSale": 0,
+    "saleItemsSkippedMissingPresentation": 0,
+    "saleItemsSkippedMissingProduct": 0,
+    "saleItemsSkippedInvalidQty": 0,
+    "purchaseItemsSkippedMissingPurchase": 0,
+    "purchaseItemsSkippedMissingPresentation": 0,
+    "purchaseItemsSkippedMissingProduct": 0,
+    "purchaseItemsSkippedInvalidQty": 0,
+    "creditPaymentsSkippedNonCreditSale": 0,
+    "creditPaymentsSkippedMissingSale": 0,
+    "creditPaymentsSkippedInvalidAmount": 7
+  }
+}
