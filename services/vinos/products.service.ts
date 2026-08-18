@@ -85,6 +85,28 @@ const asOne = <T,>(value: T | T[] | null | undefined): T | null => {
   return value ?? null;
 };
 
+const isDateOnlyValue = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+const buildPurchaseHistoryTimestamp = (purchaseDate?: string | null, createdAt?: string | null) => {
+  const created = createdAt ? new Date(createdAt) : null;
+  if (!purchaseDate || !isDateOnlyValue(purchaseDate)) return createdAt ?? purchaseDate ?? '';
+
+  const [year, month, day] = purchaseDate.split('-').map(Number);
+  if (!created || Number.isNaN(created.getTime())) {
+    return new Date(year, (month || 1) - 1, day || 1).toISOString();
+  }
+
+  return new Date(
+    year,
+    (month || 1) - 1,
+    day || 1,
+    created.getHours(),
+    created.getMinutes(),
+    created.getSeconds(),
+    created.getMilliseconds(),
+  ).toISOString();
+};
+
 type ProductPurchaseSummaryRow = {
   id: string;
   purchase_date: string;
@@ -560,7 +582,7 @@ export const vinosProductsService = {
         return {
           id: `PUR-${item.id}`,
           status: 'INGRESO' as const,
-          created_at: String(purchase!.purchase_date ?? purchase!.created_at ?? ''),
+          created_at: buildPurchaseHistoryTimestamp(purchase!.purchase_date, purchase!.created_at),
           qty: qtyBase,
           unit_price: unitPrice,
           subtotal,

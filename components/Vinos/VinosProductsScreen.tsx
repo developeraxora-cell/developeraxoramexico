@@ -29,6 +29,23 @@ const PRICE_TIER_LABEL: Record<string, string> = {
   MAYOREO: 'Mayoreo',
 };
 
+const isDateOnlyValue = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+const parseLocalDateOnly = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
+};
+
+const formatHistoryDate = (value: string) => {
+  const parsed = isDateOnlyValue(value) ? parseLocalDateOnly(value) : new Date(value);
+  return parsed.toLocaleDateString('es-MX');
+};
+
+const formatHistoryTime = (value: string) => {
+  if (isDateOnlyValue(value)) return '';
+  return new Date(value).toLocaleTimeString('es-MX');
+};
+
 const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, currentUser }) => {
   const [products, setProducts] = useState<ProductWithStock[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -983,8 +1000,10 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                           return (
                             <tr key={row.id} className="hover:bg-slate-50">
                               <td className="px-4 py-3 text-xs text-slate-600">
-                                <p className="whitespace-nowrap">{new Date(row.created_at).toLocaleDateString('es-MX')}</p>
-                                <p className="whitespace-nowrap text-[10px] text-slate-400">{new Date(row.created_at).toLocaleTimeString('es-MX')}</p>
+                                <p className="whitespace-nowrap">{formatHistoryDate(row.created_at)}</p>
+                                {formatHistoryTime(row.created_at) && (
+                                  <p className="whitespace-nowrap text-[10px] text-slate-400">{formatHistoryTime(row.created_at)}</p>
+                                )}
                               </td>
                               <td className="px-4 py-3">
                                 <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black ${badgeClass}`}>
