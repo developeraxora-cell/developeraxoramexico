@@ -9,6 +9,7 @@ export interface VinosSalePdfInput {
   customerAddress?: string;
   cashierName: string;
   paymentMethod: 'EFECTIVO' | 'CREDITO' | 'TRANSFERENCIA' | 'TARJETA' | 'CORTESIA';
+  priceType?: string | null;
   walletUsed?: number;
   creditUsed?: number;
   cashReceived?: number;
@@ -79,6 +80,9 @@ const priceTierLabel = (value?: string | null): string => {
   return '';
 };
 
+const isSpecialPriceType = (value?: string | null): boolean =>
+  String(value ?? '').trim().toUpperCase() === 'ESPECIAL';
+
 export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options: GenerateVinosSaleTicketOptions = {}) => {
   const pdfDoc = await PDFDocument.create();
   const fontRegular = await pdfDoc.embedFont('Helvetica');
@@ -136,7 +140,8 @@ export const generateVinosSaleTicket = async (input: VinosSalePdfInput, options:
     };
   });
 
-  const notesLines = input.saleNotes?.trim()
+  const hideSaleNotes = isSpecialPriceType(input.priceType) || input.items.some(item => isSpecialPriceType(item.priceType));
+  const notesLines = !hideSaleNotes && input.saleNotes?.trim()
     ? wrapText(`OBS: ${input.saleNotes.trim().toUpperCase()}`, contentWidth, fontRegular, 7)
     : [];
   const customerLines = wrapText(`CLIENTE: ${(input.customerName || 'PUBLICO GENERAL').toUpperCase()}`, contentWidth, fontRegular, 7);

@@ -875,6 +875,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
         customerName: sale.customer?.name ?? 'PUBLICO GENERAL',
         cashierName: currentUser.name,
         paymentMethod: sale.payment_method,
+        priceType: sale.price_type,
         walletUsed: Number(sale.wallet_used ?? 0),
         creditUsed: Number(sale.credit_used ?? 0),
         cashReceived: Number(sale.cash_received ?? 0),
