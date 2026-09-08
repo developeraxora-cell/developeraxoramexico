@@ -19,6 +19,7 @@ export interface Brand {
 export interface Supplier {
   id: string;
   branch_id: string;
+  business_unit?: string | null;
   name: string;
   phone: string | null;
   email: string | null;
@@ -279,7 +280,7 @@ export const catalogService = {
   async listSuppliersByBranch(branchId: string, businessUnit?: string) {
     let query = supabase
       .from('suppliers')
-      .select('id, branch_id, name, phone, email, address, is_active, created_at')
+      .select('id, branch_id, business_unit, name, phone, email, address, is_active, created_at')
       .eq('branch_id', branchId)
       .eq('is_active', true);
     if (businessUnit) query = query.eq('business_unit', businessUnit);
@@ -290,6 +291,7 @@ export const catalogService = {
 
   async createSupplier(input: {
     branch_id: string;
+    business_unit?: string;
     name: string;
     phone?: string | null;
     email?: string | null;
@@ -300,17 +302,49 @@ export const catalogService = {
       .insert([
         {
           branch_id: input.branch_id,
+          business_unit: input.business_unit ?? 'materiales',
           name: input.name,
           phone: input.phone ?? null,
           email: input.email ?? null,
           address: input.address ?? null,
         },
       ])
-      .select('id, branch_id, name, phone, email, address, is_active, created_at')
+      .select('id, branch_id, business_unit, name, phone, email, address, is_active, created_at')
       .single();
 
     if (error) throw error;
     return data as Supplier;
+  },
+
+  async updateSupplier(input: {
+    id: string;
+    name?: string;
+    phone?: string | null;
+    email?: string | null;
+    address?: string | null;
+    is_active?: boolean;
+  }) {
+    const payload: Record<string, string | boolean | null> = {};
+    if (input.name !== undefined) payload.name = input.name;
+    if (input.phone !== undefined) payload.phone = input.phone;
+    if (input.email !== undefined) payload.email = input.email;
+    if (input.address !== undefined) payload.address = input.address;
+    if (input.is_active !== undefined) payload.is_active = input.is_active;
+
+    const { data, error } = await supabase
+      .from('suppliers')
+      .update(payload)
+      .eq('id', input.id)
+      .select('id, branch_id, business_unit, name, phone, email, address, is_active, created_at')
+      .single();
+
+    if (error) throw error;
+    return data as Supplier;
+  },
+
+  async deactivateSupplier(supplierId: string) {
+    await this.updateSupplier({ id: supplierId, is_active: false });
+    return true;
   },
 
   async listStockByBranch(branchId: string) {

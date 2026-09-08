@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Brush, Eye, FileDown, History, Plus, Trash2 } from 'lucide-react';
+import { Brush, Eye, FileDown, History, Pencil, Plus, Save, Trash2, Users, X } from 'lucide-react';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { Branch, User } from '../../types';
 import { supabase } from '../../services/supabaseClient';
@@ -140,6 +140,11 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   const [supplierEmail, setSupplierEmail] = useState('');
   const [supplierAddress, setSupplierAddress] = useState('');
   const [isSavingSupplier, setIsSavingSupplier] = useState(false);
+  const [isSupplierManagerOpen, setIsSupplierManagerOpen] = useState(false);
+  const [supplierEditingId, setSupplierEditingId] = useState<string | null>(null);
+  const [supplierEditName, setSupplierEditName] = useState('');
+  const [supplierDeleteTarget, setSupplierDeleteTarget] = useState<Supplier | null>(null);
+  const [supplierActionId, setSupplierActionId] = useState<string | null>(null);
   const [cartItems, setCartItems] = useState<PurchaseCartItem[]>([]);
   const [history, setHistory] = useState<PurchaseHistoryEntry[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -938,6 +943,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     try {
       const created = await catalogService.createSupplier({
         branch_id: branchId,
+        business_unit: productBusinessUnit,
         name: supplierName.trim(),
         phone: supplierPhone.trim() || null,
         email: supplierEmail.trim() || null,
@@ -956,6 +962,140 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
     } finally {
       setIsSavingSupplier(false);
       actionLockRef.current = false;
+    }
+  };
+
+  const openSupplierManager = () => {
+    if (!branchId) {
+      showFeedback('alert', 'Sucursal requerida', 'Seleccione una sucursal antes de administrar proveedores.');
+      return;
+    }
+    setSupplierEditingId(null);
+    setSupplierEditName('');
+    setIsSupplierManagerOpen(true);
+    void loadSuppliers();
+  };
+
+  const closeSupplierManager = () => {
+    if (supplierActionId) return;
+    setIsSupplierManagerOpen(false);
+    setSupplierEditingId(null);
+    setSupplierEditName('');
+  };
+
+  const startSupplierEdit = (supplier: Supplier) => {
+    setSupplierEditingId(String(supplier.id));
+    setSupplierEditName(supplier.name);
+  };
+
+  const cancelSupplierEdit = () => {
+    setSupplierEditingId(null);
+    setSupplierEditName('');
+  };
+
+  const handleSaveSupplierName = async (supplier: Supplier) => {
+    if (!branchId) {
+      showFeedback('alert', 'Sucursal requerida', 'Seleccione una sucursal antes de editar proveedores.');
+      return;
+    }
+    const nextName = supplierEditName.trim();
+    if (!nextName) {
+      showFeedback('alert', 'Nombre requerido', 'Ingrese el nombre del proveedor.');
+      return;
+    }
+    if (nextName === supplier.name) {
+      cancelSupplierEdit();
+      return;
+    }
+
+    setSupplierActionId(String(supplier.id));
+    try {
+      const updated = await catalogService.updateSupplier({
+        id: String(supplier.id),
+        name: nextName,
+      });
+      setSuppliers((prev) =>
+        prev
+          .map((item) => (String(item.id) === String(updated.id) ? updated : item))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      );
+      cancelSupplierEdit();
+      void loadHistory();
+      logAuditForModule(auditModule, {
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ACTUALIZAR',
+        entity_type: 'proveedor',
+        entity_id: String(updated.id),
+        description: `Proveedor actualizado: ${supplier.name} -> ${updated.name}`,
+        previous_data: {
+          id: supplier.id,
+          name: supplier.name,
+          business_unit: supplier.business_unit ?? productBusinessUnit,
+        },
+        new_data: {
+          id: updated.id,
+          name: updated.name,
+          business_unit: updated.business_unit ?? productBusinessUnit,
+        },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo actualizar el proveedor.';
+      showFeedback('error', 'Error', message);
+    } finally {
+      setSupplierActionId(null);
+    }
+  };
+
+  const handleRequestDeleteSupplier = (supplier: Supplier) => {
+    setSupplierDeleteTarget(supplier);
+  };
+
+  const handleDeleteSupplier = async () => {
+    if (!branchId) {
+      showFeedback('alert', 'Sucursal requerida', 'Seleccione una sucursal antes de eliminar proveedores.');
+      return;
+    }
+    if (!supplierDeleteTarget) return;
+    const target = supplierDeleteTarget;
+
+    setSupplierActionId(String(target.id));
+    try {
+      await catalogService.deactivateSupplier(String(target.id));
+      setSuppliers((prev) => prev.filter((item) => String(item.id) !== String(target.id)));
+      if (String(supplierId) === String(target.id)) setSupplierId('');
+      if (String(supplierEditingId) === String(target.id)) cancelSupplierEdit();
+      setSupplierDeleteTarget(null);
+      void loadHistory();
+      logAuditForModule(auditModule, {
+        branch_id: branchId,
+        branch_name: selectedBranch?.name ?? null,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action_type: 'ELIMINAR',
+        entity_type: 'proveedor',
+        entity_id: String(target.id),
+        description: `Proveedor eliminado: ${target.name}`,
+        previous_data: {
+          id: target.id,
+          name: target.name,
+          business_unit: target.business_unit ?? productBusinessUnit,
+          is_active: target.is_active,
+        },
+        new_data: {
+          id: target.id,
+          name: target.name,
+          business_unit: target.business_unit ?? productBusinessUnit,
+          is_active: false,
+        },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo eliminar el proveedor.';
+      showFeedback('error', 'Error', message);
+    } finally {
+      setSupplierActionId(null);
     }
   };
 
@@ -1211,6 +1351,19 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
               <span className="inline-flex items-center gap-2">
                 <Brush className="w-4 h-4" />
                 Limpiar Historial
+              </span>
+            </button>
+          )}
+          {viewMode === 'CREATE' && (
+            <button
+              type="button"
+              onClick={openSupplierManager}
+              className="px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest border border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100 disabled:opacity-50"
+              disabled={!branchId}
+            >
+              <span className="inline-flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Proveedores
               </span>
             </button>
           )}
@@ -1744,6 +1897,116 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
         </div>
       )}
 
+      {isSupplierManagerOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[75vh] overflow-hidden flex flex-col">
+            <div className="bg-slate-900 p-6 text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black uppercase tracking-tighter">Proveedores</h3>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Sucursal {selectedBranchLabel}</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeSupplierManager}
+                className="w-10 h-10 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center"
+                disabled={Boolean(supplierActionId)}
+                aria-label="Cerrar proveedores"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto space-y-3">
+              {suppliers.length === 0 ? (
+                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-8 text-center text-sm font-bold text-slate-400">
+                  No hay proveedores registrados en esta sucursal.
+                </div>
+              ) : (
+                suppliers.map((supplier) => {
+                  const isEditing = supplierEditingId === String(supplier.id);
+                  const isBusy = supplierActionId === String(supplier.id);
+
+                  return (
+                    <div
+                      key={supplier.id}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3 flex flex-col md:flex-row md:items-center gap-3"
+                    >
+                      <div className="flex-1 min-w-0">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={supplierEditName}
+                            onChange={(event) => setSupplierEditName(event.target.value)}
+                            className="w-full rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm font-black text-slate-800 outline-none focus:ring-2 focus:ring-orange-500"
+                            disabled={isBusy}
+                            autoFocus
+                          />
+                        ) : (
+                          <>
+                            <p className="truncate text-sm font-black text-slate-900">{supplier.name}</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                              {supplier.phone || supplier.email || supplier.address || 'Sin datos adicionales'}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        {isEditing ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => void handleSaveSupplierName(supplier)}
+                              className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center disabled:opacity-50"
+                              disabled={isBusy}
+                              title="Guardar nombre"
+                              aria-label="Guardar nombre"
+                            >
+                              <Save className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelSupplierEdit}
+                              className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center disabled:opacity-50"
+                              disabled={isBusy}
+                              title="Cancelar edición"
+                              aria-label="Cancelar edición"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => startSupplierEdit(supplier)}
+                              className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center disabled:opacity-50"
+                              disabled={Boolean(supplierActionId)}
+                              title="Editar nombre"
+                              aria-label="Editar nombre"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRequestDeleteSupplier(supplier)}
+                              className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 flex items-center justify-center disabled:opacity-50"
+                              disabled={Boolean(supplierActionId)}
+                              title="Eliminar proveedor"
+                              aria-label="Eliminar proveedor"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <NewProductModal
         isOpen={isNewProductOpen}
         barcode={pendingBarcode}
@@ -1813,6 +2076,20 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
           setPurchaseToDelete(null);
           setDeletePurchaseObservation('');
           setDeletePurchaseObservationError(null);
+        }}
+      />
+
+      <ConfirmModal
+        isOpen={Boolean(supplierDeleteTarget)}
+        title="Eliminar proveedor"
+        description={`Se ocultará "${supplierDeleteTarget?.name ?? 'este proveedor'}" de la lista de proveedores activos. Las compras anteriores conservarán su referencia.`}
+        confirmText="Eliminar proveedor"
+        cancelText="Cancelar"
+        isProcessing={Boolean(supplierActionId && supplierDeleteTarget && supplierActionId === String(supplierDeleteTarget.id))}
+        onConfirm={handleDeleteSupplier}
+        onCancel={() => {
+          if (supplierActionId) return;
+          setSupplierDeleteTarget(null);
         }}
       />
 
