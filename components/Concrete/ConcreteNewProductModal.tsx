@@ -208,15 +208,15 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
     if (!baseUomId) return;
     if (!purchaseUomId) setPurchaseUomId(baseUomId);
     if (Number(purchaseFactor || 0) <= 0) setPurchaseFactor('1');
+
     setSaleUoms((prev) => {
       const baseIndex = prev.findIndex((row) => String(row.uom_id) === String(baseUomId));
       if (baseIndex >= 0) {
+        const baseRow = prev[baseIndex];
+        const nextDefault = baseRow.is_default_sale || prev.every((candidate) => !candidate.is_default_sale);
+        if (baseRow.factor_to_base === 1 && baseRow.is_default_sale === nextDefault) return prev;
         return prev.map((row, index) => index === baseIndex
-          ? {
-              ...row,
-              factor_to_base: 1,
-              is_default_sale: row.is_default_sale || prev.every((candidate) => !candidate.is_default_sale),
-            }
+          ? { ...row, factor_to_base: 1, is_default_sale: nextDefault }
           : row);
       }
       return [
@@ -231,38 +231,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
         ...prev,
       ];
     });
-  }, [baseUomId, purchaseFactor, purchaseUomId, retailPrice, saleUoms.length, wholesalePrice]);
-
-  useEffect(() => {
-    const baseSaleUom = saleUoms.find((row) => String(row.uom_id) === String(baseUomId)) ?? saleUoms.find((row) => Number(row.factor_to_base) === 1);
-    if (!baseSaleUom) return;
-    const nextWholesale = String(Number(baseSaleUom.wholesale_price ?? 0));
-    const nextRetail = String(Number(baseSaleUom.retail_price ?? 0));
-    if (wholesalePrice !== nextWholesale) setWholesalePrice(nextWholesale);
-    if (retailPrice !== nextRetail) setRetailPrice(nextRetail);
-  }, [baseUomId, retailPrice, saleUoms, wholesalePrice]);
-
-  useEffect(() => {
-    setSaleUoms((prev) => {
-      let changed = false;
-      const next = prev.map((row) => {
-        const factor = Number(row.factor_to_base ?? 0);
-        const derivedWholesale = derivePriceByFactor(Number(wholesalePrice || 0), factor);
-        const derivedRetail = derivePriceByFactor(Number(retailPrice || 0), factor);
-        const updatedRow = { ...row };
-        if (!row.wholesale_price_touched && Number(row.wholesale_price ?? 0) !== derivedWholesale) {
-          updatedRow.wholesale_price = derivedWholesale;
-          changed = true;
-        }
-        if (!row.retail_price_touched && Number(row.retail_price ?? 0) !== derivedRetail) {
-          updatedRow.retail_price = derivedRetail;
-          changed = true;
-        }
-        return updatedRow;
-      });
-      return changed ? next : prev;
-    });
-  }, [retailPrice, wholesalePrice]);
+  }, [baseUomId]);
 
   const parsedAttrs = useMemo(() => {
     if (attrPairs.some((pair) => pair.key.trim() || pair.value.trim())) {
@@ -300,26 +269,26 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   };
 
   const updateSaleUom = (index: number, next: Partial<SaleUomDraft>) => {
-    setSaleUoms((prev) =>
-      prev.map((row, i) => {
-        if (i !== index) return row;
-        const merged: SaleUomDraft = { ...row, ...next };
-        const nextFactor = Number(merged.factor_to_base ?? 0);
-        if (!merged.wholesale_price_touched && next.wholesale_price === undefined) {
-          merged.wholesale_price = derivePriceByFactor(Number(wholesalePrice || 0), nextFactor);
-        }
-        if (!merged.retail_price_touched && next.retail_price === undefined) {
-          merged.retail_price = derivePriceByFactor(Number(retailPrice || 0), nextFactor);
-        }
-        if (next.wholesale_price !== undefined) {
-          merged.wholesale_price_touched = true;
-        }
-        if (next.retail_price !== undefined) {
-          merged.retail_price_touched = true;
-        }
-        return merged;
-      })
-    );
+    setSaleUoms((prev) => prev.map((row, i) => {
+      if (i !== index) return row;
+      const merged: SaleUomDraft = { ...row, ...next };
+      const nextFactor = Number(merged.factor_to_base ?? 0);
+      if (!merged.wholesale_price_touched && next.wholesale_price === undefined) {
+        merged.wholesale_price = derivePriceByFactor(Number(wholesalePrice || 0), nextFactor);
+      }
+      if (!merged.retail_price_touched && next.retail_price === undefined) {
+        merged.retail_price = derivePriceByFactor(Number(retailPrice || 0), nextFactor);
+      }
+      if (next.wholesale_price !== undefined) {
+        merged.wholesale_price_touched = true;
+        if (String(row.uom_id) === String(baseUomId)) setWholesalePrice(String(next.wholesale_price));
+      }
+      if (next.retail_price !== undefined) {
+        merged.retail_price_touched = true;
+        if (String(row.uom_id) === String(baseUomId)) setRetailPrice(String(next.retail_price));
+      }
+      return merged;
+    }));
   };
 
   const removeSaleUom = (index: number) => {
