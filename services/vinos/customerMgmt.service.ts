@@ -43,6 +43,8 @@ export interface CreditPayment {
   evidence_url: string | null;
   evidence_public_id: string | null;
   evidence_resource_type: string | null;
+  debt_before: number | null;
+  debt_after: number | null;
   created_by: string | null;
   created_at: string;
   deleted_at: string | null;
@@ -57,6 +59,46 @@ export interface CreditSaleSummary {
   pending: number;
   notes: string | null;
 }
+
+const recomputeCreditPaymentDebtSnapshots = async (saleId?: string | null) => {
+  if (!saleId || !isVinosConfigured) return;
+
+  const [{ data: sale, error: saleError }, { data: payments, error: paymentsError }] = await Promise.all([
+    supabaseVinos
+      .from('sales')
+      .select('id, total, credit_used')
+      .eq('id', saleId)
+      .single(),
+    supabaseVinos
+      .from('credit_payments')
+      .select('id, amount, created_at')
+      .eq('sale_id', saleId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true }),
+  ]);
+  if (saleError) throw saleError;
+  if (paymentsError) throw paymentsError;
+  if (!sale) return;
+
+  let runningDebt = Number(sale.credit_used ?? sale.total ?? 0);
+  const rows = (payments ?? []).slice().sort((a, b) => {
+    const aTime = new Date(a.created_at).getTime();
+    const bTime = new Date(b.created_at).getTime();
+    if (aTime !== bTime) return aTime - bTime;
+    return String(a.id).localeCompare(String(b.id));
+  });
+
+  for (const payment of rows) {
+    const debtBefore = Math.max(0, runningDebt);
+    const debtAfter = Math.max(0, debtBefore - Number(payment.amount ?? 0));
+    const { error } = await supabaseVinos
+      .from('credit_payments')
+      .update({ debt_before: debtBefore, debt_after: debtAfter })
+      .eq('id', payment.id);
+    if (error) throw error;
+    runningDebt = debtAfter;
+  }
+};
 
 export const vinosCustomerMgmtService = {
 
@@ -231,6 +273,30 @@ export const vinosCustomerMgmtService = {
     actorId?: string;
   }): Promise<void> {
     if (input.amount <= 0) throw new Error('Monto debe ser mayor a 0.');
+    let debtBefore: number | null = null;
+    let debtAfter: number | null = null;
+
+    if (input.sale_id) {
+      const [{ data: sale, error: saleError }, { data: payments, error: paymentsError }] = await Promise.all([
+        supabaseVinos
+          .from('sales')
+          .select('id, total, credit_used')
+          .eq('id', input.sale_id)
+          .single(),
+        supabaseVinos
+          .from('credit_payments')
+          .select('amount')
+          .eq('sale_id', input.sale_id)
+          .is('deleted_at', null),
+      ]);
+      if (saleError) throw saleError;
+      if (paymentsError) throw paymentsError;
+      const creditBase = Number(sale?.credit_used ?? sale?.total ?? 0);
+      const paid = (payments ?? []).reduce((sum: number, payment: { amount: number }) => sum + Number(payment.amount ?? 0), 0);
+      debtBefore = Math.max(0, creditBase - paid);
+      if (input.amount > debtBefore) throw new Error(`El abono no puede ser mayor al saldo pendiente ($${debtBefore.toFixed(2)}).`);
+      debtAfter = Math.max(0, debtBefore - input.amount);
+    }
 
     // Si método es SALDO_FAVOR descontar de wallet
     if (input.payment_method === 'SALDO_FAVOR') {
@@ -266,6 +332,8 @@ export const vinosCustomerMgmtService = {
       payment_method: input.payment_method,
       reference: input.reference ?? null,
       notes: input.notes ?? null,
+      debt_before: debtBefore,
+      debt_after: debtAfter,
       evidence_url: input.evidence_url ?? null,
       evidence_public_id: input.evidence_public_id ?? null,
       evidence_resource_type: input.evidence_resource_type ?? null,
@@ -283,8 +351,15 @@ export const vinosCustomerMgmtService = {
     evidence_resource_type?: string | null;
   }): Promise<void> {
     if (!isVinosConfigured) throw new Error('DB no configurada');
+    const { data: existing, error: readError } = await supabaseVinos
+      .from('credit_payments')
+      .select('sale_id')
+      .eq('id', id)
+      .single();
+    if (readError) throw readError;
     const { error } = await supabaseVinos.from('credit_payments').update(patch).eq('id', id);
     if (error) throw error;
+    await recomputeCreditPaymentDebtSnapshots(existing?.sale_id ?? null);
   },
 
   async addPaymentEvidences(paymentId: string, evidences: Array<{ file_url: string; file_name: string; file_size_kb?: number; cloudinary_public_id?: string; cloudinary_resource_type?: string }>): Promise<void> {
@@ -324,7 +399,7 @@ export const vinosCustomerMgmtService = {
     // Si era SALDO_FAVOR, revertir wallet
     const { data: pay } = await supabaseVinos
       .from('credit_payments')
-      .select('customer_id, amount, payment_method')
+      .select('customer_id, sale_id, amount, payment_method')
       .eq('id', id)
       .single();
     if (pay?.payment_method === 'SALDO_FAVOR') {
@@ -347,6 +422,7 @@ export const vinosCustomerMgmtService = {
     }
     const { error } = await supabaseVinos.from('credit_payments').update({ deleted_at: new Date().toISOString() }).eq('id', id);
     if (error) throw error;
+    await recomputeCreditPaymentDebtSnapshots(pay?.sale_id ?? null);
   },
 
   // ── Credit sales con balance ───────────────────────────

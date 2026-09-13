@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Search, Pencil, Trash2, X, FileText, ExternalLink, CreditCard, Wallet, Upload, Loader2, Settings, MapPin, History, FileDown, Receipt, BanknoteIcon, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, X, FileText, ExternalLink, CreditCard, Wallet, Upload, Loader2, Settings, MapPin, History, FileDown, Receipt, BanknoteIcon, FileSpreadsheet, Printer } from 'lucide-react';
 import { User, Branch } from '../../types';
 import {
   vinosCustomersService,
@@ -13,9 +13,11 @@ import {
 import { vinosDocumentUploadService, validateDocumentFile } from '../../services/vinos/documentUpload.service';
 import { vinosCustomerMgmtService, type CustomerStats, type WalletMovement, type CreditPayment, type CreditSaleSummary } from '../../services/vinos/customerMgmt.service';
 import { supabaseVinos } from '../../services/vinosClient';
+import { supabase } from '../../services/supabaseClient';
 import { generateVinosSaleTicket } from '../../services/vinos/saleTicketPdf';
 import { generateVinosStatementPdf } from '../../services/vinos/customerStatementPdf';
 import { generateVinosWalletHistoryPdf } from '../../services/vinos/walletHistoryPdf';
+import { generateVinosCreditPaymentReceipt } from '../../services/vinos/creditPaymentReceiptPdf';
 import { vinosSalesService } from '../../services/vinos/sales.service';
 import { logVinosAudit } from '../../services/audit/audit.service';
 import { formatCurrency } from '../../services/currency';
@@ -288,6 +290,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
   const [deletePaymentNote, setDeletePaymentNote] = useState('');
   const [deleteNoteTarget, setDeleteNoteTarget] = useState<CreditSaleSummary | null>(null);
   const [deleteNoteJustif, setDeleteNoteJustif] = useState('');
+  const [printingPaymentId, setPrintingPaymentId] = useState<string | null>(null);
 
   // Historial saldo
   const [walletMovements, setWalletMovements] = useState<WalletMovement[]>([]);
@@ -997,28 +1000,146 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
     } catch (e) { console.error(e); }
   };
 
+  const getPaymentCashierName = async (payment: CreditPayment) => {
+    if (!payment.created_by) return currentUser.name;
+    if (payment.created_by === currentUser.id || payment.created_by === currentUser.authUserId) return currentUser.name;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payment.created_by)) {
+      return payment.created_by;
+    }
+    const { data } = await supabase
+      .from('app_user_profiles')
+      .select('full_name, username')
+      .eq('id', payment.created_by)
+      .maybeSingle();
+    return data?.full_name || data?.username || payment.created_by;
+  };
+
+  const calculateCreditPaymentDebtSnapshot = async (saleId: string, amount: number, paymentId?: string) => {
+    const [{ data: sale, error: saleError }, { data: payments, error: paymentsError }] = await Promise.all([
+      supabaseVinos
+        .from('sales')
+        .select('id, created_at, total, credit_used')
+        .eq('id', saleId)
+        .single(),
+      supabaseVinos
+        .from('credit_payments')
+        .select('id, amount, created_at')
+        .eq('sale_id', saleId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true }),
+    ]);
+    if (saleError) throw saleError;
+    if (paymentsError) throw paymentsError;
+    if (!sale) throw new Error('No se encontró la venta vinculada al abono.');
+
+    const orderedPayments = (payments ?? []).slice().sort((a, b) => {
+      const aTime = new Date(a.created_at).getTime();
+      const bTime = new Date(b.created_at).getTime();
+      if (aTime !== bTime) return aTime - bTime;
+      return String(a.id).localeCompare(String(b.id));
+    });
+    const paymentIndex = paymentId ? orderedPayments.findIndex(row => row.id === paymentId) : -1;
+    const paidBefore = orderedPayments
+      .slice(0, paymentIndex >= 0 ? paymentIndex : orderedPayments.length)
+      .reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+    const creditBase = Number(sale.credit_used ?? sale.total ?? 0);
+    const previousDebt = Math.max(0, creditBase - paidBefore);
+    const currentDebt = Math.max(0, previousDebt - Number(amount ?? 0));
+
+    return {
+      sale,
+      previousDebt,
+      currentDebt,
+    };
+  };
+
+  const printCreditPaymentReceipt = async (payment: CreditPayment, targetWindow?: Window | null) => {
+    if (!manageTarget) return;
+    if (!payment.sale_id) throw new Error('Este abono no tiene una venta vinculada para imprimir comprobante.');
+
+    const { data: sale, error: saleError } = await supabaseVinos
+      .from('sales')
+      .select('id, created_at, total, credit_used')
+      .eq('id', payment.sale_id)
+      .single();
+    if (saleError) throw saleError;
+    if (!sale) throw new Error('No se encontró la venta vinculada al abono.');
+
+    let previousDebt = payment.debt_before == null ? null : Number(payment.debt_before);
+    let currentDebt = payment.debt_after == null ? null : Number(payment.debt_after);
+    if (previousDebt == null || currentDebt == null) {
+      const snapshot = await calculateCreditPaymentDebtSnapshot(payment.sale_id, Number(payment.amount ?? 0), payment.id);
+      previousDebt = snapshot.previousDebt;
+      currentDebt = snapshot.currentDebt;
+    }
+
+    const cashierName = await getPaymentCashierName(payment);
+    const selectedBranch = branches.find(b => b.id === selectedBranchId);
+
+    await generateVinosCreditPaymentReceipt({
+      paymentId: payment.id,
+      saleId: payment.sale_id,
+      saleCreatedAt: sale.created_at,
+      paymentCreatedAt: payment.created_at,
+      branchName: selectedBranch?.name ?? 'CASA TAHONA',
+      customerName: manageTarget.name,
+      cashierName,
+      paymentMethod: payment.payment_method,
+      reference: payment.reference,
+      notes: payment.notes,
+      saleTotal: Number(sale.total ?? 0),
+      previousDebt,
+      paymentAmount: Number(payment.amount ?? 0),
+      currentDebt,
+    }, { mode: 'print', targetWindow });
+  };
+
+  const handlePrintCreditPaymentReceipt = async (payment: CreditPayment) => {
+    const printWindow = window.open('', '_blank');
+    setPrintingPaymentId(payment.id);
+    setActionError('');
+    try {
+      await printCreditPaymentReceipt(payment, printWindow);
+    } catch (e: unknown) {
+      if (printWindow && !printWindow.closed) printWindow.close();
+      setActionError(e instanceof Error ? e.message : 'No se pudo imprimir el comprobante de abono.');
+    } finally {
+      setPrintingPaymentId(null);
+    }
+  };
+
   const doRegisterPayment = async () => {
     if (!manageTarget) return;
     const amt = Number(paymentAmount);
     if (!amt || amt <= 0) { setActionError('Monto debe ser mayor a 0.'); return; }
+    const receiptWindow = window.open('', '_blank');
     setPaymentProcessing(true);
     setActionError('');
     try {
+      if (!paymentSaleId) throw new Error('Selecciona una venta a crédito para registrar el abono.');
+      const snapshot = await calculateCreditPaymentDebtSnapshot(paymentSaleId, amt);
+      if (amt > snapshot.previousDebt) {
+        throw new Error(`El abono no puede ser mayor al saldo pendiente (${formatCurrency(snapshot.previousDebt)}).`);
+      }
+
       // Insertar payment primero
       const { data: paymentRow, error: insErr } = await supabaseVinos
         .from('credit_payments')
         .insert({
           customer_id: manageTarget.id,
-          sale_id: paymentSaleId || null,
+          sale_id: paymentSaleId,
           amount: amt,
           payment_method: paymentMethod,
           reference: paymentReference.trim() || null,
           notes: paymentNotes.trim() || null,
+          debt_before: snapshot.previousDebt,
+          debt_after: snapshot.currentDebt,
           created_by: currentUser.id,
         })
-        .select('id')
+        .select('*')
         .single();
       if (insErr || !paymentRow) throw insErr ?? new Error('No se pudo crear el abono');
+      const createdPayment = paymentRow as CreditPayment;
 
       // Si SALDO_FAVOR — descontar wallet
       if (paymentMethod === 'SALDO_FAVOR') {
@@ -1059,7 +1180,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
             cloudinary_resource_type: up.resource_type ?? 'image',
           });
         }
-        await vinosCustomerMgmtService.addPaymentEvidences(paymentRow.id, evidences);
+        await vinosCustomerMgmtService.addPaymentEvidences(createdPayment.id, evidences);
       }
 
       logVinosAudit({
@@ -1069,11 +1190,28 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
         user_name: currentUser.name,
         action_type: 'CREAR',
         entity_type: 'cliente',
-        entity_id: paymentRow.id,
+        entity_id: createdPayment.id,
         description: `Abono crédito · ${formatCurrency(amt)} · ${paymentMethod}`,
         justification: paymentNotes.trim() || null,
-        new_data: { amount: amt, method: paymentMethod, customer_id: manageTarget.id, customer_name: manageTarget.name, sale_id: paymentSaleId || null, reference: paymentReference || null },
+        new_data: {
+          amount: amt,
+          method: paymentMethod,
+          customer_id: manageTarget.id,
+          customer_name: manageTarget.name,
+          sale_id: paymentSaleId || null,
+          reference: paymentReference || null,
+          debt_before: snapshot.previousDebt,
+          debt_after: snapshot.currentDebt,
+        },
       });
+
+      try {
+        await printCreditPaymentReceipt(createdPayment, receiptWindow);
+      } catch (printErr) {
+        console.error(printErr);
+        if (receiptWindow && !receiptWindow.closed) receiptWindow.close();
+        alert('Abono registrado, pero no se pudo imprimir el comprobante. Puedes reimprimirlo desde Historial de abonos.');
+      }
 
       await refreshStats();
       const [payList, notesList] = await Promise.all([
@@ -1086,6 +1224,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       setPaymentAmount(''); setPaymentReference(''); setPaymentNotes(''); setPaymentSaleId('');
       setSubAction(null);
     } catch (e: unknown) {
+      if (receiptWindow && !receiptWindow.closed) receiptWindow.close();
       setActionError(e instanceof Error ? e.message : 'Error al registrar abono.');
     }
     finally { setPaymentProcessing(false); }
@@ -1839,6 +1978,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       onChange={e => { setSearchPayments(e.target.value); setPgPayments(1); }}
                     />
                   </div>
+                  {actionError && <p className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600">{actionError}</p>}
                   {(() => {
                     const filtered = creditPayments.filter(p => {
                       const q = searchPayments.toLowerCase().trim();
@@ -1870,6 +2010,15 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                                   <div className="flex items-center gap-1">
                                     <button onClick={() => openEvidences(p)} title="Ver evidencias" className="relative rounded-md border border-slate-200 p-1.5 text-purple-500 hover:bg-purple-50">
                                       <FileText size={13}/>
+                                    </button>
+                                    <button
+                                      onClick={() => void handlePrintCreditPaymentReceipt(p)}
+                                      disabled={!p.sale_id || printingPaymentId === p.id}
+                                      title={p.sale_id ? 'Imprimir comprobante de abono' : 'Abono sin venta vinculada'}
+                                      aria-label={p.sale_id ? 'Imprimir comprobante de abono' : 'Abono sin venta vinculada'}
+                                      className="rounded-md border border-slate-200 p-1.5 text-green-600 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                      {printingPaymentId === p.id ? <Loader2 size={13} className="animate-spin"/> : <Printer size={13}/>}
                                     </button>
                                     <button onClick={() => setEditPaymentTarget(p)} title="Editar abono" className="rounded-md border border-slate-200 p-1.5 text-blue-500 hover:bg-blue-50"><Pencil size={13}/></button>
                                     <button onClick={() => setDeletePaymentTarget(p)} title="Eliminar abono" className="rounded-md border border-slate-200 p-1.5 text-red-500 hover:bg-red-50"><Trash2 size={13}/></button>
