@@ -546,6 +546,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
               <tr className="bg-slate-900 text-white">
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest">Nombre</th>
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest">SKU</th>
+                <th className="p-5 text-[10px] font-black uppercase tracking-widest">Fecha de creación</th>
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest">Barcode</th>
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest">Base</th>
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest text-right">Precio Menor</th>
@@ -557,12 +558,12 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
             <tbody className="divide-y divide-slate-100">
               {isLoading && (
                 <tr>
-                  <td colSpan={8} className="p-6 text-center text-slate-400 text-sm">Cargando productos...</td>
+                  <td colSpan={9} className="p-6 text-center text-slate-400 text-sm">Cargando productos...</td>
                 </tr>
               )}
               {!isLoading && branchId && filteredProducts.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-6 text-center text-slate-400 text-sm">No hay productos para mostrar.</td>
+                  <td colSpan={9} className="p-6 text-center text-slate-400 text-sm">No hay productos para mostrar.</td>
                 </tr>
               )}
               {!isLoading && paginatedProducts.map((product) => {
@@ -591,6 +592,9 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                     </div>
                   </td>
                   <td className="p-5 text-xs font-mono text-slate-500">{product.sku || '—'}</td>
+                  <td className="p-5 text-xs font-semibold text-slate-600 whitespace-nowrap">
+                    {formatDateTime(product.created_at)}
+                  </td>
                   <td className="p-5 text-xs font-mono text-slate-500">{product.barcode || '—'}</td>
                   <td className="p-5 text-xs font-bold text-slate-600">{baseLabel}</td>
                   <td className="p-5 text-right text-xs font-black text-slate-900">
