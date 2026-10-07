@@ -163,6 +163,7 @@ const Layout: React.FC<LayoutProps> = ({
         { id: 'vinos-pos', label: 'Caja / Venta', icon: '🛒' },
         { id: 'vinos-purchases', label: 'Compras / Entradas', icon: '📥' },
         { id: 'vinos-inventory', label: 'Productos', icon: '📦' },
+        { id: 'vinos-physical-inventory', label: 'Inventario', icon: '📋' },
         { id: 'vinos-customers', label: 'Clientes', icon: '👥' },
         { id: 'vinos-reports', label: 'Reportes / CRM', icon: '📊' },
         { id: 'vinos-custom-cut', label: 'Corte personalizado', icon: '🖨️' },

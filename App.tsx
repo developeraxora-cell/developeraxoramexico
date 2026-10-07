@@ -22,6 +22,7 @@ import ConcreteReportsScreen from './components/Concrete/ConcreteReportsScreen';
 import CreditAlertsScreen from './components/CreditAlerts/CreditAlertsScreen';
 import VinosCustomersScreen from './components/Vinos/VinosCustomersScreen';
 import VinosProductsScreen from './components/Vinos/VinosProductsScreen';
+import VinosPhysicalInventoryScreen from './components/Vinos/VinosPhysicalInventoryScreen';
 import VinosPOSScreen from './components/Vinos/VinosPOSScreen';
 import VinosPurchasesScreen from './components/Vinos/VinosPurchasesScreen';
 import VinosAuditScreen from './components/Vinos/VinosAuditScreen';
@@ -82,6 +83,7 @@ const APP_TAB_ORDER = [
   'vinos-pos',
   'vinos-purchases',
   'vinos-inventory',
+  'vinos-physical-inventory',
   'vinos-customers',
   'vinos-reports',
   'vinos-custom-cut',
@@ -642,6 +644,8 @@ const App: React.FC = () => {
         return <VinosCustomersScreen key="customers-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'vinos-inventory':
         return <VinosProductsScreen key="inventory-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
+      case 'vinos-physical-inventory':
+        return <VinosPhysicalInventoryScreen key={`physical-inventory-vinos-${selectedBranchId}`} selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'vinos-pos':
         return <VinosPOSScreen key="pos-vinos" selectedBranchId={selectedBranchId} branches={activeBranches} currentUser={currentUser} />;
       case 'vinos-purchases':

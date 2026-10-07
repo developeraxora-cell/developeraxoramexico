@@ -1,6 +1,6 @@
 export type AuditActionType = 'CREAR' | 'ACTUALIZAR' | 'ELIMINAR' | 'VENTA' | 'COMPRA';
 export type AuditModule = 'materiales' | 'concretera' | 'transporteria' | 'vinos';
-export type AuditEntityType = 'producto' | 'cliente' | 'proveedor' | 'venta' | 'compra' | 'nota_credito' | 'abono_credito' | 'campania' | 'produccion';
+export type AuditEntityType = 'producto' | 'cliente' | 'proveedor' | 'venta' | 'compra' | 'nota_credito' | 'abono_credito' | 'campania' | 'produccion' | 'inventario';
 
 export interface AuditLogInput {
   log_id?: string;
@@ -30,7 +30,7 @@ export interface AuditLogDocument extends AuditLogInput {
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL ?? '').trim().replace(/\/+$/, '');
 const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim();
 const DEFAULT_AUDIT_API_URL = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/audit-log` : '';
-const AUDIT_API_URL = (import.meta.env.VITE_AUDIT_API_URL ?? DEFAULT_AUDIT_API_URL).trim();
+const AUDIT_API_URL = (import.meta.env.VITE_AUDIT_API_URL ?? '').trim() || DEFAULT_AUDIT_API_URL;
 
 const createLogId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -51,7 +51,7 @@ const buildAuditDocument = (input: AuditLogInput): AuditLogDocument => ({
 });
 
 const postAuditDocument = async (document: AuditLogDocument) => {
-  if (!AUDIT_API_URL) return false;
+  if (!AUDIT_API_URL) throw new Error('La API de auditoria no esta configurada.');
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -71,8 +71,12 @@ const postAuditDocument = async (document: AuditLogDocument) => {
 
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
-    console.warn('Audit API rejected event:', payload ?? response.statusText, document);
-    return false;
+    const detail = typeof payload?.error === 'string' ? payload.error
+      : typeof payload?.message === 'string' ? payload.message : response.statusText;
+    if (document.entity_type === 'inventario' && /invalid entity_type/i.test(detail)) {
+      throw new Error('La funcion audit-log desplegada no acepta inventarios. Actualiza audit-log en el proyecto de auditoria, no en VINOS.');
+    }
+    throw new Error(`Auditoria HTTP ${response.status}: ${detail || 'El servidor rechazo el registro.'}`);
   }
 
   return true;
@@ -96,6 +100,17 @@ export const auditService = {
 
   build(input: AuditLogInput) {
     return buildAuditDocument(input);
+  },
+
+  async writeRequired(input: AuditLogInput) {
+    try {
+      return await postAuditDocument(buildAuditDocument(input));
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new Error('No se pudo conectar con auditoria. Revisa la conexion y la disponibilidad de audit-log.');
+      }
+      throw error;
+    }
   },
 
   async write(input: AuditLogInput) {

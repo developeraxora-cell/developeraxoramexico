@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Casa Tahona | Inventario funcional</title>
+<style>
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#f3f5f5;color:#262c2c;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;letter-spacing:0}main{max-width:1180px;margin:32px auto;background:#fff;padding:48px 52px}header{border-top:6px solid #087b70;padding:28px 0 22px;border-bottom:1px solid #dce4e2}.eyebrow{font-size:12px;color:#087b70;font-weight:700;margin:0 0 10px}h1{font-size:40px;line-height:1.1;margin:0 0 12px}header .subtitle{font-size:21px;margin:0 0 16px;max-width:720px}p{margin:0 0 12px}.metadata{font-size:12px;color:#64716f}.metrics{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #dce4e2;padding:26px 0;gap:22px}.metric strong{font-size:32px;display:block;line-height:1.2}.metric span{font-size:12px;color:#55615f}.intro{padding:26px 0 8px}.note{padding:14px 18px;background:#edf6f4;border-left:3px solid #087b70;font-size:13px;margin:18px 0}.download{display:inline-block;color:#087b70;font-weight:700;margin:4px 0 8px;text-underline-offset:3px}h2{font-size:21px;margin:24px 0 14px;line-height:1.3}h3{font-size:15px;margin:0 0 7px}.table-wrap{width:100%;overflow-x:auto}table{border-collapse:collapse;width:100%;table-layout:fixed}th{text-align:left;font-size:11px;color:#fff;background:#344341;padding:11px 12px;vertical-align:top}td{padding:12px;border-bottom:1px solid #dce4e2;vertical-align:top;overflow-wrap:anywhere}tbody tr:nth-child(even){background:#f6f8f7}a{color:#086a61}.overview th:first-child{width:44%}.overview th:not(:first-child),.overview td:not(:first-child){text-align:center}.overview td{padding:10px 12px}.overview tfoot{font-weight:700;background:#e8f3ef}.scope-guide{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin:22px 0}.scope-guide article{border-top:3px solid #aab5b2;padding-top:12px}.scope-guide article:first-child{border-color:#087b70}.scope-guide article:last-child{border-color:#4263ad}.scope-guide p{font-size:13px;color:#4f5d59}.module{padding-top:18px;scroll-margin-top:14px}.module-heading{display:flex;align-items:baseline;justify-content:space-between;gap:16px;border-bottom:3px solid #087b70;margin:16px 0}.module-heading h2{margin:0 0 12px}.module-heading>span{font-size:12px;white-space:nowrap;color:#65716e}.inventory{font-size:12px}.inventory th{background:#e8eeec;color:#293c36}.inventory td{padding:14px 10px}.feature strong{display:block;font-size:13px;line-height:1.45}.id{display:block;font-family:monospace;color:#087b70;font-size:11px;margin-bottom:5px}.submodule{display:block;font-size:11px;color:#677470;margin-top:7px}.description p{margin:0 0 7px}.rule{color:#54605d}.dependency{font-size:11px;color:#61706a}.state{font-size:11px;font-style:italic;color:#566561}.badge{display:inline-block;border-radius:3px;padding:4px 6px;font-size:11px;font-weight:700;line-height:1.5}.base{background:#e0f2eb;color:#086448}.conditional{background:#f2eedb;color:#705b13}.extra{background:#e9eefb;color:#35548c}.choice{display:block;font-size:11px;margin-bottom:10px;white-space:nowrap}.choice:before{content:'';display:inline-block;width:10px;height:10px;border:1px solid #899691;margin-right:5px;vertical-align:-1px}.decision{color:#596762}details{font-size:10px;color:#65736e}summary{cursor:pointer}.source{padding-top:6px;font-family:monospace;overflow-wrap:anywhere}.clarifications{margin-top:32px;padding-top:12px;border-top:3px solid #344341}.clarifications li{margin:0 0 10px}.clarifications ul{padding-left:20px}footer{margin-top:28px;padding-top:16px;border-top:1px solid #dce4e2;color:#65716e;font-size:11px}.client-line{display:flex;gap:30px;margin:18px 0;color:#64716f;font-size:12px}.client-line span{flex:1;border-bottom:1px solid #cbd5d1;padding-bottom:14px}
+th{overflow-wrap:anywhere}html{scroll-behavior:auto}
+@media(max-width:720px){body{background:#fff}main{margin:0;padding:22px 16px}h1{font-size:32px}header .subtitle{font-size:18px}.metrics{grid-template-columns:repeat(2,1fr)}.scope-guide{grid-template-columns:1fr}.module-heading{align-items:flex-start}.module-heading h2{font-size:19px}.inventory{min-width:700px}.overview{font-size:12px}.overview th:first-child{width:38%}.overview th,.overview td{padding:8px 5px}.client-line{flex-wrap:wrap}.client-line span{flex-basis:100%}}
+@media print{@page{size:A4 landscape;margin:13mm}body{background:white;font-size:10pt}main{max-width:none;margin:0;padding:0}header{padding-top:12px}h1{font-size:28pt}.metrics{padding:14px 0}.metric strong{font-size:22pt}.download,details{display:none}.module{break-before:page;padding-top:0}.module-heading{margin-top:0}thead{display:table-header-group}tr{break-inside:avoid}.inventory{font-size:9pt;min-width:0}.inventory td{padding:10px 8px}.feature strong{font-size:10pt}.table-wrap{overflow:visible}.badge{print-color-adjust:exact}.scope-guide{break-inside:avoid}.clarifications{break-before:page}a{color:inherit;text-decoration:none}footer{font-size:8pt}}
+</style></head><body><main>
+<header><p class="eyebrow">INVENTARIO FUNCIONAL · DEFINICIÓN DE ALCANCE</p><h1>Casa Tahona</h1><p class="subtitle">Funcionalidades actuales para evaluar la réplica en otro sistema</p><p class="metadata">Revisión del código local · 22 de septiembre de 2026 · Referencia del repositorio: 838e9df</p></header>
+<div class="metrics"><div class="metric"><strong>106</strong><span>funcionalidades y dependencias</span></div><div class="metric"><strong>8 + 1</strong><span>secciones y servicios compartidos</span></div><div class="metric"><strong>37</strong><span>entradas de base sugerida</span></div><div class="metric"><strong>69</strong><span>entradas sujetas a necesidad</span></div></div>
+<section class="intro"><p>El catálogo reúne las acciones disponibles en las ocho secciones de Casa Tahona y los servicios compartidos que necesitaría su réplica. Cada entrada describe qué hace, sus condiciones y las funciones de las que depende.</p><p><b>Base de la revisión:</b> pantallas, servicios, permisos y scripts SQL disponibles en este repositorio. Se verificó la implementación en código; no se realizaron operaciones en producción ni se comprobó el despliegue de las migraciones o integraciones externas.</p><a class="download" href="funcionalidades_casa_tahona.csv" download>Descargar matriz de decisión en CSV</a><div class="note"><b>Decisión del cliente:</b> completar «Decisión cliente» con <b>Incluir</b>, <b>Después</b> o <b>No incluir</b>, y detallar las adaptaciones en «Observaciones cliente». Todas las decisiones comienzan en «Por definir». Los grupos de alcance son recomendaciones iniciales, no requisitos aprobados ni una estimación de esfuerzo.</div><div class="client-line"><span>Cliente / empresa:</span><span>Responsable de la revisión:</span><span>Fecha de decisión:</span></div></section>
+<section><h2>Mapa de módulos</h2><div class="table-wrap"><table class="overview"><thead><tr><th>Módulo</th><th>Entradas</th><th>Base sugerida</th><th>Según operación</th><th>Ampliación</th></tr></thead><tbody><tr><td><a href="#module-1">01. Caja / Venta</a></td><td>26</td><td>14</td><td>11</td><td>1</td></tr><tr><td><a href="#module-2">02. Compras / Entradas</a></td><td>12</td><td>6</td><td>6</td><td>0</td></tr><tr><td><a href="#module-3">03. Productos</a></td><td>17</td><td>7</td><td>9</td><td>1</td></tr><tr><td><a href="#module-4">04. Clientes</a></td><td>20</td><td>0</td><td>18</td><td>2</td></tr><tr><td><a href="#module-5">05. Reportes / CRM</a></td><td>11</td><td>3</td><td>6</td><td>2</td></tr><tr><td><a href="#module-6">06. Corte personalizado</a></td><td>3</td><td>0</td><td>3</td><td>0</td></tr><tr><td><a href="#module-7">07. Campañas</a></td><td>9</td><td>0</td><td>0</td><td>9</td></tr><tr><td><a href="#module-8">08. Auditorías</a></td><td>4</td><td>3</td><td>0</td><td>1</td></tr><tr><td><a href="#module-9">09. Servicios compartidos</a></td><td>4</td><td>4</td><td>0</td><td>0</td></tr></tbody><tfoot><tr><td>Total</td><td>106</td><td>37</td><td>53</td><td>16</td></tr></tfoot></table></div></section>
+<section><h2>Propuesta para decidir qué replicar</h2><div class="scope-guide"><article><h3>1. Operación básica</h3><p>Productos y precios; compras y proveedores; existencias; venta de contado; apertura y cierre de caja; comprobantes; consulta de ventas; reportes básicos; acceso y auditoría.</p><p>La base supone una tienda con inventario y control de caja. El sistema destino puede aportar parte de estas capacidades.</p></article><article><h3>2. Según la operación</h3><p>Agregar clientes y cobranza si se vende a crédito; monedero si se reciben anticipos; precios por volumen si hay mayoreo; presentaciones si se compra o vende por cajas; cortes especiales si hay supervisión por turno.</p><p>Seleccionar una función exige revisar sus dependencias. Crédito requiere clientes, ventas a crédito, abonos y consulta de deuda.</p></article><article><h3>3. Ampliaciones</h3><p>Campañas por WhatsApp; promociones personales; preferencias y segmentación de clientes; análisis comercial avanzado y estadísticas de productos.</p><p>Evaluarlas cuando exista una necesidad comercial concreta y responsables para operarlas.</p></article></div></section>
+<section class="module" id="module-1"><div class="module-heading"><h2>01. Caja / Venta</h2><span>26 entradas</span></div>
+<div class="table-wrap"><table class="inventory"><colgroup><col style="width:25%"><col style="width:49%"><col style="width:14%"><col style="width:12%"></colgroup><thead><tr><th>Funcionalidad</th><th>Alcance actual y condiciones</th><th>Sugerencia</th><th>Decisión cliente</th></tr></thead><tbody><tr data-feature="CT-01.01">
+<td class="feature"><span class="id">CT-01.01</span><strong>Apertura de caja por cajero</strong><span class="submodule">Control de caja</span></td>
+<td class="description"><p>Registrar el efectivo inicial y las observaciones del turno con usuario y fecha.</p><p class="rule">La sesión corresponde a un cajero y una sucursal.</p><p class="dependency"><b>Depende de:</b> Usuarios; sucursal</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:285; services/vinos/cashRegister.service.ts:343</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.02">
+<td class="feature"><span class="id">CT-01.02</span><strong>Caja abierta obligatoria</strong><span class="submodule">Control de caja</span></td>
+<td class="description"><p>Bloquear el catálogo y el cobro hasta registrar la apertura de caja.</p><p class="rule">La restricción está aplicada en la pantalla de venta; validar su equivalente en el servidor del nuevo sistema.</p><p class="dependency"><b>Depende de:</b> CT-01.01</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:666; components/Vinos/VinosPOSScreen.tsx:1277</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.03">
+<td class="feature"><span class="id">CT-01.03</span><strong>Cierre y conciliación de efectivo</strong><span class="submodule">Control de caja</span></td>
+<td class="description"><p>Consultar el resumen del turno y registrar efectivo entregado y observaciones.</p><p class="rule">Calcula diferencia contra efectivo inicial más ventas en efectivo. El cálculo consultado no incorpora abonos de crédito ni recargas de monedero.</p><p class="dependency"><b>Depende de:</b> Caja; ventas</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:320; services/vinos/cashRegister.service.ts:150; services/vinos/cashRegister.service.ts:395</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.04">
+<td class="feature"><span class="id">CT-01.04</span><strong>Cierre de cajas vencidas</strong><span class="submodule">Control de caja</span></td>
+<td class="description"><p>Cerrar sesiones que permanecieron abiertas al terminar su día de operación.</p><p class="rule">Usa las 23:59:59 de Ciudad de México. Se ejecuta al consultar u operar cajas; el script SQL también contempla programación. Despliegue no verificado.</p><p class="dependency"><b>Depende de:</b> Caja; horario de operación</p><p class="state">Implementada; validar despliegue</p><details><summary>Referencia en código</summary><p class="source">services/vinos/cashRegister.service.ts:254; vinos_caja_auto_cierre_y_venta_atomica.sql:1</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.05">
+<td class="feature"><span class="id">CT-01.05</span><strong>Historial de aperturas y cierres</strong><span class="submodule">Control de caja</span></td>
+<td class="description"><p>Consultar cajero; fechas; efectivo inicial; efectivo esperado; entregado y diferencias.</p><p class="rule">Incluye búsqueda por cajero; fecha de apertura y paginación. La consulta de sesiones tiene un límite de 100 registros.</p><p class="dependency"><b>Depende de:</b> Caja</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:386; services/vinos/cashRegister.service.ts:326</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.06">
+<td class="feature"><span class="id">CT-01.06</span><strong>Impresión del corte de caja</strong><span class="submodule">Comprobantes</span></td>
+<td class="description"><p>Generar un comprobante PDF del cierre e imprimirlo.</p><p class="rule">El corte muestra importes por forma de pago; descuentos; cancelaciones y datos del turno.</p><p class="dependency"><b>Depende de:</b> Caja; generación PDF</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:339; services/vinos/cashRegisterReceiptPdf.ts:36</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.07">
+<td class="feature"><span class="id">CT-01.07</span><strong>Consulta y búsqueda de productos</strong><span class="submodule">Venta</span></td>
+<td class="description"><p>Localizar productos por nombre; SKU o código de barras y consultar existencias.</p><p class="rule">Requiere caja abierta y productos activos con sus presentaciones configuradas.</p><p class="dependency"><b>Depende de:</b> Productos; inventario; caja</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:1444</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.08">
+<td class="feature"><span class="id">CT-01.08</span><strong>Carrito y presentaciones de venta</strong><span class="submodule">Venta</span></td>
+<td class="description"><p>Agregar productos; elegir unidad y cantidad; modificar cantidades; retirar renglones o vaciar el carrito.</p><p class="rule">Convierte las presentaciones a unidades base y consolida renglones con la misma presentación; precio y autorización.</p><p class="dependency"><b>Depende de:</b> Productos; equivalencias</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:666; components/Vinos/VinosPOSScreen.tsx:732; services/vinos/sales.service.ts:93</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.09">
+<td class="feature"><span class="id">CT-01.09</span><strong>Precio automático por volumen</strong><span class="submodule">Precios</span></td>
+<td class="description"><p>Aplicar menudeo; medio mayoreo o mayoreo según la cantidad capturada y la configuración del producto.</p><p class="rule">Los umbrales se comparan en unidades base. La selección automática se calcula para la cantidad del renglón.</p><p class="dependency"><b>Depende de:</b> CT-03.07; CT-03.08</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:569</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.10">
+<td class="feature"><span class="id">CT-01.10</span><strong>Precio especial por producto</strong><span class="submodule">Precios</span></td>
+<td class="description"><p>Capturar un precio excepcional y el nombre de quien lo autoriza.</p><p class="rule">Exige precio mayor a cero y al menos tres caracteres de autorización. Es una captura de nombre; no una aprobación independiente con contraseña.</p><p class="dependency"><b>Depende de:</b> Productos; auditoría</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:666; vinos_precio_especial.sql:1</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.11">
+<td class="feature"><span class="id">CT-01.11</span><strong>Validación y descuento de existencias</strong><span class="submodule">Inventario</span></td>
+<td class="description"><p>Impedir cantidades superiores al stock disponible y descontar unidades base al registrar la venta.</p><p class="rule">Considera otras líneas del mismo producto en el carrito. La función SQL de venta atómica existe como script pero el servicio actual inserta por etapas.</p><p class="dependency"><b>Depende de:</b> Inventario; ventas</p><p class="state">Implementada; revisar concurrencia</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:643; services/vinos/sales.service.ts:412</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.12">
+<td class="feature"><span class="id">CT-01.12</span><strong>Venta a público general o cliente registrado</strong><span class="submodule">Clientes en caja</span></td>
+<td class="description"><p>Asociar un cliente a la venta o realizarla sin un cliente identificado.</p><p class="rule">El cliente registrado permite usar crédito; saldo a favor y promociones personales.</p><p class="dependency"><b>Depende de:</b> Clientes para venta identificada</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:2069; components/Vinos/VinosPOSScreen.tsx:1277</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.13">
+<td class="feature"><span class="id">CT-01.13</span><strong>Consulta financiera rápida del cliente</strong><span class="submodule">Clientes en caja</span></td>
+<td class="description"><p>Mostrar límite de crédito; deuda; disponible y saldo a favor desde caja.</p><p class="rule">Los accesos de edición; abonos; recarga y exportación dentro de este modal están deshabilitados. Se operan en Clientes.</p><p class="dependency"><b>Depende de:</b> Clientes; crédito; monedero</p><p class="state">Implementada con accesos limitados</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:1267; components/Vinos/VinosPOSScreen.tsx:2670</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.14">
+<td class="feature"><span class="id">CT-01.14</span><strong>Efectivo y cálculo de cambio</strong><span class="submodule">Cobro</span></td>
+<td class="description"><p>Registrar efectivo recibido y calcular el cambio de la venta.</p><p class="rule">El importe recibido debe cubrir lo que corresponde cobrar en efectivo.</p><p class="dependency"><b>Depende de:</b> Venta; caja</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:1277; components/Vinos/VinosPOSScreen.tsx:2334</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.15">
+<td class="feature"><span class="id">CT-01.15</span><strong>Registro de pago por transferencia o tarjeta</strong><span class="submodule">Cobro</span></td>
+<td class="description"><p>Clasificar la venta como pagada por transferencia bancaria o tarjeta.</p><p class="rule">Registra el método elegido. No se encontró conexión de esta pantalla con una terminal o pasarela para ejecutar el cobro.</p><p class="dependency"><b>Depende de:</b> Venta; caja</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:2196</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.16">
+<td class="feature"><span class="id">CT-01.16</span><strong>Comisión por pago con tarjeta</strong><span class="submodule">Cobro</span></td>
+<td class="description"><p>Agregar y desglosar una comisión bancaria en la venta y su comprobante.</p><p class="rule">La tasa actual está fija en 3%. También se aplica a la parte pagada con tarjeta en una venta mixta.</p><p class="dependency"><b>Depende de:</b> CT-01.15; política comercial</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:64; components/Vinos/VinosPOSScreen.tsx:2258</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.17">
+<td class="feature"><span class="id">CT-01.17</span><strong>Venta a crédito</strong><span class="submodule">Crédito</span></td>
+<td class="description"><p>Registrar una deuda a nombre del cliente seleccionado.</p><p class="rule">Valida el monto contra el crédito disponible mostrado por la pantalla.</p><p class="dependency"><b>Depende de:</b> Clientes; límite de crédito; cobranza</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:1277; components/Vinos/VinosPOSScreen.tsx:2226</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.18">
+<td class="feature"><span class="id">CT-01.18</span><strong>Pago mixto de crédito y contado</strong><span class="submodule">Crédito</span></td>
+<td class="description"><p>Dejar parte de la venta a crédito y cobrar el resto en efectivo; transferencia o tarjeta.</p><p class="rule">El pago mixto implementado combina crédito con un método adicional; no ofrece dividir libremente entre varios métodos de contado.</p><p class="dependency"><b>Depende de:</b> CT-01.17; formas de pago</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:2226; vinos_split_credit_payments.sql:1</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.19">
+<td class="feature"><span class="id">CT-01.19</span><strong>Pago con saldo a favor</strong><span class="submodule">Monedero</span></td>
+<td class="description"><p>Aplicar parte o todo el saldo disponible del cliente al importe de la venta.</p><p class="rule">Requiere monedero habilitado. Descuenta el saldo y registra el movimiento asociado a la venta.</p><p class="dependency"><b>Depende de:</b> CT-04.17; CT-04.18</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:2279; services/vinos/sales.service.ts:412</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.20">
+<td class="feature"><span class="id">CT-01.20</span><strong>Descuento manual con justificación</strong><span class="submodule">Descuentos</span></td>
+<td class="description"><p>Aplicar un descuento porcentual capturado por el operador.</p><p class="rule">Acepta un porcentaje mayor a cero y hasta 100%; exige justificación de al menos cinco caracteres y sustituye el cupón o promoción aplicada.</p><p class="dependency"><b>Depende de:</b> Venta; auditoría</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:786; components/Vinos/VinosPOSScreen.tsx:798</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.21">
+<td class="feature"><span class="id">CT-01.21</span><strong>Canje de cupones y promociones</strong><span class="submodule">Descuentos</span></td>
+<td class="description"><p>Validar un código y descontar el beneficio de la compra.</p><p class="rule">Cupones: porcentaje o monto fijo; vigencia; compra mínima y límite de usos. Promociones: porcentaje; vigencia; cliente asignado y uso único. No hay pantalla de alta de cupones genéricos.</p><p class="dependency"><b>Depende de:</b> Campañas para promociones personales; catálogo de cupones</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:816; services/vinos/sales.service.ts:600</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.22">
+<td class="feature"><span class="id">CT-01.22</span><strong>Nota de venta e impresión</strong><span class="submodule">Comprobantes</span></td>
+<td class="description"><p>Generar e imprimir el PDF de venta y volver a imprimirlo desde el historial.</p><p class="rule">Incluye productos; cantidades; precios; descuentos; pagos; comisión; cajero y observaciones. No equivale a facturación fiscal.</p><p class="dependency"><b>Depende de:</b> Venta; generación PDF</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:1187; components/Vinos/VinosPOSScreen.tsx:1277; services/vinos/saleTicketPdf.ts:86</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.23">
+<td class="feature"><span class="id">CT-01.23</span><strong>Consulta y filtros de ventas</strong><span class="submodule">Historial</span></td>
+<td class="description"><p>Buscar ventas; filtrar por fechas y cajero; consultar detalle de productos e importes.</p><p class="rule">Identifica el tipo de pago o venta y ofrece paginación local. El servicio recupera hasta 500 ventas por consulta.</p><p class="dependency"><b>Depende de:</b> Ventas; usuarios</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:849; components/Vinos/VinosPOSScreen.tsx:983; services/vinos/sales.service.ts:117</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.24">
+<td class="feature"><span class="id">CT-01.24</span><strong>Cambio del tipo de pago de una venta</strong><span class="submodule">Correcciones</span></td>
+<td class="description"><p>Cambiar una venta entre efectivo y crédito y ajustar el uso de saldo a favor.</p><p class="rule">Requiere observación; guarda el historial del cambio. La pantalla de edición solo ofrece efectivo y crédito.</p><p class="dependency"><b>Depende de:</b> Ventas; clientes; auditoría</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:1053; components/Vinos/VinosPOSScreen.tsx:2895; services/vinos/sales.service.ts:280</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.25">
+<td class="feature"><span class="id">CT-01.25</span><strong>Cancelación de venta con motivo</strong><span class="submodule">Correcciones</span></td>
+<td class="description"><p>Dar de baja una venta y conservar su motivo y detalle en auditoría.</p><p class="rule">El servicio contempla reponer stock; devolver saldo usado; reactivar promoción y reducir usos del cupón. Es cancelación completa; no devolución parcial.</p><p class="dependency"><b>Depende de:</b> Ventas; inventario; auditoría; beneficios aplicados</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:1153; services/vinos/sales.service.ts:158</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-01.26">
+<td class="feature"><span class="id">CT-01.26</span><strong>Observaciones de la venta</strong><span class="submodule">Venta</span></td>
+<td class="description"><p>Guardar notas libres e incluir la justificación de descuentos o precios especiales.</p><p class="rule">Se conservan con la operación y se incorporan al comprobante.</p><p class="dependency"><b>Depende de:</b> Venta</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPOSScreen.tsx:1315; components/Vinos/VinosPOSScreen.tsx:2307</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr></tbody></table></div></section><section class="module" id="module-2"><div class="module-heading"><h2>02. Compras / Entradas</h2><span>12 entradas</span></div>
+<div class="table-wrap"><table class="inventory"><colgroup><col style="width:25%"><col style="width:49%"><col style="width:14%"><col style="width:12%"></colgroup><thead><tr><th>Funcionalidad</th><th>Alcance actual y condiciones</th><th>Sugerencia</th><th>Decisión cliente</th></tr></thead><tbody><tr data-feature="CT-02.01">
+<td class="feature"><span class="id">CT-02.01</span><strong>Registro de compra de mercancía</strong><span class="submodule">Compras</span></td>
+<td class="description"><p>Capturar proveedor; fecha; referencia; observaciones y productos de una compra.</p><p class="rule">Exige al menos un producto; cantidades positivas y costos no negativos.</p><p class="dependency"><b>Depende de:</b> Productos; proveedores</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPurchasesScreen.tsx:364; services/vinos/purchases.service.ts:118</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-02.02">
+<td class="feature"><span class="id">CT-02.02</span><strong>Búsqueda y escaneo de productos</strong><span class="submodule">Compras</span></td>
+<td class="description"><p>Localizar productos por código o nombre para agregarlos a la entrada.</p><p class="rule">Incluye búsqueda durante la captura de la compra.</p><p class="dependency"><b>Depende de:</b> Productos; código de barras</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPurchasesScreen.tsx:769</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-02.03">
+<td class="feature"><span class="id">CT-02.03</span><strong>Alta de producto durante una entrada</strong><span class="submodule">Compras</span></td>
+<td class="description"><p>Crear un producto nuevo sin abandonar la captura de compra e incorporarlo a la entrada.</p><p class="rule">Reutiliza el formulario de productos con unidades; precios y equivalencias.</p><p class="dependency"><b>Depende de:</b> CT-03.01; catálogos</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPurchasesScreen.tsx:296; components/Vinos/VinosPurchasesScreen.tsx:790</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-02.04">
+<td class="feature"><span class="id">CT-02.04</span><strong>Presentaciones y costos de compra</strong><span class="submodule">Compras</span></td>
+<td class="description"><p>Capturar unidad de compra; cantidad y costo; calcular subtotal y total.</p><p class="rule">Conserva el factor de conversión y la cantidad en unidades base para cada renglón.</p><p class="dependency"><b>Depende de:</b> Productos; equivalencias</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPurchasesScreen.tsx:896; services/vinos/purchases.service.ts:147</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-02.05">
+<td class="feature"><span class="id">CT-02.05</span><strong>Entrada de mercancía vinculada a compra</strong><span class="submodule">Inventario</span></td>
+<td class="description"><p>Registrar los renglones que representan la entrada de productos al inventario.</p><p class="rule">El servicio inserta compra y partidas; no actualiza product_stocks directamente. La actualización automática depende de reglas de base de datos no verificadas en esta revisión.</p><p class="dependency"><b>Depende de:</b> Compras; inventario; reglas de base de datos</p><p class="state">Parcial; validar base de datos</p><details><summary>Referencia en código</summary><p class="source">services/vinos/purchases.service.ts:118; services/vinos/products.service.ts:219</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-02.06">
+<td class="feature"><span class="id">CT-02.06</span><strong>Marcado de compra a crédito</strong><span class="submodule">Condiciones</span></td>
+<td class="description"><p>Distinguir una compra a crédito de una compra de contado.</p><p class="rule">Es un indicador de la compra. No se encontró en este módulo un flujo de abonos o cuentas por pagar al proveedor.</p><p class="dependency"><b>Depende de:</b> Compras</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPurchasesScreen.tsx:855; services/vinos/purchases.service.ts:17</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-02.07">
+<td class="feature"><span class="id">CT-02.07</span><strong>Historial y detalle de compras</strong><span class="submodule">Historial</span></td>
+<td class="description"><p>Buscar entradas; filtrar por fechas y proveedor; consultar productos e importes.</p><p class="rule">Incluye referencia; proveedor; fecha; total y detalle de las partidas.</p><p class="dependency"><b>Depende de:</b> Compras</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPurchasesScreen.tsx:654; services/vinos/purchases.service.ts:71; services/vinos/purchases.service.ts:99</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-02.08">
+<td class="feature"><span class="id">CT-02.08</span><strong>Edición de datos de compra</strong><span class="submodule">Correcciones</span></td>
+<td class="description"><p>Corregir proveedor; fecha; referencia; observaciones y condición de crédito.</p><p class="rule">La edición disponible cambia datos generales; no modifica productos; cantidades ni costos de las partidas.</p><p class="dependency"><b>Depende de:</b> Compras</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPurchasesScreen.tsx:445; services/vinos/purchases.service.ts:172</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-02.09">
+<td class="feature"><span class="id">CT-02.09</span><strong>Baja de compra con motivo</strong><span class="submodule">Correcciones</span></td>
+<td class="description"><p>Retirar una compra del historial activo registrando una observación obligatoria.</p><p class="rule">Es una baja lógica. El servicio no revierte stock directamente; verificar las reglas de base de datos antes de replicar el efecto en inventario.</p><p class="dependency"><b>Depende de:</b> Compras; inventario; auditoría</p><p class="state">Implementada; validar efecto en stock</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPurchasesScreen.tsx:468; services/vinos/purchases.service.ts:163</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-02.10">
+<td class="feature"><span class="id">CT-02.10</span><strong>Alta y consulta de proveedores</strong><span class="submodule">Proveedores</span></td>
+<td class="description"><p>Crear proveedores y buscarlos por nombre; RFC; teléfono o correo electrónico.</p><p class="rule">La pantalla captura nombre; teléfono; RFC y correo. Los proveedores están disponibles en el selector de compras.</p><p class="dependency"><b>Depende de:</b> Catálogo de proveedores</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPurchasesScreen.tsx:1222; components/Vinos/VinosPurchasesScreen.tsx:1334</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-02.11">
+<td class="feature"><span class="id">CT-02.11</span><strong>Edición y baja de proveedores</strong><span class="submodule">Proveedores</span></td>
+<td class="description"><p>Actualizar datos o desactivar un proveedor conservando una nota del cambio.</p><p class="rule">La edición y eliminación solicitan motivo; la baja cambia el estado activo y las acciones generan auditoría.</p><p class="dependency"><b>Depende de:</b> Proveedores; auditoría</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPurchasesScreen.tsx:1360; components/Vinos/VinosPurchasesScreen.tsx:1397; services/vinos/catalog.service.ts:135</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-02.12">
+<td class="feature"><span class="id">CT-02.12</span><strong>Resumen de compras</strong><span class="submodule">Indicadores</span></td>
+<td class="description"><p>Consultar monto de compras del mes; proveedores involucrados y número de compras a crédito.</p><p class="rule">Los indicadores se calculan con las compras cargadas en el historial y pueden variar con sus filtros.</p><p class="dependency"><b>Depende de:</b> Historial de compras</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosPurchasesScreen.tsx:348; components/Vinos/VinosPurchasesScreen.tsx:633</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr></tbody></table></div></section><section class="module" id="module-3"><div class="module-heading"><h2>03. Productos</h2><span>17 entradas</span></div>
+<div class="table-wrap"><table class="inventory"><colgroup><col style="width:25%"><col style="width:49%"><col style="width:14%"><col style="width:12%"></colgroup><thead><tr><th>Funcionalidad</th><th>Alcance actual y condiciones</th><th>Sugerencia</th><th>Decisión cliente</th></tr></thead><tbody><tr data-feature="CT-03.01">
+<td class="feature"><span class="id">CT-03.01</span><strong>Alta y edición de productos</strong><span class="submodule">Catálogo</span></td>
+<td class="description"><p>Administrar nombre; categoría; unidad base; código de barras; costo y existencias mínimas.</p><p class="rule">El SKU se genera automáticamente. Los nuevos productos comienzan con stock cero.</p><p class="dependency"><b>Depende de:</b> Categorías; unidades; sucursal</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductModal.tsx:252; services/vinos/products.service.ts:190</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.02">
+<td class="feature"><span class="id">CT-03.02</span><strong>Búsqueda y filtros del catálogo</strong><span class="submodule">Catálogo</span></td>
+<td class="description"><p>Buscar por nombre; SKU o código; seleccionar varias categorías y mostrar stock bajo.</p><p class="rule">Muestra productos activos con precios y existencias de la sucursal.</p><p class="dependency"><b>Depende de:</b> Productos; inventario</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductsScreen.tsx:143</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.03">
+<td class="feature"><span class="id">CT-03.03</span><strong>Gestión de categorías</strong><span class="submodule">Catálogos auxiliares</span></td>
+<td class="description"><p>Crear; renombrar y eliminar categorías para ordenar los productos.</p><p class="rule">Las categorías se utilizan en la ficha y en los filtros del catálogo.</p><p class="dependency"><b>Depende de:</b> Productos</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductsScreen.tsx:1134; services/vinos/catalog.service.ts:36</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.04">
+<td class="feature"><span class="id">CT-03.04</span><strong>Gestión de unidades de medida</strong><span class="submodule">Catálogos auxiliares</span></td>
+<td class="description"><p>Crear; editar y eliminar unidades con nombre y símbolo.</p><p class="rule">Las unidades se usan como unidad base y como presentaciones de compra o venta.</p><p class="dependency"><b>Depende de:</b> Productos; compras; ventas</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductsScreen.tsx:1188; services/vinos/catalog.service.ts:157</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.05">
+<td class="feature"><span class="id">CT-03.05</span><strong>Equivalencias entre unidades</strong><span class="submodule">Presentaciones</span></td>
+<td class="description"><p>Definir cuántas unidades base contiene cada presentación del producto.</p><p class="rule">Ejemplo: una caja equivale a varias botellas. Permite precios por presentación y exige una equivalencia de unidad base con factor uno.</p><p class="dependency"><b>Depende de:</b> CT-03.04</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductModal.tsx:252; components/Vinos/VinosProductModal.tsx:492</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.06">
+<td class="feature"><span class="id">CT-03.06</span><strong>Configuración de producto divisible</strong><span class="submodule">Presentaciones</span></td>
+<td class="description"><p>Indicar si un producto admite manejo fraccionado.</p><p class="rule">La ficha guarda el indicador de divisibilidad. Conviene acordar las validaciones de cantidades fraccionadas del nuevo sistema.</p><p class="dependency"><b>Depende de:</b> Productos; unidades</p><p class="state">Implementada como configuración</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductModal.tsx:411; services/vinos/products.service.ts:201</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.07">
+<td class="feature"><span class="id">CT-03.07</span><strong>Tres niveles de precio</strong><span class="submodule">Precios</span></td>
+<td class="description"><p>Definir precios de menudeo; medio mayoreo y mayoreo para cada presentación.</p><p class="rule">Los precios quedan disponibles para el cálculo automático del punto de venta.</p><p class="dependency"><b>Depende de:</b> Productos; presentaciones</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductModal.tsx:492</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.08">
+<td class="feature"><span class="id">CT-03.08</span><strong>Umbrales de precio por cantidad</strong><span class="submodule">Precios</span></td>
+<td class="description"><p>Configurar desde qué cantidad aplica medio mayoreo y desde cuál aplica mayoreo.</p><p class="rule">Se expresan en unidades base; mayoreo debe superar medio mayoreo. El formulario propone inicialmente 10 y 20.</p><p class="dependency"><b>Depende de:</b> CT-03.07; CT-01.09</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductModal.tsx:69; components/Vinos/VinosProductModal.tsx:458; vinos_price_tier_thresholds.sql:1</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.09">
+<td class="feature"><span class="id">CT-03.09</span><strong>Modo de precio único</strong><span class="submodule">Precios</span></td>
+<td class="description"><p>Usar un mismo precio para cualquier volumen dentro de cada presentación.</p><p class="rule">Al activarlo se igualan los tres niveles de precio de cada presentación y dejan de aplicar los umbrales.</p><p class="dependency"><b>Depende de:</b> Productos; precios</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductModal.tsx:227; vinos_single_price_mode.sql:1</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.10">
+<td class="feature"><span class="id">CT-03.10</span><strong>Sugerencia de precios desde el costo</strong><span class="submodule">Precios</span></td>
+<td class="description"><p>Proponer precios de venta al capturar el costo de compra o cambiar una equivalencia.</p><p class="rule">Propone recargos de 25%; 20% y 15% para menudeo; medio mayoreo y mayoreo. En precio único propone 25%. Los precios son editables.</p><p class="dependency"><b>Depende de:</b> Costo; presentaciones; política de precios</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductModal.tsx:95; components/Vinos/VinosProductModal.tsx:222</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.11">
+<td class="feature"><span class="id">CT-03.11</span><strong>Consulta de existencias y mínimos</strong><span class="submodule">Inventario</span></td>
+<td class="description"><p>Mostrar stock disponible; total de unidades y productos que llegaron al mínimo configurado.</p><p class="rule">La alerta es visual en catálogo y reportes; no se encontró envío automático de alertas de stock.</p><p class="dependency"><b>Depende de:</b> Inventario; mínimo por producto</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductsScreen.tsx:143; components/Vinos/VinosProductsScreen.tsx:182</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.12">
+<td class="feature"><span class="id">CT-03.12</span><strong>Ajuste manual de stock</strong><span class="submodule">Inventario</span></td>
+<td class="description"><p>Establecer una nueva existencia por conteo físico; merma o corrección.</p><p class="rule">Requiere motivo y registra stock anterior y nuevo en auditoría.</p><p class="dependency"><b>Depende de:</b> Inventario; auditoría</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductsScreen.tsx:360; services/vinos/products.service.ts:745</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.13">
+<td class="feature"><span class="id">CT-03.13</span><strong>Corrección del último costo de compra</strong><span class="submodule">Costos</span></td>
+<td class="description"><p>Actualizar el costo de compra de un producto con justificación.</p><p class="rule">Si existe una compra reciente vinculada modifica su partida y recalcula el total de esa compra; también actualiza el costo del producto.</p><p class="dependency"><b>Depende de:</b> Productos; compras; auditoría</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductsScreen.tsx:424; services/vinos/products.service.ts:350</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.14">
+<td class="feature"><span class="id">CT-03.14</span><strong>Estadísticas del producto</strong><span class="submodule">Análisis</span></td>
+<td class="description"><p>Consultar último costo; cantidades e importes comprados y vendidos; stock y ganancia estimada.</p><p class="rule">La ganancia mostrada se estima usando el último costo de compra; no es costeo histórico contable.</p><p class="dependency"><b>Depende de:</b> Compras; ventas; inventario</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductsScreen.tsx:913; services/vinos/products.service.ts:438</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.15">
+<td class="feature"><span class="id">CT-03.15</span><strong>Historial de movimientos del producto</strong><span class="submodule">Trazabilidad</span></td>
+<td class="description"><p>Consultar entradas; salidas y actualizaciones con fecha; usuario; cantidad y detalle.</p><p class="rule">Muestra stock anterior y posterior reconstruidos o registrados según el tipo de movimiento.</p><p class="dependency"><b>Depende de:</b> Compras; ventas; auditoría</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductsScreen.tsx:960; services/vinos/products.service.ts:438</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.16">
+<td class="feature"><span class="id">CT-03.16</span><strong>Listado de productos en PDF</strong><span class="submodule">Exportación</span></td>
+<td class="description"><p>Exportar el catálogo que resulta de la búsqueda y los filtros actuales.</p><p class="rule">El PDF usa los productos filtrados y los datos de la sucursal.</p><p class="dependency"><b>Depende de:</b> Productos; generación PDF</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductsScreen.tsx:166; services/vinos/productsListPdf.ts:53</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-03.17">
+<td class="feature"><span class="id">CT-03.17</span><strong>Baja protegida de productos</strong><span class="submodule">Control de catálogo</span></td>
+<td class="description"><p>Desactivar un producto con motivo y verificación de contraseña.</p><p class="rule">Exige que el usuario actual sea SUPERADMIN y valide su propia contraseña; conserva el registro del producto.</p><p class="dependency"><b>Depende de:</b> Usuarios; autenticación; auditoría</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosProductsScreen.tsx:273; components/Vinos/VinosProductsScreen.tsx:304</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr></tbody></table></div></section><section class="module" id="module-4"><div class="module-heading"><h2>04. Clientes</h2><span>20 entradas</span></div>
+<div class="table-wrap"><table class="inventory"><colgroup><col style="width:25%"><col style="width:49%"><col style="width:14%"><col style="width:12%"></colgroup><thead><tr><th>Funcionalidad</th><th>Alcance actual y condiciones</th><th>Sugerencia</th><th>Decisión cliente</th></tr></thead><tbody><tr data-feature="CT-04.01">
+<td class="feature"><span class="id">CT-04.01</span><strong>Alta y edición de clientes</strong><span class="submodule">Expediente</span></td>
+<td class="description"><p>Capturar nombre; teléfono o WhatsApp; correo y fecha de nacimiento.</p><p class="rule">El teléfono incluye selector de país. La pantalla exige nombre y al menos un tipo de cliente.</p><p class="dependency"><b>Depende de:</b> Sucursales; tipos de cliente</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:510; components/Vinos/VinosCustomersScreen.tsx:1418</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.02">
+<td class="feature"><span class="id">CT-04.02</span><strong>Directorio y búsqueda de clientes</strong><span class="submodule">Expediente</span></td>
+<td class="description"><p>Buscar por nombre; teléfono o correo y consultar resumen del cliente.</p><p class="rule">Muestra indicadores de total; activos; clientes en riesgo y clientes Oro o Black.</p><p class="dependency"><b>Depende de:</b> Clientes</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:371; components/Vinos/VinosCustomersScreen.tsx:1270</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.03">
+<td class="feature"><span class="id">CT-04.03</span><strong>Tipos y preferencias del cliente</strong><span class="submodule">Segmentación</span></td>
+<td class="description"><p>Asignar varias preferencias como vino; whisky; tequila o eventos y crear tipos nuevos.</p><p class="rule">Los tipos sirven para segmentar campañas. Los tipos nuevos se incorporan a la selección del formulario.</p><p class="dependency"><b>Depende de:</b> Clientes; campañas si se utilizan</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:438; components/Vinos/VinosCustomersScreen.tsx:1461</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.04">
+<td class="feature"><span class="id">CT-04.04</span><strong>Consulta de nivel y estado comercial</strong><span class="submodule">Segmentación</span></td>
+<td class="description"><p>Visualizar niveles Bronce; Plata; Oro y Black y estados Activo; Dormido; En riesgo o Perdido.</p><p class="rule">La pantalla lee estos valores. No se verificó una regla desplegada que los recalcule automáticamente ni un editor de niveles en la ficha.</p><p class="dependency"><b>Depende de:</b> Datos de clasificación del cliente</p><p class="state">Consulta implementada; automatización no verificada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:33; components/Vinos/VinosCustomersScreen.tsx:1324</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.05">
+<td class="feature"><span class="id">CT-04.05</span><strong>Archivos del expediente del cliente</strong><span class="submodule">Documentación</span></td>
+<td class="description"><p>Adjuntar; abrir y eliminar documentos del cliente.</p><p class="rule">La ficha admite hasta dos documentos; JPG; PNG; WEBP o PDF y hasta 10 MB por archivo. Utiliza carga externa de archivos.</p><p class="dependency"><b>Depende de:</b> Servicio de archivos; expediente</p><p class="state">Integración externa implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:477; components/Vinos/VinosCustomersScreen.tsx:1563; services/vinos/documentUpload.service.ts:18</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.06">
+<td class="feature"><span class="id">CT-04.06</span><strong>Baja de cliente con motivo</strong><span class="submodule">Expediente</span></td>
+<td class="description"><p>Desactivar clientes y registrar una observación de eliminación.</p><p class="rule">La baja es lógica; se conserva el registro asociado a las operaciones.</p><p class="dependency"><b>Depende de:</b> Clientes; auditoría</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:1235; services/vinos/customers.service.ts:155</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.07">
+<td class="feature"><span class="id">CT-04.07</span><strong>Configuración de límite de crédito</strong><span class="submodule">Crédito</span></td>
+<td class="description"><p>Habilitar crédito para un cliente y establecer su línea disponible.</p><p class="rule">El límite se conserva como línea fija; la deuda y el disponible se calculan con ventas y abonos.</p><p class="dependency"><b>Depende de:</b> Clientes; ventas; abonos</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:1509; services/vinos/customerMgmt.service.ts:106</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.08">
+<td class="feature"><span class="id">CT-04.08</span><strong>Resumen financiero del cliente</strong><span class="submodule">Crédito</span></td>
+<td class="description"><p>Consultar límite; deuda actual; crédito disponible y saldo a favor.</p><p class="rule">La vista de gestión consolida los saldos del cliente.</p><p class="dependency"><b>Depende de:</b> CT-04.07; CT-04.17; ventas; abonos</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:584; components/Vinos/VinosCustomersScreen.tsx:1770</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.09">
+<td class="feature"><span class="id">CT-04.09</span><strong>Consulta de notas de venta a crédito</strong><span class="submodule">Crédito</span></td>
+<td class="description"><p>Revisar folio; importe; abonos y saldo pendiente de cada venta a crédito.</p><p class="rule">Incluye búsqueda; filtros; impresión y baja de la venta. El nombre Notas de crédito en la pantalla se refiere a ventas a crédito; no a notas fiscales.</p><p class="dependency"><b>Depende de:</b> Ventas a crédito; abonos</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:964; components/Vinos/VinosCustomersScreen.tsx:2047; services/vinos/customerMgmt.service.ts:429</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.10">
+<td class="feature"><span class="id">CT-04.10</span><strong>Registro de abono por nota de venta</strong><span class="submodule">Cobranza</span></td>
+<td class="description"><p>Aplicar un pago a una venta a crédito seleccionada y reducir su saldo pendiente.</p><p class="rule">Exige venta vinculada; monto positivo y un importe no mayor a la deuda pendiente. Guarda deuda anterior y posterior.</p><p class="dependency"><b>Depende de:</b> CT-04.09; tabla de abonos</p><p class="state">Implementada; requiere esquema actualizado</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:1111; vinos_credit_payment_debt_snapshot.sql:1</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.11">
+<td class="feature"><span class="id">CT-04.11</span><strong>Formas de pago de abonos</strong><span class="submodule">Cobranza</span></td>
+<td class="description"><p>Registrar abonos en efectivo; transferencia; cheque o saldo a favor.</p><p class="rule">El uso de saldo a favor descuenta el monedero y registra su movimiento. Los métodos de cobranza difieren de los disponibles al vender.</p><p class="dependency"><b>Depende de:</b> CT-04.10; monedero para saldo a favor</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:2274; components/Vinos/VinosCustomersScreen.tsx:1111</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.12">
+<td class="feature"><span class="id">CT-04.12</span><strong>Historial y búsqueda de abonos</strong><span class="submodule">Cobranza</span></td>
+<td class="description"><p>Consultar pagos registrados; notas vinculadas; método; referencia y comprobantes.</p><p class="rule">Incluye búsqueda por folio; nota de venta o referencia y acceso a evidencias.</p><p class="dependency"><b>Depende de:</b> Abonos; ventas a crédito</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:953; components/Vinos/VinosCustomersScreen.tsx:1970</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.13">
+<td class="feature"><span class="id">CT-04.13</span><strong>Edición y eliminación de abonos</strong><span class="submodule">Cobranza</span></td>
+<td class="description"><p>Corregir monto; método; referencia y notas o eliminar un abono registrado.</p><p class="rule">La eliminación exige motivo. El servicio contempla revertir el monedero cuando se elimina un pago realizado con saldo a favor; validar consistencia al cambiar métodos.</p><p class="dependency"><b>Depende de:</b> Abonos; deuda; monedero; auditoría</p><p class="state">Implementada; revisar reglas de corrección</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:795; components/Vinos/VinosCustomersScreen.tsx:2567; services/vinos/customerMgmt.service.ts:397</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.14">
+<td class="feature"><span class="id">CT-04.14</span><strong>Comprobantes adjuntos de abonos</strong><span class="submodule">Evidencias</span></td>
+<td class="description"><p>Adjuntar evidencias al registrar un abono; consultar; agregar o quitar archivos después.</p><p class="rule">La captura inicial admite hasta cuatro archivos; JPG; PNG; WEBP o PDF y 10 MB por archivo.</p><p class="dependency"><b>Depende de:</b> Abonos; servicio de archivos</p><p class="state">Integración externa implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:752; components/Vinos/VinosCustomersScreen.tsx:1111; components/Vinos/VinosCustomersScreen.tsx:2299</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.15">
+<td class="feature"><span class="id">CT-04.15</span><strong>Impresión y reimpresión de abonos</strong><span class="submodule">Comprobantes</span></td>
+<td class="description"><p>Generar un comprobante del pago con cliente; venta; importe; cajero y deuda antes y después.</p><p class="rule">Se abre al registrar el abono y puede reimprimirse desde el historial para pagos vinculados a una venta.</p><p class="dependency"><b>Depende de:</b> Abonos; generación PDF</p><p class="state">Implementada; requiere esquema actualizado</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:1056; services/vinos/creditPaymentReceiptPdf.ts:50</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.16">
+<td class="feature"><span class="id">CT-04.16</span><strong>Estado de cuenta en PDF</strong><span class="submodule">Estado de cuenta</span></td>
+<td class="description"><p>Exportar límite; deuda; disponible; ventas a crédito; abonos y detalle de productos.</p><p class="rule">El documento presenta estados Abierta; Parcial y Pagada y calcula vencimiento a 30 días de emisión. No se encontró configuración del plazo en la ficha.</p><p class="dependency"><b>Depende de:</b> Clientes; crédito; abonos; generación PDF</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:625; services/vinos/customerStatementPdf.ts:84</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.17">
+<td class="feature"><span class="id">CT-04.17</span><strong>Habilitación de saldo a favor</strong><span class="submodule">Monedero</span></td>
+<td class="description"><p>Activar el monedero del cliente y capturar un monto inicial.</p><p class="rule">El formulario de alta o edición permite establecer el saldo y habilitar o deshabilitar su uso.</p><p class="dependency"><b>Depende de:</b> Clientes</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:510; components/Vinos/VinosCustomersScreen.tsx:1541</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.18">
+<td class="feature"><span class="id">CT-04.18</span><strong>Recarga de saldo a favor</strong><span class="submodule">Monedero</span></td>
+<td class="description"><p>Incrementar el saldo del cliente con monto; tipo de depósito y notas.</p><p class="rule">Requiere monto positivo y tipo de depósito; registra operador y auditoría.</p><p class="dependency"><b>Depende de:</b> CT-04.17; auditoría</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:904; services/vinos/customerMgmt.service.ts:219</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.19">
+<td class="feature"><span class="id">CT-04.19</span><strong>Historial de recargas y consumos</strong><span class="submodule">Monedero</span></td>
+<td class="description"><p>Consultar entradas y salidas del monedero con fecha; usuario y referencia.</p><p class="rule">Permite revisar movimientos asociados a ventas y abonos.</p><p class="dependency"><b>Depende de:</b> Movimientos del monedero</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:942; components/Vinos/VinosCustomersScreen.tsx:1875</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-04.20">
+<td class="feature"><span class="id">CT-04.20</span><strong>Historial de saldo en PDF</strong><span class="submodule">Monedero</span></td>
+<td class="description"><p>Exportar el saldo actual y los movimientos de recarga y consumo del cliente.</p><p class="rule">Genera un documento separado del estado de cuenta de crédito.</p><p class="dependency"><b>Depende de:</b> CT-04.19; generación PDF</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomersScreen.tsx:708; services/vinos/walletHistoryPdf.ts:62</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr></tbody></table></div></section><section class="module" id="module-5"><div class="module-heading"><h2>05. Reportes / CRM</h2><span>11 entradas</span></div>
+<div class="table-wrap"><table class="inventory"><colgroup><col style="width:25%"><col style="width:49%"><col style="width:14%"><col style="width:12%"></colgroup><thead><tr><th>Funcionalidad</th><th>Alcance actual y condiciones</th><th>Sugerencia</th><th>Decisión cliente</th></tr></thead><tbody><tr data-feature="CT-05.01">
+<td class="feature"><span class="id">CT-05.01</span><strong>Consulta por periodo</strong><span class="submodule">Filtros</span></td>
+<td class="description"><p>Seleccionar hoy; semana; mes; 90 días; año o fechas manuales.</p><p class="rule">Los indicadores se recalculan para el rango seleccionado. Algunas tarjetas comparativas usan periodos calendario actuales.</p><p class="dependency"><b>Depende de:</b> Ventas; compras; inventario</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosReportsScreen.tsx:716; services/vinos/reports.service.ts:155</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-05.02">
+<td class="feature"><span class="id">CT-05.02</span><strong>Indicadores comerciales</strong><span class="submodule">Ventas</span></td>
+<td class="description"><p>Consultar número de ventas; importe de ingresos y ticket promedio.</p><p class="rule">Se basan en ventas registradas; no equivalen a flujo de efectivo cobrado ni a conciliación bancaria.</p><p class="dependency"><b>Depende de:</b> Ventas</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosReportsScreen.tsx:774; services/vinos/reports.service.ts:155</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-05.03">
+<td class="feature"><span class="id">CT-05.03</span><strong>Utilidad estimada y porcentaje</strong><span class="submodule">Rentabilidad</span></td>
+<td class="description"><p>Estimar utilidad de las ventas a partir de los costos de compra disponibles.</p><p class="rule">Usa el último costo localizado por producto. El indicador llamado Margen utilidad calcula utilidad dividida entre costo; no entre ingresos.</p><p class="dependency"><b>Depende de:</b> Ventas; compras; calidad de costos</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">services/vinos/reports.service.ts:198; services/vinos/reports.service.ts:371; services/vinos/reports.service.ts:404</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-05.04">
+<td class="feature"><span class="id">CT-05.04</span><strong>Valor estimado del inventario</strong><span class="submodule">Inventario</span></td>
+<td class="description"><p>Calcular el valor de existencias usando el costo de compra obtenido para cada producto.</p><p class="rule">Sin un costo localizado en compras el cálculo usa cero. No representa por sí solo una valuación contable.</p><p class="dependency"><b>Depende de:</b> Inventario; compras</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">services/vinos/reports.service.ts:230; components/Vinos/VinosReportsScreen.tsx:778</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-05.05">
+<td class="feature"><span class="id">CT-05.05</span><strong>Ventas y utilidad por periodo</strong><span class="submodule">Comparativos</span></td>
+<td class="description"><p>Comparar ventas; importes y utilidad de hoy; semana; mes y año.</p><p class="rule">Muestra cuatro resúmenes en paralelo.</p><p class="dependency"><b>Depende de:</b> Ventas; costos de compra</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosReportsScreen.tsx:686; components/Vinos/VinosReportsScreen.tsx:784</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-05.06">
+<td class="feature"><span class="id">CT-05.06</span><strong>Análisis por día y horario</strong><span class="submodule">Comportamiento de venta</span></td>
+<td class="description"><p>Ver los días de mayor venta; distribución por hora y horas fuertes o bajas.</p><p class="rule">Presenta gráficos y listados con número de ventas e importes.</p><p class="dependency"><b>Depende de:</b> Ventas con fecha y hora</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosReportsScreen.tsx:810; components/Vinos/VinosReportsScreen.tsx:933</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-05.07">
+<td class="feature"><span class="id">CT-05.07</span><strong>Ranking de productos más vendidos</strong><span class="submodule">Productos</span></td>
+<td class="description"><p>Consultar los productos con mayor cantidad vendida y su importe de venta.</p><p class="rule">El ranking corresponde a la información de ventas del periodo.</p><p class="dependency"><b>Depende de:</b> Detalle de ventas; productos</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosReportsScreen.tsx:847</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-05.08">
+<td class="feature"><span class="id">CT-05.08</span><strong>Productos rentables y con pérdida</strong><span class="submodule">Productos</span></td>
+<td class="description"><p>Identificar productos con mayor utilidad y productos sin utilidad o con pérdida.</p><p class="rule">Usa la misma estimación de costos del reporte; depende de que las compras tengan costos correctos.</p><p class="dependency"><b>Depende de:</b> CT-05.03; detalle de ventas</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosReportsScreen.tsx:869; components/Vinos/VinosReportsScreen.tsx:891</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-05.09">
+<td class="feature"><span class="id">CT-05.09</span><strong>Listado de productos con poco inventario</strong><span class="submodule">Inventario</span></td>
+<td class="description"><p>Revisar productos cuyo stock está en el mínimo configurado o por debajo.</p><p class="rule">Muestra producto; SKU; stock actual y mínimo.</p><p class="dependency"><b>Depende de:</b> Productos; existencias mínimas</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosReportsScreen.tsx:912</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-05.10">
+<td class="feature"><span class="id">CT-05.10</span><strong>Revisión y reimpresión de cierres</strong><span class="submodule">Caja</span></td>
+<td class="description"><p>Consultar historial de caja desde reportes y volver a imprimir cortes.</p><p class="rule">Muestra datos de la sesión; cajero y conciliación. Comparte el servicio de caja con el punto de venta.</p><p class="dependency"><b>Depende de:</b> Caja; generación PDF</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosReportsScreen.tsx:632; components/Vinos/VinosReportsScreen.tsx:971</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-05.11">
+<td class="feature"><span class="id">CT-05.11</span><strong>Detalle de ventas de un corte</strong><span class="submodule">Caja</span></td>
+<td class="description"><p>Consultar ventas asociadas a una sesión de caja y sus totales.</p><p class="rule">Permite revisar el detalle de las operaciones que componen el corte.</p><p class="dependency"><b>Depende de:</b> Caja; ventas</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosReportsScreen.tsx:611; services/vinos/cashRegister.service.ts:499</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr></tbody></table></div></section><section class="module" id="module-6"><div class="module-heading"><h2>06. Corte personalizado</h2><span>3 entradas</span></div>
+<div class="table-wrap"><table class="inventory"><colgroup><col style="width:25%"><col style="width:49%"><col style="width:14%"><col style="width:12%"></colgroup><thead><tr><th>Funcionalidad</th><th>Alcance actual y condiciones</th><th>Sugerencia</th><th>Decisión cliente</th></tr></thead><tbody><tr data-feature="CT-06.01">
+<td class="feature"><span class="id">CT-06.01</span><strong>Corte por fecha y hora</strong><span class="submodule">Consulta</span></td>
+<td class="description"><p>Reconstruir un resumen de ventas entre una fecha y hora inicial y final.</p><p class="rule">Interpreta el rango en horario de México. No altera las sesiones guardadas ni registra una nueva conciliación de caja.</p><p class="dependency"><b>Depende de:</b> Ventas; servicio de caja</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomCutScreen.tsx:135; services/vinos/cashRegister.service.ts:437</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-06.02">
+<td class="feature"><span class="id">CT-06.02</span><strong>Corte por cajero o de todos</strong><span class="submodule">Filtros</span></td>
+<td class="description"><p>Filtrar el corte por un empleado o incluir a todos los cajeros.</p><p class="rule">Los empleados se obtienen de las fuentes de usuarios y operaciones disponibles.</p><p class="dependency"><b>Depende de:</b> Usuarios; ventas</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCustomCutScreen.tsx:56; components/Vinos/VinosCustomCutScreen.tsx:240</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-06.03">
+<td class="feature"><span class="id">CT-06.03</span><strong>Impresión del corte reconstruido</strong><span class="submodule">Comprobantes</span></td>
+<td class="description"><p>Generar un ticket PDF con importes por método; descuentos; cancelaciones y cantidad vendida.</p><p class="rule">El corte personalizado usa efectivo inicial cero y no tiene efectivo entregado ni diferencia de arqueo. También existe acceso desde Reportes.</p><p class="dependency"><b>Depende de:</b> CT-06.01; generación PDF</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">services/vinos/cashRegister.service.ts:437; components/Vinos/VinosReportsScreen.tsx:561</p></details></td>
+<td class="scope"><span class="badge conditional">Según operación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr></tbody></table></div></section><section class="module" id="module-7"><div class="module-heading"><h2>07. Campañas</h2><span>9 entradas</span></div>
+<div class="table-wrap"><table class="inventory"><colgroup><col style="width:25%"><col style="width:49%"><col style="width:14%"><col style="width:12%"></colgroup><thead><tr><th>Funcionalidad</th><th>Alcance actual y condiciones</th><th>Sugerencia</th><th>Decisión cliente</th></tr></thead><tbody><tr data-feature="CT-07.01">
+<td class="feature"><span class="id">CT-07.01</span><strong>Creación guiada de campañas</strong><span class="submodule">Preparación</span></td>
+<td class="description"><p>Preparar una campaña con nombre; porcentaje de descuento; vigencia; destinatarios y mensaje.</p><p class="rule">Flujo de cuatro pasos con verificación final; guarda la campaña como borrador.</p><p class="dependency"><b>Depende de:</b> Clientes</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCampaignsScreen.tsx:263; components/Vinos/VinosCampaignsScreen.tsx:375</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-07.02">
+<td class="feature"><span class="id">CT-07.02</span><strong>Filtros combinados de destinatarios</strong><span class="submodule">Segmentación</span></td>
+<td class="description"><p>Seleccionar clientes por nivel; estado; preferencias; cumpleaños del mes e inactividad.</p><p class="rule">Combina criterios por intersección y permite indicar los días sin comprar.</p><p class="dependency"><b>Depende de:</b> Datos de clientes; fecha de última compra</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCampaignsScreen.tsx:194; services/vinos/campaigns.service.ts:196</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-07.03">
+<td class="feature"><span class="id">CT-07.03</span><strong>Selección manual de destinatarios</strong><span class="submodule">Segmentación</span></td>
+<td class="description"><p>Buscar clientes; agregarlos o retirarlos de la lista de la campaña.</p><p class="rule">Permite combinar clientes filtrados y agregados manualmente; evita repetir al mismo destinatario.</p><p class="dependency"><b>Depende de:</b> Clientes; campaña</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCampaignsScreen.tsx:219; components/Vinos/VinosCampaignsScreen.tsx:237</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-07.04">
+<td class="feature"><span class="id">CT-07.04</span><strong>Plantillas y personalización de mensajes</strong><span class="submodule">Mensajes</span></td>
+<td class="description"><p>Usar plantillas de promoción; reactivación; cumpleaños o cliente preferente y editar el texto.</p><p class="rule">Sustituye nombre; código; descuento y fechas de vigencia. Ofrece vista previa antes del envío.</p><p class="dependency"><b>Depende de:</b> Campaña; clientes</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCampaignsScreen.tsx:35; components/Vinos/VinosCampaignsScreen.tsx:249; services/vinos/campaigns.service.ts:88</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-07.05">
+<td class="feature"><span class="id">CT-07.05</span><strong>Código de promoción por cliente</strong><span class="submodule">Promociones</span></td>
+<td class="description"><p>Generar un código único de descuento para cada destinatario al enviar la campaña.</p><p class="rule">Cada código se vincula al cliente; campaña; porcentaje y vigencia y se valida en Caja / Venta.</p><p class="dependency"><b>Depende de:</b> Campañas; clientes; CT-01.21</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">services/vinos/campaigns.service.ts:99; services/vinos/campaigns.service.ts:292</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-07.06">
+<td class="feature"><span class="id">CT-07.06</span><strong>Envío masivo por WhatsApp</strong><span class="submodule">Envíos</span></td>
+<td class="description"><p>Enviar a los destinatarios el mensaje personalizado y su promoción.</p><p class="rule">Requiere teléfono y servicio WhatsApp mediante función de servidor y proveedor UltraMsg. La pantalla inicia el envío; no se encontró programación automática.</p><p class="dependency"><b>Depende de:</b> WhatsApp; proveedor externo; clientes</p><p class="state">Integración externa implementada; envío no probado</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCampaignsScreen.tsx:314; services/vinos/campaigns.service.ts:292; supabase/functions/whatsapp-send/index.ts:1</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-07.07">
+<td class="feature"><span class="id">CT-07.07</span><strong>Resultado e historial de campañas</strong><span class="submodule">Seguimiento</span></td>
+<td class="description"><p>Consultar campañas; vigencia; estado; destinatarios y conteos de envíos correctos y fallidos.</p><p class="rule">Los conteos reflejan respuesta del servicio de envío; no son confirmaciones de lectura del destinatario.</p><p class="dependency"><b>Depende de:</b> Campañas; respuesta del proveedor</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCampaignsScreen.tsx:375; services/vinos/campaigns.service.ts:292</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-07.08">
+<td class="feature"><span class="id">CT-07.08</span><strong>Consulta del uso de promociones</strong><span class="submodule">Seguimiento</span></td>
+<td class="description"><p>Ver códigos por cliente y distinguir promociones usadas de las no usadas.</p><p class="rule">Incluye búsqueda de destinatarios; filtros y paginación en el detalle de campaña.</p><p class="dependency"><b>Depende de:</b> Promociones; ventas</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCampaignsScreen.tsx:301; components/Vinos/VinosCampaignsScreen.tsx:356</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-07.09">
+<td class="feature"><span class="id">CT-07.09</span><strong>Eliminación de borradores con motivo</strong><span class="submodule">Control</span></td>
+<td class="description"><p>Dar de baja una campaña que todavía no se ha enviado.</p><p class="rule">Exige observación. La pantalla y el servicio impiden eliminar campañas ya enviadas.</p><p class="dependency"><b>Depende de:</b> Campañas; auditoría</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosCampaignsScreen.tsx:337; services/vinos/campaigns.service.ts:280</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr></tbody></table></div></section><section class="module" id="module-8"><div class="module-heading"><h2>08. Auditorías</h2><span>4 entradas</span></div>
+<div class="table-wrap"><table class="inventory"><colgroup><col style="width:25%"><col style="width:49%"><col style="width:14%"><col style="width:12%"></colgroup><thead><tr><th>Funcionalidad</th><th>Alcance actual y condiciones</th><th>Sugerencia</th><th>Decisión cliente</th></tr></thead><tbody><tr data-feature="CT-08.01">
+<td class="feature"><span class="id">CT-08.01</span><strong>Bitácora de operaciones</strong><span class="submodule">Trazabilidad</span></td>
+<td class="description"><p>Consultar eventos registrados de Casa Tahona con fecha; usuario; entidad; acción y motivo.</p><p class="rule">Cubre los eventos que las acciones envían al servicio compartido de auditoría; no implica registro automático de cualquier cambio de base de datos.</p><p class="dependency"><b>Depende de:</b> Usuarios; servicio de auditoría</p><p class="state">Integración compartida implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosAuditScreen.tsx:140; services/audit/audit.service.ts:1</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-08.02">
+<td class="feature"><span class="id">CT-08.02</span><strong>Búsqueda y filtros de auditoría</strong><span class="submodule">Consulta</span></td>
+<td class="description"><p>Buscar por usuario; descripción o motivo y filtrar por entidad; acción y fechas.</p><p class="rule">Incluye limpieza de filtros; recarga y paginación. El selector de entidad ofrece ventas; compras; productos; clientes y proveedores.</p><p class="dependency"><b>Depende de:</b> Bitácora</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosAuditScreen.tsx:140; components/Vinos/VinosAuditScreen.tsx:243</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-08.03">
+<td class="feature"><span class="id">CT-08.03</span><strong>Consulta de motivos y detalle de ventas</strong><span class="submodule">Detalle</span></td>
+<td class="description"><p>Abrir un evento para conocer responsable; sucursal; motivo e información guardada de una venta registrada o eliminada.</p><p class="rule">El detalle de productos depende de que el evento incluya una copia de los datos de la operación.</p><p class="dependency"><b>Depende de:</b> Bitácora; datos del evento</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosAuditScreen.tsx:349; components/Vinos/VinosAuditScreen.tsx:401</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-08.04">
+<td class="feature"><span class="id">CT-08.04</span><strong>Conteos de eventos y usuarios</strong><span class="submodule">Indicadores</span></td>
+<td class="description"><p>Mostrar total de registros; eventos visibles; eliminaciones y usuarios distintos.</p><p class="rule">El conteo de eliminaciones y usuarios distintos corresponde a la página cargada; no a toda la bitácora.</p><p class="dependency"><b>Depende de:</b> Bitácora</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">components/Vinos/VinosAuditScreen.tsx:172; components/Vinos/VinosAuditScreen.tsx:199</p></details></td>
+<td class="scope"><span class="badge extra">Ampliación</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr></tbody></table></div></section><section class="module" id="module-9"><div class="module-heading"><h2>09. Servicios compartidos</h2><span>4 entradas</span></div>
+<div class="table-wrap"><table class="inventory"><colgroup><col style="width:25%"><col style="width:49%"><col style="width:14%"><col style="width:12%"></colgroup><thead><tr><th>Funcionalidad</th><th>Alcance actual y condiciones</th><th>Sugerencia</th><th>Decisión cliente</th></tr></thead><tbody><tr data-feature="CT-09.01">
+<td class="feature"><span class="id">CT-09.01</span><strong>Acceso por usuario y módulo</strong><span class="submodule">Acceso</span></td>
+<td class="description"><p>Controlar qué usuarios pueden entrar a las secciones de Casa Tahona.</p><p class="rule">Usa el sistema general de autenticación y permisos. El rol VINOS_ADMIN tiene acceso a la unidad vinos; no se debe asumir control fino de cada botón por esta regla.</p><p class="dependency"><b>Depende de:</b> Autenticación del sistema destino</p><p class="state">Compartida con el sistema general</p><details><summary>Referencia en código</summary><p class="source">services/auth/permissions.ts:66; services/auth/permissions.ts:88; components/Users/UsersScreen.tsx:196</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-09.02">
+<td class="feature"><span class="id">CT-09.02</span><strong>Asignación de sucursal Casa Tahona</strong><span class="submodule">Sucursal</span></td>
+<td class="description"><p>Seleccionar automáticamente la sucursal asociada a Casa Tahona al entrar al módulo.</p><p class="rule">El selector queda fijo mientras se opera Casa Tahona. Una operación con varias sucursales necesitaría adaptar esta regla.</p><p class="dependency"><b>Depende de:</b> Catálogo de sucursales; permisos</p><p class="state">Compartida con el sistema general</p><details><summary>Referencia en código</summary><p class="source">App.tsx:477; components/Layout.tsx:279</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-09.03">
+<td class="feature"><span class="id">CT-09.03</span><strong>Persistencia separada de la operación</strong><span class="submodule">Datos</span></td>
+<td class="description"><p>Guardar la información comercial de Casa Tahona en su conexión de datos de vinos.</p><p class="rule">El módulo depende de su esquema y migraciones. Usuarios; auditoría y funciones externas usan servicios compartidos del sistema.</p><p class="dependency"><b>Depende de:</b> Base de datos; servicios del sistema destino</p><p class="state">Dependencia técnica actual</p><details><summary>Referencia en código</summary><p class="source">services/vinosClient.ts:1; services/audit/audit.service.ts:1; services/vinos/documentUpload.service.ts:1</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr><tr data-feature="CT-09.04">
+<td class="feature"><span class="id">CT-09.04</span><strong>Generación de documentos PDF</strong><span class="submodule">Documentos</span></td>
+<td class="description"><p>Producir notas de venta; cortes; recibos de abonos; estados de cuenta; historial de monedero y catálogo.</p><p class="rule">Los documentos incorporan nombre comercial y datos de Casa Tahona; deberán adaptarse a la nueva empresa.</p><p class="dependency"><b>Depende de:</b> Generadores PDF; identidad del sistema destino</p><p class="state">Implementada</p><details><summary>Referencia en código</summary><p class="source">services/vinos/saleTicketPdf.ts:86; services/vinos/cashRegisterReceiptPdf.ts:36; services/vinos/customerStatementPdf.ts:84</p></details></td>
+<td class="scope"><span class="badge base">Base sugerida</span></td>
+<td class="decision"><span class="choice">Incluir</span><span class="choice">Después</span><span class="choice">No incluir</span></td>
+</tr></tbody></table></div></section>
+<section class="clarifications"><h2>Precisiones para acordar la réplica</h2><ul>
+<li><b>Gestión de clientes desde caja:</b> el resumen de saldos funciona; los botones de edición, abonos, recargas y exportación están marcados como próximos. Esas acciones sí se implementan en la sección Clientes.</li>
+<li><b>Inventario de compras:</b> los servicios guardan compras y partidas, pero no actualizan directamente las existencias. Hay que comprobar las reglas de la base de datos que producen o revierten esas entradas.</li>
+<li><b>Crédito de proveedores:</b> existe el indicador de compra a crédito. No se encontró una pantalla de cuentas por pagar o abonos a proveedores dentro de Casa Tahona.</li>
+<li><b>Cobros y documentos:</b> tarjeta y transferencia son métodos registrados; no se encontró cobro integrado con una terminal bancaria. Los PDF son documentos operativos; no se encontró facturación fiscal dentro de este módulo.</li>
+<li><b>Reglas comerciales actuales:</b> comisión de tarjeta del 3%; sugerencias de precios con recargos de 25%, 20% y 15%; vencimiento mostrado a 30 días en el estado de cuenta; horario de Ciudad de México para cierres. Deben confirmarse para la nueva empresa.</li>
+<li><b>Utilidad y cierre:</b> la utilidad es estimada con el último costo localizado; el porcentaje del reporte se calcula sobre costo. El efectivo esperado del corte suma fondo inicial y ventas en efectivo; no incorpora los abonos ni las recargas de monedero en el cálculo consultado.</li>
+<li><b>Automatizaciones e integraciones:</b> WhatsApp y archivos necesitan servicios externos. La aplicación muestra niveles y estados de clientes, pero no se verificó su recálculo automático. Existe un script de venta atómica, aunque el servicio de venta revisado no lo invoca.</li>
+<li><b>Funciones sin acceso operativo verificado:</b> hay servicios o estructuras para domicilios, marcas, métricas CRM adicionales y consulta de ventas de contado del cliente, pero no se encontraron accesos activos completos en las pantallas revisadas. No se cuentan como capacidades disponibles de la interfaz.</li>
+<li><b>Otros alcances:</b> no se encontró un flujo operativo de devolución parcial, alta de cupones genéricos o configuración de varias sucursales dentro de Casa Tahona. Cortesías aparecen en tipos de datos e históricos, pero no como una opción de cobro en el selector actual.</li>
+</ul><p>Los servicios compartidos también figuran en el inventario para identificar dependencias; no representan cuatro pantallas adicionales. Las entradas agrupan acciones relacionadas y no equivalen a historias de usuario de tamaño uniforme.</p></section>
+<footer>Casa Tahona · Documento de trabajo para definición de alcance · Versión 1.0 · 22/09/2026<br>La matriz CSV conserva referencias técnicas por entrada. La copia HTML es una presentación del mismo catálogo y dispone de formato de impresión.</footer>
+</main></body></html>

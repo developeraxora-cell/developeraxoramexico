@@ -26,6 +26,7 @@ const ENTITY_ICON: Record<string, React.ElementType> = {
   cliente: Users,
   compra: ClipboardList,
   proveedor: Truck,
+  inventario: ClipboardList,
 };
 
 interface DeletedSaleAuditItem {
@@ -225,6 +226,7 @@ const VinosAuditScreen: React.FC<Props> = () => {
             <option value="producto">Productos</option>
             <option value="cliente">Clientes</option>
             <option value="proveedor">Proveedores</option>
+            <option value="inventario">Inventarios</option>
           </select>
         </div>
         <div>
