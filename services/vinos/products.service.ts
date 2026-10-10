@@ -2,6 +2,7 @@ import { supabaseVinos, isVinosConfigured } from '../vinosClient';
 import { supabase } from '../supabaseClient';
 import { fetchAuditLogs } from '../audit/audit.service';
 import type { PriceTier } from './sales.service';
+import { fetchProductUoms } from './productUoms.service';
 
 export interface VinosProduct {
   id: string;
@@ -226,13 +227,9 @@ export const vinosProductsService = {
 
   async listAllProductUoms(productIds: string[]): Promise<Array<{ id: string; product_id: string; uom_id: string; factor_to_base: number; uom: { id: string; name: string; symbol: string | null } }>> {
     if (!isVinosConfigured || productIds.length === 0) return [];
-    const { data, error } = await supabaseVinos
-      .from('product_uoms')
-      .select('id, product_id, uom_id, factor_to_base, uom:uoms(id,name,symbol)')
-      .in('product_id', productIds);
-    if (error) throw error;
     interface Row { id: string; product_id: string; uom_id: string; factor_to_base: number; uom: { id: string; name: string; symbol: string | null } | { id: string; name: string; symbol: string | null }[] }
-    return (data ?? []).map((r: Row) => ({
+    const data = await fetchProductUoms<Row>(productIds, 'id, product_id, uom_id, factor_to_base, uom:uoms(id,name,symbol)');
+    return data.map((r: Row) => ({
       id: r.id,
       product_id: r.product_id,
       uom_id: r.uom_id,

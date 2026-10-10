@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom';
 import {
   Search, Trash2, User as UserIcon, CreditCard, Banknote, Gift, Tag, Receipt, X, Loader2, Plus, Minus, Wallet, Eye, FileText, Pencil,
-  Clock, History, LockKeyhole, UnlockKeyhole, Store, ArrowRight,
+  Clock, History, LockKeyhole, UnlockKeyhole, Store, ArrowRight, RefreshCw,
 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency } from '../../services/currency';
 import { vinosProductsService, type ProductWithStock } from '../../services/vinos/products.service';
+import { fetchProductUoms } from '../../services/vinos/productUoms.service';
 import { vinosCustomersService, type VinosCustomer } from '../../services/vinos/customers.service';
 import { vinosSalesService, type SaleCartItem, type PaymentMethod, type PriceTier } from '../../services/vinos/sales.service';
 import { vinosCashRegisterService, type CashRegisterSession, type CashRegisterSummary } from '../../services/vinos/cashRegister.service';
@@ -87,6 +88,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   const [customers, setCustomers] = useState<VinosCustomer[]>([]);
   const [branchDbId, setBranchDbId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const catalogLoadRef = useRef(0);
 
   // caja
   const [cashSession, setCashSession] = useState<CashRegisterSession | null>(null);
@@ -210,6 +213,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   // ── load catálogo + clientes ────────────────────────────
   const load = useCallback(async () => {
+    const loadId = ++catalogLoadRef.current;
+    setCatalogError(null);
     if (!branchDbId) {
       setProducts([]);
       setCustomers([]);
@@ -224,10 +229,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         vinosCustomersService.getAll(branchDbId),
       ]);
       const ids = prods.map(p => p.id);
-      const { data: pricedUoms } = await supabaseVinos
-        .from('product_uoms')
-        .select('id, product_id, uom_id, factor_to_base, price_retail, price_mid_wholesale, price_wholesale, uom:uoms(id,name,symbol)')
-        .in('product_id', ids);
+      const pricedUoms = await fetchProductUoms<Omit<ProductUomFull, 'uom'> & { product_id: string; uom: UomMini | UomMini[] }>(
+        ids,
+        'id, product_id, uom_id, factor_to_base, price_retail, price_mid_wholesale, price_wholesale, uom:uoms(id,name,symbol)',
+      );
+      if (loadId !== catalogLoadRef.current) return;
       const byProduct: Record<string, ProductUomFull[]> = {};
       (pricedUoms ?? []).forEach((row: { id: string; product_id: string; uom_id: string; factor_to_base: number; price_retail: number; price_mid_wholesale: number; price_wholesale: number; uom: UomMini | UomMini[] }) => {
         const u = Array.isArray(row.uom) ? row.uom[0] : row.uom;
@@ -247,8 +253,14 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       if (publicGeneral) {
         setCustomerId(prev => prev || publicGeneral.id);
       }
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    } catch (e) {
+      if (loadId !== catalogLoadRef.current) return;
+      console.error('Error cargando el catalogo de Casa Tahona:', e);
+      setProducts([]);
+      setCatalogError('No se pudo cargar el catálogo y sus unidades. Intenta nuevamente.');
+    } finally {
+      if (loadId === catalogLoadRef.current) setLoading(false);
+    }
   }, [branchDbId]);
 
   useEffect(() => { load(); }, [load]);
@@ -404,11 +416,14 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
   // ── filtrados ───────────────────────────────────────────
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return products;
+    if (!q) return products.slice(0, 12);
+    const barcodeMatches = products.filter(p => (p.barcode ?? '').trim().toLowerCase() === q);
+    if (barcodeMatches.length > 0) return barcodeMatches;
+    if (q.length < 3) return products.slice(0, 12);
     return products.filter(p =>
       p.name.toLowerCase().includes(q) ||
       p.sku.toLowerCase().includes(q) ||
-      (p.barcode ?? '').includes(q)
+      (p.barcode ?? '').toLowerCase().includes(q)
     );
   }, [products, search]);
 
@@ -522,6 +537,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   // ── add product modal helpers ──────────────────────────
   const openAddProduct = (p: ProductFull) => {
+    if (loading || catalogError) return;
     if (!isCashRegisterOpen) {
       setCashStartPromptOpen(true);
       setFeedback({ type: 'error', msg: 'Primero debes iniciar caja para vender.' });
@@ -1453,6 +1469,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 className="w-full rounded-xl border border-slate-200 py-2 pl-8 pr-3 text-xs outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
                 placeholder={isCashRegisterOpen ? 'Buscar producto por nombre, SKU o código…' : 'Inicia caja para ver el catálogo'}
                 value={search}
+                aria-label="Buscar producto por nombre, SKU o código de barras"
                 onChange={e => setSearch(e.target.value)}
                 disabled={!isCashRegisterOpen}
               />
@@ -1512,6 +1529,17 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             </div>
           ) : loading ? (
             <div className="py-20 text-center text-sm font-bold text-slate-400">Cargando catálogo…</div>
+          ) : catalogError ? (
+            <div className="py-12 px-3 text-center" role="alert">
+              <p className="text-sm font-semibold text-red-700">{catalogError}</p>
+              <button
+                type="button"
+                onClick={() => { void load(); }}
+                className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"
+              >
+                <RefreshCw size={16} aria-hidden="true" /> Reintentar
+              </button>
+            </div>
           ) : filteredProducts.length === 0 ? (
             <div className="py-20 text-center">
               <Tag size={36} className="mx-auto text-slate-300" />
