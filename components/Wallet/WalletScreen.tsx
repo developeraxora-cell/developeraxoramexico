@@ -259,20 +259,20 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
     <div className="flex h-full flex-col gap-6 overflow-hidden p-6">
       <div className="grid gap-4 xl:grid-cols-4">
         <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-widest text-sky-500">Saldos a favor activos</p>
-          <p className="mt-3 text-4xl font-black tracking-tighter text-slate-900">{totals.active}</p>
+          <p className="text-xs font-semibold  tracking-wide text-sky-500">Saldos a favor activos</p>
+          <p className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">{totals.active}</p>
         </div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Saldo total</p>
-          <p className="mt-3 text-4xl font-black tracking-tighter text-emerald-600">{formatCurrency(totals.balance)}</p>
+          <p className="text-xs font-semibold  tracking-wide text-emerald-500">Saldo total</p>
+          <p className="mt-3 text-4xl font-semibold tracking-tight text-emerald-600">{formatCurrency(totals.balance)}</p>
         </div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">Recargas hoy</p>
-          <p className="mt-3 text-4xl font-black tracking-tighter text-slate-900">{totals.rechargesToday}</p>
+          <p className="text-xs font-semibold  tracking-wide text-orange-500">Recargas hoy</p>
+          <p className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">{totals.rechargesToday}</p>
         </div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-widest text-violet-500">Sucursal</p>
-          <p className="mt-3 text-lg font-black uppercase tracking-tight text-slate-900">{selectedBranch?.name ?? selectedBranchId}</p>
+          <p className="text-xs font-semibold  tracking-wide text-violet-500">Sucursal</p>
+          <p className="mt-3 text-lg font-semibold  tracking-tight text-slate-900">{selectedBranch?.name ?? selectedBranchId}</p>
         </div>
       </div>
 
@@ -281,12 +281,12 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Buscar por cliente, teléfono o dirección..."
-          className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
+          className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
         />
         <button
           type="button"
           onClick={openCreateModal}
-          className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white"
+          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-semibold  tracking-wide text-white"
         >
           <PlusCircle className="h-4 w-4" />
           Agregar cliente
@@ -295,7 +295,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
 
       <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm">
         <table className="min-w-full text-sm">
-          <thead className="bg-slate-900 text-[10px] font-black uppercase tracking-widest text-white">
+          <thead className="bg-slate-900 text-xs font-semibold  tracking-wide text-white">
             <tr>
               <th className="p-4 text-left">Cliente</th>
               <th className="p-4 text-right">Saldo actual</th>
@@ -319,22 +319,22 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
             {!isLoading && filteredWallets.map((wallet) => (
               <tr key={wallet.id} className="hover:bg-slate-50">
                 <td className="p-4">
-                  <p className="text-sm font-black uppercase text-slate-900">{wallet.customer_name}</p>
+                  <p className="text-sm font-semibold  text-slate-900">{wallet.customer_name}</p>
                   <p className="text-[11px] font-bold text-slate-400">{[wallet.customer_phone, wallet.customer_address].filter(Boolean).join(' · ') || 'Sin datos adicionales'}</p>
                 </td>
-                <td className="p-4 text-right text-base font-black text-emerald-600">{formatCurrency(wallet.current_balance)}</td>
+                <td className="p-4 text-right text-base font-semibold text-emerald-600">{formatCurrency(wallet.current_balance)}</td>
                 <td className="p-4 text-xs font-semibold text-slate-600">{new Date(wallet.opened_at).toLocaleString()}</td>
                 <td className="p-4 text-xs font-semibold text-slate-600">{wallet.last_recharge_at ? new Date(wallet.last_recharge_at).toLocaleString() : 'Sin recargas'}</td>
                 <td className="p-4 text-center">
-                  <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-700">{wallet.status}</span>
+                  <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold  tracking-wide text-emerald-700">{wallet.status}</span>
                 </td>
                 <td className="p-4 text-center">
                   <div className="flex items-center justify-center gap-2">
-                    <button type="button" onClick={() => openRechargeModal(wallet)} className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-700 hover:bg-emerald-100">
+                    <button type="button" onClick={() => openRechargeModal(wallet)} className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold  tracking-wide text-emerald-700 hover:bg-emerald-100">
                       <CreditCard className="h-4 w-4" />
                       Recargar
                     </button>
-                    <button type="button" onClick={() => void openHistoryModal(wallet)} className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-200">
+                    <button type="button" onClick={() => void openHistoryModal(wallet)} className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold  tracking-wide text-slate-700 hover:bg-slate-200">
                       <History className="h-4 w-4" />
                       Historial
                     </button>

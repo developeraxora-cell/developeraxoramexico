@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 
 import React, { useState, useMemo } from 'react';
 import { ConcreteOrder, ConcreteFormula, MixerTruck, Product, Customer } from '../../types';
@@ -133,14 +134,14 @@ const ConcreteOps: React.FC<ConcreteOpsProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Panel de Batching</h2>
-          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Control de Producción y Despacho</p>
+          <h2 className="text-2xl font-semibold text-slate-800  tracking-tight">Panel de Batching</h2>
+          <p className="text-xs text-slate-400 font-bold  tracking-wide">Control de Producción y Despacho</p>
         </div>
         <button
           onClick={() => setIsNewOrderModalOpen(true)}
-          className="bg-slate-900 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-orange-600 transition-all"
+          className="bg-slate-900 text-white px-8 py-3 rounded-xl font-semibold text-xs  tracking-wide shadow-sm hover:bg-orange-600 transition-all"
         >
           + Programar Colado
         </button>
@@ -149,20 +150,20 @@ const ConcreteOps: React.FC<ConcreteOpsProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Columna de Pedidos Pendientes */}
         <div className="lg:col-span-2 space-y-4">
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Pedidos en Espera</h3>
+          <h3 className="text-xs font-semibold text-slate-400  tracking-wide px-2">Pedidos en Espera</h3>
           <div className="grid grid-cols-1 gap-4">
             {branchOrders.map(order => {
               const customer = customers.find(c => c.id === order.customerId);
               const formula = formulas.find(f => f.id === order.formulaId);
               return (
-                <div key={order.id} className={`bg-white p-5 rounded-3xl border-2 transition-all ${order.status === 'PRODUCIENDO' ? 'border-orange-500 bg-orange-50/10' : 'border-slate-100'}`}>
+                <div key={order.id} className={`bg-white p-5 rounded-2xl border-2 transition-all ${order.status === 'PRODUCIENDO' ? 'border-orange-500 bg-orange-50/10' : 'border-slate-100'}`}>
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <p className="text-[10px] font-black text-orange-500 uppercase">{formula?.name}</p>
-                      <h4 className="text-lg font-black text-slate-800 tracking-tighter">{customer?.name}</h4>
-                      <p className="text-xs text-slate-400 font-bold uppercase">{order.qtyM3} m³ • {new Date(order.scheduledDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hrs</p>
+                      <p className="text-xs font-semibold text-orange-500 ">{formula?.name}</p>
+                      <h4 className="text-lg font-semibold text-slate-800 tracking-tight">{customer?.name}</h4>
+                      <p className="text-xs text-slate-400 font-bold ">{order.qtyM3} m³ • {new Date(order.scheduledDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hrs</p>
                     </div>
-                    <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase ${order.status === 'PENDIENTE' ? 'bg-slate-100 text-slate-500' :
+                    <span className={`px-4 py-1.5 rounded-full text-[11px] font-semibold  ${order.status === 'PENDIENTE' ? 'bg-slate-100 text-slate-500' :
                       order.status === 'PRODUCIENDO' ? 'bg-orange-500 text-white animate-pulse' :
                         'bg-blue-100 text-blue-600'
                       }`}>
@@ -174,20 +175,20 @@ const ConcreteOps: React.FC<ConcreteOpsProps> = ({
                     {order.status === 'PENDIENTE' && (
                       <button
                         onClick={() => processBatching(order.id)}
-                        className="flex-1 bg-slate-900 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest"
+                        className="flex-1 bg-slate-900 text-white py-3 rounded-xl font-semibold text-xs  tracking-wide"
                       >
-                        ⚡ Iniciar Carga (Batch)
+                        <AppIcon name="zap" /> Iniciar Carga (Batch)
                       </button>
                     )}
                     {order.status === 'PRODUCIENDO' && (
                       <button
                         onClick={() => dispatchTruck(order.id)}
-                        className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest"
+                        className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-semibold text-xs  tracking-wide"
                       >
-                        🚚 Salida de Planta
+                        <AppIcon name="truck" /> Salida de Planta
                       </button>
                     )}
-                    <button className="px-4 py-3 bg-slate-50 text-slate-400 rounded-xl">📄</button>
+                    <button className="px-4 py-3 bg-slate-50 text-slate-400 rounded-xl"><AppIcon name="file" /></button>
                   </div>
                 </div>
               );
@@ -198,16 +199,16 @@ const ConcreteOps: React.FC<ConcreteOpsProps> = ({
 
         {/* Columna de Flota Mixer */}
         <div className="space-y-4">
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Estado de Ollas</h3>
+          <h3 className="text-xs font-semibold text-slate-400  tracking-wide px-2">Estado de Ollas</h3>
           <div className="space-y-3">
             {mixers.map(mixer => (
-              <div key={mixer.id} className="bg-slate-900 p-4 rounded-2xl text-white shadow-lg border border-slate-800">
+              <div key={mixer.id} className="bg-slate-900 p-4 rounded-xl text-white shadow-lg border border-slate-800">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-xl font-black tracking-tighter">{mixer.plate}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase">Capacidad: {mixer.capacityM3}m³</p>
+                    <p className="text-xl font-semibold tracking-tight">{mixer.plate}</p>
+                    <p className="text-[11px] font-bold text-slate-400 ">Capacidad: {mixer.capacityM3}m³</p>
                   </div>
-                  <div className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase ${mixer.status === 'DISPONIBLE' ? 'bg-green-500 text-white' :
+                  <div className={`px-3 py-1 rounded-lg text-[11px] font-semibold  ${mixer.status === 'DISPONIBLE' ? 'bg-green-500 text-white' :
                     mixer.status === 'CARGANDO' ? 'bg-orange-500 text-white' :
                       'bg-blue-500 text-white'
                     }`}>
@@ -216,8 +217,8 @@ const ConcreteOps: React.FC<ConcreteOpsProps> = ({
                 </div>
                 {mixer.currentOrderId && (
                   <div className="mt-3 pt-3 border-t border-slate-800 flex items-center gap-2">
-                    <span className="text-xs">🏗️</span>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase">Orden Activa: {mixer.currentOrderId.slice(-6)}</p>
+                    <span className="text-xs"><AppIcon name="construction" /></span>
+                    <p className="text-[11px] font-bold text-slate-400 ">Orden Activa: {mixer.currentOrderId.slice(-6)}</p>
                   </div>
                 )}
               </div>
@@ -229,14 +230,14 @@ const ConcreteOps: React.FC<ConcreteOpsProps> = ({
       {/* Modal Nuevo Colado */}
       {isNewOrderModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-center shadow-lg">
-              <h3 className="text-xl font-black uppercase tracking-tighter">Programar Colado</h3>
+              <h3 className="text-xl font-semibold  tracking-tight">Programar Colado</h3>
               <button onClick={() => setIsNewOrderModalOpen(false)} className="text-2xl">&times;</button>
             </div>
             <form onSubmit={handleCreateOrder} className="p-8 space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">Cliente</label>
+                <label className="text-xs font-bold text-gray-500 ">Cliente</label>
                 <select
                   required className="w-full p-3 bg-gray-50 rounded-xl outline-none font-bold"
                   value={newOrder.customerId}
@@ -248,7 +249,7 @@ const ConcreteOps: React.FC<ConcreteOpsProps> = ({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-500 uppercase">Fórmula</label>
+                  <label className="text-xs font-bold text-gray-500 ">Fórmula</label>
                   <select
                     required className="w-full p-3 bg-gray-50 rounded-xl outline-none font-bold"
                     value={newOrder.formulaId}
@@ -259,17 +260,17 @@ const ConcreteOps: React.FC<ConcreteOpsProps> = ({
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-500 uppercase">Volumen (m³)</label>
+                  <label className="text-xs font-bold text-gray-500 ">Volumen (m³)</label>
                   <input
                     type="number" required step="0.5" min="1"
-                    className="w-full p-3 bg-gray-50 rounded-xl outline-none font-black text-center"
+                    className="w-full p-3 bg-gray-50 rounded-xl outline-none font-semibold text-center"
                     value={newOrder.qtyM3}
                     onChange={e => setNewOrder({ ...newOrder, qtyM3: Number(e.target.value) })}
                   />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Fecha y Hora de Salida</label>
+                <label className="text-xs font-bold text-gray-500  tracking-wide">Fecha y Hora de Salida</label>
                 <input
                   type="datetime-local" required
                   className="w-full p-3 bg-gray-50 rounded-xl outline-none font-bold"
@@ -277,7 +278,7 @@ const ConcreteOps: React.FC<ConcreteOpsProps> = ({
                   onChange={e => setNewOrder({ ...newOrder, scheduledDate: e.target.value })}
                 />
               </div>
-              <button type="submit" className="w-full py-4 bg-orange-500 text-white font-black rounded-2xl shadow-lg uppercase tracking-widest text-xs mt-4">Confirmar Agenda</button>
+              <button type="submit" className="w-full py-4 bg-orange-500 text-white font-semibold rounded-xl shadow-lg  tracking-wide text-xs mt-4">Confirmar Agenda</button>
             </form>
           </div>
         </div>

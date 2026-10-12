@@ -10,8 +10,8 @@ const TransportReportsScreen: React.FC<Props> = () => {
   return (
     <div className="space-y-6">
       <div className="rounded-[32px] border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
-        <p className="text-sm font-black uppercase tracking-[0.26em] text-slate-400">Módulo en construcción</p>
-        <p className="mt-4 text-2xl font-black tracking-tighter text-slate-900">Reportes — Transportería</p>
+        <p className="text-sm font-semibold  tracking-[0.26em] text-slate-400">Módulo en construcción</p>
+        <p className="mt-4 text-2xl font-semibold tracking-tight text-slate-900">Reportes — Transportería</p>
         <p className="mt-2 text-sm font-semibold text-slate-500 max-w-md mx-auto">
           Los reportes de ventas, compras, rotación de inventario y márgenes de Transportería estarán disponibles en la próxima entrega.
         </p>

@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Branch, User } from '../../types';
@@ -255,24 +256,24 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
         <div />
         <button
           onClick={() => setShowForm((v) => !v)}
-          className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm ${
+          className={`px-5 py-2.5 rounded-xl text-xs font-semibold  tracking-wide transition-all shadow-sm ${
             showForm
               ? 'bg-slate-200 text-slate-600 hover:bg-slate-300'
               : 'bg-orange-600 text-white hover:bg-orange-700 shadow-orange-600/20'
           }`}
         >
-          {showForm ? '✕ Cancelar' : '+ Nueva entrada'}
+          {showForm ? <><AppIcon name="close" /> Cancelar</> : <><AppIcon name="plus" /> Nueva entrada</>}
         </button>
       </div>
 
       {/* New purchase form */}
       {showForm && (
-        <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-6 space-y-5">
-          <p className="text-xs font-black uppercase tracking-widest text-slate-500">📥 Registrar nueva entrada</p>
+        <div className="rounded-xl bg-white border border-slate-200 shadow-sm p-6 space-y-5">
+          <p className="text-xs font-semibold  tracking-wide text-slate-500"><AppIcon name="download" /> Registrar nueva entrada</p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Fecha</label>
+              <label className="block text-xs font-semibold  tracking-wide text-slate-500 mb-1.5">Fecha</label>
               <input
                 type="date"
                 value={purchaseDate}
@@ -281,7 +282,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Proveedor</label>
+              <label className="block text-xs font-semibold  tracking-wide text-slate-500 mb-1.5">Proveedor</label>
               <select
                 value={selectedSupplierId}
                 onChange={(e) => setSelectedSupplierId(e.target.value)}
@@ -294,7 +295,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Folio / Referencia</label>
+              <label className="block text-xs font-semibold  tracking-wide text-slate-500 mb-1.5">Folio / Referencia</label>
               <input
                 type="text"
                 placeholder="Ej. FAC-001"
@@ -319,7 +320,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
 
           {/* Add product line */}
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Agregar producto</label>
+            <label className="block text-xs font-semibold  tracking-wide text-slate-500 mb-1.5">Agregar producto</label>
             <div className="flex gap-2">
               <select
                 value={selectedProductId}
@@ -335,7 +336,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
               <button
                 onClick={addLine}
                 disabled={!selectedProductId}
-                className="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-wider hover:bg-slate-800 disabled:opacity-40 transition-all"
+                className="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-semibold  tracking-wider hover:bg-slate-800 disabled:opacity-40 transition-all"
               >
                 + Agregar
               </button>
@@ -348,10 +349,10 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="text-left px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Producto</th>
-                    <th className="text-center px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Cant.</th>
-                    <th className="text-right px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Costo compra</th>
-                    <th className="text-right px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Subtotal</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold  tracking-wide text-slate-500">Producto</th>
+                    <th className="text-center px-4 py-2.5 text-xs font-semibold  tracking-wide text-slate-500">Cant.</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-semibold  tracking-wide text-slate-500">Costo compra</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-semibold  tracking-wide text-slate-500">Subtotal</th>
                     <th className="px-3 py-2.5" />
                   </tr>
                 </thead>
@@ -360,7 +361,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
                     <tr key={`${l.productId}-${l.productUomId}`} className="hover:bg-slate-50">
                       <td className="px-4 py-3">
                         <p className="font-bold text-slate-900 text-xs">{l.productName}</p>
-                        <p className="text-[10px] text-slate-400">{l.uomLabel}</p>
+                        <p className="text-xs text-slate-400">{l.uomLabel}</p>
                       </td>
                       <td className="px-4 py-3 text-center">
                         <input
@@ -382,7 +383,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
                           className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-right outline-none focus:border-orange-400"
                         />
                       </td>
-                      <td className="px-4 py-3 text-right text-xs font-black text-slate-900">{formatCurrency(l.lineTotal)}</td>
+                      <td className="px-4 py-3 text-right text-xs font-semibold text-slate-900">{formatCurrency(l.lineTotal)}</td>
                       <td className="px-3 py-3">
                         <button onClick={() => removeLine(l.productId, l.productUomId)} className="p-1 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors">
                           <Trash2 size={13} />
@@ -393,8 +394,8 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
                 </tbody>
                 <tfoot className="bg-slate-50 border-t border-slate-200">
                   <tr>
-                    <td colSpan={3} className="px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-500 text-right">Total entrada</td>
-                    <td className="px-4 py-3 text-right text-sm font-black text-slate-900">{formatCurrency(purchaseTotal)}</td>
+                    <td colSpan={3} className="px-4 py-3 text-xs font-semibold  tracking-wide text-slate-500 text-right">Total entrada</td>
+                    <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">{formatCurrency(purchaseTotal)}</td>
                     <td />
                   </tr>
                 </tfoot>
@@ -403,7 +404,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
           )}
 
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Notas</label>
+            <label className="block text-xs font-semibold  tracking-wide text-slate-500 mb-1.5">Notas</label>
             <textarea
               rows={2}
               placeholder="Observaciones, condiciones de pago, etc."
@@ -416,14 +417,14 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
           <div className="flex justify-end gap-3">
             <button
               onClick={() => { setShowForm(false); setLines([]); }}
-              className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-wider text-slate-500 hover:bg-slate-50"
+              className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold  tracking-wider text-slate-500 hover:bg-slate-50"
             >
               Cancelar
             </button>
             <button
               onClick={handleSubmit}
               disabled={isSaving || lines.length === 0}
-              className="px-6 py-2.5 rounded-xl bg-orange-600 text-white text-xs font-black uppercase tracking-wider hover:bg-orange-700 disabled:opacity-50 transition-all shadow-lg shadow-orange-600/20"
+              className="px-6 py-2.5 rounded-xl bg-orange-600 text-white text-xs font-semibold  tracking-wider hover:bg-orange-700 disabled:opacity-50 transition-all shadow-lg shadow-orange-600/20"
             >
               {isSaving ? 'Guardando...' : 'Confirmar entrada'}
             </button>
@@ -432,10 +433,10 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
       )}
 
       {/* History */}
-      <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+      <div className="rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-          <p className="text-xs font-black uppercase tracking-widest text-slate-500">📋 Historial de entradas</p>
-          <button onClick={() => void loadHistory()} disabled={isHistoryLoading} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-orange-600 disabled:opacity-50">
+          <p className="text-xs font-semibold  tracking-wide text-slate-500"><AppIcon name="clipboard" /> Historial de entradas</p>
+          <button onClick={() => void loadHistory()} disabled={isHistoryLoading} className="text-xs font-semibold  tracking-wide text-slate-400 hover:text-orange-600 disabled:opacity-50">
             ↻ Actualizar
           </button>
         </div>
@@ -447,10 +448,10 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
-                <th className="text-left px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha</th>
-                <th className="text-left px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Proveedor</th>
-                <th className="text-left px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Referencia</th>
-                <th className="text-right px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Total</th>
+                <th className="text-left px-5 py-2.5 text-xs font-semibold  tracking-wide text-slate-400">Fecha</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold  tracking-wide text-slate-400">Proveedor</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold  tracking-wide text-slate-400">Referencia</th>
+                <th className="text-right px-5 py-2.5 text-xs font-semibold  tracking-wide text-slate-400">Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -459,7 +460,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
                   <td className="px-5 py-3 text-xs text-slate-600">{formatDate(h.created_at)}</td>
                   <td className="px-4 py-3 text-xs font-semibold text-slate-700">{h.supplier_name || '—'}</td>
                   <td className="px-4 py-3 text-xs text-slate-500 font-mono">{h.reference || '—'}</td>
-                  <td className="px-5 py-3 text-right text-xs font-black text-slate-900">{formatCurrency(h.total)}</td>
+                  <td className="px-5 py-3 text-right text-xs font-semibold text-slate-900">{formatCurrency(h.total)}</td>
                 </tr>
               ))}
             </tbody>

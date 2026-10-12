@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Plus, Search, Pencil, Trash2, Package, TrendingUp, AlertTriangle, X, Settings, RefreshCw, Check, ChevronDown, Save, BarChart3, Loader2,
@@ -572,7 +573,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
             key={s.label}
             type="button"
             onClick={s.action}
-            className={`rounded-2xl border p-4 text-left shadow-sm transition-colors ${
+            className={`rounded-xl border p-4 text-left shadow-sm transition-colors ${
               s.active
                 ? 'border-orange-300 bg-orange-50 ring-2 ring-orange-100'
                 : s.action
@@ -581,10 +582,10 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
             }`}
           >
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{s.label}</p>
+              <p className="text-xs font-semibold  tracking-wide text-slate-400">{s.label}</p>
               <s.icon size={14} className="text-slate-300" />
             </div>
-            <p className={`mt-1 text-2xl font-black ${s.color}`}>{s.value}</p>
+            <p className={`mt-1 text-2xl font-semibold ${s.color}`}>{s.value}</p>
           </button>
         ))}
       </div>
@@ -595,7 +596,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
-              className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
               placeholder="Buscar por nombre, SKU o código…"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -606,7 +607,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
             <button
               type="button"
               onClick={() => setCategoryDropdownOpen(o => !o)}
-              className="flex w-full items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 outline-none hover:border-slate-300"
+              className="flex w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 outline-none hover:border-slate-300"
             >
               <span className="truncate">
                 {categoryFilters.length === 0
@@ -618,7 +619,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
             {categoryDropdownOpen && (
               <>
                 <div className="fixed inset-0 z-30" onClick={() => setCategoryDropdownOpen(false)} />
-                <div className="absolute z-40 mt-1 w-full max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
+                <div className="absolute z-40 mt-1 w-full max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
                   <button
                     type="button"
                     onClick={() => setCategoryFilters([])}
@@ -644,7 +645,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                           />
                           <span className={`font-bold ${active ? 'text-orange-700' : 'text-slate-700'}`}>{c.name}</span>
                         </div>
-                        <span className="text-[10px] text-slate-400">{count}</span>
+                        <span className="text-xs text-slate-400">{count}</span>
                       </label>
                     );
                   })}
@@ -652,13 +653,13 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
               </>
             )}
           </div>
-          <button onClick={() => setCatalogModalOpen(true)} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">
+          <button onClick={() => setCatalogModalOpen(true)} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50">
             <Settings size={14} /> Ajustes
           </button>
           <button
             type="button"
             onClick={() => setShowLowStockOnly(prev => !prev)}
-            className={`flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-xs font-black uppercase tracking-wider ${
+            className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold  tracking-wider ${
               showLowStockOnly
                 ? 'border-orange-300 bg-orange-50 text-orange-700'
                 : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
@@ -668,32 +669,32 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
             <AlertTriangle size={14} />
             Stock bajo
           </button>
-          <button onClick={load} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50" title="Recargar">
+          <button onClick={load} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50" title="Recargar">
             <RefreshCw size={14} />
           </button>
           <button
             onClick={exportProductsPdf}
             disabled={filtered.length === 0 || exportingPdf}
-            className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
             title="Exportar PDF"
           >
             {exportingPdf ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
             PDF
           </button>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 rounded-2xl bg-orange-600 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500">
+        <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500">
           <Plus size={15} /> Nuevo producto
         </button>
       </div>
 
       {/* Tabla */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <div className="py-16 text-center text-sm font-bold text-slate-400">Cargando productos…</div>
         ) : filtered.length === 0 ? (
           <div className="py-20 text-center">
             <Package size={40} className="mx-auto text-slate-300" />
-            <p className="mt-3 text-sm font-black uppercase tracking-widest text-slate-400">
+            <p className="mt-3 text-sm font-semibold  tracking-wide text-slate-400">
               {search || categoryFilters.length > 0 || showLowStockOnly ? 'Sin resultados' : 'Sin productos'}
             </p>
             <p className="mt-1 text-xs text-slate-400">
@@ -706,7 +707,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
                   {['Producto','Categoría','Unidad','Stock','Prec. Compra','Menudeo','M. Mayoreo','Mayoreo',''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold  tracking-wide text-slate-400">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -721,7 +722,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                           {p.image_url ? (
                             <img src={p.image_url} alt={p.name} className="h-10 w-10 rounded-xl object-cover" />
                           ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-lg">🍷</div>
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-lg"><AppIcon name="wine" /></div>
                           )}
                           <div className="min-w-0">
                             <p className="font-bold text-slate-900 truncate max-w-[260px]">{p.name}</p>
@@ -732,7 +733,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                       <td className="px-4 py-3 text-xs text-slate-600">{p.category?.name ?? '—'}</td>
                       <td className="px-4 py-3 text-xs text-slate-600">{p.uom?.name ?? '—'}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-black ${stockClass}`}>
+                        <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-semibold ${stockClass}`}>
                           {p.total_stock}
                         </span>
                       </td>
@@ -741,7 +742,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                       </td>
                       <td className="px-4 py-3 text-xs font-bold text-slate-800">
                         {formatCurrency(p.price_retail)}
-                        {p.single_price_mode && <p className="mt-0.5 text-[9px] font-black uppercase tracking-widest text-orange-500">Único</p>}
+                        {p.single_price_mode && <p className="mt-0.5 text-[11px] font-semibold  tracking-wide text-orange-500">Único</p>}
                       </td>
                       <td className="px-4 py-3 text-xs font-bold text-slate-800">{p.single_price_mode ? '—' : formatCurrency(p.price_mid_wholesale)}</td>
                       <td className="px-4 py-3 text-xs font-bold text-slate-800">{p.single_price_mode ? '—' : formatCurrency(p.price_wholesale)}</td>
@@ -787,56 +788,56 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
 
       {stockTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
-                <h2 className="text-base font-black uppercase tracking-tight text-slate-900">Editar stock manual</h2>
-                <p className="text-[10px] font-bold text-slate-400">{stockTarget.name} · {stockTarget.sku}</p>
+                <h2 className="text-base font-semibold  tracking-tight text-slate-900">Editar stock manual</h2>
+                <p className="text-xs font-bold text-slate-400">{stockTarget.name} · {stockTarget.sku}</p>
               </div>
               <button onClick={closeStockAdjust} disabled={stockSaving} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"><X size={18}/></button>
             </div>
 
             <div className="space-y-4 px-6 py-5">
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stock actual</p>
-                  <p className="mt-1 text-2xl font-black text-slate-900">{stockTarget.total_stock}</p>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold  tracking-wide text-slate-400">Stock actual</p>
+                  <p className="mt-1 text-2xl font-semibold text-slate-900">{stockTarget.total_stock}</p>
                 </div>
-                <label className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nuevo stock</span>
+                <label className="rounded-xl border border-slate-200 bg-white p-4">
+                  <span className="text-xs font-semibold  tracking-wide text-slate-400">Nuevo stock</span>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
                     value={stockValue}
                     onChange={e => setStockValue(e.target.value)}
-                    className="mt-1 w-full bg-transparent text-2xl font-black text-slate-900 outline-none"
+                    className="mt-1 w-full bg-transparent text-2xl font-semibold text-slate-900 outline-none"
                     autoFocus
                   />
                 </label>
               </div>
 
               <label className="block">
-                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observación obligatoria</span>
+                <span className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Observación obligatoria</span>
                 <textarea
                   value={stockNote}
                   onChange={e => setStockNote(e.target.value)}
                   rows={4}
                   placeholder="Ej. Conteo físico, merma, ajuste por captura incorrecta..."
-                  className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                 />
               </label>
 
               {stockError && (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{stockError}</div>
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{stockError}</div>
               )}
             </div>
 
             <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
-              <button onClick={closeStockAdjust} disabled={stockSaving} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+              <button onClick={closeStockAdjust} disabled={stockSaving} className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50">
                 Cancelar
               </button>
-              <button onClick={handleStockAdjust} disabled={stockSaving} className="flex-1 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-50">
+              <button onClick={handleStockAdjust} disabled={stockSaving} className="flex-1 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500 disabled:opacity-50">
                 {stockSaving ? 'Guardando...' : 'Guardar ajuste'}
               </button>
             </div>
@@ -846,58 +847,58 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
 
       {purchaseCostTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
-                <h2 className="text-base font-black uppercase tracking-tight text-slate-900">Editar precio compra</h2>
-                <p className="text-[10px] font-bold text-slate-400">{purchaseCostTarget.name} · {purchaseCostTarget.sku}</p>
+                <h2 className="text-base font-semibold  tracking-tight text-slate-900">Editar precio compra</h2>
+                <p className="text-xs font-bold text-slate-400">{purchaseCostTarget.name} · {purchaseCostTarget.sku}</p>
               </div>
               <button onClick={closePurchaseCostAdjust} disabled={purchaseCostSaving} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"><X size={18}/></button>
             </div>
 
             <div className="space-y-4 px-6 py-5">
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Precio de compra actual</p>
-                  <p className="mt-1 text-xl font-black text-slate-900">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold  tracking-wide text-slate-400">Precio de compra actual</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-900">
                     {purchaseCostTarget.last_purchase_cost != null ? formatCurrency(purchaseCostTarget.last_purchase_cost) : '—'}
                   </p>
                 </div>
-                <label className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nuevo precio de compra</span>
+                <label className="rounded-xl border border-slate-200 bg-white p-4">
+                  <span className="text-xs font-semibold  tracking-wide text-slate-400">Nuevo precio de compra</span>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
                     value={purchaseCostValue}
                     onChange={e => setPurchaseCostValue(e.target.value)}
-                    className="mt-1 w-full bg-transparent text-2xl font-black text-slate-900 outline-none"
+                    className="mt-1 w-full bg-transparent text-2xl font-semibold text-slate-900 outline-none"
                     autoFocus
                   />
                 </label>
               </div>
 
               <label className="block">
-                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observación obligatoria</span>
+                <span className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Observación obligatoria</span>
                 <textarea
                   value={purchaseCostNote}
                   onChange={e => setPurchaseCostNote(e.target.value)}
                   rows={4}
                   placeholder="Ej. Corrección de costo capturado, actualización por factura..."
-                  className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                 />
               </label>
 
               {purchaseCostError && (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{purchaseCostError}</div>
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{purchaseCostError}</div>
               )}
             </div>
 
             <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
-              <button onClick={closePurchaseCostAdjust} disabled={purchaseCostSaving} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+              <button onClick={closePurchaseCostAdjust} disabled={purchaseCostSaving} className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50">
                 Cancelar
               </button>
-              <button onClick={handlePurchaseCostAdjust} disabled={purchaseCostSaving} className="flex-1 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-50">
+              <button onClick={handlePurchaseCostAdjust} disabled={purchaseCostSaving} className="flex-1 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500 disabled:opacity-50">
                 {purchaseCostSaving ? 'Guardando...' : 'Guardar precio'}
               </button>
             </div>
@@ -907,11 +908,11 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
 
       {historyOpen && historyTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-7xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+          <div className="w-full max-w-7xl rounded-2xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
-                <h2 className="text-base font-black uppercase tracking-tight text-slate-900">Estadísticas del producto</h2>
-                <p className="text-[10px] font-bold text-slate-400">{historyTarget.name} · {historyTarget.sku}</p>
+                <h2 className="text-base font-semibold  tracking-tight text-slate-900">Estadísticas del producto</h2>
+                <p className="text-xs font-bold text-slate-400">{historyTarget.name} · {historyTarget.sku}</p>
               </div>
               <button onClick={closeHistory} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={18}/></button>
             </div>
@@ -923,44 +924,44 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                   <p className="mt-3 text-sm font-bold text-slate-400">Cargando historial…</p>
                 </div>
               ) : historyError ? (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{historyError}</div>
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{historyError}</div>
               ) : historyData ? (
                 <>
                   <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Último costo compra</p>
-                      <p className="mt-1 text-xl font-black text-slate-900">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs font-semibold  tracking-wide text-slate-400">Último costo compra</p>
+                      <p className="mt-1 text-xl font-semibold text-slate-900">
                         {historyData.last_purchase_cost != null ? formatCurrency(historyData.last_purchase_cost) : '—'}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ingresos</p>
-                      <p className="mt-1 text-xl font-black text-green-600">{formatCurrency(historyData.purchased_total)}</p>
-                      <p className="text-[10px] font-bold text-slate-400">{historyData.purchased_qty} unidades</p>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs font-semibold  tracking-wide text-slate-400">Ingresos</p>
+                      <p className="mt-1 text-xl font-semibold text-green-600">{formatCurrency(historyData.purchased_total)}</p>
+                      <p className="text-xs font-bold text-slate-400">{historyData.purchased_qty} unidades</p>
                     </div>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Salidas</p>
-                      <p className="mt-1 text-xl font-black text-orange-600">{formatCurrency(historyData.sold_total)}</p>
-                      <p className="text-[10px] font-bold text-slate-400">{historyData.sold_qty} unidades</p>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs font-semibold  tracking-wide text-slate-400">Salidas</p>
+                      <p className="mt-1 text-xl font-semibold text-orange-600">{formatCurrency(historyData.sold_total)}</p>
+                      <p className="text-xs font-bold text-slate-400">{historyData.sold_qty} unidades</p>
                     </div>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ganancia estimada</p>
-                      <p className="mt-1 text-xl font-black text-blue-600">{formatCurrency(historyData.estimated_profit)}</p>
-                      <p className="text-[10px] font-bold text-slate-400">Usando el último costo compra</p>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs font-semibold  tracking-wide text-slate-400">Ganancia estimada</p>
+                      <p className="mt-1 text-xl font-semibold text-blue-600">{formatCurrency(historyData.estimated_profit)}</p>
+                      <p className="text-xs font-bold text-slate-400">Usando el último costo compra</p>
                     </div>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stock actual</p>
-                      <p className="mt-1 text-xl font-black text-slate-900">{historyData.current_stock}</p>
-                      <p className="text-[10px] font-bold text-slate-400">Disponible hoy</p>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs font-semibold  tracking-wide text-slate-400">Stock actual</p>
+                      <p className="mt-1 text-xl font-semibold text-slate-900">{historyData.current_stock}</p>
+                      <p className="text-xs font-bold text-slate-400">Disponible hoy</p>
                     </div>
                   </div>
 
-                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
                     <table className="w-full text-sm">
                       <thead className="bg-slate-50">
                         <tr className="border-b border-slate-200">
                           {['Fecha', 'Estado', 'Movimiento', 'Stock antes', 'Stock después', 'Total', 'Tipo', 'Ganancia', 'Usuario', 'Detalle'].map((h) => (
-                            <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
+                            <th key={h} className="px-4 py-3 text-left text-xs font-semibold  tracking-wide text-slate-400">{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -1002,11 +1003,11 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                               <td className="px-4 py-3 text-xs text-slate-600">
                                 <p className="whitespace-nowrap">{formatHistoryDate(row.created_at)}</p>
                                 {formatHistoryTime(row.created_at) && (
-                                  <p className="whitespace-nowrap text-[10px] text-slate-400">{formatHistoryTime(row.created_at)}</p>
+                                  <p className="whitespace-nowrap text-xs text-slate-400">{formatHistoryTime(row.created_at)}</p>
                                 )}
                               </td>
                               <td className="px-4 py-3">
-                                <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black ${badgeClass}`}>
+                                <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${badgeClass}`}>
                                   {row.status === 'INGRESO' ? 'COMPRA' : row.status === 'SALIDA' ? 'VENTA' : row.status}
                                 </span>
                               </td>
@@ -1016,7 +1017,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                               <td className="px-4 py-3 text-sm font-bold text-slate-500">
                                 {row.previousQty != null ? row.previousQty : '—'}
                               </td>
-                              <td className="px-4 py-3 text-sm font-black text-slate-900">
+                              <td className="px-4 py-3 text-sm font-semibold text-slate-900">
                                 {row.runningQty != null ? row.runningQty : '—'}
                               </td>
                               <td className="px-4 py-3 text-sm font-bold text-slate-900">
@@ -1025,7 +1026,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                               <td className="px-4 py-3 text-xs text-slate-600">
                                 {row.price_type ? PRICE_TIER_LABEL[row.price_type] ?? row.price_type : '—'}
                               </td>
-                              <td className="px-4 py-3 text-sm font-black text-blue-600">
+                              <td className="px-4 py-3 text-sm font-semibold text-blue-600">
                                 {row.profit != null ? formatCurrency(row.profit) : '—'}
                               </td>
                               <td className="px-4 py-3 text-xs font-bold text-slate-600 max-w-[110px]">
@@ -1033,7 +1034,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                               </td>
                               <td className="px-4 py-3 text-xs text-slate-600">
                                 <p className="font-bold text-slate-800">{row.source}</p>
-                                {row.detail && <p className="mt-0.5 text-[10px] text-slate-400">{row.detail}</p>}
+                                {row.detail && <p className="mt-0.5 text-xs text-slate-400">{row.detail}</p>}
                               </td>
                             </tr>
                           );
@@ -1052,13 +1053,13 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
       {/* ─── CONFIRMAR ELIMINAR ──────────────────────────── */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-5">
-              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${deleteVerificationValid ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
+              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${deleteVerificationValid ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
                 {deleteVerificationValid ? <ShieldCheck size={22} /> : <Trash2 size={22} />}
               </div>
               <div>
-                <h3 className="text-base font-black text-slate-900">Eliminar producto</h3>
+                <h3 className="text-base font-semibold text-slate-900">Eliminar producto</h3>
                 <p className="text-xs font-bold text-slate-500">
                   <span className="text-slate-800">{deleteTarget.name}</span> se desactivará.
                 </p>
@@ -1069,34 +1070,34 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
               {!deleteVerificationValid ? (
                 <>
                   <div>
-                    <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Código de verificación</label>
+                    <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Código de verificación</label>
                     <input
                       type="password"
                       value={deleteVerificationCode}
                       onChange={e => setDeleteVerificationCode(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && verifyDeleteCode()}
-                      className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                       placeholder="Contraseña del SUPERADMIN"
                       autoComplete="current-password"
                     />
                   </div>
-                  <p className="rounded-2xl bg-orange-50 px-4 py-3 text-xs font-bold leading-relaxed text-orange-700">
+                  <p className="rounded-xl bg-orange-50 px-4 py-3 text-xs font-bold leading-relaxed text-orange-700">
                     Para continuar se debe validar la contraseña del usuario SUPERADMIN actual: {currentUser.name}.
                   </p>
                 </>
               ) : (
                 <>
-                  <div className="rounded-2xl border border-green-100 bg-green-50 px-4 py-3">
-                    <p className="text-xs font-black uppercase tracking-widest text-green-700">Código validado</p>
+                  <div className="rounded-xl border border-green-100 bg-green-50 px-4 py-3">
+                    <p className="text-xs font-semibold  tracking-wide text-green-700">Código validado</p>
                     <p className="mt-1 text-xs font-bold text-green-800">Autorizado por {currentUser.name}.</p>
                   </div>
                   <div>
-                    <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-red-500">Observación de eliminación *</label>
+                    <label className="mb-1 block text-xs font-semibold  tracking-wide text-red-500">Observación de eliminación *</label>
                     <textarea
                       rows={3}
                       value={deleteObservation}
                       onChange={e => setDeleteObservation(e.target.value)}
-                      className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                      className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
                       placeholder="Explica por qué se elimina este producto..."
                     />
                   </div>
@@ -1104,20 +1105,20 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
               )}
 
               {deleteError && (
-                <p className="rounded-2xl bg-red-50 px-4 py-3 text-xs font-bold text-red-600">{deleteError}</p>
+                <p className="rounded-xl bg-red-50 px-4 py-3 text-xs font-bold text-red-600">{deleteError}</p>
               )}
             </div>
 
             <div className="flex gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
-              <button onClick={closeDeleteConfirm} disabled={deleting || deleteVerifying} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+              <button onClick={closeDeleteConfirm} disabled={deleting || deleteVerifying} className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50">
                 Cancelar
               </button>
               {!deleteVerificationValid ? (
-                <button onClick={verifyDeleteCode} disabled={deleteVerifying || !deleteVerificationCode.trim()} className="flex-1 rounded-2xl bg-slate-900 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-700 disabled:opacity-50">
+                <button onClick={verifyDeleteCode} disabled={deleteVerifying || !deleteVerificationCode.trim()} className="flex-1 rounded-xl bg-slate-900 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-slate-700 disabled:opacity-50">
                   {deleteVerifying ? 'Validando...' : 'Validar'}
                 </button>
               ) : (
-                <button onClick={handleDelete} disabled={deleting || !deleteObservation.trim()} className="flex-1 rounded-2xl bg-red-500 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-red-600 disabled:opacity-50">
+                <button onClick={handleDelete} disabled={deleting || !deleteObservation.trim()} className="flex-1 rounded-xl bg-red-500 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-red-600 disabled:opacity-50">
                   {deleting ? 'Eliminando...' : 'Eliminar'}
                 </button>
               )}
@@ -1129,16 +1130,16 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
       {/* ─── MODAL CATÁLOGO (categorías + unidades) ──────── */}
       {catalogModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[90vh] flex flex-col">
+          <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h2 className="text-base font-black uppercase tracking-tight text-slate-900">Ajustes — Categorías y Unidades</h2>
+              <h2 className="text-base font-semibold  tracking-tight text-slate-900">Ajustes — Categorías y Unidades</h2>
               <button onClick={() => setCatalogModalOpen(false)} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={18}/></button>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-5 grid grid-cols-1 md:grid-cols-2 gap-6">
 
               {/* Categorías */}
               <div>
-                <h3 className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Categorías</h3>
+                <h3 className="mb-3 text-xs font-semibold  tracking-wide text-slate-400">Categorías</h3>
                 <div className="flex gap-2 mb-3">
                   <input
                     className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400"
@@ -1147,7 +1148,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                     onChange={e => setNewCategoryName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && addCategory()}
                   />
-                  <button onClick={addCategory} className="rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-700">
+                  <button onClick={addCategory} className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold  tracking-wide text-white hover:bg-slate-700">
                     Agregar
                   </button>
                 </div>
@@ -1185,7 +1186,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
 
               {/* Unidades */}
               <div>
-                <h3 className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Unidades de medida</h3>
+                <h3 className="mb-3 text-xs font-semibold  tracking-wide text-slate-400">Unidades de medida</h3>
                 <div className="grid grid-cols-[1fr_70px_auto] gap-2 mb-3">
                   <input
                     className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400"
@@ -1199,7 +1200,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                     value={newUomSymbol}
                     onChange={e => setNewUomSymbol(e.target.value)}
                   />
-                  <button onClick={addUom} className="rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-700">
+                  <button onClick={addUom} className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold  tracking-wide text-white hover:bg-slate-700">
                     +
                   </button>
                 </div>
@@ -1244,7 +1245,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
 
             </div>
             <div className="border-t border-slate-100 px-6 py-4 bg-slate-50/50 flex justify-end">
-              <button onClick={() => setCatalogModalOpen(false)} className="rounded-2xl bg-slate-900 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-700">
+              <button onClick={() => setCatalogModalOpen(false)} className="rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-slate-700">
                 Cerrar
               </button>
             </div>

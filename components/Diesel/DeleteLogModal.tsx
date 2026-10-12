@@ -21,10 +21,10 @@ const DeleteLogModal: React.FC<DeleteLogModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in">
         <div className="bg-red-600 p-6 text-white flex justify-between items-center">
-          <h3 className="text-lg font-black uppercase tracking-tighter">Eliminar Registro</h3>
-          <button onClick={onCancel} className="text-2xl font-black">&times;</button>
+          <h3 className="text-lg font-semibold  tracking-tight">Eliminar Registro</h3>
+          <button onClick={onCancel} className="text-2xl font-semibold">&times;</button>
         </div>
         <form onSubmit={onConfirm} className="p-8 space-y-4">
           <p className="text-xs text-slate-500 font-bold">
@@ -42,14 +42,14 @@ const DeleteLogModal: React.FC<DeleteLogModalProps> = ({
             <button
               type="button"
               onClick={onCancel}
-              className="py-3 bg-slate-100 text-slate-600 font-black rounded-xl uppercase tracking-widest text-[10px]"
+              className="py-3 bg-slate-100 text-slate-600 font-semibold rounded-xl  tracking-wide text-xs"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="py-3 bg-red-600 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-lg"
+              className="py-3 bg-red-600 text-white font-semibold rounded-xl  tracking-wide text-xs shadow-lg"
             >
               {isLoading ? 'Procesando...' : 'Confirmar'}
             </button>

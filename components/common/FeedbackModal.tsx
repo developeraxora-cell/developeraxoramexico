@@ -1,3 +1,4 @@
+import AppIcon from './AppIcon';
 import React from 'react';
 
 export type FeedbackType = 'success' | 'error' | 'alert' | 'loading';
@@ -23,22 +24,22 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
   const config = {
     success: {
-      icon: '✅',
+      icon: <AppIcon name="success" />,
       accent: 'bg-green-600',
       text: 'text-green-700',
     },
     error: {
-      icon: '❌',
+      icon: <AppIcon name="error" />,
       accent: 'bg-red-600',
       text: 'text-red-700',
     },
     alert: {
-      icon: '⚠️',
-      accent: 'bg-amber-500',
+      icon: <AppIcon name="warning" />,
+      accent: 'bg-amber-700',
       text: 'text-amber-700',
     },
     loading: {
-      icon: '⏳',
+      icon: <AppIcon name="loading" />,
       accent: 'bg-slate-700',
       text: 'text-slate-700',
     },
@@ -54,18 +55,18 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
         : 'No se pudo completar la operación.';
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div className={`${style.accent} px-5 py-4 text-white flex justify-between items-center`}>
+    <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="crm-dialog-heading px-5 py-4 flex justify-between items-center gap-3">
           <div className="flex items-center gap-3">
-            <span className="text-xl">{style.icon}</span>
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl text-white ${style.accent}`}>{style.icon}</span>
             <div>
-              <h3 className="text-base font-black uppercase tracking-tighter">{title}</h3>
+              <h3 className="text-base font-semibold  tracking-tight">{title}</h3>
             </div>
           </div>
           {!isBlocking && onClose && (
-            <button onClick={onClose} className="bg-white/10 w-9 h-9 rounded-xl text-lg font-black">
-              ×
+            <button onClick={onClose} aria-label="Cerrar aviso" className="crm-dialog-close">
+              <AppIcon name="close" />
             </button>
           )}
         </div>
@@ -77,14 +78,14 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
             <div className="mt-5 flex justify-end">
               <button
                 onClick={onClose}
-                className="px-5 py-2.5 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest"
+                className="px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-semibold  tracking-wide"
               >
                 Aceptar
               </button>
             </div>
           )}
           {isBlocking && (
-            <div className="mt-6 flex items-center gap-3 text-slate-500 text-xs font-bold uppercase tracking-widest">
+            <div className="mt-6 flex items-center gap-3 text-slate-500 text-xs font-bold  tracking-wide">
               <span className="w-2.5 h-2.5 rounded-full bg-slate-400 animate-pulse" />
               Espere un momento...
             </div>

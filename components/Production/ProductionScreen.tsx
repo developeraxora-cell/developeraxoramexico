@@ -152,14 +152,14 @@ const ProductionScreen: React.FC<ProductionScreenProps> = ({ selectedBranchId, c
 // ── Header reutilizable ───────────────────────────────────────────────────────
 
 const ScreenHeader: React.FC<{ title: string; right: React.ReactNode }> = ({ title, right }) => (
-  <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+  <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
     <div className="flex items-center gap-3">
       <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-500">
         <Factory size={18} />
       </div>
       <div>
-        <h1 className="text-base font-black tracking-tight text-slate-900">{title}</h1>
-        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Módulo Producción</p>
+        <h1 className="text-base font-semibold tracking-tight text-slate-900">{title}</h1>
+        <p className="text-[11px] font-semibold  tracking-wide text-slate-400">Módulo Producción</p>
       </div>
     </div>
     {right}
@@ -216,7 +216,7 @@ const ProductionListView: React.FC<{
             <button
               type="button"
               onClick={onShowMovements}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:bg-slate-200"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-semibold  tracking-wide text-slate-600 transition hover:bg-slate-200"
             >
               <ArrowLeftRight size={15} />
               Entradas y Salidas
@@ -224,7 +224,7 @@ const ProductionListView: React.FC<{
             <button
               type="button"
               onClick={onNew}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition hover:bg-slate-800"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-semibold  tracking-wide text-white shadow-sm transition hover:bg-slate-800"
             >
               <Plus size={15} />
               Nueva Producción
@@ -237,7 +237,7 @@ const ProductionListView: React.FC<{
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{error}</div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <input
           value={search}
           onChange={(event) => onSearch(event.target.value)}
@@ -248,7 +248,7 @@ const ProductionListView: React.FC<{
         <div className="mt-4 overflow-hidden rounded-xl border border-slate-100">
           <div className="overflow-x-auto">
             <table className="min-w-[860px] w-full text-sm">
-              <thead className="bg-slate-900 text-left text-[10px] font-black uppercase tracking-widest text-white">
+              <thead className="bg-slate-900 text-left text-xs font-semibold  tracking-wide text-white">
                 <tr>
                   <th className="px-4 py-3">ID</th>
                   <th className="px-4 py-3">Fecha</th>
@@ -275,7 +275,7 @@ const ProductionListView: React.FC<{
                 )}
                 {!loading && filtered.map((production) => (
                   <tr key={production.id} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50">
-                    <td className="px-4 py-3 font-black text-slate-900">{production.id}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-900">{production.id}</td>
                     <td className="px-4 py-3 font-bold text-slate-600">{production.date}</td>
                     <td className="px-4 py-3 font-bold text-slate-600">{production.responsible}</td>
                     <td className="px-4 py-3 font-bold text-slate-400">{production.observation || '-'}</td>
@@ -356,7 +356,7 @@ const MovementsModal: React.FC<{
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onMouseDown={onClose}>
       <div
-        className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl"
+        className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-sm"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
@@ -364,7 +364,7 @@ const MovementsModal: React.FC<{
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
               <ArrowLeftRight size={15} />
             </div>
-            <h2 className="text-sm font-black tracking-tight text-slate-900">Entradas y Salidas</h2>
+            <h2 className="text-sm font-semibold tracking-tight text-slate-900">Entradas y Salidas</h2>
           </div>
           <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-500 hover:bg-slate-100">
             <X size={15} />
@@ -383,7 +383,7 @@ const MovementsModal: React.FC<{
         <div className="flex-1 overflow-auto">
           {error && <div className="px-4 py-3 text-xs font-semibold text-red-600">{error}</div>}
           <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-slate-50 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">
+            <thead className="sticky top-0 bg-slate-50 text-left text-[11px] font-semibold  tracking-wide text-slate-400">
               <tr>
                 <th className="px-4 py-2.5">Producción</th>
                 <th className="px-4 py-2.5">Tipo</th>
@@ -401,9 +401,9 @@ const MovementsModal: React.FC<{
               )}
               {!loading && pageRows.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-2.5 font-black text-slate-900">{r.production_id}</td>
+                  <td className="px-4 py-2.5 font-semibold text-slate-900">{r.production_id}</td>
                   <td className="px-4 py-2.5">
-                    <span className={`inline-flex justify-center rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${
+                    <span className={`inline-flex justify-center rounded-md px-2 py-0.5 text-[11px] font-semibold  tracking-wide ${
                       r.movement === 'ENTRADA' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'
                     }`}>
                       {r.movement === 'ENTRADA' ? 'Entrada' : 'Salida'}
@@ -411,7 +411,7 @@ const MovementsModal: React.FC<{
                   </td>
                   <td className="px-4 py-2.5 font-bold text-slate-700">{r.product_name ?? `#${r.product_id}`}</td>
                   <td className="px-4 py-2.5 font-bold text-slate-500">{unitByProduct[String(r.product_id)] ?? '-'}</td>
-                  <td className="px-4 py-2.5 text-right font-black text-slate-700">{fmt(Number(r.qty))}</td>
+                  <td className="px-4 py-2.5 text-right font-semibold text-slate-700">{fmt(Number(r.qty))}</td>
                 </tr>
               ))}
             </tbody>
@@ -484,7 +484,7 @@ const ProductorSelect: React.FC<{
 
   return (
     <div>
-      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Productor</span>
+      <span className="text-xs font-semibold  tracking-wide text-slate-400">Productor</span>
       <div className="mt-1.5 flex gap-2">
         <select
           value={value}
@@ -619,8 +619,8 @@ const ProductoresAdminModal: React.FC<{
                 <Users size={18} />
               </div>
               <div>
-                <h2 className="text-base font-black tracking-tight text-slate-900">Productores</h2>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <h2 className="text-base font-semibold tracking-tight text-slate-900">Productores</h2>
+                <p className="text-xs font-semibold  tracking-wide text-slate-400">
                   {list.length} {list.length === 1 ? 'registrado' : 'registrados'}
                 </p>
               </div>
@@ -637,7 +637,7 @@ const ProductoresAdminModal: React.FC<{
 
         {/* Form de alta */}
         <div className="border-b border-slate-100 px-5 py-4">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nuevo Productor</span>
+          <span className="text-xs font-semibold  tracking-wide text-slate-400">Nuevo Productor</span>
           <div className="mt-1.5 flex gap-2">
             <input
               value={name}
@@ -650,7 +650,7 @@ const ProductoresAdminModal: React.FC<{
               type="button"
               onClick={add}
               disabled={saving || !name.trim()}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition hover:from-emerald-600 hover:to-emerald-700 disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-400"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 px-4 py-2.5 text-xs font-semibold  tracking-wide text-white shadow-sm transition hover:from-emerald-600 hover:to-emerald-700 disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-400"
             >
               {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
               Agregar
@@ -666,7 +666,7 @@ const ProductoresAdminModal: React.FC<{
 
         {/* Lista */}
         <div className="flex-1 overflow-auto px-5 py-4">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Lista</span>
+          <span className="text-xs font-semibold  tracking-wide text-slate-400">Lista</span>
           <div className="mt-2 space-y-1.5">
             {loading && (
               <div className="flex items-center justify-center py-12 text-slate-400">
@@ -675,7 +675,7 @@ const ProductoresAdminModal: React.FC<{
             )}
             {!loading && list.length === 0 && (
               <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
                   <Users size={20} />
                 </div>
                 <p className="text-xs font-bold text-slate-400">Sin productores todavía.</p>
@@ -687,7 +687,7 @@ const ProductoresAdminModal: React.FC<{
                 key={p.id}
                 className="group flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2.5 transition hover:border-orange-200 hover:bg-orange-50/40"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-black uppercase text-slate-500 group-hover:bg-orange-100 group-hover:text-orange-600">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold  text-slate-500 group-hover:bg-orange-100 group-hover:text-orange-600">
                   {p.name.slice(0, 2)}
                 </div>
                 <span className="flex-1 truncate text-sm font-bold text-slate-700">{p.name}</span>
@@ -704,7 +704,7 @@ const ProductoresAdminModal: React.FC<{
           </div>
         </div>
 
-        <footer className="border-t border-slate-100 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+        <footer className="border-t border-slate-100 px-5 py-3 text-xs font-semibold  tracking-wide text-slate-400">
           Eliminar es soft delete · se mantienen producciones registradas
         </footer>
       </aside>
@@ -890,7 +890,7 @@ const NewProductionView: React.FC<{
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-200"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-semibold  tracking-wide text-slate-600 hover:bg-slate-200"
           >
             <ArrowLeft size={15} />
             Volver al Historial
@@ -903,10 +903,10 @@ const NewProductionView: React.FC<{
       )}
 
       {/* Datos generales + acciones */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-3 md:grid-cols-3">
           <label className="block">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha de Producción</span>
+            <span className="text-xs font-semibold  tracking-wide text-slate-400">Fecha de Producción</span>
             <input
               type="date"
               value={date}
@@ -916,7 +916,7 @@ const NewProductionView: React.FC<{
           </label>
 
           <label className="block">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Responsable</span>
+            <span className="text-xs font-semibold  tracking-wide text-slate-400">Responsable</span>
             <input
               type="text"
               value={responsible}
@@ -927,7 +927,7 @@ const NewProductionView: React.FC<{
 
 
           <label className="block">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <span className="text-xs font-semibold  tracking-wide text-slate-400">
               Observaciones <span className="text-slate-300">(opcional)</span>
             </span>
             <input
@@ -946,7 +946,7 @@ const NewProductionView: React.FC<{
               type="button"
               onClick={handleSubmit}
               disabled={saving || exceedsStock}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-semibold  tracking-wide text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
               {saving ? 'Procesando...' : 'Procesar Producción'}
@@ -954,7 +954,7 @@ const NewProductionView: React.FC<{
             <button
               type="button"
               onClick={clearForm}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:bg-slate-200"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-semibold  tracking-wide text-slate-600 transition hover:bg-slate-200"
             >
               <Eraser size={15} />
               Limpiar
@@ -968,14 +968,14 @@ const NewProductionView: React.FC<{
       </div>
 
       {/* Materia prima: ALAMBON */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
           <Package className="text-orange-500" size={17} />
-          <h2 className="text-xs font-black uppercase tracking-widest text-slate-700">Materia Prima (Alambón)</h2>
+          <h2 className="text-xs font-semibold  tracking-wide text-slate-700">Materia Prima (Alambón)</h2>
         </div>
         <div className="grid gap-3 p-4 sm:grid-cols-4">
           <label className="block sm:col-span-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Producto</span>
+            <span className="text-xs font-semibold  tracking-wide text-slate-400">Producto</span>
             <select
               value={alambonId}
               onChange={(e) => setAlambonId(e.target.value)}
@@ -988,21 +988,21 @@ const NewProductionView: React.FC<{
             </select>
           </label>
           <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stock Actual</span>
+            <span className="text-xs font-semibold  tracking-wide text-slate-400">Stock Actual</span>
             <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5">
-              <span className="font-black text-slate-700">{alambon ? fmt(stockByProduct[alambon.id] ?? 0) : '-'}</span>
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{uomLabel(alambon)}</span>
+              <span className="font-semibold text-slate-700">{alambon ? fmt(stockByProduct[alambon.id] ?? 0) : '-'}</span>
+              <span className="text-xs font-semibold  tracking-wide text-slate-400">{uomLabel(alambon)}</span>
             </div>
           </div>
           <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cantidad Usada (Σ peso ajustado)</span>
+            <span className="text-xs font-semibold  tracking-wide text-slate-400">Cantidad Usada (Σ peso ajustado)</span>
             <div
               className={`mt-1.5 flex items-center gap-2 rounded-xl border px-3 py-2.5 ${
                 exceedsStock ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-slate-100'
               }`}
             >
-              <span className={`font-black ${exceedsStock ? 'text-red-600' : 'text-slate-700'}`}>{fmt(totalUsado)}</span>
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{uomLabel(alambon)}</span>
+              <span className={`font-semibold ${exceedsStock ? 'text-red-600' : 'text-slate-700'}`}>{fmt(totalUsado)}</span>
+              <span className="text-xs font-semibold  tracking-wide text-slate-400">{uomLabel(alambon)}</span>
             </div>
           </div>
         </div>
@@ -1016,17 +1016,17 @@ const NewProductionView: React.FC<{
       </div>
 
       {/* Productos terminados: ANILLO */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
           <div className="flex items-center gap-2">
             <Package className="text-orange-500" size={17} />
-            <h2 className="text-xs font-black uppercase tracking-widest text-slate-700">Productos Terminados (Anillos)</h2>
+            <h2 className="text-xs font-semibold  tracking-wide text-slate-700">Productos Terminados (Anillos)</h2>
           </div>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setPesoModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:bg-slate-200"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold  tracking-wide text-slate-600 transition hover:bg-slate-200"
             >
               <Scale size={14} />
               Peso
@@ -1034,7 +1034,7 @@ const NewProductionView: React.FC<{
             <button
               type="button"
               onClick={addRow}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-emerald-600"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold  tracking-wide text-white transition hover:bg-emerald-600"
             >
               <PackagePlus size={14} />
               Agregar
@@ -1043,7 +1043,7 @@ const NewProductionView: React.FC<{
         </div>
         <div className="overflow-x-auto p-4">
           <table className="min-w-[820px] w-full text-sm">
-            <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <thead className="bg-slate-50 text-xs font-semibold  tracking-wide text-slate-400">
               <tr>
                 <th className="px-3 py-2.5 text-left">Producto</th>
                 <th className="px-3 py-2.5 text-center">Stock Actual</th>
@@ -1089,9 +1089,9 @@ const NewProductionView: React.FC<{
                         className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center font-bold text-slate-900 outline-none focus:border-orange-500"
                       />
                     </td>
-                    <td className="px-3 py-2.5 text-center font-black text-slate-600">{product ? fmt(peso) : '-'}</td>
+                    <td className="px-3 py-2.5 text-center font-semibold text-slate-600">{product ? fmt(peso) : '-'}</td>
                     <td className="px-3 py-2.5">
-                      <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-center font-black text-slate-700">
+                      <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-center font-semibold text-slate-700">
                         {product ? fmt(ajustado) : '-'}
                       </div>
                     </td>
@@ -1176,7 +1176,7 @@ const PesoModal: React.FC<{
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onMouseDown={onClose}>
       <div
-        className="flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl"
+        className="flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden rounded-xl bg-white shadow-sm"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
@@ -1184,7 +1184,7 @@ const PesoModal: React.FC<{
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
               <Scale size={15} />
             </div>
-            <h2 className="text-sm font-black tracking-tight text-slate-900">Editar Peso de Anillos</h2>
+            <h2 className="text-sm font-semibold tracking-tight text-slate-900">Editar Peso de Anillos</h2>
           </div>
           <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-500 hover:bg-slate-100">
             <X size={15} />
@@ -1220,12 +1220,12 @@ const PesoModal: React.FC<{
                   onChange={(e) => setValues((prev) => ({ ...prev, [id]: e.target.value }))}
                   className="w-24 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-center text-xs font-bold text-slate-900 outline-none focus:border-orange-500"
                 />
-                <span className="w-12 text-[10px] font-black uppercase tracking-widest text-slate-400">{uomLabel(p)}</span>
+                <span className="w-12 text-xs font-semibold  tracking-wide text-slate-400">{uomLabel(p)}</span>
                 <button
                   type="button"
                   onClick={() => save(p)}
                   disabled={savingId === id}
-                  className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-slate-800 disabled:opacity-50"
+                  className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold  tracking-wide text-white transition hover:bg-slate-800 disabled:opacity-50"
                 >
                   {savingId === id ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                   Guardar
@@ -1299,13 +1299,13 @@ const DeleteProductionModal: React.FC<{
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onMouseDown={onClose}>
-      <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-sm" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-500">
               <Trash2 size={15} />
             </div>
-            <h2 className="text-sm font-black tracking-tight text-slate-900">Eliminar Producción #{production.id}</h2>
+            <h2 className="text-sm font-semibold tracking-tight text-slate-900">Eliminar Producción #{production.id}</h2>
           </div>
           <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-500 hover:bg-slate-100">
             <X size={15} />
@@ -1319,7 +1319,7 @@ const DeleteProductionModal: React.FC<{
             Esta acción no revierte el stock. Quedará registrada en auditoría.
           </div>
           <label className="block">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observación <span className="text-red-400">(obligatoria)</span></span>
+            <span className="text-xs font-semibold  tracking-wide text-slate-400">Observación <span className="text-red-400">(obligatoria)</span></span>
             <textarea
               value={observation}
               onChange={(e) => setObservation(e.target.value)}
@@ -1334,14 +1334,14 @@ const DeleteProductionModal: React.FC<{
         </div>
 
         <div className="flex justify-end gap-2 border-t border-slate-100 px-4 py-3">
-          <button type="button" onClick={onClose} className="rounded-xl bg-slate-100 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-200">
+          <button type="button" onClick={onClose} className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-semibold  tracking-wide text-slate-600 hover:bg-slate-200">
             Cancelar
           </button>
           <button
             type="button"
             onClick={confirm}
             disabled={deleting}
-            className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-red-700 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold  tracking-wide text-white hover:bg-red-700 disabled:opacity-50"
           >
             {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
             Eliminar

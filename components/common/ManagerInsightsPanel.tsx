@@ -64,13 +64,13 @@ const ManagerInsightsPanel: React.FC<ManagerInsightsPanelProps> = ({
       }];
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">{title}</h3>
+          <h3 className="text-sm font-semibold  tracking-[0.24em] text-slate-700">{title}</h3>
           <p className="mt-1 max-w-3xl text-xs font-semibold text-slate-500">{subtitle}</p>
         </div>
-        <div className="rounded-2xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
+        <div className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">
           {isLoading ? 'Analizando...' : `${visibleInsights.length} señales`}
         </div>
       </div>
@@ -79,22 +79,22 @@ const ManagerInsightsPanel: React.FC<ManagerInsightsPanelProps> = ({
         {visibleInsights.map((insight) => {
           const Icon = kindIcon[insight.kind];
           return (
-            <article key={insight.id} className="min-h-[190px] rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <article key={insight.id} className="min-h-[190px] rounded-xl border border-slate-200 bg-slate-50/70 p-4">
               <div className="flex items-start justify-between gap-3">
-                <div className={`rounded-2xl p-2.5 ${kindClass[insight.kind]}`}>
+                <div className={`rounded-xl p-2.5 ${kindClass[insight.kind]}`}>
                   <Icon size={18} />
                 </div>
-                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${priorityClass[insight.priority]}`}>
+                <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold  tracking-wide ${priorityClass[insight.priority]}`}>
                   {priorityLabel[insight.priority]}
                 </span>
               </div>
-              <h4 className="mt-4 text-sm font-black leading-snug text-slate-900">{insight.title}</h4>
+              <h4 className="mt-4 text-sm font-semibold leading-snug text-slate-900">{insight.title}</h4>
               {insight.metric && (
-                <p className="mt-2 text-2xl font-black tracking-tight text-slate-900">{insight.metric}</p>
+                <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{insight.metric}</p>
               )}
               <p className="mt-2 text-xs font-semibold leading-5 text-slate-600">{insight.description}</p>
               {insight.action && (
-                <p className="mt-3 rounded-2xl bg-white px-3 py-2 text-xs font-bold leading-5 text-slate-700">
+                <p className="mt-3 rounded-xl bg-white px-3 py-2 text-xs font-bold leading-5 text-slate-700">
                   {insight.action}
                 </p>
               )}

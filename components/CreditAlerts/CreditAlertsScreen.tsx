@@ -375,34 +375,34 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
         <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_42%,#f8fafc_100%)] px-6 py-7">
           <div className="flex flex-col gap-6">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-              <div className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3.5">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-600">Deudas activas</p>
-                <p className="mt-1.5 text-[2rem] font-black leading-none text-slate-900">{kpis.openNotesCount}</p>
+              <div className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3.5">
+                <p className="text-xs font-semibold  tracking-[0.18em] text-sky-600">Deudas activas</p>
+                <p className="mt-1.5 text-[2rem] font-semibold leading-none text-slate-900">{kpis.openNotesCount}</p>
                 <p className="mt-1 text-xs font-semibold text-sky-700">Cartera actualmente abierta</p>
               </div>
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3.5">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-600">Deuda activa</p>
-                <p className="mt-1.5 text-[1.9rem] font-black leading-none text-slate-900">{formatCurrency(kpis.totalActiveDebt)}</p>
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3.5">
+                <p className="text-xs font-semibold  tracking-[0.18em] text-emerald-600">Deuda activa</p>
+                <p className="mt-1.5 text-[1.9rem] font-semibold leading-none text-slate-900">{formatCurrency(kpis.totalActiveDebt)}</p>
                 <p className="mt-1 text-xs font-semibold text-emerald-700">Saldo total pendiente</p>
               </div>
-              <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3.5">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-red-500">Vencidos</p>
-                <p className="mt-1.5 text-[2rem] font-black leading-none text-slate-900">{kpis.criticalTime}</p>
+              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3.5">
+                <p className="text-xs font-semibold  tracking-[0.18em] text-red-500">Vencidos</p>
+                <p className="mt-1.5 text-[2rem] font-semibold leading-none text-slate-900">{kpis.criticalTime}</p>
                 <p className="mt-1 text-xs font-semibold text-red-500">Con nota ya fuera de plazo</p>
               </div>
-              <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3.5">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-500">Por vencer 7 días</p>
-                <p className="mt-1.5 text-[2rem] font-black leading-none text-slate-900">{kpis.warningTime}</p>
+              <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3.5">
+                <p className="text-xs font-semibold  tracking-[0.18em] text-amber-500">Por vencer 7 días</p>
+                <p className="mt-1.5 text-[2rem] font-semibold leading-none text-slate-900">{kpis.warningTime}</p>
                 <p className="mt-1 text-xs font-semibold text-amber-600">Seguimiento preventivo</p>
               </div>
-              <div className="rounded-2xl border border-slate-900 bg-slate-900 px-4 py-3.5">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/60">Límite excedido</p>
-                <p className="mt-1.5 text-[2rem] font-black leading-none text-white">{kpis.criticalLimit}</p>
+              <div className="rounded-xl border border-slate-900 bg-slate-900 px-4 py-3.5">
+                <p className="text-xs font-semibold  tracking-[0.18em] text-white/60">Límite excedido</p>
+                <p className="mt-1.5 text-[2rem] font-semibold leading-none text-white">{kpis.criticalLimit}</p>
                 <p className="mt-1 text-xs font-semibold text-white/70">Bloqueo recomendado</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3.5">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Límite preventivo</p>
-                <p className="mt-1.5 text-[2rem] font-black leading-none text-slate-900">{kpis.warningLimit}</p>
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3.5">
+                <p className="text-xs font-semibold  tracking-[0.18em] text-slate-400">Límite preventivo</p>
+                <p className="mt-1.5 text-[2rem] font-semibold leading-none text-slate-900">{kpis.warningLimit}</p>
                 <p className="mt-1 text-xs font-semibold text-slate-500">Desde {LIMIT_WARNING_THRESHOLD}% de uso</p>
               </div>
             </div>
@@ -426,7 +426,7 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
                     setFilter(option.id as AlertFilter);
                     setCurrentPage(1);
                   }}
-                  className={`rounded-2xl px-4 py-2 text-xs font-black uppercase tracking-[0.18em] transition ${filter === option.id
+                  className={`rounded-xl px-4 py-2 text-xs font-semibold  tracking-[0.18em] transition ${filter === option.id
                     ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/15'
                     : 'border border-slate-200 bg-white text-slate-500 hover:border-orange-200 hover:text-orange-500'
                     }`}
@@ -435,7 +435,7 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
                     {option.label} <span className="ml-1 opacity-70">({filterCounters[option.id as AlertFilter]})</span>
                   </span>
                   {module === 'materiales' && (
-                    <span className={`mt-1 block text-[10px] font-bold normal-case tracking-normal ${filter === option.id ? 'text-white/75' : 'text-slate-400'}`}>
+                    <span className={`mt-1 block text-xs font-bold normal-case tracking-normal ${filter === option.id ? 'text-white/75' : 'text-slate-400'}`}>
                       {formatCurrency(filterAmounts[option.id as AlertFilter])}
                     </span>
                   )}
@@ -449,7 +449,7 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Buscar por cliente, teléfono o observación..."
-                className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-orange-300"
+                className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-orange-300"
               />
             </div>
           </div>
@@ -459,7 +459,7 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-900 text-white">
-                <tr className="text-left text-[11px] font-black uppercase tracking-[0.16em]">
+                <tr className="text-left text-[11px] font-semibold  tracking-[0.16em]">
                   <th className="px-5 py-4">Cliente</th>
                   <th className="px-5 py-4 text-right">Límite</th>
                   <th className="px-5 py-4 text-right">Deuda</th>
@@ -500,8 +500,8 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
                       <td className="px-5 py-4">
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-black uppercase tracking-tight text-slate-900">{row.customerName}</p>
-                            <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                            <p className="font-semibold  tracking-tight text-slate-900">{row.customerName}</p>
+                            <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold  tracking-[0.14em] text-slate-500">
                               {row.creditDays} días
                             </span>
                           </div>
@@ -517,7 +517,7 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
                       </td>
                       <td className="px-5 py-4 text-center">
                         <div className="mx-auto flex w-[100px] flex-col gap-2">
-                          <div className="inline-flex items-center justify-center rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">
+                          <div className="inline-flex items-center justify-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                             {formatNumber(row.utilizationPct, 'en-US', { maximumFractionDigits: 0 })}%
                           </div>
                           <div className="h-2 overflow-hidden rounded-full bg-slate-100">
@@ -533,26 +533,26 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
                         {row.daysToDue === null ? (
                           <span className="text-xs font-semibold text-slate-400">Sin deuda</span>
                         ) : row.daysToDue < 0 ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-black text-red-600">
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600">
                             <Clock3 size={12} /> {Math.abs(row.daysToDue)} atraso
                           </span>
                         ) : (
-                          <span className="text-xs font-black text-slate-700">{row.daysToDue} día(s)</span>
+                          <span className="text-xs font-semibold text-slate-700">{row.daysToDue} día(s)</span>
                         )}
                       </td>
                       <td className="px-5 py-4 text-center">
                         <div className="space-y-1 text-xs font-semibold text-slate-500">
                           <p>{row.openNotesCount} abiertas</p>
-                          <p className={row.overdueCount > 0 ? 'font-black text-red-600' : ''}>{row.overdueCount} vencidas</p>
+                          <p className={row.overdueCount > 0 ? 'font-semibold text-red-600' : ''}>{row.overdueCount} vencidas</p>
                         </div>
                       </td>
                       <td className="px-5 py-4">
                         <div className="space-y-2">
                           <div className="flex flex-wrap gap-2">
-                            <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${getLevelBadge(row.level)}`}>
+                            <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold  tracking-[0.14em] ${getLevelBadge(row.level)}`}>
                               {row.level}
                             </span>
-                            <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${getAlertTypeBadge(row.alertType)}`}>
+                            <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold  tracking-[0.14em] ${getAlertTypeBadge(row.alertType)}`}>
                               {row.alertType}
                             </span>
                           </div>
@@ -573,18 +573,18 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
               <button
                 onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                 disabled={currentPage === 1}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-black text-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-semibold text-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 ‹
               </button>
-              <span className="rounded-xl bg-slate-900 px-3 py-2 font-black text-white">
+              <span className="rounded-xl bg-slate-900 px-3 py-2 font-semibold text-white">
                 {currentPage}
               </span>
               <span className="font-semibold text-slate-400">/ {totalPages}</span>
               <button
                 onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
                 disabled={currentPage === totalPages}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-black text-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-semibold text-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 ›
               </button>

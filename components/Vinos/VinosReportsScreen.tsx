@@ -100,22 +100,22 @@ const KpiCard: React.FC<{
   icon: React.ElementType;
   loading?: boolean;
 }> = ({ label, value, icon: Icon, loading = false }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
     <div className="flex items-start justify-between">
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+      <p className="text-xs font-semibold  tracking-wide text-slate-400">{label}</p>
       <div className="rounded-lg bg-orange-50 p-1.5 text-orange-600">
         <Icon size={14} />
       </div>
     </div>
-    {loading ? <SkeletonBlock className="mt-3 h-7 w-24" /> : <p className="mt-2 text-2xl font-black text-slate-900">{value}</p>}
+    {loading ? <SkeletonBlock className="mt-3 h-7 w-24" /> : <p className="mt-2 text-2xl font-semibold text-slate-900">{value}</p>}
   </div>
 );
 
 const PanelCard: React.FC<{ title: string; icon: React.ElementType; children: React.ReactNode }> = ({ title, icon: Icon, children }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col">
+  <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col">
     <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
       <Icon size={16} className="text-slate-500" />
-      <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">{title}</h3>
+      <h3 className="text-sm font-semibold  tracking-tight text-slate-900">{title}</h3>
     </div>
     <div className="flex-1 p-5">{children}</div>
   </div>
@@ -221,7 +221,7 @@ const WeekdayAreaChart: React.FC<{
 
   return (
     <div className="space-y-3">
-      <div className="h-72 w-full overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-slate-50">
+      <div className="h-72 w-full overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50">
         <svg viewBox={`0 0 ${width} ${height}`} className="h-full w-full" role="img" aria-label="Ventas por día de la semana">
           <defs>
             <linearGradient id="weekdaySalesArea" x1="0" x2="0" y1="0" y2="1">
@@ -294,7 +294,7 @@ const HourlyHistogram: React.FC<{
   const barWidth = Math.max(8, (chartWidth - barGap * (rows.length - 1)) / rows.length);
 
   return (
-    <div className="h-72 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white">
+    <div className="h-72 w-full overflow-hidden rounded-xl border border-slate-200 bg-white">
       <svg viewBox={`0 0 ${width} ${height}`} className="h-full w-full" role="img" aria-label="Histograma de ventas por horario">
         <defs>
           <linearGradient id="hourlyBarGradient" x1="0" x2="0" y1="0" y2="1">
@@ -713,11 +713,11 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
       {/* Header con selector */}
       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <h2 className="text-base font-black uppercase tracking-tight text-slate-900">Dashboard CRM</h2>
+          <h2 className="text-base font-semibold  tracking-tight text-slate-900">Dashboard CRM</h2>
           <p className="text-[11px] font-bold text-slate-400">Métricas comerciales y comportamiento de clientes</p>
         </div>
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-          <div className="flex flex-wrap gap-1 rounded-2xl border border-slate-200 bg-white p-1">
+          <div className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1">
             {([
               { v: 'today', label: 'Hoy' },
               { v: '7d', label: 'Semana' },
@@ -729,7 +729,7 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
               <button
                 key={p.v}
                 onClick={() => setPeriod(p.v)}
-                className={`rounded-xl px-3 py-1.5 text-[11px] font-black uppercase tracking-wider transition-colors ${
+                className={`rounded-xl px-3 py-1.5 text-[11px] font-semibold  tracking-wider transition-colors ${
                   period === p.v ? 'bg-orange-600 text-white' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
@@ -738,8 +738,8 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Desde</span>
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+              <span className="text-xs font-semibold  tracking-wide text-slate-400">Desde</span>
               <input
                 type="date"
                 value={startDate}
@@ -747,11 +747,11 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
                   setPeriod('custom');
                   setStartDate(e.target.value);
                 }}
-                className="bg-transparent text-xs font-black text-slate-700 outline-none"
+                className="bg-transparent text-xs font-semibold text-slate-700 outline-none"
               />
             </label>
-            <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Hasta</span>
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+              <span className="text-xs font-semibold  tracking-wide text-slate-400">Hasta</span>
               <input
                 type="date"
                 value={endDate}
@@ -759,11 +759,11 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
                   setPeriod('custom');
                   setEndDate(e.target.value);
                 }}
-                className="bg-transparent text-xs font-black text-slate-700 outline-none"
+                className="bg-transparent text-xs font-semibold text-slate-700 outline-none"
               />
             </label>
           </div>
-          <button onClick={load} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">
+          <button onClick={load} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50">
             <RefreshCw size={14}/>
           </button>
         </div>
@@ -788,8 +788,8 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
               <div className="grid gap-3 md:grid-cols-4">
                 {periodRows.map(row => (
                   <div key={row.label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{row.label}</p>
-                    <p className="mt-1 text-lg font-black text-slate-900">{formatCurrency(row.amount)}</p>
+                    <p className="text-xs font-semibold  tracking-wide text-slate-400">{row.label}</p>
+                    <p className="mt-1 text-lg font-semibold text-slate-900">{formatCurrency(row.amount)}</p>
                     <div className="mt-2 flex items-center justify-between text-[11px] font-bold">
                       <span className="text-slate-500">{row.sales} ventas</span>
                       {isItemAnalyticsViewLoading ? (
@@ -831,7 +831,7 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
                       .map(row => (
                         <div key={row.hour} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
                           <span className="font-bold text-slate-700">{formatHourRange(row.hour)}</span>
-                          <span className="font-black text-orange-600">{row.count} ventas</span>
+                          <span className="font-semibold text-orange-600">{row.count} ventas</span>
                         </div>
                       ))}
                   </div>
@@ -853,12 +853,12 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
                 <ul className="space-y-2">
                   {reportData.top_products.map((p, i) => (
                     <li key={p.product_id} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-100 text-[10px] font-black text-orange-600">{i + 1}</span>
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-100 text-xs font-semibold text-orange-600">{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-slate-800 truncate">{p.name}</p>
-                        <p className="text-[10px] text-slate-400 font-mono">{p.sku} · {p.qty} uds</p>
+                        <p className="text-xs text-slate-400 font-mono">{p.sku} · {p.qty} uds</p>
                       </div>
-                      <span className="font-black text-slate-900">{formatCurrency(p.total)}</span>
+                      <span className="font-semibold text-slate-900">{formatCurrency(p.total)}</span>
                     </li>
                   ))}
                 </ul>
@@ -875,12 +875,12 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
                 <ul className="space-y-2">
                   {reportData.top_profit_products.map((p, i) => (
                     <li key={p.product_id} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-[10px] font-black text-green-700">{i + 1}</span>
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">{i + 1}</span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-bold text-slate-800">{p.name}</p>
-                        <p className="text-[10px] font-mono text-slate-400">{p.sku} · {p.qty} uds · {formatCurrency(p.total)}</p>
+                        <p className="text-xs font-mono text-slate-400">{p.sku} · {p.qty} uds · {formatCurrency(p.total)}</p>
                       </div>
-                      <span className="font-black text-green-600">{formatCurrency(p.profit)}</span>
+                      <span className="font-semibold text-green-600">{formatCurrency(p.profit)}</span>
                     </li>
                   ))}
                 </ul>
@@ -899,9 +899,9 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
                     <li key={p.product_id} className="flex items-center gap-2 rounded-lg border border-red-100 bg-red-50/40 px-3 py-2 text-xs">
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-bold text-slate-800">{p.name}</p>
-                        <p className="text-[10px] font-mono text-slate-400">{p.sku} · {p.qty} uds · {formatCurrency(p.total)}</p>
+                        <p className="text-xs font-mono text-slate-400">{p.sku} · {p.qty} uds · {formatCurrency(p.total)}</p>
                       </div>
-                      <span className="font-black text-red-600">{formatCurrency(p.profit)}</span>
+                      <span className="font-semibold text-red-600">{formatCurrency(p.profit)}</span>
                     </li>
                   ))}
                 </ul>
@@ -920,9 +920,9 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
                     <li key={p.product_id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs">
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-bold text-slate-800">{p.name}</p>
-                        <p className="text-[10px] font-mono text-slate-400">{p.sku}</p>
+                        <p className="text-xs font-mono text-slate-400">{p.sku}</p>
                       </div>
-                      <span className="font-black text-orange-600">{p.stock} / {p.min_stock}</span>
+                      <span className="font-semibold text-orange-600">{p.stock} / {p.min_stock}</span>
                     </li>
                   ))}
                 </ul>
@@ -941,7 +941,7 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
                     <li key={row.hour} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-xs">
                       <span className="font-bold text-slate-800">{formatHourRange(row.hour)}</span>
                       <span className="text-slate-500">{row.count} ventas</span>
-                      <span className="font-black text-green-600">{formatCurrency(row.amount)}</span>
+                      <span className="font-semibold text-green-600">{formatCurrency(row.amount)}</span>
                     </li>
                   ))}
                 </ul>
@@ -960,7 +960,7 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
                     <li key={row.hour} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-xs">
                       <span className="font-bold text-slate-800">{formatHourRange(row.hour)}</span>
                       <span className="text-slate-500">{row.count} ventas</span>
-                      <span className="font-black text-slate-900">{formatCurrency(row.amount)}</span>
+                      <span className="font-semibold text-slate-900">{formatCurrency(row.amount)}</span>
                     </li>
                   ))}
                 </ul>
@@ -977,7 +977,7 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
               <div className="space-y-3">
                 <div className="overflow-x-auto rounded-xl border border-slate-200">
                   <table className="min-w-[1180px] w-full text-left text-xs">
-                    <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <thead className="bg-slate-50 text-xs font-semibold  tracking-wide text-slate-400">
                       <tr>
                         <th className="px-4 py-3">Responsable</th>
                         <th className="px-4 py-3">Apertura</th>
@@ -1007,19 +1007,19 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
 
                         return (
                           <tr key={session.id} className={`align-top ${isOpen ? 'bg-green-200/70 hover:bg-green-300/70' : 'bg-slate-200/80 hover:bg-slate-300/80'}`}>
-                            <td className="px-4 py-3 font-black text-slate-900">{session.cashier_name || 'Sin responsable'}</td>
+                            <td className="px-4 py-3 font-semibold text-slate-900">{session.cashier_name || 'Sin responsable'}</td>
                             <td className="px-4 py-3 font-bold text-slate-600">{formatSessionDateTime(session.opened_at)}</td>
                             <td className="px-4 py-3 font-bold text-slate-600">{formatSessionDateTime(session.closed_at)}</td>
                             <td className="px-4 py-3 font-bold text-slate-500">{formatSessionDuration(session.opened_at, session.closed_at)}</td>
-                            <td className="px-4 py-3 text-right font-black text-slate-900">{formatCurrency(Number(session.opening_cash ?? 0))}</td>
-                            <td className="px-4 py-3 text-right font-black text-orange-600">{formatCurrency(Number(session.total_sold ?? 0))}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatCurrency(Number(session.opening_cash ?? 0))}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-orange-600">{formatCurrency(Number(session.total_sold ?? 0))}</td>
                             <td className="px-4 py-3 text-right font-bold text-slate-700">{formatCurrency(Number(session.cash_sales_total ?? 0))}</td>
                             <td className="px-4 py-3 text-right font-bold text-slate-700">{formatCurrency(Number(session.card_sales_total ?? 0))}</td>
                             <td className="px-4 py-3 text-right font-bold text-slate-700">{formatCurrency(Number(session.transfer_sales_total ?? 0))}</td>
                             <td className="px-4 py-3 text-right font-bold text-slate-700">{formatCurrency(Number(session.credit_sales_total ?? 0))}</td>
-                            <td className="px-4 py-3 text-right font-black text-slate-900">{formatCurrency(Number(session.expected_cash ?? 0))}</td>
-                            <td className="px-4 py-3 text-right font-black text-slate-900">{session.delivered_cash == null ? '—' : formatCurrency(Number(session.delivered_cash ?? 0))}</td>
-                            <td className={`px-4 py-3 text-right font-black ${difference === 0 ? 'text-slate-900' : difference > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatCurrency(Number(session.expected_cash ?? 0))}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-slate-900">{session.delivered_cash == null ? '—' : formatCurrency(Number(session.delivered_cash ?? 0))}</td>
+                            <td className={`px-4 py-3 text-right font-semibold ${difference === 0 ? 'text-slate-900' : difference > 0 ? 'text-green-600' : 'text-red-600'}`}>
                               {session.cash_difference == null ? '—' : formatCurrency(difference)}
                             </td>
                             <td className="max-w-[260px] px-4 py-3 font-bold text-slate-500">
@@ -1060,14 +1060,14 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
 
       {customCutOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-100 text-orange-600">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
                   <Printer size={18} />
                 </div>
                 <div>
-                  <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Corte personalizado</h3>
+                  <h3 className="text-base font-semibold  tracking-tight text-slate-900">Corte personalizado</h3>
                   <p className="text-[11px] font-bold text-slate-400">Selecciona cualquier rango de fecha y hora</p>
                 </div>
               </div>
@@ -1081,39 +1081,39 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
             </div>
 
             <div className="space-y-4 px-6 py-5">
-              <div className="rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3">
+              <div className="rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
                 <p className="text-xs font-bold leading-relaxed text-orange-800">
                   Este corte reconstruye las ventas dentro del rango seleccionado, aunque el turno cruce medianoche. No modifica el cierre automático ni las cajas guardadas.
                 </p>
               </div>
 
               <label className="block">
-                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha y hora de inicio</span>
+                <span className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Fecha y hora de inicio</span>
                 <input
                   type="datetime-local"
                   value={customCutStart}
                   onChange={(event) => setCustomCutStart(event.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                 />
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha y hora de fin</span>
+                <span className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Fecha y hora de fin</span>
                 <input
                   type="datetime-local"
                   value={customCutEnd}
                   onChange={(event) => setCustomCutEnd(event.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                 />
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Cajero / empleado</span>
+                <span className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Cajero / empleado</span>
                 <select
                   value={customCutCashierId}
                   onChange={(event) => setCustomCutCashierId(event.target.value)}
                   disabled={cashiersLoading}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:opacity-60"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:opacity-60"
                 >
                   <option value="">{cashiersLoading ? 'Cargando empleados...' : 'Todos los cajeros'}</option>
                   {cashierOptions.map((cashier) => (
@@ -1125,7 +1125,7 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
               </label>
 
               {customCutError && (
-                <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
                   {customCutError}
                 </p>
               )}
@@ -1135,14 +1135,14 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
               <button
                 onClick={() => setCustomCutOpen(false)}
                 disabled={customCutLoading}
-                className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleGenerateCustomCut}
                 disabled={customCutLoading}
-                className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-50"
+                className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500 disabled:opacity-50"
               >
                 {customCutLoading ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
                 Generar e imprimir
@@ -1154,14 +1154,14 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
 
       {cashDetailSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-orange-600">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
                   <Receipt size={18} />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="truncate text-base font-black uppercase tracking-tight text-slate-900">Ventas asociadas al corte</h3>
+                  <h3 className="truncate text-base font-semibold  tracking-tight text-slate-900">Ventas asociadas al corte</h3>
                   <p className="truncate text-[11px] font-bold text-slate-400">
                     {cashDetailSession.cashier_name} · {formatSessionDateTime(cashDetailSession.opened_at)} - {formatSessionDateTime(cashDetailSession.closed_at ?? new Date().toISOString())}
                   </p>
@@ -1178,26 +1178,26 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
 
             <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ventas activas</p>
-                  <p className="mt-1 text-xl font-black text-slate-900">{cashDetailTotals.active}</p>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-xs font-semibold  tracking-wide text-slate-400">Ventas activas</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-900">{cashDetailTotals.active}</p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Productos</p>
-                  <p className="mt-1 text-xl font-black text-slate-900">{cashDetailTotals.items}</p>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-xs font-semibold  tracking-wide text-slate-400">Productos</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-900">{cashDetailTotals.items}</p>
                 </div>
-                <div className="rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-orange-400">Total activo</p>
-                  <p className="mt-1 text-xl font-black text-orange-600">{formatCurrency(cashDetailTotals.total)}</p>
+                <div className="rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
+                  <p className="text-xs font-semibold  tracking-wide text-orange-400">Total activo</p>
+                  <p className="mt-1 text-xl font-semibold text-orange-600">{formatCurrency(cashDetailTotals.total)}</p>
                 </div>
-                <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-red-400">Canceladas</p>
-                  <p className="mt-1 text-xl font-black text-red-600">{cashDetailTotals.cancelled} · {formatCurrency(cashDetailTotals.cancelledTotal)}</p>
+                <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+                  <p className="text-xs font-semibold  tracking-wide text-red-400">Canceladas</p>
+                  <p className="mt-1 text-xl font-semibold text-red-600">{cashDetailTotals.cancelled} · {formatCurrency(cashDetailTotals.cancelledTotal)}</p>
                 </div>
               </div>
 
               {cashDetailError && (
-                <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
                   {cashDetailError}
                 </p>
               )}
@@ -1210,9 +1210,9 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
               ) : cashDetailSales.length === 0 ? (
                 <EmptyMini icon={Receipt} text="Sin ventas asociadas a esta caja" />
               ) : (
-                <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
                   <table className="min-w-[980px] w-full text-left text-xs">
-                    <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <thead className="bg-slate-50 text-xs font-semibold  tracking-wide text-slate-400">
                       <tr>
                         <th className="px-4 py-3">Folio</th>
                         <th className="px-4 py-3">Fecha</th>
@@ -1231,22 +1231,22 @@ const VinosReportsScreen: React.FC<Props> = ({ selectedBranchId, branches, curre
                         const isDeleted = Boolean(sale.deleted_at);
                         return (
                           <tr key={sale.id} className={`align-top ${isDeleted ? 'bg-red-50/40' : 'hover:bg-slate-50'}`}>
-                            <td className="px-4 py-3 font-mono text-[11px] font-black text-blue-600">{formatSaleFolio(sale.id)}</td>
+                            <td className="px-4 py-3 font-mono text-[11px] font-semibold text-blue-600">{formatSaleFolio(sale.id)}</td>
                             <td className="px-4 py-3 font-bold text-slate-600">{formatSessionDateTime(sale.created_at)}</td>
-                            <td className="px-4 py-3 font-black text-slate-900">{getSaleCustomerName(sale)}</td>
+                            <td className="px-4 py-3 font-semibold text-slate-900">{getSaleCustomerName(sale)}</td>
                             <td className="px-4 py-3">
-                              <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600">
+                              <span className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold  tracking-wide text-slate-600">
                                 {getCashSalePaymentLabel(sale)}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-right font-black text-slate-900">{getCashSaleItemCount(sale)}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-slate-900">{getCashSaleItemCount(sale)}</td>
                             <td className="px-4 py-3 text-right font-bold text-slate-700">{formatCurrency(Number(sale.subtotal ?? 0))}</td>
                             <td className="px-4 py-3 text-right font-bold text-slate-700">{formatCurrency(Number(sale.discount_amount ?? 0))}</td>
-                            <td className={`px-4 py-3 text-right font-black ${isDeleted ? 'text-red-600' : 'text-orange-600'}`}>
+                            <td className={`px-4 py-3 text-right font-semibold ${isDeleted ? 'text-red-600' : 'text-orange-600'}`}>
                               {formatCurrency(Number(sale.total ?? 0))}
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest ${isDeleted ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                              <span className={`rounded-lg px-2 py-1 text-xs font-semibold  tracking-wide ${isDeleted ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
                                 {isDeleted ? 'Cancelada' : 'Activa'}
                               </span>
                             </td>

@@ -336,10 +336,10 @@ const VinosProductModal: React.FC<Props> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-4xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col">
+      <div className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col">
         <div className="flex items-center justify-between border-b border-slate-100 px-8 py-5">
           <div>
-            <h2 className="text-lg font-black uppercase tracking-tight text-slate-900">
+            <h2 className="text-lg font-semibold  tracking-tight text-slate-900">
               {editTarget ? 'Editar producto' : 'Nuevo producto'}
             </h2>
             <p className="mt-0.5 text-[11px] font-bold text-slate-400">
@@ -353,12 +353,12 @@ const VinosProductModal: React.FC<Props> = ({
 
         <div className="flex-1 space-y-6 overflow-y-auto px-8 py-6">
           <section>
-            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Datos del producto</h3>
+            <h3 className="mb-3 text-xs font-semibold  tracking-[0.22em] text-slate-400">Datos del producto</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Código de barras</label>
+                <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Código de barras</label>
                 <input
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-mono outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-mono outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                   value={form.barcode}
                   onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))}
                   placeholder="Opcional"
@@ -366,20 +366,20 @@ const VinosProductModal: React.FC<Props> = ({
               </div>
 
               <div>
-                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Stock mínimo (alerta)</label>
+                <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Stock mínimo (alerta)</label>
                 <input
                   type="number"
                   min="0"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                   value={form.min_stock}
                   onChange={e => setForm(f => ({ ...f, min_stock: e.target.value }))}
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Nombre *</label>
+                <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Nombre *</label>
                 <input
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="Casa Madero Cabernet 750ml"
@@ -387,9 +387,9 @@ const VinosProductModal: React.FC<Props> = ({
               </div>
 
               <div>
-                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Categoría</label>
+                <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Categoría</label>
                 <select
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                   value={form.category_id}
                   onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
                 >
@@ -399,9 +399,9 @@ const VinosProductModal: React.FC<Props> = ({
               </div>
 
               <div>
-                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Unidad base</label>
+                <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Unidad base</label>
                 <select
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                   value={form.uom_id}
                   onChange={e => setForm(f => ({ ...f, uom_id: e.target.value }))}
                 >
@@ -420,22 +420,22 @@ const VinosProductModal: React.FC<Props> = ({
               </div>
 
               <div>
-                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Precio de compra</label>
+                <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Precio de compra</label>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                   value={form.purchase_cost}
                   onChange={e => handlePurchaseCostChange(e.target.value)}
                   placeholder="Precio por unidad base"
                 />
-                <p className="mt-1 text-[10px] font-bold text-slate-400">
+                <p className="mt-1 text-xs font-bold text-slate-400">
                   Si lo capturas, se sugieren precios con utilidad de 25%, 20% y 15%. Puedes editarlos antes de guardar.
                 </p>
               </div>
 
-              <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <label className="flex cursor-pointer items-start gap-3">
                   <input
                     type="checkbox"
@@ -444,7 +444,7 @@ const VinosProductModal: React.FC<Props> = ({
                     onChange={e => handleSinglePriceModeChange(e.target.checked)}
                   />
                   <span>
-                    <span className="block text-xs font-black uppercase tracking-widest text-slate-800">Usar precio único</span>
+                    <span className="block text-xs font-semibold  tracking-wide text-slate-800">Usar precio único</span>
                     <span className="mt-0.5 block text-[11px] font-bold text-slate-500">
                       Si está activo solo se captura el precio de menudeo y se usa para cualquier cantidad.
                     </span>
@@ -455,49 +455,49 @@ const VinosProductModal: React.FC<Props> = ({
               {!form.single_price_mode && (
                 <>
                   <div>
-                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">M. mayoreo desde</label>
+                    <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">M. mayoreo desde</label>
                     <input
                       type="number"
                       min="0.0001"
                       step="0.0001"
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                       value={form.price_mid_wholesale_min_qty}
                       onChange={e => setForm(f => ({ ...f, price_mid_wholesale_min_qty: e.target.value }))}
                       placeholder="Cantidad base"
                     />
-                    <p className="mt-1 text-[10px] font-bold text-slate-400">Cantidad en unidad base para aplicar medio mayoreo.</p>
+                    <p className="mt-1 text-xs font-bold text-slate-400">Cantidad en unidad base para aplicar medio mayoreo.</p>
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Mayoreo desde</label>
+                    <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Mayoreo desde</label>
                     <input
                       type="number"
                       min="0.0001"
                       step="0.0001"
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                       value={form.price_wholesale_min_qty}
                       onChange={e => setForm(f => ({ ...f, price_wholesale_min_qty: e.target.value }))}
                       placeholder="Cantidad base"
                     />
-                    <p className="mt-1 text-[10px] font-bold text-slate-400">Desde esta cantidad base se aplicara mayoreo.</p>
+                    <p className="mt-1 text-xs font-bold text-slate-400">Desde esta cantidad base se aplicara mayoreo.</p>
                   </div>
                 </>
               )}
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Equivalencias en unidades de medida</h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">
+                <h3 className="text-xs font-semibold  tracking-[0.22em] text-slate-400">Equivalencias en unidades de medida</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
                   Define otras unidades de venta (caja, lote, etc.). El factor indica cuántas unidades base equivalen a 1 de la unidad indicada.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={addEquivalence}
-                className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-700"
+                className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold  tracking-wide text-white hover:bg-slate-700"
               >
                 <Plus size={12}/> Agregar
               </button>
@@ -509,7 +509,7 @@ const VinosProductModal: React.FC<Props> = ({
               </p>
             ) : (
               <div className="space-y-2">
-                <div className={`hidden md:grid ${form.single_price_mode ? 'grid-cols-[1fr_100px_130px_32px]' : 'grid-cols-[1fr_100px_100px_100px_100px_32px]'} gap-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400`}>
+                <div className={`hidden md:grid ${form.single_price_mode ? 'grid-cols-[1fr_100px_130px_32px]' : 'grid-cols-[1fr_100px_100px_100px_100px_32px]'} gap-2 px-2 text-[11px] font-semibold  tracking-wide text-slate-400`}>
                   <span>Unidad</span>
                   <span>Factor</span>
                   <span>{form.single_price_mode ? 'Precio único' : 'Menudeo'}</span>
@@ -523,7 +523,7 @@ const VinosProductModal: React.FC<Props> = ({
                     <div key={idx} className={`grid grid-cols-2 ${form.single_price_mode ? 'md:grid-cols-[1fr_100px_130px_32px]' : 'md:grid-cols-[1fr_100px_100px_100px_100px_32px]'} gap-2 rounded-xl border p-2 ${isBase ? 'border-orange-300 bg-orange-50' : 'border-slate-200 bg-white'}`}>
                       {isBase ? (
                         <div className="flex items-center gap-2 px-2 py-1.5">
-                          <span className="rounded-md bg-orange-200 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-orange-800">Base</span>
+                          <span className="rounded-md bg-orange-200 px-1.5 py-0.5 text-[11px] font-semibold  tracking-wide text-orange-800">Base</span>
                           <span className="text-xs font-bold text-slate-700 truncate">
                             {uoms.find(u => u.id === eq.uom_id)?.name ?? '—'}
                           </span>
@@ -599,13 +599,13 @@ const VinosProductModal: React.FC<Props> = ({
         </div>
 
         <div className="flex justify-end gap-3 border-t border-slate-100 px-8 py-5 bg-slate-50/50">
-          <button onClick={onClose} className="rounded-2xl border border-slate-200 bg-white px-6 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100">
+          <button onClick={onClose} className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-100">
             Cancelar
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 rounded-2xl bg-orange-600 px-6 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-xl bg-orange-600 px-6 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-50"
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? 'Guardando...' : editTarget ? 'Guardar cambios' : 'Crear producto'}

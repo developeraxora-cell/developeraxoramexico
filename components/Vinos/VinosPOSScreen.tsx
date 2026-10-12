@@ -1,3 +1,4 @@
+import AppIcon, { IconText } from '../common/AppIcon';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import {
@@ -1457,10 +1458,10 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   // ── render ──────────────────────────────────────────────
   return (
-    <div className="relative grid h-full min-h-0 grid-cols-1 gap-3 pb-3 pl-0 pr-3 pt-0 lg:grid-cols-[minmax(0,1fr)_460px] xl:grid-cols-[minmax(0,1fr)_500px]">
+    <div className="relative grid flex-1 h-full min-h-0 grid-cols-1 gap-4 overflow-y-auto p-4 lg:overflow-hidden lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_460px]">
 
       {/* ─── Catálogo ──────────────────────────────────── */}
-      <div className="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex min-h-[380px] lg:min-h-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="border-b border-slate-100 p-3">
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -1476,7 +1477,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             </div>
             <button
               onClick={openHistory}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50"
               title="Historial de ventas"
             >
               <Receipt size={14}/> Historial
@@ -1491,14 +1492,14 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               </div>
               <button
                 onClick={openCloseCashModal}
-                className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-700 hover:bg-emerald-100"
+                className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold  tracking-wider text-emerald-700 hover:bg-emerald-100"
                 title={`Caja abierta desde ${formatDateTime(cashSession.opened_at)}`}
               >
                 <LockKeyhole size={14}/> Cerrar caja
               </button>
               <button
                 onClick={openCashHistory}
-                className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+                className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50"
                 title="Historial de caja"
               >
                 <History size={14}/> Caja
@@ -1509,19 +1510,19 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
         <div className="flex-1 overflow-y-auto p-3">
           {!isCashRegisterOpen ? (
-            <div className="flex min-h-full items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-orange-50/40 px-6 py-16 text-center">
+            <div className="flex min-h-full items-center justify-center rounded-xl border border-dashed border-orange-200 bg-orange-50/40 px-6 py-16 text-center">
               <div className="max-w-sm">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-600 text-white shadow-lg shadow-orange-600/20">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-orange-600 text-white shadow-lg shadow-orange-600/20">
                   <Store size={28} />
                 </div>
-                <p className="mt-5 text-[11px] font-black uppercase tracking-[0.24em] text-orange-600">Caja requerida</p>
-                <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Inicia caja para ver productos</h2>
+                <p className="mt-5 text-[11px] font-semibold  tracking-[0.24em] text-orange-600">Caja requerida</p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Inicia caja para ver productos</h2>
                 <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
                   El catálogo y la venta permanecen bloqueados hasta registrar la apertura de caja.
                 </p>
                 <button
                   onClick={openCashOpeningForm}
-                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-orange-600/20 hover:bg-orange-500"
+                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-xs font-semibold  tracking-wider text-white shadow-lg shadow-orange-600/20 hover:bg-orange-500"
                 >
                   <UnlockKeyhole size={15} /> Iniciar caja
                 </button>
@@ -1543,7 +1544,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           ) : filteredProducts.length === 0 ? (
             <div className="py-20 text-center">
               <Tag size={36} className="mx-auto text-slate-300" />
-              <p className="mt-3 text-sm font-black uppercase tracking-widest text-slate-400">Sin productos</p>
+              <p className="mt-3 text-sm font-semibold  tracking-wide text-slate-400">Sin productos</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
@@ -1553,11 +1554,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   onClick={() => openAddProduct(p)}
                   className="flex min-h-[88px] flex-col gap-0.5 rounded-xl border border-slate-200 bg-white p-2.5 text-left transition-all hover:border-orange-300 hover:shadow-sm"
                 >
-                  <p className="flex-1 text-[11px] font-black leading-4 text-slate-900 line-clamp-2">{p.name}</p>
-                  <p className="text-[9px] font-mono text-slate-400">{p.sku}</p>
+                  <p className="flex-1 text-[11px] font-semibold leading-4 text-slate-900 line-clamp-2">{p.name}</p>
+                  <p className="text-[11px] font-mono text-slate-400">{p.sku}</p>
                   <div className="flex items-end justify-between gap-2 pt-0.5">
-                    <p className="text-sm font-black text-orange-600">{formatCurrency(p.price_retail)}</p>
-                    <p className="text-[9px] font-bold text-slate-500">Stock: {p.total_stock}</p>
+                    <p className="text-sm font-semibold text-orange-600">{formatCurrency(p.price_retail)}</p>
+                    <p className="text-[11px] font-bold text-slate-500">Stock: {p.total_stock}</p>
                   </div>
                 </button>
               ))}
@@ -1567,11 +1568,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       </div>
 
       {/* ─── Panel carrito + pago ──────────────────────── */}
-      <div className="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
 
         {/* Cliente */}
         <div className="border-b border-slate-100 px-3 py-2">
-          <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-slate-400">Cliente</p>
+          <p className="mb-1 text-[11px] font-semibold  tracking-wide text-slate-400">Cliente</p>
           {selectedCustomer ? (
             <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-1.5">
               <button
@@ -1579,12 +1580,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 className="flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left"
                 title="Cambiar cliente"
               >
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-600 text-xs font-black text-white">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-600 text-xs font-semibold text-white">
                   {selectedCustomer.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-bold text-slate-900">{selectedCustomer.name}</p>
-                  <p className="text-[9px] text-slate-500">
+                  <p className="text-[11px] text-slate-500">
                     {selectedCustomer.wallet_enabled ? `Saldo: ${formatCurrency(walletAvailable)}` : ''}
                     {selectedCustomer.credit_limit > 0 ? ` · Crédito: ${formatCurrency(creditAvailable)}` : ''}
                   </p>
@@ -1601,7 +1602,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               </div>
               <div className="flex-1">
                 <p className="text-xs font-bold text-slate-700">Público general</p>
-                <p className="text-[9px] text-slate-400">Click para seleccionar cliente</p>
+                <p className="text-[11px] text-slate-400">Click para seleccionar cliente</p>
               </div>
             </button>
           )}
@@ -1612,8 +1613,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center">
               <Receipt size={36} className="text-slate-300" />
-              <p className="mt-3 text-xs font-black uppercase tracking-widest text-slate-400">Carrito vacío</p>
-              <p className="mt-1 text-[10px] text-slate-400">Click un producto del catálogo</p>
+              <p className="mt-3 text-xs font-semibold  tracking-wide text-slate-400">Carrito vacío</p>
+              <p className="mt-1 text-xs text-slate-400">Click un producto del catálogo</p>
             </div>
           ) : (
             <div className="space-y-1.5">
@@ -1621,22 +1622,22 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 <div key={idx} className="flex items-center gap-3 rounded-xl border border-slate-200 p-2.5">
                   <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-bold text-slate-900">{it.product_name}</p>
-                      <p className="text-[9px] text-slate-400">{it.uom_name} · {PRICE_TIER_LABEL[it.price_type]}</p>
+                      <p className="text-[11px] text-slate-400">{it.uom_name} · {PRICE_TIER_LABEL[it.price_type]}</p>
                       {it.price_type === 'ESPECIAL' && it.special_authorization && (
-                        <p className="mt-0.5 line-clamp-1 text-[9px] font-bold text-amber-600">Autoriza: {it.special_authorization}</p>
+                        <p className="mt-0.5 line-clamp-1 text-[11px] font-bold text-amber-600">Autoriza: {it.special_authorization}</p>
                       )}
                   </div>
                   <div className="flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 p-1">
                       <button onClick={() => updateCartItem(idx, { qty: Math.max(0.01, it.qty - 1) })} className="rounded-lg p-1 hover:bg-slate-100"><Minus size={12}/></button>
                       <input
                         type="number" min="0" step="0.01"
-                        className="w-10 bg-transparent text-center text-xs font-black outline-none"
+                        className="w-10 bg-transparent text-center text-xs font-semibold outline-none"
                         value={it.qty}
                         onChange={e => updateCartItem(idx, { qty: Number(e.target.value) || 0 })}
                       />
                       <button onClick={() => updateCartItem(idx, { qty: it.qty + 1 })} className="rounded-lg p-1 hover:bg-slate-100"><Plus size={12}/></button>
                   </div>
-                  <p className="shrink-0 text-right text-xs font-black text-slate-900">{formatCurrency(it.qty * it.unit_price)}</p>
+                  <p className="shrink-0 text-right text-xs font-semibold text-slate-900">{formatCurrency(it.qty * it.unit_price)}</p>
                   <button onClick={() => removeCartItem(idx)} className="shrink-0 text-slate-400 hover:text-red-500"><Trash2 size={14}/></button>
                 </div>
               ))}
@@ -1647,13 +1648,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         {/* Footer: subtotal + cobrar */}
         <div className="space-y-2.5 border-t border-slate-100 bg-slate-50/50 p-3">
           <div className="flex items-baseline justify-between border-t border-slate-200 pt-2.5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Subtotal</span>
-            <span className="text-xl font-black text-orange-600">{formatCurrency(subtotal)}</span>
+            <span className="text-xs font-semibold  tracking-wide text-slate-500">Subtotal</span>
+            <span className="text-xl font-semibold text-orange-600">{formatCurrency(subtotal)}</span>
           </div>
           <button
             onClick={() => setCheckoutOpen(true)}
             disabled={cart.length === 0 || !isCashRegisterOpen}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
           >
             Continuar a cobro
           </button>
@@ -1662,29 +1663,29 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
       {/* ─── MODAL BLOQUEANTE INICIAR CAJA ────────────── */}
       {shouldShowCashStartGate && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center rounded-2xl bg-slate-950/70 p-4 backdrop-blur-md">
-          <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-orange-100 bg-white p-8 shadow-2xl sm:p-10">
+        <div className="absolute inset-0 z-40 flex items-center justify-center rounded-xl bg-slate-950/70 p-4 backdrop-blur-md">
+          <div className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-orange-100 bg-white p-8 shadow-2xl sm:p-10">
             <div className="mb-6 flex items-center gap-3">
               <div className="relative">
-                <div className="absolute inset-0 animate-ping rounded-2xl bg-orange-300 opacity-30" />
-                <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-600 text-white shadow-lg shadow-orange-600/25">
+                <div className="absolute inset-0 animate-ping rounded-xl bg-orange-300 opacity-30" />
+                <div className="relative flex h-16 w-16 items-center justify-center rounded-xl bg-orange-600 text-white shadow-lg shadow-orange-600/25">
                   <Store size={29} />
                 </div>
               </div>
               <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-orange-600">Casa Tahona</p>
+                <p className="text-[11px] font-semibold  tracking-[0.22em] text-orange-600">Casa Tahona</p>
                 <p className="text-sm font-bold text-slate-600">{branchName}</p>
               </div>
             </div>
 
-            <h2 className="text-4xl font-black tracking-tight text-slate-950">Iniciar Caja</h2>
+            <h2 className="text-4xl font-semibold tracking-tight text-slate-950">Iniciar Caja</h2>
             <p className="mt-4 max-w-lg text-sm font-semibold leading-6 text-slate-500">
               Para comenzar a vender, primero registra la apertura de caja de {currentUser.name}.
             </p>
 
             <button
               onClick={openCashOpeningForm}
-              className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 px-5 py-4 text-sm font-black uppercase tracking-wider text-white shadow-xl shadow-orange-600/20 transition hover:bg-orange-500"
+              className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-4 text-sm font-semibold  tracking-wider text-white shadow-sm shadow-orange-600/20 transition hover:bg-orange-500"
             >
               Continuar <ArrowRight size={18} />
             </button>
@@ -1695,42 +1696,42 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       {/* ─── MODAL INICIAR CAJA ───────────────────────── */}
       {cashOpenModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
-                <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Iniciar caja</h3>
+                <h3 className="text-base font-semibold  tracking-tight text-slate-900">Iniciar caja</h3>
                 <p className="text-[11px] font-bold text-slate-400">{currentUser.name} · {branchName}</p>
               </div>
               <button onClick={() => { setCashOpenModal(false); if (!cashSession) setCashStartPromptOpen(true); }} disabled={cashLoading} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-40"><X size={18}/></button>
             </div>
             <div className="space-y-4 px-6 py-5">
               <label className="block">
-                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Monto inicial</span>
+                <span className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Monto inicial</span>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   value={openingCash}
                   onChange={e => setOpeningCash(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-xl font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-xl font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                   autoFocus
                 />
               </label>
               <label className="block">
-                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Descripción opcional</span>
+                <span className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Descripción opcional</span>
                 <textarea
                   rows={3}
                   value={openingObservations}
                   onChange={e => setOpeningObservations(e.target.value)}
                   placeholder="Opcional..."
-                  className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                 />
               </label>
-              {cashError && <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{cashError}</p>}
+              {cashError && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{cashError}</p>}
             </div>
             <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
-              <button onClick={() => { setCashOpenModal(false); if (!cashSession) setCashStartPromptOpen(true); }} disabled={cashLoading} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-40">Regresar</button>
-              <button onClick={handleOpenCash} disabled={cashLoading} className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-40">
+              <button onClick={() => { setCashOpenModal(false); if (!cashSession) setCashStartPromptOpen(true); }} disabled={cashLoading} className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-40">Regresar</button>
+              <button onClick={handleOpenCash} disabled={cashLoading} className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500 disabled:opacity-40">
                 {cashLoading && <Loader2 size={14} className="animate-spin"/>}
                 Iniciar caja
               </button>
@@ -1742,10 +1743,10 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       {/* ─── MODAL CERRAR CAJA ────────────────────────── */}
       {cashCloseModal && cashSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-4xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+          <div className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
-                <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Cerrar caja</h3>
+                <h3 className="text-base font-semibold  tracking-tight text-slate-900">Cerrar caja</h3>
                 <p className="text-[11px] font-bold text-slate-400">
                   {cashSession.cashier_name} · Apertura {formatDateTime(cashSession.opened_at)}
                 </p>
@@ -1772,11 +1773,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                       { label: 'Total vendido', value: cashSummary.total_sold, icon: Receipt, box: 'border-orange-200 bg-orange-50', iconBox: 'bg-orange-100 text-orange-700', valueClass: 'text-orange-700' },
                       { label: 'Efectivo esperado', value: cashSummary.expected_cash, icon: Wallet, box: 'border-slate-200 bg-slate-50', iconBox: 'bg-slate-200 text-slate-700', valueClass: 'text-slate-900' },
                     ].map(row => (
-                      <div key={row.label} className={`rounded-2xl border p-4 ${row.box}`}>
+                      <div key={row.label} className={`rounded-xl border p-4 ${row.box}`}>
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{row.label}</p>
-                            <p className={`mt-1 text-xl font-black ${row.valueClass}`}>{formatCurrency(row.value)}</p>
+                            <p className="text-xs font-semibold  tracking-wide text-slate-500">{row.label}</p>
+                            <p className={`mt-1 text-xl font-semibold ${row.valueClass}`}>{formatCurrency(row.value)}</p>
                           </div>
                           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${row.iconBox}`}>
                             <row.icon size={18} />
@@ -1786,41 +1787,41 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     ))}
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
                     <label className="grid gap-3 md:grid-cols-[180px_1fr_auto] md:items-center">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Efectivo entregado</span>
+                      <span className="text-xs font-semibold  tracking-wide text-slate-400">Efectivo entregado</span>
                       <input
                         type="number"
                         min="0"
                         step="0.01"
                         value={deliveredCash}
                         onChange={e => setDeliveredCash(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-black text-slate-900 outline-none focus:border-orange-400"
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400"
                       />
-                      <span className={`text-xs font-black ${Number(deliveredCash || 0) - cashSummary.expected_cash === 0 ? 'text-slate-500' : Number(deliveredCash || 0) - cashSummary.expected_cash > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`text-xs font-semibold ${Number(deliveredCash || 0) - cashSummary.expected_cash === 0 ? 'text-slate-500' : Number(deliveredCash || 0) - cashSummary.expected_cash > 0 ? 'text-green-600' : 'text-red-600'}`}>
                         Dif. {formatCurrency(Number(deliveredCash || 0) - cashSummary.expected_cash)}
                       </span>
                     </label>
                   </div>
 
                   <label className="block">
-                    <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observaciones de cierre</span>
+                    <span className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Observaciones de cierre</span>
                     <textarea
                       rows={3}
                       value={closingObservations}
                       onChange={e => setClosingObservations(e.target.value)}
                       placeholder="Opcional..."
-                      className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                     />
                   </label>
                 </>
               ) : null}
-              {cashError && <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{cashError}</p>}
+              {cashError && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{cashError}</p>}
             </div>
 
             <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
-              <button onClick={() => setCashCloseModal(false)} disabled={cashLoading} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-40">Cancelar</button>
-              <button onClick={handleCloseCash} disabled={cashLoading || !cashSummary} className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-40">
+              <button onClick={() => setCashCloseModal(false)} disabled={cashLoading} className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-40">Cancelar</button>
+              <button onClick={handleCloseCash} disabled={cashLoading || !cashSummary} className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500 disabled:opacity-40">
                 {cashLoading && <Loader2 size={14} className="animate-spin"/>}
                 Cerrar caja
               </button>
@@ -1839,8 +1840,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   <Clock size={18}/>
                 </div>
                 <div>
-                  <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Historial de caja</h3>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{branchName}</p>
+                  <h3 className="text-base font-semibold  tracking-tight text-slate-900">Historial de caja</h3>
+                  <p className="text-xs font-semibold  tracking-wide text-slate-400">{branchName}</p>
                 </div>
               </div>
               <button onClick={() => setCashHistoryOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X size={18}/></button>
@@ -1869,7 +1870,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                       setCashHistoryCashierSearch('');
                       setCashHistoryOpenDate('');
                     }}
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-100"
                   >
                     Limpiar
                   </button>
@@ -1889,7 +1890,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   <thead className="sticky top-0 z-10 bg-slate-100">
                     <tr className="border-b border-slate-200">
                       {['Cajera','Apertura','Cierre','Efectivo','Tarjeta','Transf.','Cortesías','Desc.','Cancel.','Total','Esperado','Obs.'].map(h => (
-                        <th key={h} className="px-3 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">{h}</th>
+                        <th key={h} className="px-3 py-3 text-left text-xs font-semibold  tracking-wide text-slate-500">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1905,8 +1906,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                         <td className="px-3 py-3 text-xs font-bold text-slate-900">{formatCurrency(row.courtesy_total)}</td>
                         <td className="px-3 py-3 text-xs font-bold text-slate-900">{formatCurrency(row.discounts_total)}</td>
                         <td className="px-3 py-3 text-xs font-bold text-slate-900">{row.cancellations_count} · {formatCurrency(row.cancellations_total)}</td>
-                        <td className="px-3 py-3 text-xs font-black text-slate-900">{formatCurrency(row.total_sold)}</td>
-                        <td className="px-3 py-3 text-xs font-black text-slate-900">{formatCurrency(row.expected_cash)}</td>
+                        <td className="px-3 py-3 text-xs font-semibold text-slate-900">{formatCurrency(row.total_sold)}</td>
+                        <td className="px-3 py-3 text-xs font-semibold text-slate-900">{formatCurrency(row.expected_cash)}</td>
                         <td className="px-3 py-3 text-xs text-slate-500 max-w-[220px]">
                           <p className="truncate">{row.closing_observations || row.opening_observations || '—'}</p>
                         </td>
@@ -1926,17 +1927,17 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   <button
                     onClick={() => setCashHistoryPage(page => Math.max(1, page - 1))}
                     disabled={cashHistoryCurrentPage <= 1}
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Anterior
                   </button>
-                  <span className="min-w-20 text-center text-[11px] font-black text-slate-700">
+                  <span className="min-w-20 text-center text-[11px] font-semibold text-slate-700">
                     {cashHistoryCurrentPage} / {cashHistoryTotalPages}
                   </span>
                   <button
                     onClick={() => setCashHistoryPage(page => Math.min(cashHistoryTotalPages, page + 1))}
                     disabled={cashHistoryCurrentPage >= cashHistoryTotalPages}
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Siguiente
                   </button>
@@ -1950,10 +1951,10 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       {/* ─── MODAL ADD PRODUCT (uom + qty + auto price) ───────── */}
       {addProductTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
-                <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Agregar al carrito</h3>
+                <h3 className="text-sm font-semibold  tracking-tight text-slate-900">Agregar al carrito</h3>
                 <p className="text-[11px] font-bold text-slate-500 truncate">{addProductTarget.name}</p>
               </div>
               <button onClick={closeAddProduct} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={18}/></button>
@@ -1962,9 +1963,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
               {/* Unidad */}
               <div>
-                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">1. Unidad de medida</label>
+                <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">1. Unidad de medida</label>
                 <select
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400"
                   value={stepUomId}
                   onChange={e => setStepUomId(e.target.value)}
                 >
@@ -1978,17 +1979,17 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
               {/* Cantidad */}
               <div>
-                <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">2. Cantidad</label>
+                <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">2. Cantidad</label>
                 <input
                   type="number" min="0" step="0.01" autoFocus
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-base font-bold outline-none focus:border-orange-400"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-base font-bold outline-none focus:border-orange-400"
                   value={stepQty}
                   onChange={e => setStepQty(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleAddToCart(); }}
                 />
               </div>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 hover:border-orange-200 hover:bg-orange-50/40">
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 hover:border-orange-200 hover:bg-orange-50/40">
                 <input
                   type="checkbox"
                   className="mt-0.5 h-4 w-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500"
@@ -1996,8 +1997,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   onChange={e => setStepSpecialPriceEnabled(e.target.checked)}
                 />
                 <span>
-                  <span className="block text-[11px] font-black uppercase tracking-widest text-slate-700">Precio especial</span>
-                  <span className="block text-[10px] font-bold text-slate-500">Usar un precio autorizado solo para esta venta.</span>
+                  <span className="block text-[11px] font-semibold  tracking-wide text-slate-700">Precio especial</span>
+                  <span className="block text-xs font-bold text-slate-500">Usar un precio autorizado solo para esta venta.</span>
                 </span>
               </label>
 
@@ -2008,27 +2009,27 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 if (stepSpecialPriceEnabled) {
                   const specialUnitPrice = Number(stepSpecialPrice) || 0;
                   return (
-                    <div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                    <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
-                          <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-amber-700">Precio especial</label>
+                          <label className="mb-1 block text-xs font-semibold  tracking-wide text-amber-700">Precio especial</label>
                           <input
                             type="number"
                             min="0"
                             step="0.01"
-                            className="w-full rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-black text-slate-900 outline-none focus:border-orange-400"
+                            className="w-full rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400"
                             value={stepSpecialPrice}
                             onChange={e => setStepSpecialPrice(e.target.value)}
                             placeholder="0.00"
                           />
                         </div>
                         <div className="rounded-xl border border-amber-200 bg-white px-3 py-2">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">Total</p>
-                          <p className="mt-1 text-lg font-black text-orange-600">{formatCurrency(qty * specialUnitPrice)}</p>
+                          <p className="text-xs font-semibold  tracking-wide text-amber-700">Total</p>
+                          <p className="mt-1 text-lg font-semibold text-orange-600">{formatCurrency(qty * specialUnitPrice)}</p>
                         </div>
                       </div>
                       <div>
-                        <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-amber-700">¿Quién autoriza?</label>
+                        <label className="mb-1 block text-xs font-semibold  tracking-wide text-amber-700">¿Quién autoriza?</label>
                         <textarea
                           className="min-h-[84px] w-full resize-none rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-orange-400"
                           value={stepSpecialAuthorization}
@@ -2042,19 +2043,19 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 const autoPrice = getAutoPriceForQty(addProductTarget, pu, qty);
                 const tierRows = getTierRangeRows(addProductTarget, pu);
                 return (
-                  <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3">
+                  <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-orange-700">Precio aplicado</p>
-                        <p className="mt-1 text-sm font-black text-slate-950">{PRICE_TIER_LABEL[autoPrice.tier]}</p>
-                        <p className="mt-0.5 text-[10px] font-bold text-slate-500">
+                        <p className="text-xs font-semibold  tracking-wide text-orange-700">Precio aplicado</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-950">{PRICE_TIER_LABEL[autoPrice.tier]}</p>
+                        <p className="mt-0.5 text-xs font-bold text-slate-500">
                           {autoPrice.qtyBase.toLocaleString('es-MX', { maximumFractionDigits: 4 })} en unidad base
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-base font-black text-orange-600">{formatCurrency(autoPrice.unitPrice)}</p>
+                        <p className="text-base font-semibold text-orange-600">{formatCurrency(autoPrice.unitPrice)}</p>
                         <p className="mt-1 text-[11px] font-bold text-slate-500">
-                          Subtotal: <span className="font-black text-slate-900">{formatCurrency(qty * autoPrice.unitPrice)}</span>
+                          Subtotal: <span className="font-semibold text-slate-900">{formatCurrency(qty * autoPrice.unitPrice)}</span>
                         </p>
                       </div>
                     </div>
@@ -2066,11 +2067,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                             key={row.tier}
                             className={`rounded-xl border px-2 py-2 ${active ? 'border-orange-400 bg-white' : 'border-orange-100 bg-orange-100/40'}`}
                           >
-                            <p className={`text-[9px] font-black uppercase tracking-widest ${active ? 'text-orange-700' : 'text-slate-500'}`}>
+                            <p className={`text-[11px] font-semibold  tracking-wide ${active ? 'text-orange-700' : 'text-slate-500'}`}>
                               {PRICE_TIER_LABEL[row.tier]}
                             </p>
-                            <p className="mt-1 text-[10px] font-black text-slate-700">{row.range}</p>
-                            <p className={`mt-1 text-xs font-black ${active ? 'text-orange-600' : 'text-slate-900'}`}>
+                            <p className="mt-1 text-xs font-semibold text-slate-700">{row.range}</p>
+                            <p className={`mt-1 text-xs font-semibold ${active ? 'text-orange-600' : 'text-slate-900'}`}>
                               {formatCurrency(row.price)}
                             </p>
                           </div>
@@ -2082,8 +2083,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               })()}
             </div>
             <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4 bg-slate-50/50">
-              <button onClick={closeAddProduct} className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100">Cancelar</button>
-              <button onClick={handleAddToCart} className="rounded-2xl bg-orange-600 px-5 py-2 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500">Agregar</button>
+              <button onClick={closeAddProduct} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-100">Cancelar</button>
+              <button onClick={handleAddToCart} className="rounded-xl bg-orange-600 px-5 py-2 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500">Agregar</button>
             </div>
           </div>
         </div>
@@ -2092,9 +2093,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       {/* ─── MODAL SELECTOR CLIENTE ────────────────────── */}
       {customerSelectorOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[80vh] flex flex-col">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Seleccionar cliente</h3>
+              <h3 className="text-sm font-semibold  tracking-tight text-slate-900">Seleccionar cliente</h3>
               <button onClick={() => setCustomerSelectorOpen(false)} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={18}/></button>
             </div>
             <div className="border-b border-slate-100 px-6 py-3">
@@ -2118,12 +2119,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   onClick={() => { setCustomerId(c.id); setCustomerSelectorOpen(false); setCustomerSearch(''); }}
                   className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-orange-50"
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 font-black text-orange-600">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 font-semibold text-orange-600">
                     {c.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-slate-900 truncate">{c.name}</p>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-xs text-slate-400">
                       {c.phone ?? '—'}
                       {c.wallet_enabled ? ` · Saldo: ${formatCurrency(c.wallet_balance)}` : ''}
                       {c.credit_limit > 0 ? ` · Crédito: ${formatCurrency(c.credit_limit)}` : ''}
@@ -2139,10 +2140,10 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       {/* ─── MODAL CHECKOUT ────────────────────────────── */}
       {checkoutOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-5xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col">
+          <div className="w-full max-w-5xl rounded-2xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
-                <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Finalizar venta</h3>
+                <h3 className="text-base font-semibold  tracking-tight text-slate-900">Finalizar venta</h3>
                 <p className="text-[11px] font-bold text-slate-400">
                   {cart.length} producto{cart.length !== 1 ? 's' : ''}
                   {selectedCustomer ? ` · ${selectedCustomer.name}` : ' · Público general'}
@@ -2152,7 +2153,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             </div>
 
             <div className="grid flex-1 grid-cols-1 items-start gap-4 overflow-y-auto px-6 py-5 lg:grid-cols-2">
-              <section className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <section className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
 
               {/* Cupón */}
               <div>
@@ -2178,16 +2179,16 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     <>
                       <div className="mt-2 flex gap-2">
                         <input
-                          className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs uppercase outline-none focus:border-orange-400"
+                          className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs  outline-none focus:border-orange-400"
                           placeholder="Código del cupón"
                           value={couponCode}
                           onChange={e => setCouponCode(e.target.value)}
                         />
-                        <button onClick={validateCoupon} disabled={!couponCode.trim() || validatingCoupon} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-700 disabled:opacity-40">
+                        <button onClick={validateCoupon} disabled={!couponCode.trim() || validatingCoupon} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold  tracking-wide text-white hover:bg-slate-700 disabled:opacity-40">
                           {validatingCoupon ? '…' : 'Aplicar'}
                         </button>
                       </div>
-                      {couponMsg && <p className="mt-1 text-[10px] font-bold text-red-500">{couponMsg}</p>}
+                      {couponMsg && <p className="mt-1 text-xs font-medium text-red-600"><IconText>{couponMsg}</IconText></p>}
                     </>
                   )
                 )}
@@ -2222,7 +2223,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
               {/* Método de pago */}
               <div className="border-t border-slate-200 pt-4">
-                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Método de pago</p>
+                <p className="mb-2 text-xs font-semibold  tracking-wide text-slate-400">Método de pago</p>
                 <div className="grid grid-cols-4 gap-2">
                   {([
                     { v: 'EFECTIVO', label: 'Efectivo',  icon: Banknote,   disabled: false },
@@ -2246,13 +2247,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                         }`}
                       >
                         <p.icon size={15} className={active && !p.disabled ? 'text-orange-700' : 'text-slate-500'} />
-                        <span className={`text-center text-[10px] font-black leading-3 ${active && !p.disabled ? 'text-orange-700' : 'text-slate-600'}`}>{p.label}</span>
+                        <span className={`text-center text-xs font-semibold leading-3 ${active && !p.disabled ? 'text-orange-700' : 'text-slate-600'}`}>{p.label}</span>
                       </button>
                     );
                   })}
                 </div>
                 {!selectedCustomer && (
-                  <p className="mt-2 text-[10px] text-slate-400">Crédito requiere cliente seleccionado.</p>
+                  <p className="mt-2 text-xs text-slate-400">Crédito requiere cliente seleccionado.</p>
                 )}
                 {isCredito && selectedCustomer && (
                   <div className="mt-2 space-y-3 rounded-xl bg-blue-50 px-3 py-3 text-[11px] text-blue-700">
@@ -2261,7 +2262,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                       <strong>{formatCurrency(creditAvailable)}</strong>
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-blue-700">Monto a crédito</label>
+                      <label className="mb-1 block text-xs font-semibold  tracking-wide text-blue-700">Monto a crédito</label>
                       <input
                         type="number"
                         min="0"
@@ -2269,10 +2270,10 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                         max={creditMaxAllowed}
                         value={creditAmount}
                         onChange={e => handleCreditAmountChange(e.target.value)}
-                        className="w-full rounded-xl border border-blue-100 bg-white px-3 py-2 text-sm font-black text-slate-900 outline-none focus:border-blue-300"
+                        className="w-full rounded-xl border border-blue-100 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-blue-300"
                         placeholder="Monto que quedará como deuda"
                       />
-                      <p className="mt-1 text-[10px] font-bold text-blue-600">
+                      <p className="mt-1 text-xs font-bold text-blue-600">
                         Máximo permitido: {formatCurrency(creditMaxAllowed)}
                       </p>
                     </div>
@@ -2283,7 +2284,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                           <strong className="text-slate-900">{formatCurrency(creditRemainderBase)}</strong>
                         </div>
                         <div>
-                          <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Pagar restante con</label>
+                          <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Pagar restante con</label>
                           <select
                             value={creditRemainderMethod}
                             onChange={e => setCreditRemainderMethod(e.target.value as 'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA')}
@@ -2329,7 +2330,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                       onChange={e => { setUseWallet(e.target.checked); if (e.target.checked) setWalletAmount(String(Math.min(walletAvailable, totalAfterCoupon))); }}
                     />
                   </label>
-                  <p className="mt-1 text-[10px] text-slate-500">Disponible: <strong>{formatCurrency(walletAvailable)}</strong></p>
+                  <p className="mt-1 text-xs text-slate-500">Disponible: <strong>{formatCurrency(walletAvailable)}</strong></p>
                   {useWallet && (
                     <input
                       type="number" min="0" step="0.01" max={Math.min(walletAvailable, totalAfterCoupon)}
@@ -2344,10 +2345,10 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
               {/* Notas */}
               <div className="border-t border-slate-200 pt-4">
-                <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Observaciones de la venta</label>
+                <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Observaciones de la venta</label>
                 <textarea
                   rows={3}
-                  className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                   placeholder="Opcional…"
                   value={saleNotes}
                   onChange={e => setSaleNotes(e.target.value)}
@@ -2359,26 +2360,26 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
               {/* Efectivo recibido */}
               {isEfectivo && total > 0 ? (
-                <section className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Monto recibido</label>
+                <section className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Monto recibido</label>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
                     inputMode="decimal"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-base font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-base font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                     placeholder="Ej. 100.00"
                     value={cashReceived}
                     onChange={e => setCashReceived(e.target.value)}
                   />
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-xl bg-white px-3 py-2">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total</p>
-                      <p className="mt-1 font-black text-slate-900">{formatCurrency(total)}</p>
+                      <p className="text-xs font-semibold  tracking-wide text-slate-400">Total</p>
+                      <p className="mt-1 font-semibold text-slate-900">{formatCurrency(total)}</p>
                     </div>
                     <div className="rounded-xl bg-white px-3 py-2">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vuelto</p>
-                      <p className={`mt-1 font-black ${cashPaymentInvalid ? 'text-red-500' : 'text-green-600'}`}>{formatCurrency(change)}</p>
+                      <p className="text-xs font-semibold  tracking-wide text-slate-400">Vuelto</p>
+                      <p className={`mt-1 font-semibold ${cashPaymentInvalid ? 'text-red-500' : 'text-green-600'}`}>{formatCurrency(change)}</p>
                     </div>
                   </div>
                   {cashPaymentInvalid && (
@@ -2390,26 +2391,26 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               ) : null}
 
               {isCredito && creditRemainderMethod === 'EFECTIVO' && creditRemainderTotal > 0 ? (
-                <section className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Efectivo recibido para restante</label>
+                <section className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Efectivo recibido para restante</label>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
                     inputMode="decimal"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-base font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-base font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                     placeholder="Ej. 200.00"
                     value={creditRemainderCashReceived}
                     onChange={e => setCreditRemainderCashReceived(e.target.value)}
                   />
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-xl bg-white px-3 py-2">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Restante</p>
-                      <p className="mt-1 font-black text-slate-900">{formatCurrency(creditRemainderTotal)}</p>
+                      <p className="text-xs font-semibold  tracking-wide text-slate-400">Restante</p>
+                      <p className="mt-1 font-semibold text-slate-900">{formatCurrency(creditRemainderTotal)}</p>
                     </div>
                     <div className="rounded-xl bg-white px-3 py-2">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vuelto</p>
-                      <p className={`mt-1 font-black ${cashPaymentInvalid ? 'text-red-500' : 'text-green-600'}`}>{formatCurrency(creditRemainderCashChange)}</p>
+                      <p className="text-xs font-semibold  tracking-wide text-slate-400">Vuelto</p>
+                      <p className={`mt-1 font-semibold ${cashPaymentInvalid ? 'text-red-500' : 'text-green-600'}`}>{formatCurrency(creditRemainderCashChange)}</p>
                     </div>
                   </div>
                   {cashPaymentInvalid && (
@@ -2421,7 +2422,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               ) : null}
 
               {/* Resumen */}
-              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-1.5 text-xs">
+              <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1.5 text-xs">
                 <div className="flex justify-between text-slate-500"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
                 {activeDiscount > 0 && <div className="flex justify-between text-green-600"><span>{discountLabel}</span><span>-{formatCurrency(activeDiscount)}</span></div>}
                 {walletUsedActual > 0 && <div className="flex justify-between text-blue-600"><span>Saldo a favor</span><span>-{formatCurrency(walletUsedActual)}</span></div>}
@@ -2441,7 +2442,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 {isCredito && creditRemainderMethod === 'TARJETA' && cardCommissionAmount > 0 && (
                   <div className="flex justify-between text-indigo-600"><span>Comisión bancaria (3%)</span><span>{formatCurrency(cardCommissionAmount)}</span></div>
                 )}
-                <div className="flex justify-between border-t border-slate-200 pt-1.5 text-lg font-black text-slate-900">
+                <div className="flex justify-between border-t border-slate-200 pt-1.5 text-lg font-semibold text-slate-900">
                   <span>{isTarjeta || (isCredito && creditRemainderMethod === 'TARJETA') ? 'Total a cobrar' : 'Total'}</span><span className="text-orange-600">{formatCurrency(total)}</span>
                 </div>
               </section>
@@ -2449,13 +2450,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             </div>
 
             <div className="flex gap-2 border-t border-slate-100 px-6 py-4 bg-slate-50/50">
-              <button onClick={() => setCheckoutOpen(false)} disabled={charging} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100 disabled:opacity-40">
+              <button onClick={() => setCheckoutOpen(false)} disabled={charging} className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-100 disabled:opacity-40">
                 Volver
               </button>
               <button
                 onClick={handleCharge}
                 disabled={charging || cart.length === 0 || cashPaymentInvalid || creditPaymentInvalid}
-                className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
+                className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
               >
                 {charging && <Loader2 size={14} className="animate-spin"/>}
                 {charging ? 'Procesando…' : `Confirmar venta ${formatCurrency(total)}`}
@@ -2468,10 +2469,10 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       {/* ─── MODAL DESCUENTO MANUAL ───────────────────── */}
       {manualDiscountOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
-                <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Confirmar descuento</h3>
+                <h3 className="text-base font-semibold  tracking-tight text-slate-900">Confirmar descuento</h3>
                 <p className="text-[11px] font-bold text-slate-400">Porcentaje y justificación</p>
               </div>
               <button onClick={() => setManualDiscountOpen(false)} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={18}/></button>
@@ -2480,8 +2481,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             <div className="px-6 py-5">
               <section className="space-y-4">
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Porcentaje de descuento</span>
-                  <div className="flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100">
+                  <span className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Porcentaje de descuento</span>
+                  <div className="flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100">
                     <input
                       type="number"
                       min="0.01"
@@ -2489,23 +2490,23 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                       step="0.01"
                       value={manualDiscountPercent}
                       onChange={e => { setManualDiscountPercent(e.target.value); setManualDiscountError(''); }}
-                      className="w-full bg-transparent text-xl font-black text-slate-900 outline-none"
+                      className="w-full bg-transparent text-xl font-semibold text-slate-900 outline-none"
                       autoFocus
                     />
-                    <span className="text-sm font-black text-slate-400">%</span>
+                    <span className="text-sm font-semibold text-slate-400">%</span>
                   </div>
                 </label>
 
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Justificación obligatoria</span>
+                  <span className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Justificación obligatoria</span>
                   <textarea
                     rows={4}
                     value={manualDiscountJustification}
                     onChange={e => { setManualDiscountJustification(e.target.value); setManualDiscountError(''); }}
                     placeholder="Ej. Promoción autorizada..."
-                    className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                   />
-                  <p className={`mt-1 text-[10px] font-bold ${manualDiscountJustificationValid ? 'text-slate-600' : 'text-slate-400'}`}>
+                  <p className={`mt-1 text-xs font-bold ${manualDiscountJustificationValid ? 'text-slate-600' : 'text-slate-400'}`}>
                     Mínimo 5 caracteres.
                   </p>
                 </label>
@@ -2513,14 +2514,14 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             </div>
 
             {manualDiscountError && (
-              <p className="mx-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{manualDiscountError}</p>
+              <p className="mx-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{manualDiscountError}</p>
             )}
 
             <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
-              <button onClick={() => setManualDiscountOpen(false)} className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">
+              <button onClick={() => setManualDiscountOpen(false)} className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50">
                 Cancelar
               </button>
-              <button onClick={confirmManualDiscount} className="flex-[2] rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500">
+              <button onClick={confirmManualDiscount} className="flex-[2] rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500">
                 Confirmar descuento
               </button>
             </div>
@@ -2540,8 +2541,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   <Receipt size={18}/>
                 </div>
                 <div>
-                  <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Historial de Ventas</h3>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sucursal activa</p>
+                  <h3 className="text-base font-semibold  tracking-tight text-slate-900">Historial de Ventas</h3>
+                  <p className="text-xs font-semibold  tracking-wide text-slate-400">Sucursal activa</p>
                 </div>
               </div>
               <button onClick={() => setHistoryOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X size={18}/></button>
@@ -2550,17 +2551,17 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             {/* Filtros */}
             <div className="border-b border-slate-200 bg-slate-50 px-6 py-4 grid grid-cols-1 md:grid-cols-[140px_140px_220px_1fr_auto] gap-3 items-end">
               <div>
-                <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Desde</label>
+                <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Desde</label>
                 <input type="date" value={historyFrom} onChange={e => setHistoryFrom(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-400"/>
               </div>
               <div>
-                <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Hasta</label>
+                <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Hasta</label>
                 <input type="date" value={historyTo} onChange={e => setHistoryTo(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-400"/>
               </div>
               <div>
-                <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Cajero</label>
+                <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Cajero</label>
                 <select
                   value={historyCashierId}
                   onChange={e => setHistoryCashierId(e.target.value)}
@@ -2574,12 +2575,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Buscar</label>
+                <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Buscar</label>
                 <input value={historySearch} onChange={e => setHistorySearch(e.target.value)}
                   placeholder="Cliente, total, código…"
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-400"/>
               </div>
-              <button onClick={clearHistoryFilters} className="rounded-lg bg-slate-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-700">
+              <button onClick={clearHistoryFilters} className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold  tracking-wide text-white hover:bg-slate-700">
                 Limpiar filtro
               </button>
             </div>
@@ -2595,7 +2596,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   <thead className="sticky top-0 bg-slate-100 z-10">
                     <tr className="border-b border-slate-200">
                       {['Fecha','Código','Cliente','Cajero','Tipo','Productos','Total','Notas','Acciones'].map(h => (
-                        <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">{h}</th>
+                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold  tracking-wide text-slate-500">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -2611,7 +2612,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                       return (
                         <tr key={s.id} className="hover:bg-orange-50/30 border-l-4" style={{ borderLeftColor: typeInfo.color }}>
                           <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{new Date(s.created_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                          <td className="px-4 py-3 text-xs font-mono font-black text-slate-700 whitespace-nowrap" title={saleCode}>
+                          <td className="px-4 py-3 text-xs font-mono font-semibold text-slate-700 whitespace-nowrap" title={saleCode}>
                             {saleCode}
                           </td>
                           <td className="px-4 py-3 text-xs font-bold text-slate-800">{s.customer?.name ?? <span className="font-normal text-slate-400">Público general</span>}</td>
@@ -2619,30 +2620,30 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                             {employeeName}
                           </td>
                           <td className="px-4 py-3">
-                            <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black tracking-wider ${typeInfo.bg} ${typeInfo.text}`}>{typeInfo.label}</span>
+                            <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold tracking-wider ${typeInfo.bg} ${typeInfo.text}`}>{typeInfo.label}</span>
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-[10px] font-black text-blue-700">{itemCount}</span>
+                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">{itemCount}</span>
                           </td>
-                          <td className="px-4 py-3 text-sm font-black text-slate-900 whitespace-nowrap">
+                          <td className="px-4 py-3 text-sm font-semibold text-slate-900 whitespace-nowrap">
                             <div>{formatCurrency(s.total)}</div>
                             {s.price_type === 'ESPECIAL' && (
-                              <div className="mt-0.5 text-[10px] font-bold text-amber-700">
+                              <div className="mt-0.5 text-xs font-bold text-amber-700">
                                 Pago: {getPaymentMethodLabel(s.payment_method)}
                               </div>
                             )}
                             {s.payment_method === 'EFECTIVO' && saleCashReceived > 0 && (
-                              <div className="mt-0.5 text-[10px] font-bold text-slate-500">
+                              <div className="mt-0.5 text-xs font-bold text-slate-500">
                                 Pagó {formatCurrency(saleCashReceived)} · Vuelto {formatCurrency(saleCashChange)}
                               </div>
                             )}
                             {s.payment_method === 'TARJETA' && saleCardCommission > 0 && (
-                              <div className="mt-0.5 text-[10px] font-bold text-indigo-600">
+                              <div className="mt-0.5 text-xs font-bold text-indigo-600">
                                 Incluye comisión {formatCurrency(saleCardCommission)}
                               </div>
                             )}
                             {s.payment_method === 'CREDITO' && Number(s.split_payment_amount ?? 0) > 0 && (
-                              <div className="mt-0.5 text-[10px] font-bold text-orange-600">
+                              <div className="mt-0.5 text-xs font-bold text-orange-600">
                                 Crédito {formatCurrency(Number(s.credit_used ?? 0))} + {s.split_payment_method?.toLowerCase()} {formatCurrency(Number(s.split_payment_amount ?? 0))}
                               </div>
                             )}
@@ -2674,7 +2675,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
             {/* Footer: paginación + leyenda */}
             <div className="border-t border-slate-200 bg-slate-50 px-6 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-500">
+              <div className="flex items-center gap-3 text-xs font-semibold  tracking-wide text-slate-500">
                 <span>{filteredHistorySales.length} venta{filteredHistorySales.length !== 1 ? 's' : ''}</span>
                 {filteredHistorySales.length > 0 && (
                   <div className="flex items-center gap-1">
@@ -2684,7 +2685,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-500">
+              <div className="flex items-center gap-3 text-xs font-semibold  tracking-wide text-slate-500">
                 <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-green-500"/> Efectivo</span>
                 <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-red-500"/> Crédito</span>
                 <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-purple-500"/> Saldo</span>
@@ -2698,10 +2699,10 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       {/* ─── MODAL GESTIONAR CLIENTE ───────────────────── */}
       {customerDetailOpen && selectedCustomer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-4xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+          <div className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between bg-slate-900 px-6 py-4 text-white">
               <div>
-                <h3 className="text-base font-black uppercase tracking-tight">Gestionar cliente</h3>
+                <h3 className="text-base font-semibold  tracking-tight">Gestionar cliente</h3>
                 <p className="text-[11px] font-bold text-orange-400">{selectedCustomer.name.toUpperCase()}</p>
               </div>
               <button onClick={() => setCustomerDetailOpen(false)} className="rounded-xl bg-slate-800 p-1.5 text-slate-300 hover:bg-slate-700"><X size={18}/></button>
@@ -2711,99 +2712,99 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
               {/* 4 Stats */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Límite</p>
-                  <p className="mt-1 text-xl font-black text-slate-900">{formatCurrency(selectedCustomer.credit_limit)}</p>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-semibold  tracking-wide text-slate-400">Límite</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-900">{formatCurrency(selectedCustomer.credit_limit)}</p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Deuda actual</p>
-                  <p className="mt-1 text-xl font-black text-red-500">{formatCurrency(customerDebt)}</p>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-semibold  tracking-wide text-slate-400">Deuda actual</p>
+                  <p className="mt-1 text-xl font-semibold text-red-500">{formatCurrency(customerDebt)}</p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Disponible</p>
-                  <p className="mt-1 text-xl font-black text-green-600">{formatCurrency(Math.max(0, selectedCustomer.credit_limit - customerDebt))}</p>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-semibold  tracking-wide text-slate-400">Disponible</p>
+                  <p className="mt-1 text-xl font-semibold text-green-600">{formatCurrency(Math.max(0, selectedCustomer.credit_limit - customerDebt))}</p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo a favor</p>
-                  <p className="mt-1 text-xl font-black text-purple-600">{formatCurrency(selectedCustomer.wallet_balance)}</p>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-semibold  tracking-wide text-slate-400">Saldo a favor</p>
+                  <p className="mt-1 text-xl font-semibold text-purple-600">{formatCurrency(selectedCustomer.wallet_balance)}</p>
                 </div>
               </div>
 
               {/* 3 Paneles */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Cliente */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</h4>
+                <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+                  <h4 className="text-xs font-semibold  tracking-wide text-slate-400">Cliente</h4>
                   <button disabled className="flex w-full items-center justify-between rounded-xl border border-slate-200 p-3 text-left opacity-60">
                     <div>
                       <p className="text-sm font-bold text-slate-700">Editar datos</p>
-                      <p className="text-[10px] text-slate-400">Modifica nombre, teléfono, dirección y límite</p>
+                      <p className="text-xs text-slate-400">Modifica nombre, teléfono, dirección y límite</p>
                     </div>
-                    <span className="text-[9px] text-slate-400">Próx.</span>
+                    <span className="text-[11px] text-slate-400">Próx.</span>
                   </button>
                   <button disabled className="flex w-full items-center justify-between rounded-xl border border-slate-200 p-3 text-left opacity-60">
                     <div>
                       <p className="text-sm font-bold text-slate-700">Exportar PDF</p>
-                      <p className="text-[10px] text-slate-400">Estado de cuenta completo</p>
+                      <p className="text-xs text-slate-400">Estado de cuenta completo</p>
                     </div>
-                    <span className="text-[9px] text-slate-400">Próx.</span>
+                    <span className="text-[11px] text-slate-400">Próx.</span>
                   </button>
                 </div>
 
                 {/* Crédito */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Crédito</h4>
+                <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+                  <h4 className="text-xs font-semibold  tracking-wide text-slate-400">Crédito</h4>
                   <button disabled className="flex w-full items-center justify-between rounded-xl border border-slate-200 p-3 text-left opacity-60">
                     <div>
                       <p className="text-sm font-bold text-slate-700">Historial de abonos</p>
-                      <p className="text-[10px] text-slate-400">Consulta abonos registrados</p>
+                      <p className="text-xs text-slate-400">Consulta abonos registrados</p>
                     </div>
-                    <span className="text-[9px] text-slate-400">Próx.</span>
+                    <span className="text-[11px] text-slate-400">Próx.</span>
                   </button>
                   <button disabled className="flex w-full items-center justify-between rounded-xl border border-slate-200 p-3 text-left opacity-60">
                     <div>
                       <p className="text-sm font-bold text-slate-700">Notas de crédito</p>
-                      <p className="text-[10px] text-slate-400">Ventas a crédito y documentos</p>
+                      <p className="text-xs text-slate-400">Ventas a crédito y documentos</p>
                     </div>
-                    <span className="text-[9px] text-slate-400">Próx.</span>
+                    <span className="text-[11px] text-slate-400">Próx.</span>
                   </button>
                   <button disabled className="flex w-full items-center justify-between rounded-xl border border-slate-200 p-3 text-left opacity-60">
                     <div>
                       <p className="text-sm font-bold text-slate-700">Registrar abono</p>
-                      <p className="text-[10px] text-slate-400">Captura abono para deuda</p>
+                      <p className="text-xs text-slate-400">Captura abono para deuda</p>
                     </div>
-                    <span className="text-[9px] text-slate-400">Próx.</span>
+                    <span className="text-[11px] text-slate-400">Próx.</span>
                   </button>
                 </div>
 
                 {/* Saldo a favor */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo a favor</h4>
+                <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+                  <h4 className="text-xs font-semibold  tracking-wide text-slate-400">Saldo a favor</h4>
                   <button disabled className="flex w-full items-center justify-between rounded-xl border border-slate-200 p-3 text-left opacity-60">
                     <div>
                       <p className="text-sm font-bold text-slate-700">Recargar saldo</p>
-                      <p className="text-[10px] text-slate-400">Aumenta saldo del cliente</p>
+                      <p className="text-xs text-slate-400">Aumenta saldo del cliente</p>
                     </div>
-                    <span className="text-[9px] text-slate-400">Próx.</span>
+                    <span className="text-[11px] text-slate-400">Próx.</span>
                   </button>
                   <button disabled className="flex w-full items-center justify-between rounded-xl border border-slate-200 p-3 text-left opacity-60">
                     <div>
                       <p className="text-sm font-bold text-slate-700">Historial de saldo</p>
-                      <p className="text-[10px] text-slate-400">Aperturas, recargas, consumos</p>
+                      <p className="text-xs text-slate-400">Aperturas, recargas, consumos</p>
                     </div>
-                    <span className="text-[9px] text-slate-400">Próx.</span>
+                    <span className="text-[11px] text-slate-400">Próx.</span>
                   </button>
                   <button disabled className="flex w-full items-center justify-between rounded-xl border border-slate-200 p-3 text-left opacity-60">
                     <div>
                       <p className="text-sm font-bold text-slate-700">Exportar historial</p>
-                      <p className="text-[10px] text-slate-400">PDF con recargas y gastos</p>
+                      <p className="text-xs text-slate-400">PDF con recargas y gastos</p>
                     </div>
-                    <span className="text-[9px] text-slate-400">Próx.</span>
+                    <span className="text-[11px] text-slate-400">Próx.</span>
                   </button>
                 </div>
               </div>
 
-              <p className="text-[10px] text-slate-400 italic">Las acciones marcadas "Próx." se implementarán en la siguiente fase (igual que módulo materiales).</p>
+              <p className="text-xs text-slate-400 italic">Las acciones marcadas "Próx." se implementarán en la siguiente fase (igual que módulo materiales).</p>
             </div>
           </div>
         </div>
@@ -2815,22 +2816,22 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           <div className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white shadow-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
               <div>
-                <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Detalle de venta</h3>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Folio {saleDetailRow.id.slice(0, 8)}</p>
+                <h3 className="text-base font-semibold  tracking-tight text-slate-900">Detalle de venta</h3>
+                <p className="text-xs font-semibold  tracking-wide text-slate-400">Folio {saleDetailRow.id.slice(0, 8)}</p>
               </div>
               <button onClick={() => setSaleDetailOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X size={18}/></button>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
               <div className="grid grid-cols-2 gap-3 text-xs">
-                <div><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha</p><p className="font-bold text-slate-900">{new Date(saleDetailRow.created_at).toLocaleString('es-MX')}</p></div>
-                <div><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</p><p className="font-bold text-slate-900">{saleDetailRow.customer?.name ?? 'Público general'}</p></div>
-                <div><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tipo</p>
-                  <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black ${getSaleTypeInfo(saleDetailRow).bg} ${getSaleTypeInfo(saleDetailRow).text}`}>{getSaleTypeInfo(saleDetailRow).label}</span>
+                <div><p className="text-xs font-semibold  tracking-wide text-slate-400">Fecha</p><p className="font-bold text-slate-900">{new Date(saleDetailRow.created_at).toLocaleString('es-MX')}</p></div>
+                <div><p className="text-xs font-semibold  tracking-wide text-slate-400">Cliente</p><p className="font-bold text-slate-900">{saleDetailRow.customer?.name ?? 'Público general'}</p></div>
+                <div><p className="text-xs font-semibold  tracking-wide text-slate-400">Tipo</p>
+                  <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${getSaleTypeInfo(saleDetailRow).bg} ${getSaleTypeInfo(saleDetailRow).text}`}>{getSaleTypeInfo(saleDetailRow).label}</span>
                 </div>
-                {saleDetailRow.coupon_code && <div><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cupón</p><p className="font-mono font-bold text-slate-900">{saleDetailRow.coupon_code}</p></div>}
+                {saleDetailRow.coupon_code && <div><p className="text-xs font-semibold  tracking-wide text-slate-400">Cupón</p><p className="font-mono font-bold text-slate-900">{saleDetailRow.coupon_code}</p></div>}
               </div>
               <table className="w-full text-xs">
-                <thead><tr className="border-b border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <thead><tr className="border-b border-slate-200 text-xs font-semibold  tracking-wide text-slate-400">
                   <th className="py-2 text-left">Producto</th>
                   <th className="py-2 text-left">Unidad</th>
                   <th className="py-2 text-left">Tipo</th>
@@ -2868,7 +2869,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     <span>{formatCurrency(getStoredCardCommission(saleDetailRow))}</span>
                   </div>
                 )}
-                <div className="flex justify-between border-t border-slate-200 pt-1 text-base font-black text-slate-900"><span>Total</span><span className="text-orange-600">{formatCurrency(saleDetailRow.total)}</span></div>
+                <div className="flex justify-between border-t border-slate-200 pt-1 text-base font-semibold text-slate-900"><span>Total</span><span className="text-orange-600">{formatCurrency(saleDetailRow.total)}</span></div>
                 {saleDetailRow.payment_method === 'EFECTIVO' && Number(saleDetailRow.cash_received ?? 0) > 0 && (
                   <>
                     <div className="flex justify-between text-slate-500"><span>Pagó con</span><span>{formatCurrency(Number(saleDetailRow.cash_received ?? 0))}</span></div>
@@ -2891,10 +2892,10 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       {/* ─── MODAL EDITAR TIPO DE VENTA ─────────────────── */}
       {editTypeOpen && editTypeRow && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-orange-600 to-orange-500 px-6 py-4 text-white">
-              <h3 className="text-base font-black uppercase tracking-tight">Editar tipo de venta</h3>
+              <h3 className="text-base font-semibold  tracking-tight">Editar tipo de venta</h3>
               <p className="text-[11px] font-bold opacity-90">V-{editTypeRow.id.replace(/-/g, '').slice(0, 6).toUpperCase()} · {formatCurrency(editTypeRow.total)}</p>
             </div>
 
@@ -2902,27 +2903,27 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
               {/* Cliente info */}
               {editTypeCustomerSnapshot ? (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</p>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold  tracking-wide text-slate-400">Cliente</p>
                   <p className="mt-0.5 text-sm font-bold text-slate-900">{editTypeCustomerSnapshot.name}</p>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-lg bg-white p-2">
-                      <p className="font-black uppercase tracking-widest text-slate-400">Saldo a favor</p>
-                      <p className="mt-0.5 text-sm font-black text-purple-600">{formatCurrency(editTypeCustomerSnapshot.wallet_balance)}</p>
+                      <p className="font-semibold  tracking-wide text-slate-400">Saldo a favor</p>
+                      <p className="mt-0.5 text-sm font-semibold text-purple-600">{formatCurrency(editTypeCustomerSnapshot.wallet_balance)}</p>
                     </div>
                     <div className="rounded-lg bg-white p-2">
-                      <p className="font-black uppercase tracking-widest text-slate-400">Crédito disp.</p>
-                      <p className="mt-0.5 text-sm font-black text-blue-600">{formatCurrency(editTypeCustomerSnapshot.credit_limit)}</p>
+                      <p className="font-semibold  tracking-wide text-slate-400">Crédito disp.</p>
+                      <p className="mt-0.5 text-sm font-semibold text-blue-600">{formatCurrency(editTypeCustomerSnapshot.credit_limit)}</p>
                     </div>
                   </div>
                 </div>
               ) : (
-                <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-700">⚠ Venta sin cliente vinculado. Solo se puede cambiar entre EFECTIVO ↔ EFECTIVO.</p>
+                <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-700"><AppIcon name="warning" /> Venta sin cliente vinculado. Solo se puede cambiar entre EFECTIVO ↔ EFECTIVO.</p>
               )}
 
               {/* Selector nuevo tipo */}
               <div>
-                <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Nuevo tipo de pago</label>
+                <label className="mb-2 block text-xs font-semibold  tracking-wide text-slate-400">Nuevo tipo de pago</label>
                 <div className="grid grid-cols-2 gap-2">
                   {(['EFECTIVO', 'CREDITO'] as const).map(t => {
                     const active = editTypeValue === t;
@@ -2932,14 +2933,14 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                         key={t}
                         disabled={disabled}
                         onClick={() => setEditTypeValue(t)}
-                        className={`rounded-2xl border-2 px-4 py-3 text-left transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
+                        className={`rounded-xl border-2 px-4 py-3 text-left transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
                           active
                             ? 'border-orange-500 bg-orange-50'
                             : 'border-slate-200 bg-white hover:border-slate-300'
                         }`}
                       >
-                        <p className={`text-xs font-black uppercase tracking-widest ${active ? 'text-orange-700' : 'text-slate-600'}`}>{t}</p>
-                        <p className="mt-0.5 text-[10px] text-slate-400">
+                        <p className={`text-xs font-semibold  tracking-wide ${active ? 'text-orange-700' : 'text-slate-600'}`}>{t}</p>
+                        <p className="mt-0.5 text-xs text-slate-400">
                           {t === 'EFECTIVO' ? 'Pago completo / al contado' : 'Se descuenta del crédito'}
                         </p>
                       </button>
@@ -2956,13 +2957,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 if (effectiveBalance <= 0) return null;
                 const maxApply = Math.min(effectiveBalance, Number(editTypeRow.total));
                 return (
-                  <div className={`rounded-2xl border-2 p-3 transition-colors ${editTypeUseWallet ? 'border-purple-400 bg-purple-50' : 'border-slate-200 bg-white'}`}>
+                  <div className={`rounded-xl border-2 p-3 transition-colors ${editTypeUseWallet ? 'border-purple-400 bg-purple-50' : 'border-slate-200 bg-white'}`}>
                     <label className="flex items-center justify-between cursor-pointer">
                       <div className="flex items-center gap-2">
                         <Wallet size={16} className="text-purple-500"/>
                         <div>
                           <p className="text-sm font-bold text-slate-800">Aplicar saldo a favor</p>
-                          <p className="text-[10px] text-slate-500">
+                          <p className="text-xs text-slate-500">
                             Disponible tras revertir: {formatCurrency(effectiveBalance)}
                             {oldWalletUsed > 0 && <span className="ml-1 italic">(esta venta usó {formatCurrency(oldWalletUsed)})</span>}
                           </p>
@@ -2992,12 +2993,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
               {/* Observación obligatoria */}
               <div>
-                <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">
                   Observación <span className="text-red-500">(obligatoria)</span>
                 </label>
                 <textarea
                   rows={3}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 resize-none"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 resize-none"
                   placeholder="Explica por qué se está modificando el tipo de venta…"
                   value={editTypeObservation}
                   onChange={e => setEditTypeObservation(e.target.value)}
@@ -3019,14 +3020,14 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               <button
                 onClick={() => setEditTypeOpen(false)}
                 disabled={editTypeSaving}
-                className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+                className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-100 disabled:opacity-40"
               >
                 Cancelar
               </button>
               <button
                 onClick={saveEditType}
                 disabled={editTypeSaving || !editTypeObservation.trim()}
-                className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-orange-600 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
+                className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
               >
                 {editTypeSaving && <Loader2 size={14} className="animate-spin"/>}
                 {editTypeSaving ? 'Aplicando…' : 'Guardar cambio'}
@@ -3043,12 +3044,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-red-500"><Trash2 size={18}/></div>
               <div>
-                <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Eliminar venta</h3>
-                <p className="text-[10px] text-slate-500">Folio {deleteSaleRow.id.slice(0, 8)} · {formatCurrency(deleteSaleRow.total)}</p>
+                <h3 className="text-sm font-semibold  tracking-tight text-slate-900">Eliminar venta</h3>
+                <p className="text-xs text-slate-500">Folio {deleteSaleRow.id.slice(0, 8)} · {formatCurrency(deleteSaleRow.total)}</p>
               </div>
             </div>
             <div className="px-6 py-5 space-y-3">
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500">Motivo de eliminación *</label>
+              <label className="block text-xs font-semibold  tracking-wide text-slate-500">Motivo de eliminación *</label>
               <textarea
                 rows={3}
                 value={deleteSaleNote}
@@ -3059,8 +3060,8 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               <p className="rounded-xl bg-red-50 px-3 py-2 text-[11px] text-red-700">La venta quedará cancelada y el stock de los productos se restaurará automáticamente.</p>
             </div>
             <div className="flex gap-2 border-t border-slate-200 bg-slate-50 px-6 py-3">
-              <button onClick={() => setDeleteSaleOpen(false)} className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100">Cancelar</button>
-              <button onClick={confirmDeleteSale} disabled={deletingSale || !deleteSaleNote.trim()} className="flex-[2] rounded-xl bg-red-500 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-red-600 disabled:opacity-40">
+              <button onClick={() => setDeleteSaleOpen(false)} className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-xs font-semibold  tracking-wide text-slate-600 hover:bg-slate-100">Cancelar</button>
+              <button onClick={confirmDeleteSale} disabled={deletingSale || !deleteSaleNote.trim()} className="flex-[2] rounded-xl bg-red-500 py-2 text-xs font-semibold  tracking-wide text-white hover:bg-red-600 disabled:opacity-40">
                 {deletingSale ? 'Eliminando…' : 'Eliminar venta'}
               </button>
             </div>
@@ -3070,11 +3071,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
       {printModalOpen && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-2xl">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-2xl">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
               <Loader2 size={28} className="animate-spin" />
             </div>
-            <h3 className="mt-4 text-base font-black uppercase tracking-tight text-slate-900">Generando documento</h3>
+            <h3 className="mt-4 text-base font-semibold  tracking-tight text-slate-900">Generando documento</h3>
             <p className="mt-2 text-sm font-semibold text-slate-500">
               La nota de venta se abrirá para imprimir en unos segundos.
             </p>

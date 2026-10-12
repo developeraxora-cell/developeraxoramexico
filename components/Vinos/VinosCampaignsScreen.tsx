@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Megaphone, Plus, X, Send, Users, Calendar, Percent, Eye,
@@ -38,7 +39,7 @@ const MESSAGE_TEMPLATES: MessageTemplate[] = [
     text: 'Hola {{nombre_cliente}}, ¡te extrañamos! 🍷 Vuelve y disfruta {{descuento}} de descuento con tu código {{promocion}}, válido del {{fecha_inicio_promocion}} al {{fecha_fin_promocion}}. Te esperamos.' },
   { id: 'infrequent', label: 'Te extrañamos (poco frecuentes)', segment: 'INFREQUENT',
     text: 'Hola {{nombre_cliente}}, hace tiempo no nos visitas 🥂 Tenemos {{descuento}} de descuento para ti con el código {{promocion}}, del {{fecha_inicio_promocion}} al {{fecha_fin_promocion}}. ¡Vuelve pronto!' },
-  { id: 'birthday', label: 'Cumpleaños 🎂', segment: 'BIRTHDAY',
+  { id: 'birthday', label: 'Cumpleaños', segment: 'BIRTHDAY',
     text: '🎉 ¡Feliz cumpleaños {{nombre_cliente}}! Para celebrar te regalamos {{descuento}} de descuento con el código {{promocion}}, válido del {{fecha_inicio_promocion}} al {{fecha_fin_promocion}}. ¡Salud! 🥂' },
   { id: 'loyalty', label: 'Cliente preferente', segment: 'LOYALTY',
     text: 'Hola {{nombre_cliente}}, gracias por tu preferencia ✨ Como cliente especial tienes {{descuento}} de descuento con el código {{promocion}}, válido del {{fecha_inicio_promocion}} al {{fecha_fin_promocion}}.' },
@@ -60,14 +61,14 @@ function MultiSelect({ label, options, selected, onToggle }: {
   return (
     <div className="relative">
       <button type="button" onClick={() => setOpen(o => !o)}
-        className={`flex w-full items-center justify-between rounded-2xl border px-3 py-2.5 text-left text-sm outline-none ${selected.length ? 'border-purple-400 bg-purple-50' : 'border-slate-200'}`}>
-        <span className="truncate"><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}: </span><span className="font-bold text-slate-700">{summary}</span></span>
+        className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm outline-none ${selected.length ? 'border-purple-400 bg-purple-50' : 'border-slate-200'}`}>
+        <span className="truncate"><span className="text-xs font-semibold  tracking-wide text-slate-400">{label}: </span><span className="font-bold text-slate-700">{summary}</span></span>
         <svg className="h-3 w-3 shrink-0 text-slate-400" viewBox="0 0 12 12" fill="none"><path d="M3 4.5 6 7.5 9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1 shadow-xl">
+          <div className="absolute left-0 top-full z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
             {options.map(o => (
               <label key={o.value} className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-2 text-xs hover:bg-purple-50">
                 <input type="checkbox" checked={selected.includes(o.value)} onChange={() => onToggle(o.value)}
@@ -374,13 +375,13 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="rounded-2xl bg-purple-100 p-2.5 text-purple-600"><Megaphone size={20} /></div>
+          <div className="rounded-xl bg-purple-100 p-2.5 text-purple-600"><Megaphone size={20} /></div>
           <div>
-            <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">Campañas</h1>
+            <h1 className="text-xl font-semibold  tracking-tight text-slate-900">Campañas</h1>
             <p className="text-[11px] font-bold text-slate-400">Envíos masivos WhatsApp + promociones por cliente</p>
           </div>
         </div>
-        <button onClick={openCreate} className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-purple-500">
+        <button onClick={openCreate} className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-xs font-semibold  tracking-wide text-white hover:bg-purple-500">
           <Plus size={16} /> Nueva campaña
         </button>
       </div>
@@ -388,12 +389,12 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       {loading ? (
         <div className="flex items-center justify-center py-20 text-slate-400"><Loader2 className="animate-spin" size={28} /></div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           {campaigns.length === 0 ? (
             <div className="py-16 text-center"><Megaphone size={32} className="mx-auto text-slate-300" /><p className="mt-2 text-sm font-bold text-slate-400">Sin campañas aún</p></div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <thead className="bg-slate-50 text-xs font-semibold  tracking-wide text-slate-400">
                 <tr>
                   <th className="px-4 py-3 text-left">Campaña</th>
                   <th className="px-4 py-3 text-center">Desc.</th>
@@ -411,16 +412,16 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   return (
                     <tr key={c.id} className={`hover:bg-slate-50 ${isExpired ? 'border-l-4 border-l-red-400 bg-red-50/40' : ''}`}>
                       <td className="px-4 py-3">
-                        <p className="font-bold text-slate-900">{c.name}{isExpired && <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-red-600">Vencida</span>}</p>
-                        <p className="text-[10px] text-slate-400">{c.created_by_name ?? '—'}</p>
+                        <p className="font-bold text-slate-900">{c.name}{isExpired && <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold  tracking-wide text-red-600">Vencida</span>}</p>
+                        <p className="text-xs text-slate-400">{c.created_by_name ?? '—'}</p>
                       </td>
-                      <td className="px-4 py-3 text-center font-black text-purple-600">{c.discount_percent}%</td>
+                      <td className="px-4 py-3 text-center font-semibold text-purple-600">{c.discount_percent}%</td>
                       <td className="px-4 py-3 text-center text-[11px] text-slate-500">{c.valid_from} → {c.valid_to}</td>
                       <td className="px-4 py-3 text-center font-bold text-slate-700">
                         {c.total_recipients}
-                        {c.status === 'ENVIADA' && <span className="ml-1 text-[10px] text-slate-400">({c.sent_count}✓/{c.failed_count}✗)</span>}
+                        {c.status === 'ENVIADA' && <span className="ml-1 text-xs text-slate-400">({c.sent_count}<AppIcon name="check" />/{c.failed_count}<AppIcon name="close" />)</span>}
                       </td>
-                      <td className="px-4 py-3 text-center"><span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${st.bg} ${st.text}`}>{st.label}</span></td>
+                      <td className="px-4 py-3 text-center"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${st.bg} ${st.text}`}>{st.label}</span></td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5">
                           <button onClick={() => openDetail(c)} title="Ver detalle" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Eye size={15} /></button>
@@ -440,9 +441,9 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       {/* ─── Wizard crear ─── */}
       {createOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="flex max-h-[92vh] w-full max-w-3xl flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <div className="flex max-h-[92vh] w-full max-w-3xl flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Nueva campaña</h3>
+              <h3 className="text-base font-semibold  tracking-tight text-slate-900">Nueva campaña</h3>
               <button onClick={() => setCreateOpen(false)} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={18} /></button>
             </div>
 
@@ -454,10 +455,10 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                 return (
                   <React.Fragment key={s}>
                     <div className="flex items-center gap-2">
-                      <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black ${active ? 'bg-purple-600 text-white' : done ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                      <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${active ? 'bg-purple-600 text-white' : done ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
                         {done ? <Check size={12} /> : n}
                       </div>
-                      <span className={`text-[11px] font-black uppercase tracking-widest ${active ? 'text-purple-600' : 'text-slate-400'}`}>{s}</span>
+                      <span className={`text-[11px] font-semibold  tracking-wide ${active ? 'text-purple-600' : 'text-slate-400'}`}>{s}</span>
                     </div>
                     {n < STEPS.length && <div className="h-px flex-1 bg-slate-200" />}
                   </React.Fragment>
@@ -470,25 +471,25 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               {step === 1 && (
                 <>
                   <div>
-                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Nombre de la campaña *</label>
+                    <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Nombre de la campaña *</label>
                     <input value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Reactivación Oro Mayo"
-                      className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-purple-400" />
+                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-purple-400" />
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div>
-                      <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500"><Percent size={12} className="mb-0.5 mr-1 inline" />Descuento %</label>
+                      <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500"><Percent size={12} className="mb-0.5 mr-1 inline" />Descuento %</label>
                       <input type="number" min="1" max="100" value={discount} onChange={e => setDiscount(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-purple-400" />
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-purple-400" />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500"><Calendar size={12} className="mb-0.5 mr-1 inline" />Inicio</label>
+                      <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500"><Calendar size={12} className="mb-0.5 mr-1 inline" />Inicio</label>
                       <input type="date" value={validFrom} onChange={e => setValidFrom(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-purple-400" />
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-purple-400" />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500"><Calendar size={12} className="mb-0.5 mr-1 inline" />Fin</label>
+                      <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500"><Calendar size={12} className="mb-0.5 mr-1 inline" />Fin</label>
                       <input type="date" value={validTo} onChange={e => setValidTo(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-purple-400" />
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-purple-400" />
                     </div>
                   </div>
                   {!step1Valid && <p className="text-[11px] font-bold text-slate-400">Completa nombre, descuento (1-100) y fechas válidas.</p>}
@@ -499,7 +500,7 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               {step === 2 && (
                 <>
                   <div>
-                    <p className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-500"><Users size={12} className="mb-0.5 mr-1 inline" />1. Filtra clientes (se combinan)</p>
+                    <p className="mb-2 text-[11px] font-semibold  tracking-wide text-slate-500"><Users size={12} className="mb-0.5 mr-1 inline" />1. Filtra clientes (se combinan)</p>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                       <MultiSelect label="Nivel" selected={levels} onToggle={v => toggle(levels, v, setLevels)}
                         options={LOYALTY_LEVELS.map(l => ({ value: l, label: l }))} />
@@ -512,7 +513,7 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       <label className="flex cursor-pointer items-center gap-2">
                         <input type="checkbox" checked={birthdayMonth} onChange={e => setBirthdayMonth(e.target.checked)}
                           className="h-4 w-4 rounded border-slate-300 text-purple-600" />
-                        <span className="text-xs font-bold text-slate-600">🎂 Cumpleañeros del mes</span>
+                        <span className="text-xs font-bold text-slate-600"><AppIcon name="cake" /> Cumpleañeros del mes</span>
                       </label>
                       <label className="flex cursor-pointer items-center gap-2">
                         <input type="checkbox" checked={infreqEnabled} onChange={e => setInfreqEnabled(e.target.checked)}
@@ -527,7 +528,7 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                         </div>
                       )}
                       <button onClick={applyFilters} disabled={!hasActiveFilter}
-                        className="ml-auto rounded-xl bg-slate-900 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-700 disabled:opacity-40">
+                        className="ml-auto rounded-xl bg-slate-900 px-4 py-1.5 text-xs font-semibold  tracking-wide text-white hover:bg-slate-700 disabled:opacity-40">
                         Aplicar filtros
                       </button>
                     </div>
@@ -535,7 +536,7 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
 
                   {/* Agregar clientes manualmente */}
                   <div>
-                    <p className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-500"><UserPlus size={12} className="mb-0.5 mr-1 inline" />2. Agrega otros clientes (opcional)</p>
+                    <p className="mb-2 text-[11px] font-semibold  tracking-wide text-slate-500"><UserPlus size={12} className="mb-0.5 mr-1 inline" />2. Agrega otros clientes (opcional)</p>
                     <div className="mb-2 flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2">
                       <Search size={14} className="text-slate-400" />
                       <input value={addSearch} onChange={e => setAddSearch(e.target.value)} placeholder="Buscar cliente para agregar…"
@@ -549,7 +550,7 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                               className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-purple-50">
                               <Plus size={13} className="text-purple-500" />
                               <span className="flex-1 text-xs font-semibold text-slate-700">{c.name}</span>
-                              <span className="text-[10px] text-slate-400">{c.phone ?? 'sin tel.'}</span>
+                              <span className="text-xs text-slate-400">{c.phone ?? 'sin tel.'}</span>
                             </button>
                           ))}
                       </div>
@@ -559,8 +560,8 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   {/* Lista final */}
                   <div>
                     <div className="mb-2 flex items-center justify-between">
-                      <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Clientes en la campaña</p>
-                      <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-black text-purple-700">{recipients.length}</span>
+                      <p className="text-[11px] font-semibold  tracking-wide text-slate-500">Clientes en la campaña</p>
+                      <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-700">{recipients.length}</span>
                     </div>
                     {resolving ? (
                       <div className="flex justify-center py-6 text-slate-400"><Loader2 className="animate-spin" size={20} /></div>
@@ -571,7 +572,7 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                         {recipients.map(r => (
                           <div key={r.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50">
                             <span className="flex-1 text-xs font-semibold text-slate-700">{r.name}</span>
-                            <span className="text-[10px] text-slate-400">{r.phone ?? 'sin tel.'}</span>
+                            <span className="text-xs text-slate-400">{r.phone ?? 'sin tel.'}</span>
                             <button onClick={() => removeRecipient(r.id)} className="text-slate-300 hover:text-red-500"><X size={13} /></button>
                           </div>
                         ))}
@@ -584,25 +585,25 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               {/* Paso 3: mensaje */}
               {step === 3 && (
                 <div>
-                  <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Plantilla</label>
+                  <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Plantilla</label>
                   <select
                     onChange={e => { const t = MESSAGE_TEMPLATES.find(x => x.id === e.target.value); if (t) setMessage(t.text); }}
                     value={MESSAGE_TEMPLATES.find(t => t.text === message)?.id ?? ''}
-                    className="mb-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 outline-none focus:border-purple-400">
+                    className="mb-4 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 outline-none focus:border-purple-400">
                     <option value="" disabled>Elige una plantilla…</option>
                     {MESSAGE_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                   </select>
-                  <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500"><MessageSquare size={12} className="mb-0.5 mr-1 inline" />Mensaje</label>
+                  <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500"><MessageSquare size={12} className="mb-0.5 mr-1 inline" />Mensaje</label>
                   <div className="mb-2 flex flex-wrap gap-1.5">
                     {VARIABLES.map(v => (
                       <button key={v} onClick={() => insertVar(v)}
-                        className="rounded-lg bg-slate-100 px-2 py-1 font-mono text-[10px] font-bold text-slate-600 hover:bg-purple-100 hover:text-purple-700">{v}</button>
+                        className="rounded-lg bg-slate-100 px-2 py-1 font-mono text-xs font-bold text-slate-600 hover:bg-purple-100 hover:text-purple-700">{v}</button>
                     ))}
                   </div>
                   <textarea value={message} onChange={e => setMessage(e.target.value)} rows={5}
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-purple-400" />
-                  <div className="mt-2 rounded-2xl bg-slate-50 px-4 py-3">
-                    <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Vista previa</p>
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-purple-400" />
+                  <div className="mt-2 rounded-xl bg-slate-50 px-4 py-3">
+                    <p className="mb-1 text-xs font-semibold  tracking-wide text-slate-400">Vista previa</p>
                     <p className="whitespace-pre-wrap text-sm text-slate-700">{previewMessage}</p>
                   </div>
                 </div>
@@ -612,20 +613,20 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               {step === 4 && (
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <div className="rounded-2xl border border-slate-200 p-3"><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Campaña</p><p className="text-sm font-black text-slate-900">{name}</p></div>
-                    <div className="rounded-2xl border border-slate-200 p-3"><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Descuento</p><p className="text-sm font-black text-purple-600">{discount}%</p></div>
-                    <div className="rounded-2xl border border-slate-200 p-3"><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Inicio</p><p className="text-sm font-black text-slate-900">{validFrom}</p></div>
-                    <div className="rounded-2xl border border-slate-200 p-3"><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Fin</p><p className="text-sm font-black text-slate-900">{validTo}</p></div>
+                    <div className="rounded-xl border border-slate-200 p-3"><p className="text-[11px] font-semibold  tracking-wide text-slate-400">Campaña</p><p className="text-sm font-semibold text-slate-900">{name}</p></div>
+                    <div className="rounded-xl border border-slate-200 p-3"><p className="text-[11px] font-semibold  tracking-wide text-slate-400">Descuento</p><p className="text-sm font-semibold text-purple-600">{discount}%</p></div>
+                    <div className="rounded-xl border border-slate-200 p-3"><p className="text-[11px] font-semibold  tracking-wide text-slate-400">Inicio</p><p className="text-sm font-semibold text-slate-900">{validFrom}</p></div>
+                    <div className="rounded-xl border border-slate-200 p-3"><p className="text-[11px] font-semibold  tracking-wide text-slate-400">Fin</p><p className="text-sm font-semibold text-slate-900">{validTo}</p></div>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 p-3">
+                  <div className="rounded-xl border border-slate-200 p-3">
                     <div className="mb-1 flex items-center justify-between">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Clientes</p>
-                      <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-black text-purple-700">{recipients.length}</span>
+                      <p className="text-[11px] font-semibold  tracking-wide text-slate-400">Clientes</p>
+                      <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">{recipients.length}</span>
                     </div>
                     <p className="text-xs text-slate-600">{recipients.slice(0, 12).map(r => r.name).join(', ')}{recipients.length > 12 ? `, +${recipients.length - 12} más` : ''}</p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 p-3">
-                    <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-slate-400">Mensaje (ejemplo)</p>
+                  <div className="rounded-xl border border-slate-200 p-3">
+                    <p className="mb-1 text-[11px] font-semibold  tracking-wide text-slate-400">Mensaje (ejemplo)</p>
                     <p className="whitespace-pre-wrap text-sm text-slate-700">{previewMessage}</p>
                   </div>
                 </div>
@@ -635,19 +636,19 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
             {/* Footer wizard */}
             <div className="flex items-center justify-between border-t border-slate-100 px-6 py-4">
               <button onClick={() => step === 1 ? setCreateOpen(false) : setStep(s => s - 1)}
-                className="inline-flex items-center gap-1 rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100">
+                className="inline-flex items-center gap-1 rounded-xl px-4 py-2.5 text-xs font-semibold  tracking-wide text-slate-500 hover:bg-slate-100">
                 {step === 1 ? 'Cancelar' : <><ChevronLeft size={14} /> Atrás</>}
               </button>
               {step < 4 ? (
                 <button
                   onClick={() => setStep(s => s + 1)}
                   disabled={(step === 1 && !step1Valid) || (step === 2 && !step2Valid) || (step === 3 && !step3Valid)}
-                  className="inline-flex items-center gap-1 rounded-xl bg-purple-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-purple-500 disabled:opacity-40">
+                  className="inline-flex items-center gap-1 rounded-xl bg-purple-600 px-5 py-2.5 text-xs font-semibold  tracking-wide text-white hover:bg-purple-500 disabled:opacity-40">
                   Siguiente <ChevronRight size={14} />
                 </button>
               ) : (
                 <button onClick={saveCampaign} disabled={saving || !step1Valid || !step2Valid || !step3Valid}
-                  className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-purple-500 disabled:opacity-40">
+                  className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-xs font-semibold  tracking-wide text-white hover:bg-purple-500 disabled:opacity-40">
                   {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Crear campaña
                 </button>
               )}
@@ -659,16 +660,16 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       {/* ─── Detalle ─── */}
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <div className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h3 className="text-base font-black uppercase tracking-tight text-slate-900">{detail.name}</h3>
+              <h3 className="text-base font-semibold  tracking-tight text-slate-900">{detail.name}</h3>
               <button onClick={() => setDetail(null)} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={18} /></button>
             </div>
             <div className="grid grid-cols-4 gap-3 border-b border-slate-100 px-6 py-3">
-              <div className="text-center"><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Estado</p><p className="text-sm font-black text-slate-900">{CAMPAIGN_STATUS[detail.status]?.label}</p></div>
-              <div className="text-center"><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Descuento</p><p className="text-lg font-black text-purple-600">{detail.discount_percent}%</p></div>
-              <div className="text-center"><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Clientes</p><p className="text-lg font-black text-slate-900">{detail.total_recipients}</p></div>
-              <div className="text-center"><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Vigencia</p><p className="text-[11px] font-bold text-slate-700">{detail.valid_from}<br/>{detail.valid_to}</p></div>
+              <div className="text-center"><p className="text-[11px] font-semibold  tracking-wide text-slate-400">Estado</p><p className="text-sm font-semibold text-slate-900">{CAMPAIGN_STATUS[detail.status]?.label}</p></div>
+              <div className="text-center"><p className="text-[11px] font-semibold  tracking-wide text-slate-400">Descuento</p><p className="text-lg font-semibold text-purple-600">{detail.discount_percent}%</p></div>
+              <div className="text-center"><p className="text-[11px] font-semibold  tracking-wide text-slate-400">Clientes</p><p className="text-lg font-semibold text-slate-900">{detail.total_recipients}</p></div>
+              <div className="text-center"><p className="text-[11px] font-semibold  tracking-wide text-slate-400">Vigencia</p><p className="text-[11px] font-bold text-slate-700">{detail.valid_from}<br/>{detail.valid_to}</p></div>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-4">
               {loadingDetail ? (
@@ -696,7 +697,7 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     <p className="py-8 text-center text-xs font-bold text-slate-400">Sin resultados</p>
                   ) : (
                     <table className="w-full text-sm">
-                      <thead className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      <thead className="text-xs font-semibold  tracking-wide text-slate-400">
                         <tr><th className="px-2 py-2 text-left">Cliente</th><th className="px-2 py-2 text-left">Código</th><th className="px-2 py-2 text-center">Estado</th></tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -706,7 +707,7 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                             <tr key={i}>
                               <td className="px-2 py-2 font-semibold text-slate-700">{r.name}</td>
                               <td className="px-2 py-2 font-mono font-bold text-slate-900">{r.code ?? <span className="font-sans text-[11px] font-bold text-slate-400">Se genera al enviar</span>}</td>
-                              <td className="px-2 py-2 text-center">{ps ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${ps.bg} ${ps.text}`}>{ps.label}</span> : <span className="text-[11px] text-slate-300">—</span>}</td>
+                              <td className="px-2 py-2 text-center">{ps ? <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${ps.bg} ${ps.text}`}>{ps.label}</span> : <span className="text-[11px] text-slate-300">—</span>}</td>
                             </tr>
                           );
                         })}
@@ -716,12 +717,12 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   {detailTotalPages > 1 && (
                     <div className="mt-3 flex items-center justify-between">
                       <button onClick={() => setDetailPage(p => Math.max(1, p - 1))} disabled={detailPage === 1}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold  tracking-wide text-slate-600 hover:bg-slate-50 disabled:opacity-40">
                         <ChevronLeft size={13} /> Anterior
                       </button>
                       <span className="text-[11px] font-bold text-slate-400">Página {detailPage} / {detailTotalPages}</span>
                       <button onClick={() => setDetailPage(p => Math.min(detailTotalPages, p + 1))} disabled={detailPage === detailTotalPages}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold  tracking-wide text-slate-600 hover:bg-slate-50 disabled:opacity-40">
                         Siguiente <ChevronRight size={13} />
                       </button>
                     </div>
@@ -736,18 +737,18 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       {/* ─── Confirmar envío ─── */}
       {sendTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="mb-3 flex items-center gap-3">
-              <div className="rounded-2xl bg-green-100 p-2.5 text-green-600"><Send size={20} /></div>
-              <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Enviar campaña</h3>
+              <div className="rounded-xl bg-green-100 p-2.5 text-green-600"><Send size={20} /></div>
+              <h3 className="text-base font-semibold  tracking-tight text-slate-900">Enviar campaña</h3>
             </div>
             <p className="text-sm text-slate-600">
               Se generarán <b>{sendTarget.total_recipients}</b> promociones y se enviarán los mensajes por WhatsApp. Esta acción no se puede deshacer.
             </p>
             <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setSendTarget(null)} disabled={sending} className="rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100">Cancelar</button>
+              <button onClick={() => setSendTarget(null)} disabled={sending} className="rounded-xl px-4 py-2.5 text-xs font-semibold  tracking-wide text-slate-500 hover:bg-slate-100">Cancelar</button>
               <button onClick={doSend} disabled={sending}
-                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-green-500 disabled:opacity-40">
+                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-xs font-semibold  tracking-wide text-white hover:bg-green-500 disabled:opacity-40">
                 {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Enviar ahora
               </button>
             </div>
@@ -758,18 +759,18 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       {/* ─── Confirmar eliminación ─── */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="mb-3 flex items-center gap-3">
-              <div className="rounded-2xl bg-red-100 p-2.5 text-red-600"><Trash2 size={20} /></div>
-              <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Eliminar campaña</h3>
+              <div className="rounded-xl bg-red-100 p-2.5 text-red-600"><Trash2 size={20} /></div>
+              <h3 className="text-base font-semibold  tracking-tight text-slate-900">Eliminar campaña</h3>
             </div>
             <p className="mb-3 text-sm text-slate-600">Vas a eliminar <b>{deleteTarget.name}</b>. Indica el motivo (obligatorio).</p>
             <textarea value={deleteNote} onChange={e => setDeleteNote(e.target.value)} rows={3} placeholder="Motivo de la eliminación…"
-              className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-red-400" />
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-red-400" />
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setDeleteTarget(null)} className="rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100">Cancelar</button>
+              <button onClick={() => setDeleteTarget(null)} className="rounded-xl px-4 py-2.5 text-xs font-semibold  tracking-wide text-slate-500 hover:bg-slate-100">Cancelar</button>
               <button onClick={doDelete} disabled={!deleteNote.trim()}
-                className="rounded-xl bg-red-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-red-500 disabled:opacity-40">Eliminar</button>
+                className="rounded-xl bg-red-600 px-5 py-2.5 text-xs font-semibold  tracking-wide text-white hover:bg-red-500 disabled:opacity-40">Eliminar</button>
             </div>
           </div>
         </div>

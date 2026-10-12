@@ -952,7 +952,7 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
     const Icon = manager.icon;
     const isGeneral = manager.title === 'Gerente General';
     return (
-      <div key={manager.title} className={`flex flex-col rounded-2xl border border-slate-200 bg-slate-50 p-4 ${extraClass}`}>
+      <div key={manager.title} className={`flex flex-col rounded-xl border border-slate-200 bg-slate-50 p-4 ${extraClass}`}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -960,8 +960,8 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
                 <Icon size={16} />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-black text-slate-900">{manager.title}</p>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{manager.status}</p>
+                <p className="truncate text-sm font-semibold text-slate-900">{manager.title}</p>
+                <p className="text-xs font-semibold  tracking-wide text-slate-400">{manager.status}</p>
               </div>
             </div>
             <p className={`mt-3 font-semibold text-slate-600 ${
@@ -979,15 +979,15 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
               priority: manager.title === 'Gerente General' ? 'alta' : 'media',
               agent: manager.agent,
             })}
-            className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-slate-300"
+            className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold  tracking-wide text-slate-600 hover:border-slate-300"
           >
             <Bot size={12} /> IA
           </button>
         </div>
 
         {!isGeneral && manager.context?.length ? (
-          <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Lectura por área</p>
+          <div className="mt-5 rounded-xl border border-slate-200 bg-white p-3">
+            <p className="text-xs font-semibold  tracking-[0.2em] text-slate-400">Lectura por área</p>
             <div className="mt-3 space-y-2">
               {manager.context.map((item) => (
                 <p key={item} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold leading-5 text-slate-700">
@@ -1001,7 +1001,7 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
         {manager.actions.length > 0 && (
         <div className={`mt-3 space-y-1.5 ${isGeneral ? 'mt-auto pt-4' : ''}`}>
           {isGeneral && manager.actions.length > 0 && (
-            <p className="pb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Prioridades directivas</p>
+            <p className="pb-1 text-xs font-semibold  tracking-[0.2em] text-slate-400">Prioridades directivas</p>
           )}
           {manager.actions.slice(0, isGeneral ? 5 : 3).map((action) => (
             <p key={action} className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-700">
@@ -1017,18 +1017,18 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
   return (
     <div className="h-full w-full overflow-y-auto px-3 py-4 sm:px-4 md:px-6 xl:px-8">
       <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 lg:gap-6">
-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:p-5 xl:p-6">
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5 xl:p-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-orange-500">Reporte Gerencial</p>
-              <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-900">Resumen ejecutivo del negocio</h2>
+              <p className="text-[11px] font-semibold  tracking-[0.3em] text-orange-500">Reporte Gerencial</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Resumen ejecutivo del negocio</h2>
               <p className="mt-1 text-sm font-semibold text-slate-500">
                 {branchName}. Comparativo del periodo seleccionado contra {previousPeriodLabel}.
               </p>
             </div>
             <button
               onClick={() => void loadDashboard()}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-semibold  tracking-wide text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
             >
               <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Actualizar
             </button>
@@ -1037,13 +1037,13 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
           <div className={`mt-5 grid grid-cols-1 gap-3 ${fixedUnit ? 'lg:grid-cols-[1fr_1fr_1fr]' : 'lg:grid-cols-[220px_1fr] xl:grid-cols-[220px_1fr_1fr_1fr]'}`}>
             {!fixedUnit && (
               <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Unidad</span>
-                <div className="grid grid-cols-3 rounded-2xl border border-slate-200 bg-slate-50 p-1">
+                <span className="text-xs font-semibold  tracking-[0.22em] text-slate-400">Unidad</span>
+                <div className="grid grid-cols-3 rounded-xl border border-slate-200 bg-slate-50 p-1">
                   {(['materiales', 'concretera', 'transporteria'] as ExecutiveUnit[]).map((value) => (
                     <button
                       key={value}
                       onClick={() => setUnit(value)}
-                      className={`rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-widest transition ${
+                      className={`rounded-xl px-3 py-2 text-[11px] font-semibold  tracking-wide transition ${
                         unit === value ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
@@ -1054,7 +1054,7 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
               </div>
             )}
             <div className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Periodo</span>
+              <span className="text-xs font-semibold  tracking-[0.22em] text-slate-400">Periodo</span>
               <div className="flex flex-wrap gap-2">
                 {[
                   { id: 'today', label: 'Hoy' },
@@ -1066,7 +1066,7 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
                   <button
                     key={preset.id}
                     onClick={() => setDatePreset(preset.id as DatePreset)}
-                    className={`rounded-2xl border px-4 py-3 text-[11px] font-black uppercase tracking-widest transition ${
+                    className={`rounded-xl border px-4 py-3 text-[11px] font-semibold  tracking-wide transition ${
                       datePreset === preset.id
                         ? 'border-slate-900 bg-slate-900 text-white'
                         : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
@@ -1078,7 +1078,7 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
               </div>
             </div>
             <div className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Desde</span>
+              <span className="text-xs font-semibold  tracking-[0.22em] text-slate-400">Desde</span>
               <input
                 type="date"
                 value={startDate}
@@ -1086,11 +1086,11 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
                   setDatePreset('custom');
                   setStartDate(e.target.value);
                 }}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
               />
             </div>
             <div className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Hasta</span>
+              <span className="text-xs font-semibold  tracking-[0.22em] text-slate-400">Hasta</span>
               <input
                 type="date"
                 value={endDate}
@@ -1098,41 +1098,41 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
                   setDatePreset('custom');
                   setEndDate(e.target.value);
                 }}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
               />
             </div>
           </div>
         </section>
 
         {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>
         )}
 
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <article className="rounded-3xl border border-slate-200 bg-slate-900 p-5 text-white shadow-lg shadow-slate-900/15 md:p-6">
+          <article className="rounded-2xl border border-slate-200 bg-slate-900 p-5 text-white shadow-lg shadow-slate-900/15 md:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.3em] text-orange-300">Director General Digital</p>
-                <h3 className="mt-3 text-2xl font-black tracking-tight">Buenos días.</h3>
+                <p className="text-[11px] font-semibold  tracking-[0.3em] text-orange-300">Director General Digital</p>
+                <h3 className="mt-3 text-2xl font-semibold tracking-tight">Buenos días.</h3>
                 <p className="mt-2 text-sm font-semibold text-slate-300">
                   Detecté estas situaciones importantes para {unitConfig[unit].label.toLowerCase()}.
                 </p>
               </div>
-              <div className="rounded-2xl bg-white/10 p-3 text-orange-300">
+              <div className="rounded-xl bg-white/10 p-3 text-orange-300">
                 <Bot size={20} />
               </div>
             </div>
             <div className="mt-5 space-y-3">
               {morningHighlights.map((item, index) => (
-                <div key={`${item}-${index}`} className="flex gap-3 rounded-2xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-500 text-xs font-black text-white">
+                <div key={`${item}-${index}`} className="flex gap-3 rounded-xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-500 text-xs font-semibold text-white">
                     {index + 1}
                   </span>
                   <p className="text-sm font-semibold leading-6 text-slate-100">{item}</p>
                 </div>
               ))}
               {morningHighlights.length === 0 && (
-                <div className="rounded-2xl bg-white/8 px-4 py-3 text-sm font-semibold text-slate-100 ring-1 ring-white/10">
+                <div className="rounded-xl bg-white/8 px-4 py-3 text-sm font-semibold text-slate-100 ring-1 ring-white/10">
                   No hay situaciones críticas con los filtros actuales.
                 </div>
               )}
@@ -1143,13 +1143,13 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
         </section>
 
         <section>
-          <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Gerentes especializados</h3>
+                <h3 className="text-sm font-semibold  tracking-[0.24em] text-slate-700">Gerentes especializados</h3>
                 <p className="mt-1 text-xs font-semibold text-slate-500">Cada gerente observa una parte del negocio y propone acciones.</p>
               </div>
-              <div className="rounded-2xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">{specializedManagers.length} gerentes</div>
+              <div className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">{specializedManagers.length} gerentes</div>
             </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-4">
               {specializedManagers.map((manager) => renderManagerCard(manager, 'h-full'))}

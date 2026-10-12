@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 
 import React, { useState } from 'react';
 import { Product, ProductConversion, Unit } from '../../types';
@@ -96,7 +97,7 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
   return (
     <div className="space-y-6">
       {/* Barra de Herramientas */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex flex-1 gap-2 w-full">
           <div className="relative flex-1">
             <input
@@ -106,7 +107,7 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><AppIcon name="search" /></span>
           </div>
           <select 
             className="p-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:ring-2 focus:ring-orange-500"
@@ -125,15 +126,15 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
       </div>
 
       {/* Grid de Productos mejorado */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Información</th>
-              <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Costos y Precios</th>
-              <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Unidad Base</th>
-              <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Presentaciones / Conversiones</th>
-              <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Acciones</th>
+              <th className="p-4 text-xs font-semibold text-slate-400  tracking-wide">Información</th>
+              <th className="p-4 text-xs font-semibold text-slate-400  tracking-wide">Costos y Precios</th>
+              <th className="p-4 text-xs font-semibold text-slate-400  tracking-wide text-center">Unidad Base</th>
+              <th className="p-4 text-xs font-semibold text-slate-400  tracking-wide">Presentaciones / Conversiones</th>
+              <th className="p-4 text-xs font-semibold text-slate-400  tracking-wide text-center">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -145,7 +146,7 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
                 <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="p-4 max-w-xs">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-orange-600 uppercase tracking-tighter mb-0.5">{p.category}</span>
+                      <span className="text-xs font-bold text-orange-600  tracking-tight mb-0.5">{p.category}</span>
                       <span className="font-bold text-slate-800">{p.name}</span>
                       <span className="text-xs text-gray-400 font-mono">SKU: {p.sku}</span>
                     </div>
@@ -160,13 +161,13 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
                         <span className="text-gray-400">Venta:</span>
                         <span className="font-bold text-green-600">${p.pricePerBaseUnit.toFixed(2)}</span>
                       </div>
-                      <div className="mt-1 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                      <div className="mt-1 text-[11px] font-semibold text-slate-400  tracking-wide">
                         Margen: {margin.toFixed(1)}%
                       </div>
                     </div>
                   </td>
                   <td className="p-4 text-center">
-                    <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">
+                    <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-semibold ">
                       {UNITS.find(u => u.id === p.baseUnitId)?.symbol}
                     </span>
                   </td>
@@ -175,7 +176,7 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
                       <div className="flex flex-wrap gap-1">
                         {prodConversions.map(c => (
                           <div key={c.id} className="flex items-center bg-slate-100 border border-slate-200 px-2 py-1 rounded-lg">
-                            <span className="text-[10px] font-bold text-slate-600">
+                            <span className="text-xs font-bold text-slate-600">
                               1 {UNITS.find(u => u.id === c.fromUnitId)?.symbol} = {c.factor} {UNITS.find(u => u.id === p.baseUnitId)?.symbol}
                             </span>
                             <button onClick={() => removeConversion(c.id)} className="ml-1 text-red-400 hover:text-red-600">×</button>
@@ -185,7 +186,7 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
                       {/* Mini-form para añadir conversión rápido */}
                       <div className="flex gap-1 items-center bg-slate-50 p-1 rounded-lg border border-dashed border-slate-200">
                          <select 
-                          className="text-[9px] bg-transparent border-none outline-none font-bold"
+                          className="text-[11px] bg-transparent border-none outline-none font-bold"
                           onChange={(e) => setNewConv({...newConv, fromUnitId: e.target.value})}
                           value={newConv.fromUnitId}
                          >
@@ -196,7 +197,7 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
                          <input 
                           type="number" 
                           placeholder="Factor"
-                          className="w-10 text-[9px] bg-transparent border-none outline-none font-bold"
+                          className="w-10 text-[11px] bg-transparent border-none outline-none font-bold"
                           onBlur={(e) => handleAddConversion(p.id)}
                           onChange={(e) => setNewConv({...newConv, factor: Number(e.target.value)})}
                          />
@@ -218,7 +219,7 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
                       }}
                       className="text-slate-400 hover:text-orange-500 p-2 transition-colors opacity-0 group-hover:opacity-100"
                     >
-                      ✏️ Editar
+                      <AppIcon name="edit" /> Editar
                     </button>
                   </td>
                 </tr>
@@ -231,10 +232,10 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
       {/* MODAL NUEVO/EDITAR PRODUCTO */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-black uppercase tracking-tighter">
+                <h3 className="text-xl font-semibold  tracking-tight">
                   {editingProductId ? 'Editar Material' : 'Nuevo Producto'}
                 </h3>
                 <p className="text-slate-400 text-xs">Configure las reglas fundamentales de venta.</p>
@@ -244,7 +245,7 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
             
             <form onSubmit={handleSaveProduct} className="p-8 grid grid-cols-2 gap-6">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Nombre Comercial</label>
+                <label className="text-xs font-bold text-gray-500  tracking-wide">Nombre Comercial</label>
                 <input 
                   type="text" required placeholder="Ej. Varilla 1/2 pulgada"
                   className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-semibold transition-all"
@@ -253,7 +254,7 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Código / SKU</label>
+                <label className="text-xs font-bold text-gray-500  tracking-wide">Código / SKU</label>
                 <input 
                   type="text" required placeholder="SKU-BASE-001"
                   className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-mono transition-all"
@@ -262,7 +263,7 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Categoría</label>
+                <label className="text-xs font-bold text-gray-500  tracking-wide">Categoría</label>
                 <select 
                   className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none transition-all"
                   value={formData.category}
@@ -272,7 +273,7 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Unidad de Medida Base</label>
+                <label className="text-xs font-bold text-gray-500  tracking-wide">Unidad de Medida Base</label>
                 <select 
                   className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none transition-all"
                   value={formData.baseUnitId}
@@ -282,7 +283,7 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Costo Unitario (Base)</label>
+                <label className="text-xs font-bold text-gray-500  tracking-wide">Costo Unitario (Base)</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
                   <input 
@@ -294,7 +295,7 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Precio Venta (Base)</label>
+                <label className="text-xs font-bold text-gray-500  tracking-wide">Precio Venta (Base)</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
                   <input 
@@ -306,7 +307,7 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
                 </div>
               </div>
 
-              <div className="col-span-2 flex items-center gap-4 bg-orange-50 p-4 rounded-2xl border border-orange-100">
+              <div className="col-span-2 flex items-center gap-4 bg-orange-50 p-4 rounded-xl border border-orange-100">
                 <input 
                   type="checkbox" id="decimals_modal" 
                   className="w-5 h-5 accent-orange-500"
@@ -321,13 +322,13 @@ const ProductScreen: React.FC<ProductScreenProps> = ({ products, setProducts, co
               <div className="col-span-2 flex gap-4 mt-4">
                 <button 
                   type="button" onClick={closeModal}
-                  className="flex-1 py-4 text-gray-500 font-bold hover:bg-gray-100 rounded-2xl transition-colors"
+                  className="flex-1 py-4 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition-colors"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 py-4 bg-orange-500 text-white font-black rounded-2xl hover:bg-orange-600 shadow-lg shadow-orange-500/30 transition-all uppercase tracking-widest"
+                  className="flex-1 py-4 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 shadow-lg shadow-orange-500/30 transition-all  tracking-wide"
                 >
                   {editingProductId ? 'Guardar Cambios' : 'Crear Producto'}
                 </button>

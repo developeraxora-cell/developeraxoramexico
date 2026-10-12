@@ -196,14 +196,14 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 ">
-      <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col justify-between gap-4">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between gap-4">
         {(title || subtitle) && (
           <div>
-            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
+            <h2 className="text-2xl font-semibold text-slate-900  tracking-tight flex items-center gap-3">
               <ClipboardList className="w-7 h-7 text-orange-500" />
               {title}
             </h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+            <p className="text-xs font-bold text-slate-400  tracking-wide mt-1">
               {subtitle}
             </p>
           </div>
@@ -216,14 +216,14 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por descripción, usuario, entidad u observación (mín. 3 letras)..."
-              className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
           <select
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
           >
             <option value="">Todas las acciones</option>
             <option value="CREAR">Crear</option>
@@ -236,7 +236,7 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
           <select
             value={entityFilter}
             onChange={(e) => setEntityFilter(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
           >
             <option value="">Todas las entidades</option>
             <option value="producto">Producto</option>
@@ -252,20 +252,20 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
             />
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
         </div>
       </div>
 
       {!auditReadService.isConfigured() && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl px-4 py-3 text-sm font-bold">
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-4 py-3 text-sm font-bold">
           La auditoría no está configurada. Verifica `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` o `VITE_AUDIT_API_URL`.
         </div>
       )}
@@ -273,22 +273,22 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
 
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 py-3 text-sm font-bold">
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm font-bold">
           {error}
         </div>
       )}
 
-      <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px] border-collapse">
             <thead>
               <tr className="bg-slate-900 text-white">
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-left">Fecha</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-left">Acción</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-left">Entidad</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-left">Descripción</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-left">Usuario</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-left">Observación / Nota</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide text-left">Fecha</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide text-left">Acción</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide text-left">Entidad</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide text-left">Descripción</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide text-left">Usuario</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide text-left">Observación / Nota</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -308,18 +308,18 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
                 <tr key={row.log_id} className="hover:bg-slate-50">
                   <td className="p-4 text-xs font-semibold text-slate-600">{formatDateTime(row.timestamp)}</td>
                   <td className="p-4">
-                    <span className={`inline-flex rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-widest ${badgeClass(row.action_type)}`}>
+                    <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold  tracking-wide ${badgeClass(row.action_type)}`}>
                       {formatActionLabel(row.action_type)}
                     </span>
                   </td>
-                  <td className="p-4 text-xs font-black uppercase text-slate-700">{formatEntityLabel(row.entity_type)}</td>
+                  <td className="p-4 text-xs font-semibold  text-slate-700">{formatEntityLabel(row.entity_type)}</td>
                   <td className="p-4 text-xs font-semibold text-slate-700">
                     <p>{row.description}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">ID: {row.entity_id}</p>
+                    <p className="text-xs text-slate-400 mt-1">ID: {row.entity_id}</p>
                   </td>
                   <td className="p-4 text-xs font-semibold text-slate-600">
                     <p>{row.user_name || '—'}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">{row.user_id}</p>
+                    <p className="text-xs text-slate-400 mt-1">{row.user_id}</p>
                   </td>
                   <td className="p-4 text-xs font-semibold text-slate-600 max-w-[260px]">
                     <p className="line-clamp-2 break-words">{extractObservation(row)}</p>
@@ -331,7 +331,7 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-3">
+      <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-3">
         <p className="text-xs font-bold text-slate-500">
           Mostrando {rows.length} de {total} registros
         </p>
@@ -339,17 +339,17 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
           <button
             onClick={() => setPage((prev) => Math.max(1, prev - 1))}
             disabled={page === 1}
-            className="px-3 py-2 rounded-lg border border-slate-200 text-[10px] font-black uppercase disabled:opacity-40"
+            className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold  disabled:opacity-40"
           >
             Anterior
           </button>
-          <span className="text-[11px] font-black text-slate-700">
+          <span className="text-[11px] font-semibold text-slate-700">
             {page} / {totalPages}
           </span>
           <button
             onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
             disabled={page === totalPages}
-            className="px-3 py-2 rounded-lg border border-slate-200 text-[10px] font-black uppercase disabled:opacity-40"
+            className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold  disabled:opacity-40"
           >
             Siguiente
           </button>

@@ -6,6 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SISTEMA INDUSTRIAL - GRUPO LOPAR</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              slate: { 50: '#f5f7fa', 100: '#edf1f5', 200: '#e1e7ee', 300: '#c5cfdb', 400: '#7b899b', 500: '#617184', 600: '#4c5e73', 700: '#35485e', 800: '#25374c', 900: '#18283b', 950: '#101d2d' },
+              orange: { 50: '#fff6ef', 100: '#fce9da', 200: '#f8d0b5', 300: '#efac83', 400: '#df8855', 500: '#bd5727', 600: '#aa471d', 700: '#8f3e1f', 800: '#7b351e', 900: '#652e1d', 950: '#38150c' }
+            }
+          }
+        }
+      };
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -21,7 +33,7 @@
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-<body class="bg-gray-50 text-gray-900">
+<body class="crm-app bg-gray-50 text-gray-900">
     <div id="root"></div>
 <script type="module" src="/index.tsx"></script>
 </body>

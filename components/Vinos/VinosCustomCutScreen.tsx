@@ -30,10 +30,10 @@ const toLocalDateTimeInputValue = (value: Date) => {
 const getBranchName = (branch?: Branch | null) => branch?.name ?? 'CASA TAHONA';
 
 const PanelCard: React.FC<{ title: string; subtitle: string; children: React.ReactNode }> = ({ title, subtitle, children }) => (
-  <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div className="border-b border-slate-100 px-6 py-5">
-      <p className="text-[11px] font-black uppercase tracking-[0.28em] text-slate-400">Corte personalizado</p>
-      <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-900">{title}</h2>
+      <p className="text-[11px] font-semibold  tracking-[0.28em] text-slate-400">Corte personalizado</p>
+      <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{title}</h2>
       <p className="mt-1 text-sm font-semibold text-slate-500">{subtitle}</p>
     </div>
     <div className="p-6">{children}</div>
@@ -187,12 +187,12 @@ const VinosCustomCutScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
     <div className="space-y-6">
       <div className="rounded-[28px] border border-slate-200 bg-slate-50 px-5 py-4 shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-orange-600">
+          <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
             <Printer size={20} />
           </div>
           <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.28em] text-orange-600">Casa Tahona</p>
-            <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-900">Corte personalizado</h1>
+            <p className="text-[11px] font-semibold  tracking-[0.28em] text-orange-600">Casa Tahona</p>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">Corte personalizado</h1>
             <p className="mt-1 text-sm font-semibold text-slate-500">
               Reconstruye un corte para cualquier rango de fecha y hora, aunque cruce medianoche.
             </p>
@@ -203,39 +203,39 @@ const VinosCustomCutScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       <PanelCard title="Reimprimir corte de caja" subtitle="Genera e imprime el mismo ticket del corte normal usando cualquier rango personalizado.">
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-4">
-            <div className="rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3">
+            <div className="rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
               <p className="text-sm font-bold leading-relaxed text-orange-800">
                 Este corte reconstruye las ventas dentro del rango seleccionado. No modifica las cajas guardadas ni el cierre automático.
               </p>
             </div>
 
             <label className="block">
-              <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha y hora de inicio</span>
+              <span className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Fecha y hora de inicio</span>
               <input
                 type="datetime-local"
                 value={startAt}
                 onChange={(event) => setStartAt(event.target.value)}
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
               />
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha y hora de fin</span>
+              <span className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Fecha y hora de fin</span>
               <input
                 type="datetime-local"
                 value={endAt}
                 onChange={(event) => setEndAt(event.target.value)}
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
               />
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Cajero / empleado</span>
+              <span className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Cajero / empleado</span>
               <select
                 value={cashierId}
                 onChange={(event) => setCashierId(event.target.value)}
                 disabled={cashiersLoading}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:opacity-60"
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:opacity-60"
               >
                 <option value="">{cashiersLoading ? 'Cargando empleados...' : 'Todos los cajeros'}</option>
                 {cashierOptions.map((cashier) => (
@@ -247,33 +247,33 @@ const VinosCustomCutScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
             </label>
 
             {error && (
-              <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+              <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
                 {error}
               </p>
             )}
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2 text-slate-500">
               <Clock size={16} />
-              <p className="text-[11px] font-black uppercase tracking-[0.24em]">Resumen</p>
+              <p className="text-[11px] font-semibold  tracking-[0.24em]">Resumen</p>
             </div>
             <div className="mt-4 space-y-3 text-sm">
-              <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+              <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
                 <span className="font-bold text-slate-500">Sucursal</span>
-                <span className="font-black text-slate-900">{branchName}</span>
+                <span className="font-semibold text-slate-900">{branchName}</span>
               </div>
-              <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+              <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
                 <span className="font-bold text-slate-500">Cajero</span>
-                <span className="font-black text-slate-900">{cashierId ? (cashierOptions.find((item) => item.id === cashierId)?.name ?? '—') : 'Todos los cajeros'}</span>
+                <span className="font-semibold text-slate-900">{cashierId ? (cashierOptions.find((item) => item.id === cashierId)?.name ?? '—') : 'Todos los cajeros'}</span>
               </div>
-              <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+              <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
                 <span className="font-bold text-slate-500">Inicio</span>
-                <span className="font-black text-slate-900">{startAt ? new Date(startAt).toLocaleString('es-MX') : '—'}</span>
+                <span className="font-semibold text-slate-900">{startAt ? new Date(startAt).toLocaleString('es-MX') : '—'}</span>
               </div>
-              <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+              <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
                 <span className="font-bold text-slate-500">Fin</span>
-                <span className="font-black text-slate-900">{endAt ? new Date(endAt).toLocaleString('es-MX') : '—'}</span>
+                <span className="font-semibold text-slate-900">{endAt ? new Date(endAt).toLocaleString('es-MX') : '—'}</span>
               </div>
             </div>
           </div>
@@ -283,7 +283,7 @@ const VinosCustomCutScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
           <button
             onClick={handleGenerate}
             disabled={loading}
-            className="inline-flex min-w-[240px] items-center justify-center gap-2 rounded-2xl bg-orange-600 px-5 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-orange-500 disabled:opacity-60"
+            className="inline-flex min-w-[240px] items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500 disabled:opacity-60"
           >
             {loading ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
             Generar e imprimir

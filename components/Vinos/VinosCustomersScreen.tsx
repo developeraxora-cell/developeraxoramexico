@@ -147,7 +147,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
         <button
           type="button"
           onClick={() => setOpen(o => !o)}
-          className="flex h-full items-center gap-1.5 rounded-2xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+          className="flex h-full items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
         >
           <span className="text-base leading-none">{selected.flag}</span>
           <span className="font-bold text-slate-700">+{selected.dial}</span>
@@ -156,7 +156,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
         {open && (
           <>
             <div className="fixed inset-0 z-10" onClick={() => { setOpen(false); setSearch(''); }} />
-            <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+            <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
               <input
                 autoFocus
                 value={search}
@@ -191,10 +191,10 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
           onChange(buildPhone(dial, digits));
         }}
         placeholder="987654321"
-        className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
       />
     </div>
-    <p className="mt-1 text-right text-[10px] font-bold text-slate-400">{parsed.number.length} / {MAX_PHONE_DIGITS} dígitos</p>
+    <p className="mt-1 text-right text-xs font-bold text-slate-400">{parsed.number.length} / {MAX_PHONE_DIGITS} dígitos</p>
     </div>
   );
 }
@@ -1272,9 +1272,9 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
           { label: 'En riesgo',      value: stats.riesgo,  color: 'text-orange-500' },
           { label: 'ORO / BLACK',    value: stats.vip,     color: 'text-yellow-600' },
         ].map(s => (
-          <div key={s.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{s.label}</p>
-            <p className={`mt-1 text-2xl font-black ${s.color}`}>{s.value}</p>
+          <div key={s.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold  tracking-wide text-slate-400">{s.label}</p>
+            <p className={`mt-1 text-2xl font-semibold ${s.color}`}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -1284,7 +1284,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input
-            className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
             placeholder="Buscar por nombre, teléfono o email…"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -1292,19 +1292,19 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 rounded-2xl bg-orange-600 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 transition-colors"
+          className="flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 transition-colors"
         >
           <Plus size={15} /> Nuevo cliente
         </button>
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <div className="py-16 text-center text-sm font-bold text-slate-400">Cargando clientes…</div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="text-sm font-black uppercase tracking-widest text-slate-400">Sin resultados</p>
+            <p className="text-sm font-semibold  tracking-wide text-slate-400">Sin resultados</p>
             <p className="mt-2 text-xs text-slate-400">
               {search ? 'Prueba otro término de búsqueda.' : 'Agrega tu primer cliente.'}
             </p>
@@ -1315,7 +1315,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
                   {['Cliente', 'Teléfono', 'Tipos', 'Nivel', 'Estado', 'Crédito', 'Saldo', 'Deuda actual', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold  tracking-wide text-slate-400">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -1327,7 +1327,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-100 font-black text-orange-600">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-100 font-semibold text-orange-600">
                             {c.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -1340,14 +1340,14 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {(c.customer_types ?? []).map(t => (
-                            <span key={t} className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">
+                            <span key={t} className="rounded-md bg-slate-100 px-1.5 py-0.5 text-xs font-bold text-slate-600">
                               {customerTypeLabelMap[t] ?? humanizeCustomerType(t)}
                             </span>
                           ))}
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-black ${loy.bg} ${loy.text}`}>
+                        <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-semibold ${loy.bg} ${loy.text}`}>
                           {loy.label}
                         </span>
                       </td>
@@ -1396,10 +1396,10 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       {/* Modal Add / Edit */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-5xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col">
+          <div className="w-full max-w-5xl rounded-2xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-slate-100 px-8 py-5">
               <div>
-                <h2 className="text-lg font-black uppercase tracking-tight text-slate-900">
+                <h2 className="text-lg font-semibold  tracking-tight text-slate-900">
                   {editTarget ? 'Editar cliente' : 'Nuevo cliente'}
                 </h2>
                 <p className="mt-0.5 text-[11px] font-bold text-slate-400">
@@ -1415,39 +1415,39 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
 
               {/* SECCIÓN 1: Datos personales */}
               <section>
-                <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Datos personales</h3>
+                <h3 className="mb-3 text-xs font-semibold  tracking-[0.22em] text-slate-400">Datos personales</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Nombre *</label>
+                    <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Nombre *</label>
                     <input
-                      className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                       value={form.name}
                       onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                       placeholder="Nombre completo"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Teléfono / WhatsApp</label>
+                    <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Teléfono / WhatsApp</label>
                     <PhoneInput
                       value={form.phone}
                       onChange={v => setForm(f => ({ ...f, phone: v }))}
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Email</label>
+                    <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Email</label>
                     <input
                       type="email"
-                      className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                       value={form.email}
                       onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                       placeholder="correo@ejemplo.com"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Fecha de nacimiento</label>
+                    <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Fecha de nacimiento</label>
                     <input
                       type="date"
-                      className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                       value={form.birthday}
                       onChange={e => setForm(f => ({ ...f, birthday: e.target.value }))}
                     />
@@ -1458,18 +1458,18 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               {/* SECCIÓN 2: Tipo de cliente (checkboxes, full width) */}
               <section>
                 <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
+                  <h3 className="text-xs font-semibold  tracking-[0.22em] text-slate-400">
                     Tipo de cliente <span className="font-normal normal-case text-slate-400/80">(puede ser más de uno)</span>
                   </h3>
                   <button
                     type="button"
                     onClick={openTypeModal}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-orange-700 transition-colors hover:border-orange-300 hover:bg-orange-100"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold  tracking-wide text-orange-700 transition-colors hover:border-orange-300 hover:bg-orange-100"
                   >
                     <Plus size={13} /> Nuevo tipo
                   </button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
                   {customerTypeOptions.map(t => {
                     const active = form.customer_types.includes(t.value);
                     return (
@@ -1497,7 +1497,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                 {/* Col izquierda: Crédito + Wallet stacked */}
                 <div className="space-y-4">
                   {/* Crédito */}
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <label className="flex items-center justify-between cursor-pointer">
                       <div className="flex items-center gap-2">
                         <CreditCard size={16} className="text-slate-500" />
@@ -1512,12 +1512,12 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     </label>
                     {form.allow_credit && (
                       <div className="mt-3">
-                        <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Límite de crédito (MXN)</label>
+                        <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Límite de crédito (MXN)</label>
                         <input
                           type="number"
                           min="0"
                           step="0.01"
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                           value={form.credit_limit}
                           onChange={e => setForm(f => ({ ...f, credit_limit: e.target.value }))}
                           placeholder="0.00"
@@ -1527,7 +1527,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   </div>
 
                   {/* Wallet */}
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <label className="flex items-center justify-between cursor-pointer">
                       <div className="flex items-center gap-2">
                         <Wallet size={16} className="text-slate-500" />
@@ -1542,12 +1542,12 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     </label>
                     {form.enable_wallet && (
                       <div className="mt-3">
-                        <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Monto inicial (MXN)</label>
+                        <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Monto inicial (MXN)</label>
                         <input
                           type="number"
                           min="0"
                           step="0.01"
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                           value={form.wallet_balance}
                           onChange={e => setForm(f => ({ ...f, wallet_balance: e.target.value }))}
                           placeholder="0.00"
@@ -1558,7 +1558,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                 </div>
 
                 {/* Col derecha: Documentos */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <FileText size={16} className="text-slate-500" />
                     <span className="text-sm font-bold text-slate-700">Documentos del cliente</span>
@@ -1571,7 +1571,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       <li key={d.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-xs font-bold text-slate-700">{d.file_name}</p>
-                          {d.description && <p className="truncate text-[10px] text-slate-400">{d.description}</p>}
+                          {d.description && <p className="truncate text-xs text-slate-400">{d.description}</p>}
                         </div>
                         <a href={d.file_url} target="_blank" rel="noopener noreferrer" className="ml-2 text-slate-400 hover:text-orange-500" title="Ver">
                           <ExternalLink size={14} />
@@ -1591,7 +1591,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       <li key={i} className="flex items-center justify-between rounded-xl border border-orange-200 bg-orange-50 px-3 py-2">
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-xs font-bold text-orange-700">{q.file.name}</p>
-                          <p className="text-[10px] text-orange-400">{(q.file.size / 1024).toFixed(1)} KB</p>
+                          <p className="text-xs text-orange-400">{(q.file.size / 1024).toFixed(1)} KB</p>
                         </div>
                         <button onClick={() => removeQueuedFile(i)} className="ml-2 text-orange-400 hover:text-red-500" title="Quitar de la cola">
                           <Trash2 size={14} />
@@ -1603,12 +1603,12 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
 
                 {/* File picker — bloqueado si llegó al máximo */}
                 {existingDocs.length + queuedFiles.length >= MAX_DOCS ? (
-                  <div className="flex items-center justify-center gap-2 rounded-xl bg-slate-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-not-allowed">
+                  <div className="flex items-center justify-center gap-2 rounded-xl bg-slate-200 px-3 py-2 text-xs font-semibold  tracking-wide text-slate-500 cursor-not-allowed">
                     <Upload size={14} />
                     Límite alcanzado ({MAX_DOCS} documentos)
                   </div>
                 ) : (
-                  <label className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white cursor-pointer transition-colors hover:bg-slate-700">
+                  <label className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold  tracking-wide text-white cursor-pointer transition-colors hover:bg-slate-700">
                     <Upload size={14} />
                     Seleccionar archivo
                     <input
@@ -1619,7 +1619,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     />
                   </label>
                 )}
-                <p className="mt-2 text-[10px] text-slate-400">
+                <p className="mt-2 text-xs text-slate-400">
                   JPG · PNG · WEBP · PDF · máx 10 MB · {existingDocs.length + queuedFiles.length}/{MAX_DOCS} documentos.
                 </p>
                 {uploadError && (
@@ -1636,14 +1636,14 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
             <div className="flex justify-end gap-3 border-t border-slate-100 px-8 py-5 bg-slate-50/50">
               <button
                 onClick={closeModal}
-                className="rounded-2xl border border-slate-200 bg-white px-6 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100 transition-colors"
+                className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-100 transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center gap-2 rounded-2xl bg-orange-600 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-50 transition-colors"
               >
                 {saving && <Loader2 size={14} className="animate-spin" />}
                 {saving
@@ -1657,10 +1657,10 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
 
       {typeModalOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
-                <h3 className="text-base font-black uppercase tracking-tight text-slate-900">Nuevo tipo de cliente</h3>
+                <h3 className="text-base font-semibold  tracking-tight text-slate-900">Nuevo tipo de cliente</h3>
                 <p className="mt-0.5 text-[11px] font-bold text-slate-400">Crea una etiqueta para clasificar clientes.</p>
               </div>
               <button onClick={closeTypeModal} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
@@ -1668,10 +1668,10 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               </button>
             </div>
             <div className="px-6 py-5">
-              <label className="mb-1 block text-[11px] font-black uppercase tracking-widest text-slate-500">Nombre del tipo</label>
+              <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Nombre del tipo</label>
               <input
                 autoFocus
-                className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                 value={newTypeLabel}
                 onChange={e => {
                   setNewTypeLabel(e.target.value);
@@ -1692,13 +1692,13 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
             <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50/70 px-6 py-4">
               <button
                 onClick={closeTypeModal}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-100"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleCreateCustomerType}
-                className="rounded-2xl bg-orange-600 px-5 py-2 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500"
+                className="rounded-xl bg-orange-600 px-5 py-2 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500"
               >
                 Agregar tipo
               </button>
@@ -1710,17 +1710,17 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       {/* Confirm Delete */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-500">
                 <Trash2 size={22} />
               </div>
               <div>
-                <h3 className="text-base font-black text-slate-900">¿Eliminar cliente?</h3>
+                <h3 className="text-base font-semibold text-slate-900">¿Eliminar cliente?</h3>
                 <p className="text-xs text-slate-500"><span className="font-bold">{deleteTarget.name}</span> se desactivará. No se borran sus ventas.</p>
               </div>
             </div>
-            <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-red-500">Motivo / observación *</label>
+            <label className="mb-1 block text-xs font-semibold  tracking-wide text-red-500">Motivo / observación *</label>
             <textarea
               rows={3}
               className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-red-400 resize-none"
@@ -1732,14 +1732,14 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
             <div className="mt-4 flex gap-3">
               <button
                 onClick={() => { setDeleteTarget(null); setDeleteCustomerNote(''); setActionError(''); }}
-                className="flex-1 rounded-2xl border border-slate-200 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 transition-colors"
+                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50 transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deleting || !deleteCustomerNote.trim()}
-                className="flex-1 rounded-2xl bg-red-500 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-red-600 disabled:opacity-40 transition-colors"
+                className="flex-1 rounded-xl bg-red-500 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-red-600 disabled:opacity-40 transition-colors"
               >
                 {deleting ? 'Eliminando…' : 'Eliminar'}
               </button>
@@ -1751,11 +1751,11 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       {/* ─── MODAL GESTIONAR CLIENTE ─────────────────────── */}
       {manageOpen && manageTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-5xl h-[50vh] rounded-3xl border border-slate-200 bg-white shadow-2xl flex flex-col overflow-hidden">
+          <div className="w-full max-w-5xl h-[50vh] rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between bg-gradient-to-r from-slate-900 to-slate-800 px-6 py-4 text-white">
               <div>
-                <h2 className="text-base font-black uppercase tracking-tight">Gestionar cliente</h2>
+                <h2 className="text-base font-semibold  tracking-tight">Gestionar cliente</h2>
                 <p className="mt-0.5 text-[11px] font-bold text-orange-400">{manageTarget.name.toUpperCase()}</p>
               </div>
               <button onClick={closeManage} className="rounded-xl bg-slate-700 p-1.5 text-slate-200 hover:bg-slate-600"><X size={18}/></button>
@@ -1772,9 +1772,9 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       { label: 'Disponible',   value: formatCurrency(manageStats.available),    color: 'text-green-600' },
                       { label: 'Saldo a favor', value: formatCurrency(manageStats.wallet_balance), color: 'text-purple-600' },
                     ].map(k => (
-                      <div key={k.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{k.label}</p>
-                        <p className={`mt-1 text-2xl font-black ${k.color}`}>{manageLoading ? '…' : k.value}</p>
+                      <div key={k.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <p className="text-xs font-semibold  tracking-wide text-slate-400">{k.label}</p>
+                        <p className={`mt-1 text-2xl font-semibold ${k.color}`}>{manageLoading ? '…' : k.value}</p>
                       </div>
                     ))}
                   </div>
@@ -1782,23 +1782,23 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   {/* 3 Paneles */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Cliente */}
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Cliente</h4>
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+                      <h4 className="text-xs font-semibold  tracking-wide text-slate-400 mb-3">Cliente</h4>
                       <PanelButton icon={<Pencil size={16} className="text-orange-500"/>} title="Editar datos" subtitle="Modifica nombre, teléfono y límite" onClick={subEditDatos}/>
                       <PanelButton icon={<FileDown size={16} className="text-orange-500"/>} title="Exportar PDF" subtitle="Estado de cuenta completo" onClick={exportStatementPdf}/>
                     </div>
 
                     {/* Crédito */}
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Crédito</h4>
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+                      <h4 className="text-xs font-semibold  tracking-wide text-slate-400 mb-3">Crédito</h4>
                       <PanelButton icon={<History size={16} className="text-blue-500"/>} title="Historial de abonos" subtitle="Abonos registrados y evidencias" onClick={openCreditHistory}/>
                       <PanelButton icon={<Receipt size={16} className="text-blue-500"/>} title="Notas de crédito" subtitle="Ventas a crédito con saldo" onClick={openCreditNotes}/>
                       <PanelButton icon={<BanknoteIcon size={16} className="text-blue-500"/>} title="Registrar abono" subtitle="Captura abono para deudas" onClick={openRegisterPayment}/>
                     </div>
 
                     {/* Saldo a favor */}
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Saldo a favor</h4>
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+                      <h4 className="text-xs font-semibold  tracking-wide text-slate-400 mb-3">Saldo a favor</h4>
                       <PanelButton icon={<CreditCard size={16} className="text-purple-500"/>} title="Recargar saldo" subtitle="Aumenta saldo disponible" onClick={openRecharge}/>
                       <PanelButton icon={<History size={16} className="text-purple-500"/>} title="Historial de saldo" subtitle="Recargas y consumos" onClick={openWalletHistory}/>
                       <PanelButton icon={<FileDown size={16} className="text-purple-500"/>} title="Exportar historial" subtitle="PDF de movimientos" onClick={exportWalletPdf}/>
@@ -1811,17 +1811,17 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               {subAction === 'recharge' && (
                 <SubPanel title="Recargar saldo a favor" onBack={() => setSubAction(null)}>
                   <div className="flex justify-center">
-                    <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-6">
+                    <div className="w-full max-w-3xl rounded-xl border border-slate-200 bg-white p-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div className="rounded-2xl bg-purple-50 border border-purple-100 p-4">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-purple-500">Saldo actual</p>
-                          <p className="mt-1 text-2xl font-black text-purple-700">{formatCurrency(manageStats.wallet_balance)}</p>
+                        <div className="rounded-xl bg-purple-50 border border-purple-100 p-4">
+                          <p className="text-xs font-semibold  tracking-wide text-purple-500">Saldo actual</p>
+                          <p className="mt-1 text-2xl font-semibold text-purple-700">{formatCurrency(manageStats.wallet_balance)}</p>
                         </div>
-                        <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">Monto de recarga *</label>
+                        <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+                          <label className="block text-xs font-semibold  tracking-wide text-slate-400">Monto de recarga *</label>
                           <input
                             type="number" min="0" step="0.01" autoFocus
-                            className="mt-1 w-full bg-transparent text-2xl font-black outline-none"
+                            className="mt-1 w-full bg-transparent text-2xl font-semibold outline-none"
                             value={rechargeAmount}
                             onChange={e => setRechargeAmount(e.target.value)}
                             placeholder="0.00"
@@ -1831,9 +1831,9 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500">Tipo de depósito *</label>
+                          <label className="mb-1.5 block text-xs font-semibold  tracking-wide text-slate-500">Tipo de depósito *</label>
                           <select
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-purple-400"
+                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-purple-400"
                             value={rechargeDepositType}
                             onChange={e => setRechargeDepositType(e.target.value)}
                           >
@@ -1845,9 +1845,9 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                           </select>
                         </div>
                         <div>
-                          <label className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500">Observación</label>
+                          <label className="mb-1.5 block text-xs font-semibold  tracking-wide text-slate-500">Observación</label>
                           <input
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-purple-400"
+                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-purple-400"
                             value={rechargeNotes}
                             onChange={e => setRechargeNotes(e.target.value)}
                             placeholder="Observación de la recarga"
@@ -1860,7 +1860,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       <button
                         onClick={doRecharge}
                         disabled={rechargeProcessing}
-                        className="mt-5 w-full flex items-center justify-center gap-2 rounded-2xl bg-purple-600 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-purple-500 disabled:opacity-40"
+                        className="mt-5 w-full flex items-center justify-center gap-2 rounded-xl bg-purple-600 py-3 text-xs font-semibold  tracking-wider text-white hover:bg-purple-500 disabled:opacity-40"
                       >
                         {rechargeProcessing && <Loader2 size={14} className="animate-spin"/>}
                         {rechargeProcessing ? 'Procesando…' : `Guardar recarga ${formatCurrency(Number(rechargeAmount) || 0)}`}
@@ -1894,16 +1894,16 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       <>
                         {/* Stats header */}
                         <div className="grid grid-cols-3 gap-3 mb-4">
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo actual</p>
-                            <p className="mt-1 text-2xl font-black text-green-600">{formatCurrency(manageStats.wallet_balance)}</p>
+                          <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <p className="text-xs font-semibold  tracking-wide text-slate-400">Saldo actual</p>
+                            <p className="mt-1 text-2xl font-semibold text-green-600">{formatCurrency(manageStats.wallet_balance)}</p>
                           </div>
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Monto de apertura</p>
-                            <p className="mt-1 text-2xl font-black text-slate-900">{formatCurrency(aperturaMov?.amount ?? 0)}</p>
+                          <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <p className="text-xs font-semibold  tracking-wide text-slate-400">Monto de apertura</p>
+                            <p className="mt-1 text-2xl font-semibold text-slate-900">{formatCurrency(aperturaMov?.amount ?? 0)}</p>
                           </div>
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Última recarga</p>
+                          <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <p className="text-xs font-semibold  tracking-wide text-slate-400">Última recarga</p>
                             <p className="mt-1 text-sm font-bold text-slate-900">
                               {ultimaRecarga ? new Date(ultimaRecarga.created_at).toLocaleString('es-MX') : 'Sin recargas'}
                             </p>
@@ -1925,21 +1925,21 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                           const typeLabel = (t: string) =>
                             t === 'USO' ? 'USO VENTA' : t;
                           return (
-                            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
                               <table className="w-full text-sm">
                                 <thead className="bg-slate-900 text-white">
                                   <tr>{['Fecha','Tipo','Monto','Saldo Antes','Saldo Después','Usuario','Referencia'].map(h => (
-                                    <th key={h} className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest">{h}</th>
+                                    <th key={h} className="px-4 py-2 text-left text-xs font-semibold  tracking-wide">{h}</th>
                                   ))}</tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                   {slice.map(m => (
                                     <tr key={m.id} className="hover:bg-slate-50">
                                       <td className="px-4 py-2 text-xs text-slate-600">{new Date(m.created_at).toLocaleString('es-MX')}</td>
-                                      <td className="px-4 py-2"><span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black ${typeColor(m.type)}`}>{typeLabel(m.type)}</span></td>
-                                      <td className={`px-4 py-2 text-sm font-black ${m.amount >= 0 ? 'text-slate-900' : 'text-red-600'}`}>{formatCurrency(Math.abs(m.amount))}</td>
+                                      <td className="px-4 py-2"><span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${typeColor(m.type)}`}>{typeLabel(m.type)}</span></td>
+                                      <td className={`px-4 py-2 text-sm font-semibold ${m.amount >= 0 ? 'text-slate-900' : 'text-red-600'}`}>{formatCurrency(Math.abs(m.amount))}</td>
                                       <td className="px-4 py-2 text-xs text-slate-500">{formatCurrency(m.balance_before)}</td>
-                                      <td className="px-4 py-2 text-xs font-black text-green-600">{formatCurrency(m.balance_after)}</td>
+                                      <td className="px-4 py-2 text-xs font-semibold text-green-600">{formatCurrency(m.balance_after)}</td>
                                       <td className="px-4 py-2 text-xs text-slate-600">{m.created_by_name ?? 'Sistema'}</td>
                                       <td className="px-4 py-2 text-xs text-slate-500 italic">
                                         {m.related_sale_id ? `V-${m.related_sale_id.replace(/-/g, '').slice(0, 6).toUpperCase()}` : (m.type === 'APERTURA' ? 'APERTURA' : (m.deposit_type ?? '—'))}
@@ -1948,7 +1948,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                                   ))}
                                 </tbody>
                               </table>
-                              <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                              <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-2 text-xs font-semibold  tracking-wide text-slate-500">
                                 <span>Mostrando {Math.min(start + 1, total)}-{Math.min(start + PAGE_SIZE, total)} de {total}</span>
                                 <div className="flex items-center gap-1">
                                   <button onClick={() => setPgWallet(p => Math.max(1, p - 1))} disabled={pgWallet <= 1} className="rounded-md border border-slate-200 bg-white px-3 py-1 disabled:opacity-40">Anterior</button>
@@ -1990,11 +1990,11 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     const start = (pgPayments - 1) * PAGE_SIZE;
                     const slice = filtered.slice(start, start + PAGE_SIZE);
                     return (
-                      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
                         <table className="w-full text-sm">
                           <thead className="bg-slate-900 text-white">
                             <tr>{['Fecha','Folio','Método','Monto','Referencia','Nota','Acción'].map(h => (
-                              <th key={h} className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest">{h}</th>
+                              <th key={h} className="px-4 py-2 text-left text-xs font-semibold  tracking-wide">{h}</th>
                             ))}</tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
@@ -2002,8 +2002,8 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                               <tr key={p.id} className="hover:bg-slate-50">
                                 <td className="px-4 py-2 text-xs text-slate-600">{new Date(p.created_at).toLocaleString('es-MX')}</td>
                                 <td className="px-4 py-2 text-xs font-mono font-bold text-slate-700">{p.sale_id ? `V-${p.sale_id.slice(0, 6).toUpperCase()}` : '—'}</td>
-                                <td className="px-4 py-2"><span className="rounded-md bg-blue-100 px-2 py-0.5 text-[10px] font-black text-blue-700">{p.payment_method}</span></td>
-                                <td className="px-4 py-2 text-sm font-black text-green-600">{formatCurrency(p.amount)}</td>
+                                <td className="px-4 py-2"><span className="rounded-md bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">{p.payment_method}</span></td>
+                                <td className="px-4 py-2 text-sm font-semibold text-green-600">{formatCurrency(p.amount)}</td>
                                 <td className="px-4 py-2 text-xs text-slate-500">{p.reference ?? '—'}</td>
                                 <td className="px-4 py-2 text-xs text-slate-500 italic truncate max-w-[140px]">{p.notes ?? '—'}</td>
                                 <td className="px-4 py-2">
@@ -2028,7 +2028,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                             ))}
                           </tbody>
                         </table>
-                        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-2 text-xs font-semibold  tracking-wide text-slate-500">
                           <span>Mostrando {Math.min(start + 1, filtered.length)}-{Math.min(start + PAGE_SIZE, filtered.length)} de {filtered.length}</span>
                           <div className="flex items-center gap-1">
                             <button onClick={() => setPgPayments(p => Math.max(1, p - 1))} disabled={pgPayments <= 1} className="rounded-md border border-slate-200 bg-white px-3 py-1 disabled:opacity-40">Anterior</button>
@@ -2065,11 +2065,11 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     const start = (pgCreditNotes - 1) * PAGE_SIZE;
                     const slice = filtered.slice(start, start + PAGE_SIZE);
                     return (
-                      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
                         <table className="w-full text-sm">
                           <thead className="bg-slate-900 text-white">
                             <tr>{['Folio','Emisión','Total','Abonado','Saldo','Estado','Acción'].map(h => (
-                              <th key={h} className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest">{h}</th>
+                              <th key={h} className="px-4 py-2 text-left text-xs font-semibold  tracking-wide">{h}</th>
                             ))}</tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
@@ -2079,9 +2079,9 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                                 <td className="px-4 py-2 text-xs text-slate-600">{new Date(n.created_at).toLocaleDateString('es-MX')}</td>
                                 <td className="px-4 py-2 text-sm font-bold text-slate-900">{formatCurrency(n.total)}</td>
                                 <td className="px-4 py-2 text-sm font-bold text-green-600">{formatCurrency(n.paid)}</td>
-                                <td className="px-4 py-2 text-sm font-black text-red-500">{formatCurrency(n.pending)}</td>
+                                <td className="px-4 py-2 text-sm font-semibold text-red-500">{formatCurrency(n.pending)}</td>
                                 <td className="px-4 py-2">
-                                  <span className={`rounded-md px-2 py-0.5 text-[10px] font-black ${n.pending === 0 ? 'bg-green-100 text-green-700' : n.paid > 0 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                                  <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${n.pending === 0 ? 'bg-green-100 text-green-700' : n.paid > 0 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
                                     {n.pending === 0 ? 'LIQUIDADA' : n.paid > 0 ? 'PARCIAL' : 'PENDIENTE'}
                                   </span>
                                 </td>
@@ -2095,7 +2095,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                             ))}
                           </tbody>
                         </table>
-                        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-2 text-xs font-semibold  tracking-wide text-slate-500">
                           <span>Mostrando {Math.min(start + 1, filtered.length)}-{Math.min(start + PAGE_SIZE, filtered.length)} de {filtered.length}</span>
                           <div className="flex items-center gap-1">
                             <button onClick={() => setPgCreditNotes(p => Math.max(1, p - 1))} disabled={pgCreditNotes <= 1} className="rounded-md border border-slate-200 bg-white px-3 py-1 disabled:opacity-40">Anterior</button>
@@ -2119,11 +2119,11 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     const start = (pgCashSales - 1) * PAGE_SIZE;
                     const slice = cashSales.slice(start, start + PAGE_SIZE);
                     return (
-                      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
                         <table className="w-full text-sm">
                           <thead className="bg-slate-900 text-white">
                             <tr>{['Folio','Fecha','Método','Total','Pago','Notas','Acción'].map(h => (
-                              <th key={h} className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest">{h}</th>
+                              <th key={h} className="px-4 py-2 text-left text-xs font-semibold  tracking-wide">{h}</th>
                             ))}</tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
@@ -2131,7 +2131,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                               <tr key={s.id} className="hover:bg-slate-50">
                                 <td className="px-4 py-2 text-xs font-mono font-bold text-slate-700">V-{s.id.slice(0, 6).toUpperCase()}</td>
                                 <td className="px-4 py-2 text-xs text-slate-600">{new Date(s.created_at).toLocaleString('es-MX')}</td>
-                                <td className="px-4 py-2"><span className="rounded-md bg-green-100 px-2 py-0.5 text-[10px] font-black text-green-700">{s.payment_method}</span></td>
+                                <td className="px-4 py-2"><span className="rounded-md bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">{s.payment_method}</span></td>
                                 <td className="px-4 py-2 text-sm font-bold text-slate-900">{formatCurrency(s.total)}</td>
                                 <td className="px-4 py-2 text-xs text-slate-600">
                                   {s.payment_method === 'EFECTIVO' && Number(s.cash_received ?? 0) > 0 ? (
@@ -2149,7 +2149,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                             ))}
                           </tbody>
                         </table>
-                        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-2 text-xs font-semibold  tracking-wide text-slate-500">
                           <span>Mostrando {Math.min(start + 1, cashSales.length)}-{Math.min(start + PAGE_SIZE, cashSales.length)} de {cashSales.length}</span>
                           <div className="flex items-center gap-1">
                             <button onClick={() => setPgCashSales(p => Math.max(1, p - 1))} disabled={pgCashSales <= 1} className="rounded-md border border-slate-200 bg-white px-3 py-1 disabled:opacity-40">Anterior</button>
@@ -2178,11 +2178,11 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       const start = (pgCreditNotes - 1) * PAGE_SIZE;
                       const slice = pending.slice(start, start + PAGE_SIZE);
                       return (
-                        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
                           <table className="w-full text-sm">
                             <thead className="bg-slate-900 text-white">
                               <tr>{['Folio','Registro','Vence','Saldo','Acción'].map(h => (
-                                <th key={h} className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest">{h}</th>
+                                <th key={h} className="px-4 py-2 text-left text-xs font-semibold  tracking-wide">{h}</th>
                               ))}</tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -2194,11 +2194,11 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                                     <td className="px-4 py-2 text-xs font-mono font-bold text-slate-700">V-{n.id.replace(/-/g, '').slice(0, 6).toUpperCase()}</td>
                                     <td className="px-4 py-2 text-xs text-slate-600">{new Date(n.created_at).toISOString().slice(0, 10)}</td>
                                     <td className="px-4 py-2 text-xs text-slate-600">{due.toISOString().slice(0, 10)}</td>
-                                    <td className="px-4 py-2 text-sm font-black text-red-500">{formatCurrency(n.pending)}</td>
+                                    <td className="px-4 py-2 text-sm font-semibold text-red-500">{formatCurrency(n.pending)}</td>
                                     <td className="px-4 py-2">
                                       <button
                                         onClick={() => { setPaymentSaleId(n.id); setPaymentAmount(String(n.pending)); }}
-                                        className="flex items-center gap-1.5 rounded-xl bg-green-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-green-500"
+                                        className="flex items-center gap-1.5 rounded-xl bg-green-600 px-3 py-1.5 text-xs font-semibold  tracking-wide text-white hover:bg-green-500"
                                       >
                                         <BanknoteIcon size={12}/> Abonar
                                       </button>
@@ -2208,7 +2208,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                               })}
                             </tbody>
                           </table>
-                          <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                          <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-2 text-xs font-semibold  tracking-wide text-slate-500">
                             <span>Mostrando {Math.min(start + 1, pending.length)}-{Math.min(start + PAGE_SIZE, pending.length)} de {pending.length}</span>
                             <div className="flex items-center gap-1">
                               <button onClick={() => setPgCreditNotes(p => Math.max(1, p - 1))} disabled={pgCreditNotes <= 1} className="rounded-md border border-slate-200 bg-white px-3 py-1 disabled:opacity-40">Anterior</button>
@@ -2227,11 +2227,11 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       const start = (pgCreditNotes - 1) * PAGE_SIZE;
                       const slice = pending.slice(start, start + PAGE_SIZE);
                       return (
-                        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden opacity-40 pointer-events-none">
+                        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden opacity-40 pointer-events-none">
                           <table className="w-full text-sm">
                             <thead className="bg-slate-900 text-white">
                               <tr>{['Folio','Registro','Vence','Saldo','Acción'].map(h => (
-                                <th key={h} className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest">{h}</th>
+                                <th key={h} className="px-4 py-2 text-left text-xs font-semibold  tracking-wide">{h}</th>
                               ))}</tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -2240,13 +2240,13 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                                   <td className="px-4 py-2 text-xs font-mono font-bold text-slate-700">V-{n.id.replace(/-/g, '').slice(0, 6).toUpperCase()}</td>
                                   <td className="px-4 py-2 text-xs text-slate-600">{new Date(n.created_at).toISOString().slice(0, 10)}</td>
                                   <td className="px-4 py-2 text-xs text-slate-600">—</td>
-                                  <td className="px-4 py-2 text-sm font-black text-red-500">{formatCurrency(n.pending)}</td>
-                                  <td className="px-4 py-2 text-[10px] text-slate-400">SELECCIONADA</td>
+                                  <td className="px-4 py-2 text-sm font-semibold text-red-500">{formatCurrency(n.pending)}</td>
+                                  <td className="px-4 py-2 text-xs text-slate-400">SELECCIONADA</td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
-                          <div className="border-t border-slate-100 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">{pending.length} notas pendientes</div>
+                          <div className="border-t border-slate-100 px-4 py-2 text-xs font-semibold  tracking-wide text-slate-500">{pending.length} notas pendientes</div>
                           <span className="hidden">{totalPg}{start}</span>
                         </div>
                       );
@@ -2261,17 +2261,17 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                 const saldoNota = selectedNote?.pending ?? 0;
                 return (
                   <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4">
-                    <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+                    <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
                       {/* Header verde */}
                       <div className="bg-gradient-to-r from-green-600 to-green-500 px-6 py-4 text-white">
-                        <h3 className="text-base font-black uppercase tracking-tight">Registrar Abono</h3>
+                        <h3 className="text-base font-semibold  tracking-tight">Registrar Abono</h3>
                         <p className="text-[11px] font-bold opacity-95">V-{paymentSaleId.replace(/-/g, '').slice(0, 6).toUpperCase()} · SALDO {formatCurrency(saldoNota)}</p>
                       </div>
 
                       <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
                         <div className="grid grid-cols-2 gap-3">
                           <select
-                            className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-green-500 focus:bg-white"
+                            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-green-500 focus:bg-white"
                             value={paymentMethod}
                             onChange={e => setPaymentMethod(e.target.value as typeof paymentMethod)}
                           >
@@ -2283,7 +2283,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                           </select>
                           <input
                             type="number" min="0" step="0.01" max={saldoNota}
-                            className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-green-500 focus:bg-white"
+                            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-green-500 focus:bg-white"
                             placeholder="Monto del abono"
                             value={paymentAmount}
                             onChange={e => setPaymentAmount(e.target.value)}
@@ -2291,7 +2291,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                         </div>
 
                         <input
-                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-green-500 focus:bg-white"
+                          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-green-500 focus:bg-white"
                           placeholder="Notas del abono"
                           value={paymentNotes}
                           onChange={e => setPaymentNotes(e.target.value)}
@@ -2299,8 +2299,8 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
 
                         <div>
                           <div className="mb-2 flex items-center justify-between">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Evidencias (máx {MAX_EVIDENCE_FILES})</p>
-                            <p className="text-[10px] text-slate-400">{paymentEvidenceFiles.length}/{MAX_EVIDENCE_FILES}</p>
+                            <p className="text-xs font-semibold  tracking-wide text-slate-500">Evidencias (máx {MAX_EVIDENCE_FILES})</p>
+                            <p className="text-xs text-slate-400">{paymentEvidenceFiles.length}/{MAX_EVIDENCE_FILES}</p>
                           </div>
 
                           {/* Lista de archivos en cola */}
@@ -2312,7 +2312,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                                     <FileText size={14} className="text-green-600 shrink-0"/>
                                     <div className="min-w-0">
                                       <p className="text-xs font-bold text-green-700 truncate">{f.name}</p>
-                                      <p className="text-[10px] text-green-500">{(f.size / 1024).toFixed(1)} KB</p>
+                                      <p className="text-xs text-green-500">{(f.size / 1024).toFixed(1)} KB</p>
                                     </div>
                                   </div>
                                   <button onClick={() => setPaymentEvidenceFiles(prev => prev.filter((_, i) => i !== idx))} className="text-green-500 hover:text-red-500 ml-2"><X size={14}/></button>
@@ -2322,7 +2322,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                           )}
 
                           {paymentEvidenceFiles.length < MAX_EVIDENCE_FILES ? (
-                            <label className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-xs font-black uppercase tracking-widest text-slate-600 cursor-pointer hover:bg-slate-100 hover:border-slate-400">
+                            <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-xs font-semibold  tracking-wide text-slate-600 cursor-pointer hover:bg-slate-100 hover:border-slate-400">
                               <Upload size={16}/>
                               Adjuntar imagen o PDF · Máximo 10 MB por archivo
                               <input
@@ -2344,7 +2344,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                               />
                             </label>
                           ) : (
-                            <div className="flex items-center justify-center gap-2 rounded-2xl bg-slate-100 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                            <div className="flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-3 text-xs font-semibold  tracking-wide text-slate-500">
                               Límite alcanzado ({MAX_EVIDENCE_FILES} archivos)
                             </div>
                           )}
@@ -2357,14 +2357,14 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                         <button
                           onClick={() => { setPaymentSaleId(''); setPaymentEvidenceFiles([]); setActionError(''); }}
                           disabled={paymentProcessing}
-                          className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+                          className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wide text-slate-600 hover:bg-slate-100 disabled:opacity-40"
                         >
                           Cancelar
                         </button>
                         <button
                           onClick={doRegisterPayment}
                           disabled={paymentProcessing || !Number(paymentAmount)}
-                          className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-green-600 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-green-500 disabled:opacity-40"
+                          className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-green-600 py-2.5 text-xs font-semibold  tracking-wide text-white hover:bg-green-500 disabled:opacity-40"
                         >
                           {paymentProcessing && <Loader2 size={14} className="animate-spin"/>}
                           {paymentProcessing ? 'Procesando…' : 'Confirmar abono'}
@@ -2382,18 +2382,18 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       {/* Confirmar eliminar abono */}
       {deletePaymentTarget && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-red-500"><Trash2 size={18}/></div>
               <div>
-                <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Eliminar abono</h3>
+                <h3 className="text-sm font-semibold  tracking-tight text-slate-900">Eliminar abono</h3>
                 <p className="text-[11px] text-slate-500">{formatCurrency(deletePaymentTarget.amount)} · {deletePaymentTarget.payment_method}</p>
               </div>
             </div>
             <div className="px-5 py-4 space-y-3">
               <p className="text-sm text-slate-600">¿Eliminar este abono? {deletePaymentTarget.payment_method === 'SALDO_FAVOR' ? 'El monto se restaurará al saldo del cliente.' : 'Esta acción no se puede deshacer.'}</p>
               <div>
-                <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-red-500">Motivo / observación *</label>
+                <label className="mb-1 block text-xs font-semibold  tracking-wide text-red-500">Motivo / observación *</label>
                 <textarea
                   rows={3}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-red-400 resize-none"
@@ -2405,8 +2405,8 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               {actionError && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-600">{actionError}</p>}
             </div>
             <div className="flex gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3">
-              <button onClick={() => { setDeletePaymentTarget(null); setDeletePaymentNote(''); setActionError(''); }} className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100">Cancelar</button>
-              <button onClick={handleDeletePayment} disabled={!deletePaymentNote.trim()} className="flex-1 rounded-xl bg-red-500 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-red-600 disabled:opacity-40">Eliminar</button>
+              <button onClick={() => { setDeletePaymentTarget(null); setDeletePaymentNote(''); setActionError(''); }} className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-xs font-semibold  tracking-wide text-slate-600 hover:bg-slate-100">Cancelar</button>
+              <button onClick={handleDeletePayment} disabled={!deletePaymentNote.trim()} className="flex-1 rounded-xl bg-red-500 py-2 text-xs font-semibold  tracking-wide text-white hover:bg-red-600 disabled:opacity-40">Eliminar</button>
             </div>
           </div>
         </div>
@@ -2415,18 +2415,18 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       {/* Confirmar eliminar nota de venta */}
       {deleteNoteTarget && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-red-500"><Trash2 size={18}/></div>
               <div>
-                <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Eliminar venta</h3>
+                <h3 className="text-sm font-semibold  tracking-tight text-slate-900">Eliminar venta</h3>
                 <p className="text-[11px] text-slate-500">V-{deleteNoteTarget.id.slice(0, 6).toUpperCase()} · {formatCurrency(deleteNoteTarget.total)}</p>
               </div>
             </div>
             <div className="px-5 py-4 space-y-3">
               <p className="text-sm text-slate-600">Se eliminará la venta a crédito y todos sus items. Stock no se revierte automáticamente.</p>
               <div>
-                <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-red-500">Motivo / observación *</label>
+                <label className="mb-1 block text-xs font-semibold  tracking-wide text-red-500">Motivo / observación *</label>
                 <textarea
                   rows={3}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-red-400 resize-none"
@@ -2438,8 +2438,8 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               {actionError && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-600">{actionError}</p>}
             </div>
             <div className="flex gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3">
-              <button onClick={() => { setDeleteNoteTarget(null); setDeleteNoteJustif(''); setActionError(''); }} className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100">Cancelar</button>
-              <button onClick={handleDeleteNoteSale} disabled={!deleteNoteJustif.trim()} className="flex-1 rounded-xl bg-red-500 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-red-600 disabled:opacity-40">Eliminar venta</button>
+              <button onClick={() => { setDeleteNoteTarget(null); setDeleteNoteJustif(''); setActionError(''); }} className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-xs font-semibold  tracking-wide text-slate-600 hover:bg-slate-100">Cancelar</button>
+              <button onClick={handleDeleteNoteSale} disabled={!deleteNoteJustif.trim()} className="flex-1 rounded-xl bg-red-500 py-2 text-xs font-semibold  tracking-wide text-white hover:bg-red-600 disabled:opacity-40">Eliminar venta</button>
             </div>
           </div>
         </div>
@@ -2448,10 +2448,10 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       {/* Modal Evidencias del Abono */}
       {evidencesPayment && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between bg-slate-900 px-6 py-4 text-white">
               <div>
-                <h3 className="text-base font-black uppercase tracking-tight">Evidencias del Abono</h3>
+                <h3 className="text-base font-semibold  tracking-tight">Evidencias del Abono</h3>
                 <p className="text-[11px] font-bold text-slate-300">
                   {formatCurrency(evidencesPayment.amount)} · {new Date(evidencesPayment.created_at).toLocaleString('es-MX')}
                 </p>
@@ -2461,12 +2461,12 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
 
             <div className="flex-1 overflow-y-auto p-5 bg-slate-50 space-y-3">
               {/* Subir nueva */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 flex items-center gap-3">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 flex items-center gap-3">
                 <div className="flex-1">
                   <p className="text-sm font-bold text-slate-700">Agregar nuevas evidencias</p>
-                  <p className="text-[10px] text-slate-400">Adjunta imagen o PDF para este abono.</p>
+                  <p className="text-xs text-slate-400">Adjunta imagen o PDF para este abono.</p>
                 </div>
-                <label className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 cursor-pointer hover:bg-slate-50">
+                <label className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold  tracking-wide text-slate-600 cursor-pointer hover:bg-slate-50">
                   <Upload size={13}/>
                   Seleccionar archivo
                   <input
@@ -2485,7 +2485,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                 <button
                   onClick={uploadEvidenceFromModal}
                   disabled={!evidencesQueueFile || evidencesUploading}
-                  className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-700 disabled:opacity-40"
+                  className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold  tracking-wide text-white hover:bg-slate-700 disabled:opacity-40"
                 >
                   {evidencesUploading && <Loader2 size={12} className="animate-spin"/>}
                   Agregar archivo
@@ -2503,19 +2503,19 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   {evidencesList.map(ev => {
                     const isImage = ev.file_url.match(/\.(jpe?g|png|webp|gif)(\?|$)/i);
                     return (
-                      <li key={ev.id} className="rounded-2xl border border-slate-200 bg-white p-3 space-y-2">
+                      <li key={ev.id} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-bold text-slate-800">{ev.file_name}</p>
-                            <p className="text-[10px] text-slate-400">
+                            <p className="text-xs text-slate-400">
                               {new Date(ev.uploaded_at).toLocaleString('es-MX')}
                               {ev.file_size_kb ? ` · ${(ev.file_size_kb / 1024).toFixed(2)} MB` : ''}
                             </p>
                           </div>
-                          <a href={ev.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-700">
+                          <a href={ev.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold  tracking-wide text-white hover:bg-slate-700">
                             <ExternalLink size={12}/> Abrir
                           </a>
-                          <button onClick={() => removeEvidence(ev.id)} className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-red-600 hover:bg-red-100">
+                          <button onClick={() => removeEvidence(ev.id)} className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold  tracking-wide text-red-600 hover:bg-red-100">
                             <Trash2 size={12}/> Eliminar
                           </button>
                         </div>
@@ -2583,18 +2583,18 @@ const EditPaymentModal: React.FC<{
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
+      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-200 bg-slate-900 px-5 py-4 text-white">
-          <h3 className="text-sm font-black uppercase tracking-tight">Editar abono</h3>
+          <h3 className="text-sm font-semibold  tracking-tight">Editar abono</h3>
           <button onClick={onClose} className="rounded-md p-1 hover:bg-slate-800"><X size={16}/></button>
         </div>
         <div className="px-5 py-4 space-y-3">
           <div>
-            <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Monto</label>
+            <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Monto</label>
             <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-base font-bold outline-none focus:border-orange-400"/>
           </div>
           <div>
-            <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Método</label>
+            <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Método</label>
             <select value={method} onChange={e => setMethod(e.target.value as CreditPayment['payment_method'])} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400">
               <option value="EFECTIVO">Efectivo</option>
               <option value="TARJETA">Tarjeta</option>
@@ -2604,18 +2604,18 @@ const EditPaymentModal: React.FC<{
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Referencia</label>
+            <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Referencia</label>
             <input value={reference} onChange={e => setReference(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400"/>
           </div>
           <div>
-            <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Notas</label>
+            <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Notas</label>
             <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400 resize-none"/>
           </div>
           {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-600">{err}</p>}
         </div>
         <div className="flex gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3">
-          <button onClick={onClose} className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100">Cancelar</button>
-          <button onClick={save} disabled={saving} className="flex-1 rounded-xl bg-orange-600 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-orange-500 disabled:opacity-40">{saving ? 'Guardando…' : 'Guardar'}</button>
+          <button onClick={onClose} className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-xs font-semibold  tracking-wide text-slate-600 hover:bg-slate-100">Cancelar</button>
+          <button onClick={save} disabled={saving} className="flex-1 rounded-xl bg-orange-600 py-2 text-xs font-semibold  tracking-wide text-white hover:bg-orange-500 disabled:opacity-40">{saving ? 'Guardando…' : 'Guardar'}</button>
         </div>
       </div>
     </div>
@@ -2628,7 +2628,7 @@ const PanelButton: React.FC<{ icon: React.ReactNode; title: string; subtitle: st
     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50">{icon}</div>
     <div className="min-w-0 flex-1">
       <p className="text-sm font-bold text-slate-800">{title}</p>
-      <p className="text-[10px] text-slate-400 truncate">{subtitle}</p>
+      <p className="text-xs text-slate-400 truncate">{subtitle}</p>
     </div>
   </button>
 );
@@ -2636,8 +2636,8 @@ const PanelButton: React.FC<{ icon: React.ReactNode; title: string; subtitle: st
 const SubPanel: React.FC<{ title: string; onBack: () => void; children: React.ReactNode }> = ({ title, onBack, children }) => (
   <div className="p-6">
     <div className="mb-4 flex items-center gap-3">
-      <button onClick={onBack} className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100">← Volver</button>
-      <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">{title}</h3>
+      <button onClick={onBack} className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold  tracking-wide text-slate-600 hover:bg-slate-100">← Volver</button>
+      <h3 className="text-sm font-semibold  tracking-tight text-slate-900">{title}</h3>
     </div>
     {children}
   </div>

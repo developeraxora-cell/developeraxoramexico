@@ -85,7 +85,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
       />
 
       {isOpen && (
-        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-40 rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-40 rounded-xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
@@ -94,7 +94,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
               !selectedCustomer ? 'bg-orange-50 text-orange-700' : 'hover:bg-slate-50 text-slate-700'
             }`}
           >
-            <p className="text-sm font-black">{publicLabel}</p>
+            <p className="text-sm font-semibold">{publicLabel}</p>
             <p className="text-[11px] font-bold text-slate-400">Venta sin cliente de crédito</p>
           </button>
 
@@ -127,7 +127,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
                   selectedCustomer?.id === customer.id ? 'bg-slate-900 text-white' : 'hover:bg-slate-50 text-slate-700'
                 }`}
               >
-                <p className="text-sm font-black uppercase">{customer.name}</p>
+                <p className="text-sm font-semibold ">{customer.name}</p>
                 <p className={`text-[11px] font-bold ${selectedCustomer?.id === customer.id ? 'text-white/70' : 'text-slate-400'}`}>
                   {[customer.phone, customer.address].filter(Boolean).join(' | ') || 'Sin datos adicionales'}
                 </p>

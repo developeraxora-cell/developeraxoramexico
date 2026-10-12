@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Branch, User } from '../../types';
@@ -298,18 +299,18 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
           </div>
 
           {isLoading && (
-            <div className="rounded-2xl bg-white border border-slate-200 p-8 text-center">
+            <div className="rounded-xl bg-white border border-slate-200 p-8 text-center">
               <p className="text-sm font-bold text-slate-400 animate-pulse">Cargando catálogo...</p>
             </div>
           )}
           {loadError && (
-            <div className="rounded-2xl bg-red-50 border border-red-200 p-4 text-sm font-semibold text-red-700">{loadError}</div>
+            <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-sm font-semibold text-red-700">{loadError}</div>
           )}
 
           {!isLoading && !loadError && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {filteredProducts.length === 0 && (
-                <div className="col-span-full rounded-2xl bg-white border border-slate-200 p-8 text-center text-sm font-bold text-slate-400">
+                <div className="col-span-full rounded-xl bg-white border border-slate-200 p-8 text-center text-sm font-bold text-slate-400">
                   {products.length === 0 ? 'No hay productos en esta sucursal.' : 'Sin resultados.'}
                 </div>
               )}
@@ -323,16 +324,16 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
                     key={p.id}
                     onClick={() => addToCart(p)}
                     disabled={noStock}
-                    className={`rounded-2xl border bg-white p-4 text-left shadow-sm transition-all hover:shadow-md active:scale-95 ${
+                    className={`rounded-xl border bg-white p-4 text-left shadow-sm transition-all hover:shadow-md active:scale-95 ${
                       noStock
                         ? 'border-slate-100 opacity-50 cursor-not-allowed'
                         : 'border-slate-200 hover:border-orange-300 hover:shadow-orange-100'
                     }`}
                   >
-                    <p className="text-xs font-black text-slate-800 leading-tight line-clamp-2">{p.name}</p>
-                    {p.sku && <p className="mt-1 font-mono text-[10px] text-slate-400">{p.sku}</p>}
-                    <p className="mt-2 text-sm font-black text-orange-600">{formatCurrency(price)}</p>
-                    <p className={`mt-1 text-[10px] font-bold ${noStock ? 'text-red-500' : 'text-slate-400'}`}>
+                    <p className="text-xs font-semibold text-slate-800 leading-tight line-clamp-2">{p.name}</p>
+                    {p.sku && <p className="mt-1 font-mono text-xs text-slate-400">{p.sku}</p>}
+                    <p className="mt-2 text-sm font-semibold text-orange-600">{formatCurrency(price)}</p>
+                    <p className={`mt-1 text-xs font-bold ${noStock ? 'text-red-500' : 'text-slate-400'}`}>
                       Stock: {stock.toLocaleString('es-MX')} {uom?.uom?.code ?? ''}
                     </p>
                   </button>
@@ -344,10 +345,10 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
 
         {/* Cart & checkout */}
         <div className="xl:col-span-2 space-y-4">
-          <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+          <div className="rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
-              <p className="text-xs font-black uppercase tracking-widest text-slate-500">
-                🛒 Carrito ({cart.length} líneas)
+              <p className="text-xs font-semibold  tracking-wide text-slate-500">
+                <AppIcon name="cart" /> Carrito ({cart.length} líneas)
               </p>
             </div>
 
@@ -361,9 +362,9 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
                   <div key={`${item.productId}-${item.productUomId}`} className="px-4 py-3 flex items-start gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-slate-800 truncate">{item.productName}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">{item.uomLabel}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{item.uomLabel}</p>
                       <div className="flex items-center gap-2 mt-2">
-                        <label className="text-[10px] text-slate-400 font-bold">Cant:</label>
+                        <label className="text-xs text-slate-400 font-bold">Cant:</label>
                         <input
                           type="number"
                           min="0.01"
@@ -372,7 +373,7 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
                           onChange={(e) => updateCartQty(item.productId, item.productUomId, Number(e.target.value))}
                           className="w-16 rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-orange-400 text-center"
                         />
-                        <label className="text-[10px] text-slate-400 font-bold">Precio:</label>
+                        <label className="text-xs text-slate-400 font-bold">Precio:</label>
                         <input
                           type="number"
                           min="0"
@@ -384,7 +385,7 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-xs font-black text-slate-900">{formatCurrency(item.lineTotal)}</p>
+                      <p className="text-xs font-semibold text-slate-900">{formatCurrency(item.lineTotal)}</p>
                       <button
                         onClick={() => removeFromCart(item.productId, item.productUomId)}
                         className="mt-1 p-1 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
@@ -399,15 +400,15 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
 
             {/* Total */}
             <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <p className="text-xs font-black uppercase tracking-widest text-slate-500">Total</p>
-              <p className="text-xl font-black text-slate-900">{formatCurrency(cartTotal)}</p>
+              <p className="text-xs font-semibold  tracking-wide text-slate-500">Total</p>
+              <p className="text-xl font-semibold text-slate-900">{formatCurrency(cartTotal)}</p>
             </div>
           </div>
 
           {/* Checkout form */}
-          <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 space-y-4">
+          <div className="rounded-xl bg-white border border-slate-200 shadow-sm p-5 space-y-4">
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">
+              <label className="block text-xs font-semibold  tracking-wide text-slate-500 mb-1.5">
                 Método de pago
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -415,25 +416,25 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
                   <button
                     key={m}
                     onClick={() => setPaymentMethod(m)}
-                    className={`py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                    className={`py-2.5 rounded-xl text-xs font-semibold  tracking-wider transition-all ${
                       paymentMethod === m
                         ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20'
                         : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                     }`}
                   >
-                    {m === 'EFECTIVO' ? '💵 Efectivo' : '📋 Crédito'}
+                    {m === 'EFECTIVO' ? <><AppIcon name="wallet" /> Efectivo</> : <><AppIcon name="clipboard" /> Crédito</>}
                   </button>
                 ))}
               </div>
               {paymentMethod === 'CREDITO' && (
-                <p className="mt-2 text-[10px] text-orange-600 font-semibold bg-orange-50 rounded-lg px-3 py-1.5">
+                <p className="mt-2 text-xs text-orange-600 font-semibold bg-orange-50 rounded-lg px-3 py-1.5">
                   Crédito básico — gestión de pagarés y saldo en próxima entrega.
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">
+              <label className="block text-xs font-semibold  tracking-wide text-slate-500 mb-1.5">
                 Nombre del cliente {paymentMethod === 'CREDITO' && <span className="text-red-500">*</span>}
               </label>
               <input
@@ -446,7 +447,7 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
             </div>
 
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">
+              <label className="block text-xs font-semibold  tracking-wide text-slate-500 mb-1.5">
                 Notas (opcional)
               </label>
               <textarea
@@ -461,7 +462,7 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
             <button
               onClick={handleCheckout}
               disabled={isSelling || cart.length === 0}
-              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-black uppercase tracking-widest text-sm shadow-lg shadow-orange-600/30 hover:bg-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 rounded-xl bg-orange-600 text-white font-semibold  tracking-wide text-sm shadow-lg shadow-orange-600/30 hover:bg-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSelling ? 'Procesando...' : `Confirmar venta — ${formatCurrency(cartTotal)}`}
             </button>
@@ -470,13 +471,13 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
       </div>
 
       {/* Sales history */}
-      <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+      <div className="rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-          <p className="text-xs font-black uppercase tracking-widest text-slate-500">📋 Últimas ventas</p>
+          <p className="text-xs font-semibold  tracking-wide text-slate-500"><AppIcon name="clipboard" /> Últimas ventas</p>
           <button
             onClick={() => void loadHistory()}
             disabled={isHistoryLoading}
-            className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-orange-600 transition-colors disabled:opacity-50"
+            className="text-xs font-semibold  tracking-wide text-slate-400 hover:text-orange-600 transition-colors disabled:opacity-50"
           >
             ↻ Actualizar
           </button>
@@ -489,10 +490,10 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
-                <th className="text-left px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha</th>
-                <th className="text-left px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</th>
-                <th className="text-left px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Pago</th>
-                <th className="text-right px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Total</th>
+                <th className="text-left px-5 py-2.5 text-xs font-semibold  tracking-wide text-slate-400">Fecha</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold  tracking-wide text-slate-400">Cliente</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold  tracking-wide text-slate-400">Pago</th>
+                <th className="text-right px-5 py-2.5 text-xs font-semibold  tracking-wide text-slate-400">Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -501,7 +502,7 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
                   <td className="px-5 py-3 text-xs text-slate-600">{formatDate(s.created_at)}</td>
                   <td className="px-4 py-3 text-xs font-semibold text-slate-700">{s.nombre_cliente || '—'}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-block rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                    <span className={`inline-block rounded-lg px-2 py-0.5 text-xs font-semibold  tracking-wider ${
                       s.payment_type === 'EFECTIVO'
                         ? 'bg-green-100 text-green-700'
                         : s.payment_type === 'CREDITO'
@@ -511,7 +512,7 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
                       {s.payment_type ?? '—'}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-right text-xs font-black text-slate-900">{formatCurrency(s.total)}</td>
+                  <td className="px-5 py-3 text-right text-xs font-semibold text-slate-900">{formatCurrency(s.total)}</td>
                 </tr>
               ))}
             </tbody>

@@ -1,3 +1,4 @@
+import AppIcon, { IconText } from './AppIcon';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { runOllamaAgent, OllamaMessage, QueryDebug } from '../../services/ai/ollama.service';
 import { isOpenAIProviderEnabled, runOpenAIAgent } from '../../services/ai/openai.service';
@@ -693,15 +694,15 @@ function renderInline(text: string, keyBase: string): React.ReactNode[] {
   let m: RegExpExecArray | null;
   let k = 0;
   while ((m = regex.exec(text))) {
-    if (m.index > last) parts.push(text.slice(last, m.index));
+    if (m.index > last) parts.push(<IconText key={`${keyBase}-t${k++}`}>{text.slice(last, m.index)}</IconText>);
     if (m[1] !== undefined) {
-      parts.push(<strong key={`${keyBase}-b${k++}`} className="font-bold text-slate-900">{m[1]}</strong>);
+      parts.push(<strong key={`${keyBase}-b${k++}`} className="font-semibold text-slate-900"><IconText>{m[1]}</IconText></strong>);
     } else {
       parts.push(<code key={`${keyBase}-c${k++}`} className="rounded bg-slate-100 px-1 py-0.5 text-[12px] text-orange-600">{m[2]}</code>);
     }
     last = regex.lastIndex;
   }
-  if (last < text.length) parts.push(text.slice(last));
+  if (last < text.length) parts.push(<IconText key={`${keyBase}-t${k++}`}>{text.slice(last)}</IconText>);
   return parts;
 }
 
@@ -1575,10 +1576,12 @@ ORDER BY s.qty_base ASC, p.name ASC`;
 
       {/* Drawer */}
       <aside
-        className={`fixed right-0 top-0 z-[61] flex h-full w-full max-w-2xl flex-col bg-slate-50 shadow-2xl shadow-slate-900/30 transition-transform duration-300 ease-out ${
+        className={`crm-assistant fixed right-0 top-0 z-[61] flex h-full w-full max-w-xl flex-col border-l border-slate-200 bg-slate-50 shadow-2xl shadow-slate-900/20 transition-transform duration-300 ease-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         role="dialog"
+        aria-hidden={!isOpen}
+        inert={!isOpen}
         aria-modal="true"
         aria-label="Asistente IA"
       >
@@ -1588,16 +1591,16 @@ ORDER BY s.qty_base ASC, p.name ASC`;
           <div className="pointer-events-none absolute -bottom-12 left-10 h-32 w-32 rounded-full bg-orange-600/20 blur-3xl" />
           <div className="relative flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-lg shadow-orange-500/30">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-lg shadow-orange-500/30">
                 <SparkIcon className="h-6 w-6" />
               </div>
               <div>
-                <h2 className="text-base font-black uppercase tracking-tight text-white">
+                <h2 className="text-base font-semibold  tracking-tight text-white">
                   {view === 'history' ? 'Historial' : agent?.name ?? 'Asistente IA'}
                 </h2>
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-400" />
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  <p className="text-xs font-bold  tracking-wide text-slate-400">
                     {agent?.subtitle || branchName || 'En línea'}
                   </p>
                 </div>
@@ -1661,7 +1664,7 @@ ORDER BY s.qty_base ASC, p.name ASC`;
             )}
             {!loadingHistory && history.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-200 text-slate-400">
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-xl bg-slate-200 text-slate-400">
                   <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" /><path d="M12 7v5l4 2" />
                   </svg>
@@ -1674,7 +1677,7 @@ ORDER BY s.qty_base ASC, p.name ASC`;
               <button
                 key={c.id}
                 onClick={() => loadConversation(c)}
-                className="group flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition-all hover:border-orange-400 hover:shadow-md hover:shadow-orange-500/10"
+                className="group flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition-all hover:border-orange-400 hover:shadow-md hover:shadow-orange-500/10"
               >
                 <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white">
                   <SparkIcon className="h-4 w-4" />
@@ -1703,11 +1706,11 @@ ORDER BY s.qty_base ASC, p.name ASC`;
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-5">
               {messages.length === 0 && (
                 <div className="mx-auto flex h-full max-w-md flex-col items-center justify-center px-6 text-center">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-xl shadow-orange-500/30">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-sm shadow-orange-500/30">
                     <SparkIcon className="h-8 w-8" />
                   </div>
-                  <h3 className="text-lg font-black uppercase tracking-tight text-slate-900">
-                    {agent ? agent.name : `Hola${userName ? `, ${userName}` : ''} 👋`}
+                  <h3 className="text-2xl font-semibold tracking-tight text-slate-900">
+                    {agent ? agent.name : `Hola${userName ? `, ${userName}` : ''}`}
                   </h3>
                   <p className="mt-1.5 text-sm font-medium text-slate-500">
                     {agent
@@ -1719,7 +1722,7 @@ ORDER BY s.qty_base ASC, p.name ASC`;
                       <button
                         key={p.label}
                         onClick={() => send(p.prompt)}
-                        className="group flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-orange-400 hover:shadow-md hover:shadow-orange-500/10"
+                        className="group flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-orange-400 hover:shadow-md hover:shadow-orange-500/10"
                       >
                         <SparkIcon className="h-4 w-4 text-orange-500" />
                         <span className="flex-1">{p.label}</span>
@@ -1739,7 +1742,7 @@ ORDER BY s.qty_base ASC, p.name ASC`;
                     </div>
                   )}
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm font-medium leading-relaxed shadow-sm ${
+                    className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm font-medium leading-relaxed shadow-sm ${
                       m.role === 'user'
                         ? 'whitespace-pre-wrap rounded-br-md bg-slate-900 text-white'
                         : 'rounded-bl-md border border-slate-200 bg-white text-slate-700'
@@ -1768,7 +1771,7 @@ ORDER BY s.qty_base ASC, p.name ASC`;
                   <div className="mr-2 mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-md">
                     <SparkIcon className="h-4 w-4" />
                   </div>
-                  <div className="flex items-center gap-2 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                  <div className="flex items-center gap-2 rounded-xl rounded-bl-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
                     <span className="flex items-center gap-1">
                       <span className="h-2 w-2 animate-bounce rounded-full bg-orange-400 [animation-delay:-0.3s]" />
                       <span className="h-2 w-2 animate-bounce rounded-full bg-orange-400 [animation-delay:-0.15s]" />
@@ -1783,7 +1786,7 @@ ORDER BY s.qty_base ASC, p.name ASC`;
 
               {/* Panel de consultas SQL ejecutadas (debug) */}
               {debugQueries.length > 0 && (
-                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
                   <button
                     onClick={() => setShowDebug((v) => !v)}
                     className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
@@ -1794,14 +1797,14 @@ ORDER BY s.qty_base ASC, p.name ASC`;
                       </svg>
                       {debugQueries.length} consulta{debugQueries.length > 1 ? 's' : ''} SQL ejecutada{debugQueries.length > 1 ? 's' : ''}
                     </span>
-                    <span className="text-slate-400">{showDebug ? '▲' : '▼'}</span>
+                    <span className="text-slate-400">{showDebug ? '▲' : <AppIcon name="chevron" />}</span>
                   </button>
                   {showDebug && (
                     <div className="space-y-2 border-t border-slate-100 px-3 py-2">
                       {debugQueries.map((q, i) => (
                         <div key={i} className="rounded-lg bg-slate-900 p-2.5">
                           <pre className="overflow-x-auto whitespace-pre-wrap break-words text-[11px] leading-snug text-orange-300">{q.sql}</pre>
-                          <p className={`mt-1.5 text-[10px] font-bold ${q.error ? 'text-red-400' : 'text-green-400'}`}>
+                          <p className={`mt-1.5 text-xs font-bold ${q.error ? 'text-red-400' : 'text-green-400'}`}>
                             {q.error ? `✕ ${q.error}` : `✓ ${q.rows ?? 0} fila(s)`}
                           </p>
                         </div>
@@ -1815,7 +1818,7 @@ ORDER BY s.qty_base ASC, p.name ASC`;
 
             {/* Composer */}
             <div className="border-t border-slate-200 bg-white px-4 py-3">
-              <div className="mx-auto flex w-full max-w-2xl items-end gap-2 rounded-2xl border-2 border-slate-200 bg-slate-50 px-3 py-2 transition-colors focus-within:border-orange-400 focus-within:bg-white">
+              <div className="mx-auto flex w-full max-w-2xl items-end gap-2 rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 transition-colors focus-within:border-orange-400 focus-within:bg-white">
                 <textarea
                   ref={inputRef}
                   value={input}
@@ -1836,7 +1839,7 @@ ORDER BY s.qty_base ASC, p.name ASC`;
                   </svg>
                 </button>
               </div>
-              <p className="mt-1.5 text-center text-[10px] font-medium text-slate-400">
+              <p className="mt-1.5 text-center text-xs font-medium text-slate-400">
                 Presiona Enter para enviar · Shift+Enter para nueva línea
               </p>
             </div>

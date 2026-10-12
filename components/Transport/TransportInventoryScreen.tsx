@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Branch, User } from '../../types';
 import { catalogService, type Product, type Supplier } from '../../services/inventory/catalog.service';
@@ -56,10 +57,10 @@ const TransportInventoryScreen: React.FC<Props> = ({ selectedBranchId, currentUs
   return (
     <div className="space-y-6">
       {/* Notice banner */}
-      <div className="rounded-2xl bg-orange-50 border border-orange-200 px-5 py-3 flex items-center gap-3">
-        <span className="text-xl">🚧</span>
+      <div className="rounded-xl bg-orange-50 border border-orange-200 px-5 py-3 flex items-center gap-3">
+        <span className="text-xl"><AppIcon name="construction" /></span>
         <div>
-          <p className="text-xs font-black uppercase tracking-widest text-orange-600">Gestión de catálogo — próximamente</p>
+          <p className="text-xs font-semibold  tracking-wide text-orange-600">Gestión de catálogo — próximamente</p>
           <p className="text-xs text-orange-700 font-semibold mt-0.5">
             Alta, edición y baja de productos estará disponible en la siguiente entrega. Por ahora puedes consultar el inventario actual.
           </p>
@@ -72,13 +73,13 @@ const TransportInventoryScreen: React.FC<Props> = ({ selectedBranchId, currentUs
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+            className={`px-5 py-2.5 rounded-xl text-xs font-semibold  tracking-wide transition-all ${
               activeTab === tab
                 ? 'bg-slate-900 text-white shadow-lg'
                 : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-300'
             }`}
           >
-            {tab === 'products' ? `📦 Productos (${products.length})` : `🏭 Proveedores (${suppliers.length})`}
+            {tab === 'products' ? <><AppIcon name="package" /> Productos ({products.length})</> : <><AppIcon name="factory" /> Proveedores ({suppliers.length})</>}
           </button>
         ))}
       </div>
@@ -96,24 +97,24 @@ const TransportInventoryScreen: React.FC<Props> = ({ selectedBranchId, currentUs
             <button
               onClick={() => void loadData()}
               disabled={isLoading}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-500 hover:border-slate-300 transition-all disabled:opacity-50"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-500 hover:border-slate-300 transition-all disabled:opacity-50"
             >
               ↻ Actualizar
             </button>
           </div>
 
           {isLoading && (
-            <div className="rounded-2xl bg-white border border-slate-200 p-8 text-center">
+            <div className="rounded-xl bg-white border border-slate-200 p-8 text-center">
               <p className="text-sm font-bold text-slate-400 animate-pulse">Cargando inventario...</p>
             </div>
           )}
 
           {error && (
-            <div className="rounded-2xl bg-red-50 border border-red-200 p-4 text-sm font-semibold text-red-700">{error}</div>
+            <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-sm font-semibold text-red-700">{error}</div>
           )}
 
           {!isLoading && !error && (
-            <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+            <div className="rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden">
               {filtered.length === 0 ? (
                 <div className="p-10 text-center text-sm font-bold text-slate-400">
                   {products.length === 0
@@ -124,11 +125,11 @@ const TransportInventoryScreen: React.FC<Props> = ({ selectedBranchId, currentUs
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="text-left px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Producto</th>
-                      <th className="text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500">SKU</th>
-                      <th className="text-right px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Stock actual</th>
-                      <th className="text-right px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Precio venta</th>
-                      <th className="text-center px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Estado</th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold  tracking-wide text-slate-500">Producto</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold  tracking-wide text-slate-500">SKU</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold  tracking-wide text-slate-500">Stock actual</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold  tracking-wide text-slate-500">Precio venta</th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold  tracking-wide text-slate-500">Estado</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -139,12 +140,12 @@ const TransportInventoryScreen: React.FC<Props> = ({ selectedBranchId, currentUs
                         <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                           <td className="px-5 py-3 font-bold text-slate-900">{p.name}</td>
                           <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.sku ?? '—'}</td>
-                          <td className="px-4 py-3 text-right font-black text-slate-800">{stock.toLocaleString('es-MX')}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-slate-800">{stock.toLocaleString('es-MX')}</td>
                           <td className="px-4 py-3 text-right font-bold text-slate-700">
                             {p.retail_price != null ? formatCurrency(p.retail_price) : '—'}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`inline-block rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${status.color}`}>
+                            <span className={`inline-block rounded-lg px-2.5 py-1 text-xs font-semibold  tracking-wider ${status.color}`}>
                               {status.label}
                             </span>
                           </td>
@@ -160,17 +161,17 @@ const TransportInventoryScreen: React.FC<Props> = ({ selectedBranchId, currentUs
       )}
 
       {activeTab === 'suppliers' && (
-        <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <div className="rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden">
           {suppliers.length === 0 ? (
             <div className="p-10 text-center text-sm font-bold text-slate-400">No hay proveedores registrados en esta sucursal.</div>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="text-left px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Proveedor</th>
-                  <th className="text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Teléfono</th>
-                  <th className="text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Correo</th>
-                  <th className="text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Dirección</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold  tracking-wide text-slate-500">Proveedor</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold  tracking-wide text-slate-500">Teléfono</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold  tracking-wide text-slate-500">Correo</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold  tracking-wide text-slate-500">Dirección</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

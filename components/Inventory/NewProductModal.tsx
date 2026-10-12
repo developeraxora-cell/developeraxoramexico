@@ -528,10 +528,10 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col">
         <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
           <div>
-            <h3 className="text-xl font-black uppercase tracking-tighter">
+            <h3 className="text-xl font-semibold  tracking-tight">
               {mode === 'reactivate' ? 'Reactivar Producto' : mode === 'edit' ? 'Editar Producto' : 'Nuevo Producto'}
             </h3>
             <p className="text-slate-400 text-xs">
@@ -547,7 +547,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
 
         <form onSubmit={handleSave} className="p-8 space-y-6 overflow-y-auto">
           {!isCatalogReady && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold rounded-2xl px-4 py-3">
+            <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold rounded-xl px-4 py-3">
               {isCatalogLoading
                 ? 'Cargando catálogo de unidades...'
                 : 'No hay unidades registradas. Verifique las UOMs en Supabase.'}
@@ -557,12 +557,12 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {mode === 'create' && (
               <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Barcode</label>
+                <label className="text-xs font-bold text-gray-500  tracking-wide">Barcode</label>
                 <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden">
                   <button
                     type="button"
                     onClick={() => setBarcodeMode('with')}
-                    className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
+                    className={`px-4 py-2 text-xs font-semibold  tracking-wide ${
                       barcodeMode === 'with' ? 'bg-slate-900 text-white' : 'bg-white text-slate-500'
                     }`}
                   >
@@ -574,7 +574,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                       setBarcodeMode('without');
                       setBarcodeValue('');
                     }}
-                    className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
+                    className={`px-4 py-2 text-xs font-semibold  tracking-wide ${
                       barcodeMode === 'without' ? 'bg-slate-900 text-white' : 'bg-white text-slate-500'
                     }`}
                   >
@@ -584,7 +584,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
               </div>
             )}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Barcode</label>
+              <label className="text-xs font-bold text-gray-500  tracking-wide">Barcode</label>
               <input
                 type="text"
                 value={barcodeValue}
@@ -601,7 +601,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Stock mínimo</label>
+              <label className="text-xs font-bold text-gray-500  tracking-wide">Stock mínimo</label>
               <input
                 type="number"
                 min={0}
@@ -612,7 +612,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Peso unitario (kg)</label>
+              <label className="text-xs font-bold text-gray-500  tracking-wide">Peso unitario (kg)</label>
               <input
                 type="number"
                 min={0}
@@ -624,7 +624,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
               />
             </div>
             <div className="space-y-1 md:col-span-2">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Nombre</label>
+              <label className="text-xs font-bold text-gray-500  tracking-wide">Nombre</label>
               <input
                 type="text"
                 required
@@ -634,7 +634,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Unidad Base</label>
+              <label className="text-xs font-bold text-gray-500  tracking-wide">Unidad Base</label>
               <select
                 className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
                 value={baseUomId}
@@ -648,16 +648,16 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 ))}
               </select>
               {modalUoms.length === 0 && (
-                <p className="text-[10px] text-slate-400">No hay unidades registradas.</p>
+                <p className="text-xs text-slate-400">No hay unidades registradas.</p>
               )}
               <button
                 type="button"
                 onClick={() => setIsNewUomModalOpen(true)}
-                className="text-[10px] font-black uppercase tracking-widest text-orange-600 hover:text-orange-700"
+                className="text-xs font-semibold  tracking-wide text-orange-600 hover:text-orange-700"
               >
                 + Nueva unidad base
               </button>
-              <p className="text-[10px] text-slate-400">Unidad en la que se controla el stock (ej: KG).</p>
+              <p className="text-xs text-slate-400">Unidad en la que se controla el stock (ej: KG).</p>
             </div>
             <div className="space-y-1 flex items-center gap-3">
               <input
@@ -673,24 +673,24 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-black uppercase tracking-widest text-slate-600">Equivalencias en las unidades de medida</h4>
+              <h4 className="text-xs font-semibold  tracking-wide text-slate-600">Equivalencias en las unidades de medida</h4>
               <button
                 type="button"
                 onClick={handleAddSaleUom}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest"
+                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold  tracking-wide"
               >
                 + Agregar
               </button>
             </div>
-            <p className="text-[10px] text-slate-400">Define equivalencias de venta y sus precios específicos. La fila de la unidad base reemplaza el precio general del producto.</p>
+            <p className="text-xs text-slate-400">Define equivalencias de venta y sus precios específicos. La fila de la unidad base reemplaza el precio general del producto.</p>
             {saleUoms.length === 0 ? (
               <p className="text-xs text-slate-400">No hay unidades de venta configuradas.</p>
             ) : (
               <div className="space-y-3">
                 {saleUoms.map((row, index) => (
-                  <div key={`${row.uom_id}-${index}`} className="bg-slate-50 p-4 rounded-2xl space-y-3">
+                  <div key={`${row.uom_id}-${index}`} className="bg-slate-50 p-4 rounded-xl space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
                       <select
                         className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
@@ -716,7 +716,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                         type="number"
                         min={0}
                         step="0.01"
-                        className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs font-black"
+                        className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs font-semibold"
                         value={row.wholesale_price}
                         onChange={(e) => updateSaleUom(index, { wholesale_price: Number(e.target.value || 0) })}
                       />
@@ -724,25 +724,25 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                         type="number"
                         min={0}
                         step="0.01"
-                        className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs font-black"
+                        className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs font-semibold"
                         value={row.retail_price}
                         onChange={(e) => updateSaleUom(index, { retail_price: Number(e.target.value || 0) })}
                       />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Unidad de venta</p>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Factor a base</p>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Precio mayoreo</p>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Precio menudeo</p>
+                      <p className="text-[11px] font-bold  tracking-wide text-slate-400">Unidad de venta</p>
+                      <p className="text-[11px] font-bold  tracking-wide text-slate-400">Factor a base</p>
+                      <p className="text-[11px] font-bold  tracking-wide text-slate-400">Precio mayoreo</p>
+                      <p className="text-[11px] font-bold  tracking-wide text-slate-400">Precio menudeo</p>
                     </div>
                     <div className="flex items-center justify-between gap-3 pt-1">
-                      <span className="text-[10px] text-slate-400">
+                      <span className="text-xs text-slate-400">
                         1 unidad equivale a {formatNumber(Number(row.factor_to_base || 0))} base
                       </span>
                       <button
                         type="button"
                         onClick={() => removeSaleUom(index)}
-                        className="text-[10px] font-black text-red-500"
+                        className="text-xs font-semibold text-red-500"
                       >
                         Quitar
                       </button>
@@ -757,14 +757,14 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 text-slate-400 font-black text-[10px] uppercase tracking-widest"
+              className="px-6 py-3 text-slate-400 font-semibold text-xs  tracking-wide"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={saving || !isCatalogReady}
-                className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl ${saving || !isCatalogReady ? 'bg-slate-200 text-slate-400' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
+                className={`px-8 py-3 rounded-xl text-xs font-semibold  tracking-wide shadow-sm ${saving || !isCatalogReady ? 'bg-slate-200 text-slate-400' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
               >
               {saving
                 ? 'Guardando...'
@@ -808,12 +808,12 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
 
       {error && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-3xl overflow-hidden bg-white shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl overflow-hidden bg-white shadow-2xl">
             <div className="bg-red-600 p-5 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <AlertTriangle className="w-6 h-6" />
                 <div>
-                  <h4 className="text-base font-black uppercase tracking-widest">Error</h4>
+                  <h4 className="text-base font-semibold  tracking-wide">Error</h4>
                   <p className="text-[11px] text-white/80">No se pudo completar la operación.</p>
                 </div>
               </div>
@@ -832,7 +832,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setError(null)}
-                  className="px-6 py-3 rounded-2xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest"
+                  className="px-6 py-3 rounded-xl bg-slate-900 text-white text-xs font-semibold  tracking-wide"
                 >
                   Aceptar
                 </button>
@@ -844,10 +844,10 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
 
       {isNewUomModalOpen && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
               <div>
-                <h4 className="text-lg font-black uppercase tracking-tighter">Nueva unidad base</h4>
+                <h4 className="text-lg font-semibold  tracking-tight">Nueva unidad base</h4>
                 <p className="text-slate-400 text-xs">Disponible para Materiales.</p>
               </div>
               <button
@@ -860,7 +860,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
             </div>
             <div className="p-6 space-y-3">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Código</label>
+                <label className="text-xs font-bold text-gray-500  tracking-wide">Código</label>
                 <input
                   type="text"
                   placeholder="Ej: UND"
@@ -870,7 +870,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Nombre</label>
+                <label className="text-xs font-bold text-gray-500  tracking-wide">Nombre</label>
                 <input
                   type="text"
                   placeholder="Ej: Unidad"
@@ -883,7 +883,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsNewUomModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest"
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold  tracking-wide"
                 >
                   Cancelar
                 </button>
@@ -891,7 +891,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                   type="button"
                   onClick={handleCreateUom}
                   disabled={isSavingUom}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold  tracking-wide ${
                     isSavingUom ? 'bg-slate-200 text-slate-400' : 'bg-slate-900 text-white hover:bg-slate-800'
                   }`}
                 >

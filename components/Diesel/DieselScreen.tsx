@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 import React, { useState, useMemo, useEffect } from 'react';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { Pencil, Trash2 } from 'lucide-react';
@@ -855,28 +856,27 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
   };
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-24 font-sans antialiased text-slate-900">
+    <div className="bg-slate-50 pb-8 antialiased text-slate-900">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
-        .font-outfit { font-family: 'Outfit', sans-serif; }
+        .font-outfit { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
         @keyframes diesel-wave { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .animate-diesel-wave { animation: diesel-wave 4s linear infinite; }
       `}</style>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+      <div className="max-w-[1600px] mx-auto">
         {/* STATS GRID */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 mb-8">
-          <div className="bg-white p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-200">
-            <p className="text-[8px] md:text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em] mb-1">Estatus</p>
-            <p className="text-2xl md:text-3xl lg:text-5xl font-black font-outfit">{analytics.globalStatus.toFixed(1)}%</p>
+          <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-2xl shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-200">
+            <p className="text-[11px] md:text-[11px] font-bold text-slate-300  tracking-[0.15em] mb-1">Estatus</p>
+            <p className="text-2xl md:text-3xl lg:text-5xl font-semibold font-outfit">{analytics.globalStatus.toFixed(1)}%</p>
           </div>
-          <div className="bg-white p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-300">
-            <p className="text-[8px] md:text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em] mb-1">Entradas</p>
-            <p className="text-2xl md:text-3xl lg:text-5xl font-black font-outfit text-blue-600">+{analytics.monthlySupplies.toLocaleString()}</p>
+          <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-2xl shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-300">
+            <p className="text-[11px] md:text-[11px] font-bold text-slate-300  tracking-[0.15em] mb-1">Entradas</p>
+            <p className="text-2xl md:text-3xl lg:text-5xl font-semibold font-outfit text-blue-600">+{analytics.monthlySupplies.toLocaleString()}</p>
           </div>
-          <div className="col-span-2 md:col-span-1 bg-white p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-400">
-            <p className="text-[8px] md:text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em] mb-1">Despachos</p>
-            <p className="text-2xl md:text-3xl lg:text-5xl font-black font-outfit text-orange-600">-{analytics.monthlyDispatches.toLocaleString()}L</p>
+          <div className="col-span-2 md:col-span-1 bg-white p-4 md:p-6 rounded-2xl md:rounded-2xl shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-400">
+            <p className="text-[11px] md:text-[11px] font-bold text-slate-300  tracking-[0.15em] mb-1">Despachos</p>
+            <p className="text-2xl md:text-3xl lg:text-5xl font-semibold font-outfit text-orange-600">-{analytics.monthlyDispatches.toLocaleString()}L</p>
           </div>
         </div>
 
@@ -884,29 +884,29 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">
           <button
             onClick={() => setIsRecepcionModalOpen(true)}
-            className="group bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-3xl flex items-center justify-center gap-4 shadow-xl shadow-blue-200 transition-all active:scale-95 duration-300"
+            className="group bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-2xl flex items-center justify-center gap-4 shadow-sm shadow-blue-200 transition-all active:scale-95 duration-300"
           >
-            <span className="text-2xl group-hover:scale-110 transition-transform">🚚</span>
+            <span className="text-2xl group-hover:scale-110 transition-transform"><AppIcon name="truck" /></span>
             <div className="text-left">
-              <span className="block text-[10px] font-black uppercase tracking-widest opacity-70">Recibir Diésel</span>
-              <span className="text-sm font-black uppercase">Registrar Entrada</span>
+              <span className="block text-xs font-semibold  tracking-wide opacity-70">Recibir Diésel</span>
+              <span className="text-sm font-semibold ">Registrar Entrada</span>
             </div>
           </button>
           <button
             onClick={() => setIsCargaModalOpen(true)}
-            className="group bg-slate-900 hover:bg-black text-white p-6 rounded-3xl flex items-center justify-center gap-4 shadow-xl shadow-slate-300 transition-all active:scale-95 duration-300"
+            className="group bg-slate-900 hover:bg-black text-white p-6 rounded-2xl flex items-center justify-center gap-4 shadow-sm shadow-slate-300 transition-all active:scale-95 duration-300"
           >
-            <span className="text-2xl group-hover:scale-110 transition-transform">⛽</span>
+            <span className="text-2xl group-hover:scale-110 transition-transform"><AppIcon name="fuel" /></span>
             <div className="text-left">
-              <span className="block text-[10px] font-black uppercase tracking-widest opacity-70">Despachar Diésel</span>
-              <span className="text-sm font-black uppercase">Nueva Carga</span>
+              <span className="block text-xs font-semibold  tracking-wide opacity-70">Despachar Diésel</span>
+              <span className="text-sm font-semibold ">Nueva Carga</span>
             </div>
           </button>
         </div>
 
         {/* Navigation Tabs (Centered for Desktop) */}
         <div className="flex justify-center mb-8 sticky top-[10px] md:top-[20px] z-20">
-          <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-[2.5rem] flex shadow-2xl border border-slate-100 w-full max-w-2xl mx-auto">
+          <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-2xl flex shadow-2xl border border-slate-100 w-full max-w-2xl mx-auto">
             {[
               { id: 'status', label: 'Niveles de Tanque' },
               { id: 'logs', label: 'Historial Completo' },
@@ -915,7 +915,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveView(tab.id as any)}
-                className={`flex-1 py-4 px-2 sm:px-6 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeView === tab.id
+                className={`flex-1 py-4 px-2 sm:px-6 rounded-full text-[11px] sm:text-xs font-semibold  tracking-wide transition-all duration-300 ${activeView === tab.id
                   ? 'bg-slate-900 text-white shadow-lg'
                   : 'text-slate-400 hover:bg-slate-50'
                   }`}
@@ -939,10 +939,10 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                         setIsEditCapacityOpen(true);
                       }
                     }}
-                    className="bg-slate-900 text-[12px] font-black flex items-center gap-2 text-white px-4 py-2 rounded-lg shadow-lg shadow-slate-200 transition-all active:scale-95 duration-300"
+                    className="bg-slate-900 text-[12px] font-semibold flex items-center gap-2 text-white px-4 py-2 rounded-lg shadow-lg shadow-slate-200 transition-all active:scale-95 duration-300"
                   >
                     EDITAR CAPACIDAD
-                    <span className="grayscale-0">⛽</span>
+                    <span className="grayscale-0"><AppIcon name="fuel" /></span>
                   </button>
                 </div>
               </div>
@@ -953,7 +953,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                 />
               ))}
               {branchTanks.length === 0 && (
-                <div className="col-span-full bg-white p-12 rounded-[3rem] border-2 border-dashed border-slate-200 text-center">
+                <div className="col-span-full bg-white p-12 rounded-2xl border-2 border-dashed border-slate-200 text-center">
                   <p className="text-slate-400 font-bold">No hay tanques registrados en esta ubicación.</p>
                 </div>
               )}
@@ -964,10 +964,10 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
             <div className="space-y-6">
               <div className="flex flex-col gap-4 px-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logs de Movimientos</h3>
+                  <h3 className="text-xs font-semibold text-slate-400  tracking-wide">Logs de Movimientos</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[170px_170px_auto_auto] gap-2">
                     <label className="flex flex-col gap-1">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Desde</span>
+                      <span className="text-[11px] font-semibold  tracking-wide text-slate-400">Desde</span>
                       <input
                         type="date"
                         value={logsDateFrom}
@@ -976,7 +976,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                       />
                     </label>
                     <label className="flex flex-col gap-1">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Hasta</span>
+                      <span className="text-[11px] font-semibold  tracking-wide text-slate-400">Hasta</span>
                       <input
                         type="date"
                         value={logsDateTo}
@@ -989,14 +989,14 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                         setLogsDateFrom('');
                         setLogsDateTo('');
                       }}
-                      className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                      className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[11px] font-semibold  tracking-wide hover:bg-slate-200 transition-all"
                     >
                       Limpiar
                     </button>
                     <button
                       onClick={handleExportVisibleLogsPdf}
                       disabled={isExportingLogs}
-                      className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-slate-300 hover:bg-black transition-all active:scale-95 disabled:opacity-50"
+                      className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[11px] font-semibold  tracking-wide shadow-lg shadow-slate-300 hover:bg-black transition-all active:scale-95 disabled:opacity-50"
                     >
                       {isExportingLogs ? 'Exportando...' : 'Descargar PDF'}
                     </button>
@@ -1006,16 +1006,16 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                   <button
                     onClick={handleResetCalculations}
                     disabled={isLoading}
-                    className="px-4 py-2 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-red-200 hover:bg-red-600 transition-all active:scale-95"
+                    className="px-4 py-2 bg-red-500 text-white rounded-xl text-[11px] font-semibold  tracking-wide shadow-lg shadow-red-200 hover:bg-red-600 transition-all active:scale-95"
                   >
                     {isLoading ? 'Reiniciando...' : 'Reiniciar Cálculos'}
                   </button>
                 </div>
               </div>
-              <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse min-w-[600px]">
-                    <thead className="bg-slate-900 text-white text-[9px] font-black uppercase tracking-[0.2em]">
+                    <thead className="bg-slate-900 text-white text-[11px] font-semibold  tracking-[0.2em]">
                       <tr>
                         <th className="p-6">Fecha</th>
                         <th className="p-6">Tipo</th>
@@ -1041,26 +1041,26 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                           <tr key={log.id} className={`hover:bg-slate-50 transition-colors ${isDeleted ? 'opacity-60' : ''}`}>
                             <td className="p-6 text-xs text-slate-500 font-bold">{formatDieselDateTime(log.createdAt)}</td>
                             <td className="p-6">
-                              <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${log.type === 'CARGA' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
+                              <span className={`px-3 py-1 rounded-full text-[11px] font-semibold  ${log.type === 'CARGA' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
                                 {log.type === 'CARGA' ? 'Salida' : 'Entrada'}
                               </span>
                             </td>
                             <td className="p-6">
-                              <p className="text-sm font-black text-slate-800 uppercase">
+                              <p className="text-sm font-semibold text-slate-800 ">
                                 {log.type === 'CARGA' ? vehicles.find(v => v.id === log.vehicleId)?.description : log.supplier}
                               </p>
                             </td>
-                            <td className="p-6 text-right font-black text-sm">{formatNumber(log.amount)} L</td>
-                            <td className="p-6 text-right font-black text-sm">{log.costPerLiter ? formatCurrency(log.costPerLiter) : '———'}</td>
-                            <td className="p-6 text-sm font-black text-slate-800 uppercase">
+                            <td className="p-6 text-right font-semibold text-sm">{formatNumber(log.amount)} L</td>
+                            <td className="p-6 text-right font-semibold text-sm">{log.costPerLiter ? formatCurrency(log.costPerLiter) : '———'}</td>
+                            <td className="p-6 text-sm font-semibold text-slate-800 ">
                               {isDeleted ? (log.deleteObservation || '—') : (log.notes || '———')}
                             </td>
-                            <td className="p-6 text-right font-black text-sm">{log.status || 'ACTIVO'}</td>
+                            <td className="p-6 text-right font-semibold text-sm">{log.status || 'ACTIVO'}</td>
                             <td className="p-6 text-right">
                               <button
                                 onClick={() => handleDeleteLog(log)}
                                 disabled={isLoading || isDeleted}
-                                className="px-3 py-2 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-red-200 hover:bg-red-600 transition-all active:scale-95"
+                                className="px-3 py-2 bg-red-500 text-white rounded-xl text-[11px] font-semibold  tracking-wide shadow-lg shadow-red-200 hover:bg-red-600 transition-all active:scale-95"
                               >
                                 Eliminar
                               </button>
@@ -1081,93 +1081,93 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                 <button
                   onClick={handleResetCalculations}
                   disabled={isLoading}
-                  className="px-6 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-red-600 transition-all active:scale-95"
+                  className="px-6 py-3 bg-slate-900 text-white rounded-xl text-xs font-semibold  tracking-wide shadow-sm hover:bg-red-600 transition-all active:scale-95"
                 >
                   {isLoading ? 'Reiniciando...' : 'Reiniciar Historial de Logística'}
                 </button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div className="space-y-6">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 ml-2">Flota Activa</h3>
+                  <h3 className="text-xs font-semibold  tracking-wide text-slate-400 ml-2">Flota Activa</h3>
                   <div className="space-y-3">
                     {activeVehicles.map(v => (
-                      <div key={v.id} className="bg-white p-5 rounded-3xl border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+                      <div key={v.id} className="bg-white p-5 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-xl">🚛</div>
+                          <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-xl"><AppIcon name="truck" /></div>
                           <div>
-                            <p className="text-sm font-black">{v.description}</p>
-                            <p className="text-[10px] font-mono text-orange-600 font-bold tracking-wider">{v.plate}</p>
+                            <p className="text-sm font-semibold">{v.description}</p>
+                            <p className="text-xs font-mono text-orange-600 font-bold tracking-wider">{v.plate}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleOpenEditVehicle(v)}
-                            className="w-9 h-9 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition-colors"
                             title="Editar unidad"
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleAskDeleteVehicle(v)}
-                            className="w-9 h-9 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors"
+                            className="w-9 h-9 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors"
                             title="Eliminar unidad"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                          <div className={`px-3 py-1 rounded-full text-[8px] font-black ${v.active ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-300'}`}>
+                          <div className={`px-3 py-1 rounded-full text-[11px] font-semibold ${v.active ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-300'}`}>
                             {v.active ? 'ACTIVO' : 'INACTIVO'}
                           </div>
                         </div>
                       </div>
                     ))}
                     {activeVehicles.length === 0 && (
-                      <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 text-center text-xs font-bold text-slate-400">
+                      <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-center text-xs font-bold text-slate-400">
                         No hay unidades activas registradas en esta sucursal.
                       </div>
                     )}
-                    <button onClick={handleOpenCreateVehicle} className="w-full py-4 bg-slate-100 text-slate-500 rounded-3xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-200 hover:bg-slate-200 transition-colors">+ Añadir Unidad</button>
+                    <button onClick={handleOpenCreateVehicle} className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl text-xs font-semibold  tracking-wide border-2 border-dashed border-slate-200 hover:bg-slate-200 transition-colors">+ Añadir Unidad</button>
                   </div>
                 </div>
 
                 <div className="space-y-6">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 ml-2">Operadores Registrados</h3>
+                  <h3 className="text-xs font-semibold  tracking-wide text-slate-400 ml-2">Operadores Registrados</h3>
                   <div className="space-y-3">
                     {activeDrivers.map(d => (
-                      <div key={d.id} className="bg-white p-5 rounded-3xl border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+                      <div key={d.id} className="bg-white p-5 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-xl">👷</div>
+                          <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-xl"><AppIcon name="worker" /></div>
                           <div>
-                            <p className="text-sm font-black">{d.name}</p>
-                            <p className="text-[10px] font-mono text-blue-600 tracking-wider font-bold">{d.license}</p>
+                            <p className="text-sm font-semibold">{d.name}</p>
+                            <p className="text-xs font-mono text-blue-600 tracking-wider font-bold">{d.license}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleOpenEditDriver(d)}
-                            className="w-9 h-9 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition-colors"
                             title="Editar operador"
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleAskDeleteDriver(d)}
-                            className="w-9 h-9 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors"
+                            className="w-9 h-9 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors"
                             title="Eliminar operador"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                          <div className={`px-3 py-1 rounded-full text-[8px] font-black ${d.active ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-300'}`}>
+                          <div className={`px-3 py-1 rounded-full text-[11px] font-semibold ${d.active ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-300'}`}>
                             {d.active ? 'OPERANDO' : 'INACTIVO'}
                           </div>
                         </div>
                       </div>
                     ))}
                     {activeDrivers.length === 0 && (
-                      <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 text-center text-xs font-bold text-slate-400">
+                      <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-center text-xs font-bold text-slate-400">
                         No hay operadores activos registrados en esta sucursal.
                       </div>
                     )}
-                    <button onClick={handleOpenCreateDriver} className="w-full py-4 bg-slate-100 text-slate-500 rounded-3xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-200 hover:bg-slate-200 transition-colors">+ Añadir Operador</button>
+                    <button onClick={handleOpenCreateDriver} className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl text-xs font-semibold  tracking-wide border-2 border-dashed border-slate-200 hover:bg-slate-200 transition-colors">+ Añadir Operador</button>
                   </div>
                 </div>
               </div>
@@ -1179,52 +1179,52 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
       {/* MODALS */}
       {isCargaModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in my-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in my-auto">
             <div className="bg-orange-500 p-8 text-white flex justify-between items-center shadow-lg shadow-orange-500/20">
-              <h3 className="text-xl font-black uppercase tracking-tighter">Despachar Diésel</h3>
-              <button onClick={() => setIsCargaModalOpen(false)} className="bg-white/10 w-10 h-10 rounded-xl text-xl font-black">×</button>
+              <h3 className="text-xl font-semibold  tracking-tight">Despachar Diésel</h3>
+              <button onClick={() => setIsCargaModalOpen(false)} className="bg-white/10 w-10 h-10 rounded-xl text-xl font-semibold">×</button>
             </div>
             <form onSubmit={handleCarga} className="p-8 space-y-5">
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tanque</label>
-                <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-2xl outline-none font-black text-xs uppercase appearance-none" value={cargaData.tankId} onChange={e => setCargaData({ ...cargaData, tankId: e.target.value })}>
+                <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Tanque</label>
+                <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-semibold text-xs  appearance-none" value={cargaData.tankId} onChange={e => setCargaData({ ...cargaData, tankId: e.target.value })}>
                   <option value="">Seleccionar...</option>
                   {branchTanks.map(tank => <option key={tank.id} value={tank.id}>{tank.name} ({tank.currentQty} L)</option>)}
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidad</label>
-                <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-2xl outline-none font-black text-xs uppercase appearance-none" value={cargaData.vehicleId} onChange={e => setCargaData({ ...cargaData, vehicleId: e.target.value })}>
+                <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Unidad</label>
+                <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-semibold text-xs  appearance-none" value={cargaData.vehicleId} onChange={e => setCargaData({ ...cargaData, vehicleId: e.target.value })}>
                   <option value="">Seleccionar...</option>
                   {vehicles.filter(v => v.active).map(v => <option key={v.id} value={v.id}>{v.description} - {v.plate}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Litros</label>
+                  <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Litros</label>
                   <input
                     type="number"
                     required
                     min={1}
                     max={selectedCargaTank?.currentQty || undefined}
-                    className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-2xl font-black text-center text-lg"
+                    className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl font-semibold text-center text-lg"
                     value={cargaData.amount || ''}
                     onChange={e => setCargaData({ ...cargaData, amount: Number(e.target.value) })}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Km</label>
-                  <input type="number" required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-2xl font-black text-center text-lg text-orange-600" value={cargaData.odometer || ''} onChange={e => setCargaData({ ...cargaData, odometer: Number(e.target.value) })} />
+                  <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Km</label>
+                  <input type="number" required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl font-semibold text-center text-lg text-orange-600" value={cargaData.odometer || ''} onChange={e => setCargaData({ ...cargaData, odometer: Number(e.target.value) })} />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Operador</label>
-                <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-2xl outline-none font-black text-xs uppercase appearance-none" value={cargaData.driverId} onChange={e => setCargaData({ ...cargaData, driverId: e.target.value })}>
+                <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Operador</label>
+                <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-semibold text-xs  appearance-none" value={cargaData.driverId} onChange={e => setCargaData({ ...cargaData, driverId: e.target.value })}>
                   <option value="">Seleccionar...</option>
                   {drivers.filter(d => d.active).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
-              <button type="submit" disabled={isLoading} className="w-full py-5 bg-slate-900 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[10px] hover:bg-orange-600 transition-colors">
+              <button type="submit" disabled={isLoading} className="w-full py-5 bg-slate-900 text-white font-semibold rounded-xl shadow-sm  tracking-wide text-xs hover:bg-orange-600 transition-colors">
                 {isLoading ? 'Procesando...' : 'Validar y Cargar'}
               </button>
             </form>
@@ -1234,42 +1234,42 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
 
       {isRecepcionModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in my-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in my-auto">
             <div className="bg-blue-600 p-8 text-white flex justify-between items-center shadow-lg shadow-blue-600/20">
-              <h3 className="text-xl font-black uppercase tracking-tighter">Recibir Combustible</h3>
-              <button onClick={() => setIsRecepcionModalOpen(false)} className="bg-white/10 w-10 h-10 rounded-xl text-xl font-black">×</button>
+              <h3 className="text-xl font-semibold  tracking-tight">Recibir Combustible</h3>
+              <button onClick={() => setIsRecepcionModalOpen(false)} className="bg-white/10 w-10 h-10 rounded-xl text-xl font-semibold">×</button>
             </div>
             <form onSubmit={handleRecepcion} className="p-8 space-y-5">
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tanque de Destino</label>
-                <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-black text-xs uppercase appearance-none" value={recepcionData.tankId} onChange={e => setRecepcionData({ ...recepcionData, tankId: e.target.value })}>
+                <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Tanque de Destino</label>
+                <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-xl outline-none font-semibold text-xs  appearance-none" value={recepcionData.tankId} onChange={e => setRecepcionData({ ...recepcionData, tankId: e.target.value })}>
                   <option value="">Seleccionar...</option>
                   {branchTanks.map(tank => <option key={tank.id} value={tank.id}>{tank.name}</option>)}
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Proveedor</label>
-                <input type="text" required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold text-sm" value={recepcionData.supplier} onChange={e => setRecepcionData({ ...recepcionData, supplier: e.target.value })} placeholder="Nombre del proveedor" />
+                <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Proveedor</label>
+                <input type="text" required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-xl font-bold text-sm" value={recepcionData.supplier} onChange={e => setRecepcionData({ ...recepcionData, supplier: e.target.value })} placeholder="Nombre del proveedor" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Litros</label>
+                  <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Litros</label>
                   <input
                     type="number"
                     required
                     min={1}
                     max={recepcionMax}
-                    className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-black text-center text-lg"
+                    className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-xl font-semibold text-center text-lg"
                     value={recepcionData.amount || ''}
                     onChange={e => setRecepcionData({ ...recepcionData, amount: Number(e.target.value) })}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">$/Litro</label>
-                  <input type="number" step="0.01" required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-black text-center text-lg text-blue-600" value={recepcionData.costPerLiter || ''} onChange={e => setRecepcionData({ ...recepcionData, costPerLiter: Number(e.target.value) })} />
+                  <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">$/Litro</label>
+                  <input type="number" step="0.01" required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-xl font-semibold text-center text-lg text-blue-600" value={recepcionData.costPerLiter || ''} onChange={e => setRecepcionData({ ...recepcionData, costPerLiter: Number(e.target.value) })} />
                 </div>
               </div>
-              <button type="submit" disabled={isLoading} className="w-full py-5 bg-slate-900 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[10px] hover:bg-blue-600 transition-colors">
+              <button type="submit" disabled={isLoading} className="w-full py-5 bg-slate-900 text-white font-semibold rounded-xl shadow-sm  tracking-wide text-xs hover:bg-blue-600 transition-colors">
                 {isLoading ? 'Procesando...' : 'Registrar Recepción'}
               </button>
             </form>
@@ -1351,9 +1351,9 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
 
       {isAssetModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
-              <h3 className="text-lg font-black uppercase tracking-tighter">
+              <h3 className="text-lg font-semibold  tracking-tight">
                 {isAssetModalOpen === 'vehicle'
                   ? editingVehicleId
                     ? 'Editar Vehículo'
@@ -1368,13 +1368,13 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                 setNewVehicle({ plate: '', description: '' });
                 setEditingDriverId(null);
                 setNewDriver({ name: '', license: '' });
-              }} className="text-2xl font-black">&times;</button>
+              }} className="text-2xl font-semibold">&times;</button>
             </div>
             {isAssetModalOpen === 'vehicle' ? (
               <form onSubmit={handleAddVehicle} className="p-8 space-y-4">
-                <input required placeholder="PLACA (EX. KW-22-MX)" className="w-full p-4 bg-slate-50 rounded-xl font-black text-xs uppercase appearance-none border-2 border-transparent focus:border-orange-500 outline-none" value={newVehicle.plate} onChange={e => setNewVehicle({ ...newVehicle, plate: e.target.value })} />
+                <input required placeholder="PLACA (EX. KW-22-MX)" className="w-full p-4 bg-slate-50 rounded-xl font-semibold text-xs  appearance-none border-2 border-transparent focus:border-orange-500 outline-none" value={newVehicle.plate} onChange={e => setNewVehicle({ ...newVehicle, plate: e.target.value })} />
                 <input required placeholder="DESCRIPCIÓN" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-sm border-2 border-transparent focus:border-orange-500 outline-none" value={newVehicle.description} onChange={e => setNewVehicle({ ...newVehicle, description: e.target.value })} />
-                <button type="submit" disabled={isLoading} className="w-full py-4 bg-orange-500 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-lg">
+                <button type="submit" disabled={isLoading} className="w-full py-4 bg-orange-500 text-white font-semibold rounded-xl  tracking-wide text-xs shadow-lg">
                   {editingVehicleId ? 'GUARDAR CAMBIOS' : 'AGREGAR UNIDAD'}
                 </button>
               </form>
@@ -1382,7 +1382,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
               <form onSubmit={handleAddDriver} className="p-8 space-y-4">
                 <input required placeholder="NOMBRE COMPLETO" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-sm border-2 border-transparent focus:border-orange-500 outline-none" value={newDriver.name} onChange={e => setNewDriver({ ...newDriver, name: e.target.value })} />
                 <input required placeholder="LICENCIA / ID" className="w-full p-4 bg-slate-50 rounded-xl font-mono text-sm border-2 border-transparent focus:border-orange-500 outline-none" value={newDriver.license} onChange={e => setNewDriver({ ...newDriver, license: e.target.value })} />
-                <button type="submit" disabled={isLoading} className="w-full py-4 bg-blue-600 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-lg">
+                <button type="submit" disabled={isLoading} className="w-full py-4 bg-blue-600 text-white font-semibold rounded-xl  tracking-wide text-xs shadow-lg">
                   {editingDriverId ? 'GUARDAR CAMBIOS' : 'AGREGAR OPERADOR'}
                 </button>
               </form>

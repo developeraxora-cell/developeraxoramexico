@@ -625,9 +625,9 @@ const Metric: React.FC<{ label: string; value: string | number; tone: 'blue' | '
     red: 'text-red-500 bg-red-50',
   };
   return (
-    <div className={`rounded-2xl px-4 py-3 text-center ${colors[tone]}`}>
-      <p className="text-[10px] font-black uppercase tracking-widest opacity-80">{label}</p>
-      <p className="mt-1 text-xl font-black">{value}</p>
+    <div className={`rounded-xl px-4 py-3 text-center ${colors[tone]}`}>
+      <p className="text-xs font-semibold  tracking-wide opacity-80">{label}</p>
+      <p className="mt-1 text-xl font-semibold">{value}</p>
     </div>
   );
 };
@@ -641,13 +641,13 @@ const Input: React.FC<{
   placeholder?: string;
 }> = ({ label, value, onChange, type = 'text', placeholder }) => (
   <label className="block">
-    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</span>
+    <span className="text-xs font-semibold  tracking-wide text-slate-400">{label}</span>
     <input
       type={type}
       value={value}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
-      className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-orange-600"
+      className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-orange-600"
     />
   </label>
 );
@@ -655,9 +655,9 @@ const Input: React.FC<{
 const ReadOnlyBox: React.FC<{ label: string; value: string; tone?: 'red' | 'green' | 'cyan' }> = ({ label, value, tone }) => {
   const toneClass = tone === 'red' ? 'text-red-500' : tone === 'cyan' ? 'text-orange-600' : tone === 'green' ? 'text-emerald-600' : 'text-slate-900';
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
-      <p className={`mt-1 text-lg font-black ${toneClass}`}>{value}</p>
+    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+      <p className="text-xs font-semibold  tracking-wide text-slate-400">{label}</p>
+      <p className={`mt-1 text-lg font-semibold ${toneClass}`}>{value}</p>
     </div>
   );
 };
@@ -703,38 +703,38 @@ const InventoryListView: React.FC<{
   onPrint: (inventory: PhysicalInventory) => void;
 }> = ({ inventories, inventorySearch, isLoading, onSearch, onNew, onCapture, onEdit, onClose, onDelete, onPrint }) => (
   <div className="space-y-6">
-    <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm md:flex-row md:items-center md:justify-between">
       <div className="flex items-center gap-4">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50 text-orange-500">
           <ClipboardList size={21} />
         </div>
         <div>
-          <h1 className="text-lg font-black tracking-tight text-slate-900">Historial de Inventarios</h1>
-          <p className="mt-0.5 text-[9px] font-black uppercase tracking-widest text-slate-400">Sucursal activa</p>
+          <h1 className="text-lg font-semibold tracking-tight text-slate-900">Historial de Inventarios</h1>
+          <p className="mt-0.5 text-[11px] font-semibold  tracking-wide text-slate-400">Sucursal activa</p>
         </div>
       </div>
       <button
         type="button"
         onClick={onNew}
-        className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition hover:bg-slate-800"
+        className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-xs font-semibold  tracking-wide text-white shadow-sm transition hover:bg-slate-800"
       >
         <Plus size={16} />
         Nuevo Inventario
       </button>
     </div>
 
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <input
         value={inventorySearch}
         onChange={(event) => onSearch(event.target.value)}
         placeholder="Buscar inventario por nombre, fecha o estado..."
-        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
       />
 
-      <div className="mt-5 overflow-hidden rounded-3xl border border-slate-100 bg-white">
+      <div className="mt-5 overflow-hidden rounded-2xl border border-slate-100 bg-white">
         <div className="overflow-x-auto">
           <table className="min-w-[880px] w-full text-sm">
-            <thead className="bg-slate-900 text-left text-[10px] font-black uppercase tracking-widest text-white">
+            <thead className="bg-slate-900 text-left text-xs font-semibold  tracking-wide text-white">
               <tr>
                 <th className="px-5 py-4">Nombre</th>
                 <th className="px-5 py-4">Fecha Inicio</th>
@@ -760,11 +760,11 @@ const InventoryListView: React.FC<{
               )}
               {!isLoading && inventories.map((inventory) => (
                 <tr key={inventory.id} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50">
-                  <td className="px-5 py-4 font-black text-slate-900">{inventory.name}</td>
+                  <td className="px-5 py-4 font-semibold text-slate-900">{inventory.name}</td>
                   <td className="px-5 py-4 font-bold text-slate-600">{inventory.start_date}</td>
                   <td className="px-5 py-4 font-bold text-slate-600">{inventory.end_date ?? '-'}</td>
                   <td className="px-5 py-4">
-                    <span className={`rounded-full px-3 py-1 text-[10px] font-black ${inventory.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${inventory.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                       {inventory.is_active ? 'Activo' : 'Cerrado'}
                     </span>
                 </td>
@@ -832,27 +832,27 @@ const NewInventoryView: React.FC<{
   onSubmit: (event?: React.FormEvent | React.MouseEvent) => void;
 }> = ({ title, submitLabel, name, startDate, endDate, isActive, isSaving, onNameChange, onStartDateChange, onEndDateChange, onActiveChange, onBack, onSubmit }) => (
   <div className="space-y-6">
-    <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm md:flex-row md:items-center md:justify-between">
       <div className="flex items-center gap-4">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50 text-orange-500">
           <ClipboardList size={21} />
         </div>
         <div>
-          <h1 className="text-lg font-black tracking-tight text-slate-900">{title}</h1>
-          <p className="mt-0.5 text-[9px] font-black uppercase tracking-widest text-slate-400">Sucursal activa</p>
+          <h1 className="text-lg font-semibold tracking-tight text-slate-900">{title}</h1>
+          <p className="mt-0.5 text-[11px] font-semibold  tracking-wide text-slate-400">Sucursal activa</p>
         </div>
       </div>
       <button
         type="button"
         onClick={onBack}
-        className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-200"
+        className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-5 py-3 text-xs font-semibold  tracking-wide text-slate-600 hover:bg-slate-200"
       >
         <ArrowLeft size={16} />
         Volver al Historial
       </button>
     </div>
 
-    <form onSubmit={onSubmit} className="mx-auto max-w-3xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+    <form onSubmit={onSubmit} className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="space-y-5">
         <Input label="Nombre" value={name} onChange={onNameChange} placeholder="Ej. Inventario Agosto 2025" />
         <div className="grid gap-4 md:grid-cols-2">
@@ -860,11 +860,11 @@ const NewInventoryView: React.FC<{
           <Input label="Fecha Fin" type="date" value={endDate} onChange={onEndDateChange} />
         </div>
         <label className="block">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</span>
+          <span className="text-xs font-semibold  tracking-wide text-slate-400">Estado</span>
           <select
             value={isActive ? 'ACTIVE' : 'INACTIVE'}
             onChange={(event) => onActiveChange(event.target.value === 'ACTIVE')}
-            className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
           >
             <option value="ACTIVE">Activo</option>
             <option value="INACTIVE">Cerrado</option>
@@ -873,13 +873,13 @@ const NewInventoryView: React.FC<{
         </label>
       </div>
       <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5">
-        <button type="button" onClick={onBack} className="rounded-xl bg-slate-100 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-200">
+        <button type="button" onClick={onBack} className="rounded-xl bg-slate-100 px-5 py-3 text-xs font-semibold  tracking-wide text-slate-600 hover:bg-slate-200">
           Cancelar
         </button>
         <button
           type="submit"
           disabled={isSaving}
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-800 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-xs font-semibold  tracking-wide text-white hover:bg-slate-800 disabled:opacity-60"
         >
           <Save size={16} />
           {submitLabel}
@@ -929,18 +929,18 @@ const CaptureInventoryView: React.FC<{
   onDeleteItem,
 }) => (
   <div className="space-y-6">
-    <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm md:flex-row md:items-center md:justify-between">
       <div className="flex items-center gap-4">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50 text-orange-500">
           <PackageSearch size={21} />
         </div>
         <div>
-          <h1 className="text-lg font-black tracking-tight text-slate-900">{selectedInventory?.name ?? 'Captura de Inventario'}</h1>
-          <p className="mt-0.5 text-[9px] font-black uppercase tracking-widest text-slate-400">Captura de productos</p>
+          <h1 className="text-lg font-semibold tracking-tight text-slate-900">{selectedInventory?.name ?? 'Captura de Inventario'}</h1>
+          <p className="mt-0.5 text-[11px] font-semibold  tracking-wide text-slate-400">Captura de productos</p>
         </div>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button type="button" onClick={onBack} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-200">
+        <button type="button" onClick={onBack} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-5 py-3 text-xs font-semibold  tracking-wide text-slate-600 hover:bg-slate-200">
           <ArrowLeft size={16} />
           Volver a Inventarios
         </button>
@@ -950,15 +950,15 @@ const CaptureInventoryView: React.FC<{
     <div className="grid gap-4 md:grid-cols-3">
       <InfoPanel label="Fecha Inicio" value={selectedInventory?.start_date ?? '-'} />
       <InfoPanel label="Fecha Fin" value={selectedInventory?.end_date ?? '-'} />
-      <div className="rounded-3xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
         <p className="text-lg font-semibold text-slate-500">Estado</p>
-        <button type="button" onClick={onToggleInventory} disabled={!selectedInventory || isSaving || hasPendingChanges} className={`mt-2 rounded px-3 py-1 text-xs font-black text-white disabled:opacity-50 ${selectedInventory?.is_active ? 'bg-emerald-500' : 'bg-slate-500'}`}>
+        <button type="button" onClick={onToggleInventory} disabled={!selectedInventory || isSaving || hasPendingChanges} className={`mt-2 rounded px-3 py-1 text-xs font-semibold text-white disabled:opacity-50 ${selectedInventory?.is_active ? 'bg-emerald-500' : 'bg-slate-500'}`}>
           {selectedInventory?.is_active ? 'Activo' : 'Cerrado'}
         </button>
       </div>
     </div>
 
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="grid grid-cols-2 gap-4 text-center md:grid-cols-4">
         <Metric label="Total Productos" value={summary.total} tone="blue" />
         <Metric label="Sin Diferencias" value={summary.exact} tone="green" />
@@ -967,13 +967,13 @@ const CaptureInventoryView: React.FC<{
       </div>
     </div>
 
-    <div className="space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div>
         <div className="mb-4 flex items-center gap-3">
           <Search className="text-orange-600" size={42} />
-          <h2 className="text-xl font-black text-slate-900">Captura de Productos</h2>
+          <h2 className="text-xl font-semibold text-slate-900">Captura de Productos</h2>
         </div>
-        <label className="text-sm font-black text-slate-700">Buscar Producto:</label>
+        <label className="text-sm font-semibold text-slate-700">Buscar Producto:</label>
         <div className="relative mt-2 max-w-3xl">
           <div className="flex">
             <div className="flex w-10 items-center justify-center rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 text-orange-500">
@@ -991,7 +991,7 @@ const CaptureInventoryView: React.FC<{
             <p className="mt-2 text-xs font-bold text-slate-400">Escribe al menos 3 caracteres para buscar.</p>
           )}
           {productSearch.trim().length >= 3 && (
-            <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-2xl">
               {searchedProducts.length > 0 ? searchedProducts.map((product) => (
                 <button
                   key={product.id}
@@ -999,8 +999,8 @@ const CaptureInventoryView: React.FC<{
                   onClick={() => onSelectProduct(product)}
                   className="flex w-full items-center justify-between border-b border-slate-100 px-4 py-2 text-left last:border-b-0 hover:bg-orange-50"
                 >
-                  <span className="text-sm font-black text-slate-800">{product.name}</span>
-                  <span className="text-[11px] font-black text-slate-500">
+                  <span className="text-sm font-semibold text-slate-800">{product.name}</span>
+                  <span className="text-[11px] font-semibold text-slate-500">
                     Stock: {formatNumber(Number(stockByProduct[product.id] ?? 0), undefined, { maximumFractionDigits: 3 })}
                   </span>
                 </button>
@@ -1014,11 +1014,11 @@ const CaptureInventoryView: React.FC<{
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white">
-        <div className="bg-slate-900 px-5 py-4 text-[10px] font-black uppercase tracking-widest text-white">Productos en Inventario</div>
+      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white">
+        <div className="bg-slate-900 px-5 py-4 text-xs font-semibold  tracking-wide text-white">Productos en Inventario</div>
         <div className="overflow-x-auto p-5">
           <table className="min-w-[1000px] w-full text-sm">
-            <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <thead className="bg-slate-50 text-xs font-semibold  tracking-wide text-slate-400">
               <tr>
                 <th className="px-4 py-3 text-left">#</th>
                 <th className="px-4 py-3 text-left">Producto</th>
@@ -1038,7 +1038,7 @@ const CaptureInventoryView: React.FC<{
                   <tr key={draft.product.id} className="bg-orange-50">
                     <td className="px-4 py-3 font-bold">{index + 1}</td>
                     <td className="px-4 py-3 font-bold">{draft.product.name}</td>
-                    <td className="px-4 py-3 text-center font-black text-slate-600">{draft.baseUom}</td>
+                    <td className="px-4 py-3 text-center font-semibold text-slate-600">{draft.baseUom}</td>
                     <td className="px-4 py-3 text-center font-bold">{formatNumber(draft.systemQty, undefined, { maximumFractionDigits: 3 })}</td>
                     <td className="px-4 py-3">
                       <input
@@ -1051,7 +1051,7 @@ const CaptureInventoryView: React.FC<{
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 font-bold text-slate-900 outline-none focus:border-orange-500"
                       />
                     </td>
-                    <td className={`px-4 py-3 text-center font-black ${difference < 0 ? 'text-red-500' : difference > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                    <td className={`px-4 py-3 text-center font-semibold ${difference < 0 ? 'text-red-500' : difference > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
                       {formatNumber(difference, undefined, { maximumFractionDigits: 3 })}
                     </td>
                     <td className="px-4 py-3">
@@ -1076,7 +1076,7 @@ const CaptureInventoryView: React.FC<{
                 <tr key={item.id} className="odd:bg-slate-50">
                   <td className="px-4 py-3">{draftItems.length + index + 1}</td>
                   <td className="px-4 py-3">{item.product_name}</td>
-                  <td className="px-4 py-3 text-center font-black text-slate-600">{item.base_uom_code || '-'}</td>
+                  <td className="px-4 py-3 text-center font-semibold text-slate-600">{item.base_uom_code || '-'}</td>
                   <td className="px-4 py-3 text-center">{formatNumber(Number(item.system_qty), undefined, { maximumFractionDigits: 3 })}</td>
                   <td className="px-4 py-3 text-center font-bold text-slate-900">{formatNumber(Number(item.physical_qty), undefined, { maximumFractionDigits: 3 })}</td>
                   <td className={`px-4 py-3 text-center font-bold ${Number(item.difference_qty) < 0 ? 'text-red-500' : Number(item.difference_qty) > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
@@ -1105,7 +1105,7 @@ const CaptureInventoryView: React.FC<{
                 type="button"
                 onClick={() => onSaveProducts()}
                 disabled={isSaving || !selectedInventory?.is_active}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-slate-800 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-semibold  tracking-wide text-white hover:bg-slate-800 disabled:opacity-60"
               >
                 <Save size={16} />
                 Guardar Productos
@@ -1122,7 +1122,7 @@ const CaptureInventoryView: React.FC<{
 );
 
 const InfoPanel: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div className="rounded-3xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+  <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
     <p className="text-lg font-semibold text-slate-500">{label}</p>
     <p className="mt-2 text-sm font-bold text-slate-600">{value}</p>
   </div>

@@ -662,7 +662,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
                 <button
                   key={preset.id}
                   onClick={() => setDatePreset(preset.id as typeof datePreset)}
-                  className={`rounded-2xl border px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${
+                  className={`rounded-xl border px-4 py-2 text-[11px] font-semibold  tracking-wide transition-all ${
                     datePreset === preset.id
                       ? 'border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/15'
                       : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'
@@ -675,7 +675,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
 
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
               <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Desde</span>
+                <span className="text-xs font-semibold  tracking-[0.22em] text-slate-400">Desde</span>
                 <input
                   type="date"
                   value={startDate}
@@ -683,11 +683,11 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
                     setDatePreset('custom');
                     setStartDate(e.target.value);
                   }}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Hasta</span>
+                <span className="text-xs font-semibold  tracking-[0.22em] text-slate-400">Hasta</span>
                 <input
                   type="date"
                   value={endDate}
@@ -695,15 +695,15 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
                     setDatePreset('custom');
                     setEndDate(e.target.value);
                   }}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Categoría</span>
+                <span className="text-xs font-semibold  tracking-[0.22em] text-slate-400">Categoría</span>
                 <select
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
                 >
                   <option value="">Todas</option>
                   {categories.map((cat) => (
@@ -714,11 +714,11 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
                 </select>
               </div>
               <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Producto</span>
+                <span className="text-xs font-semibold  tracking-[0.22em] text-slate-400">Producto</span>
                 <select
                   value={productId}
                   onChange={(e) => setProductId(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
                 >
                   <option value="">Todos</option>
                   {productOptions.map((product) => (
@@ -733,13 +733,13 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={downloadSalesCsv}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-semibold  tracking-wide text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
               >
                 <Download size={14} /> Exportar ventas CSV
               </button>
               <button
                 onClick={downloadPurchasesCsv}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-semibold  tracking-wide text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
               >
                 <Download size={14} /> Exportar compras CSV
               </button>
@@ -748,7 +748,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
         </section>
 
         {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>
         )}
 
         <ManagerInsightsPanel
@@ -797,10 +797,10 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
               <article key={card.label} className={`min-h-[170px] rounded-[28px] border bg-gradient-to-br p-5 shadow-lg ${card.tone}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.24em] opacity-80">{card.label}</p>
-                    <p className="mt-4 break-words text-3xl font-black tracking-tight md:text-4xl">{card.value}</p>
+                    <p className="text-[11px] font-semibold  tracking-[0.24em] opacity-80">{card.label}</p>
+                    <p className="mt-4 break-words text-3xl font-semibold tracking-tight md:text-4xl">{card.value}</p>
                   </div>
-                  <div className={`rounded-2xl p-3 ${card.iconTone}`}>
+                  <div className={`rounded-xl p-3 ${card.iconTone}`}>
                     <Icon size={18} />
                   </div>
                 </div>
@@ -814,12 +814,12 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
           <article className={`${cardBaseClass} p-4 md:p-5`}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Ventas en el tiempo</h3>
+                <h3 className="text-sm font-semibold  tracking-[0.24em] text-slate-700">Ventas en el tiempo</h3>
                 <p className="mt-1 text-xs text-slate-500">Evolución acumulada por periodo seleccionado.</p>
               </div>
-              <div className="rounded-2xl bg-orange-50 px-3 py-2 text-xs font-black text-orange-600">{salesSeries.length} puntos</div>
+              <div className="rounded-xl bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-600">{salesSeries.length} puntos</div>
             </div>
-            <div className="h-72 rounded-2xl bg-slate-50/80 p-0 md:h-80 md:p-1">
+            <div className="h-72 rounded-xl bg-slate-50/80 p-0 md:h-80 md:p-1">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={salesSeries} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
                   <defs>
@@ -841,12 +841,12 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
           <article className={`${cardBaseClass} p-4 md:p-5`}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Compras en el tiempo</h3>
+                <h3 className="text-sm font-semibold  tracking-[0.24em] text-slate-700">Compras en el tiempo</h3>
                 <p className="mt-1 text-xs text-slate-500">Comportamiento de entradas y abastecimiento.</p>
               </div>
-              <div className="rounded-2xl bg-blue-50 px-3 py-2 text-xs font-black text-blue-600">{purchaseSeries.length} puntos</div>
+              <div className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-600">{purchaseSeries.length} puntos</div>
             </div>
-            <div className="h-72 rounded-2xl bg-slate-50/80 p-0 md:h-80 md:p-1">
+            <div className="h-72 rounded-xl bg-slate-50/80 p-0 md:h-80 md:p-1">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={purchaseSeries} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
                   <defs>
@@ -870,12 +870,12 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
           <article className={`${cardBaseClass} p-4 md:p-5`}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Top productos</h3>
+                <h3 className="text-sm font-semibold  tracking-[0.24em] text-slate-700">Top productos</h3>
                 <p className="mt-1 text-xs text-slate-500">Mayor facturación dentro del periodo filtrado.</p>
               </div>
-              <div className="rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-600">{topProducts.length} productos</div>
+              <div className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-600">{topProducts.length} productos</div>
             </div>
-            <div className="h-72 rounded-2xl bg-slate-50/80 p-0 md:h-80 md:p-1">
+            <div className="h-72 rounded-xl bg-slate-50/80 p-0 md:h-80 md:p-1">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={topProducts} layout="vertical" margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -891,12 +891,12 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
           <article className={`${cardBaseClass} p-4 md:p-5`}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Menos vendidos</h3>
+                <h3 className="text-sm font-semibold  tracking-[0.24em] text-slate-700">Menos vendidos</h3>
                 <p className="mt-1 text-xs text-slate-500">Referencias con menor movimiento dentro del periodo.</p>
               </div>
-              <div className="rounded-2xl bg-amber-50 px-3 py-2 text-xs font-black text-amber-600">{lowProducts.length} productos</div>
+              <div className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-600">{lowProducts.length} productos</div>
             </div>
-            <div className="h-72 rounded-2xl bg-slate-50/80 p-0 md:h-80 md:p-1">
+            <div className="h-72 rounded-xl bg-slate-50/80 p-0 md:h-80 md:p-1">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={lowProducts} layout="vertical" margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -913,13 +913,13 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
         <section className={`${cardBaseClass} p-4 md:p-5`}>
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Stock actual vs mínimo</h3>
+              <h3 className="text-sm font-semibold  tracking-[0.24em] text-slate-700">Stock actual vs mínimo</h3>
               <p className="mt-1 text-xs text-slate-500">Señales rápidas para reordenar antes de quedarte sin inventario.</p>
             </div>
-            <div className="rounded-2xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">{stockTable.length} productos monitoreados</div>
+            <div className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">{stockTable.length} productos monitoreados</div>
           </div>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.9fr)]">
-            <div className="h-80 rounded-2xl bg-slate-50/80 p-0 md:p-1">
+            <div className="h-80 rounded-xl bg-slate-50/80 p-0 md:p-1">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={visibleStockRows} margin={{ top: 8, right: 4, left: -18, bottom: 0 }} barCategoryGap={18}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -948,13 +948,13 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
             </div>
             <div className="space-y-2">
               {visibleStockRows.map((row) => (
-                <div key={row.name} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <div key={row.name} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold text-slate-700">{row.name}</p>
                     <p className="text-xs text-slate-400">Mínimo esperado: {formatQty(row.min)} {row.unitLabel}</p>
                   </div>
                   <span
-                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-black uppercase tracking-widest ${
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold  tracking-wide ${
                       row.status === 'critical'
                         ? 'bg-red-100 text-red-600'
                         : row.status === 'warning'
@@ -970,7 +970,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
                 <button
                   type="button"
                   onClick={() => setStockVisibleCount((prev) => prev + 4)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 transition hover:border-slate-300 hover:bg-white"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-semibold  tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-white"
                 >
                   Mostrar 4 más
                 </button>
@@ -983,29 +983,29 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
           <article className={`${cardBaseClass} p-4 md:p-5`}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Ventas recientes</h3>
+                <h3 className="text-sm font-semibold  tracking-[0.24em] text-slate-700">Ventas recientes</h3>
                 <p className="mt-1 text-xs text-slate-500">Últimas operaciones visibles dentro del filtro aplicado.</p>
               </div>
-              <div className="rounded-2xl bg-sky-50 px-3 py-2 text-xs font-black text-sky-600">{salesTable.length} filas</div>
+              <div className="rounded-xl bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-600">{salesTable.length} filas</div>
             </div>
 
             <div className="space-y-3 md:hidden">
               {visibleSalesRows.map((row) => (
-                <div key={row.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div key={row.id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-slate-800">{row.customer}</p>
+                      <p className="truncate text-sm font-semibold text-slate-800">{row.customer}</p>
                       <p className="mt-1 text-xs text-slate-500">{row.date}</p>
                     </div>
-                    <div className="rounded-xl bg-white px-3 py-1 text-[11px] font-black text-slate-600 shadow-sm">#{row.id}</div>
+                    <div className="rounded-xl bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm">#{row.id}</div>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-xl bg-white px-3 py-2">
-                      <p className="font-black uppercase tracking-widest text-slate-400">Items</p>
+                      <p className="font-semibold  tracking-wide text-slate-400">Items</p>
                       <p className="mt-1 font-bold text-slate-700">{row.items}</p>
                     </div>
                     <div className="rounded-xl bg-white px-3 py-2 text-right">
-                      <p className="font-black uppercase tracking-widest text-slate-400">Total</p>
+                      <p className="font-semibold  tracking-wide text-slate-400">Total</p>
                       <p className="mt-1 font-bold text-slate-700">{formatCurrency(row.total)}</p>
                     </div>
                   </div>
@@ -1016,7 +1016,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
                 <button
                   type="button"
                   onClick={() => setSalesVisibleCount((prev) => prev + 4)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-semibold  tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
                 >
                   Mostrar 4 más
                 </button>
@@ -1025,7 +1025,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
 
             <div className="hidden overflow-x-auto md:block">
               <table className="min-w-[640px] w-full text-sm">
-                <thead className="text-[10px] uppercase tracking-widest text-slate-400">
+                <thead className="text-xs  tracking-wide text-slate-400">
                   <tr>
                     <th className="py-2 text-left">Fecha</th>
                     <th className="text-left">Cliente</th>
@@ -1049,7 +1049,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
                 <button
                   type="button"
                   onClick={() => setSalesVisibleCount((prev) => prev + 4)}
-                  className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                  className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-semibold  tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
                 >
                   Mostrar 4 más
                 </button>
@@ -1060,29 +1060,29 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
           <article className={`${cardBaseClass} p-4 md:p-5`}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.24em] text-slate-700">Compras recientes</h3>
+                <h3 className="text-sm font-semibold  tracking-[0.24em] text-slate-700">Compras recientes</h3>
                 <p className="mt-1 text-xs text-slate-500">Compras más recientes para entender abastecimiento y crédito.</p>
               </div>
-              <div className="rounded-2xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-600">{purchasesTable.length} filas</div>
+              <div className="rounded-xl bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-600">{purchasesTable.length} filas</div>
             </div>
 
             <div className="space-y-3 md:hidden">
               {visiblePurchasesRows.map((row) => (
-                <div key={row.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div key={row.id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-slate-800">{row.supplier}</p>
+                      <p className="truncate text-sm font-semibold text-slate-800">{row.supplier}</p>
                       <p className="mt-1 text-xs text-slate-500">{row.date}</p>
                     </div>
-                    <div className="rounded-xl bg-white px-3 py-1 text-[11px] font-black text-slate-600 shadow-sm">#{row.id}</div>
+                    <div className="rounded-xl bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm">#{row.id}</div>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-xl bg-white px-3 py-2">
-                      <p className="font-black uppercase tracking-widest text-slate-400">Items</p>
+                      <p className="font-semibold  tracking-wide text-slate-400">Items</p>
                       <p className="mt-1 font-bold text-slate-700">{row.items}</p>
                     </div>
                     <div className="rounded-xl bg-white px-3 py-2 text-right">
-                      <p className="font-black uppercase tracking-widest text-slate-400">Total</p>
+                      <p className="font-semibold  tracking-wide text-slate-400">Total</p>
                       <p className="mt-1 font-bold text-slate-700">{formatCurrency(row.total)}</p>
                     </div>
                   </div>
@@ -1093,7 +1093,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
                 <button
                   type="button"
                   onClick={() => setPurchasesVisibleCount((prev) => prev + 4)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-semibold  tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
                 >
                   Mostrar 4 más
                 </button>
@@ -1102,7 +1102,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
 
             <div className="hidden overflow-x-auto md:block">
               <table className="min-w-[640px] w-full text-sm">
-                <thead className="text-[10px] uppercase tracking-widest text-slate-400">
+                <thead className="text-xs  tracking-wide text-slate-400">
                   <tr>
                     <th className="py-2 text-left">Fecha</th>
                     <th className="text-left">Proveedor</th>
@@ -1126,7 +1126,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
                 <button
                   type="button"
                   onClick={() => setPurchasesVisibleCount((prev) => prev + 4)}
-                  className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                  className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-semibold  tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
                 >
                   Mostrar 4 más
                 </button>

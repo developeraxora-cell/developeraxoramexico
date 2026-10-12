@@ -1127,16 +1127,16 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white px-6 py-5 rounded-3xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white px-6 py-5 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center">
             <History className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-900 tracking-tight">
+            <h2 className="text-lg font-semibold text-slate-900 tracking-tight">
               {viewMode === 'HISTORY' ? 'Historial de Compras' : 'Nueva Compra'}
             </h2>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+            <p className="text-[11px] font-semibold text-slate-400  tracking-wide mt-0.5">
               {selectedBranchLabel}
             </p>
           </div>
@@ -1149,7 +1149,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 setClearHistoryObservationError(null);
                 setIsClearHistoryOpen(true);
               }}
-              className="px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest border border-orange-200 text-orange-600 bg-orange-50 hover:bg-orange-100"
+              className="px-5 py-2.5 rounded-xl font-semibold text-xs  tracking-wide border border-orange-200 text-orange-600 bg-orange-50 hover:bg-orange-100"
             >
               <span className="inline-flex items-center gap-2">
                 <Brush className="w-4 h-4" />
@@ -1159,7 +1159,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
           )}
           <button
             onClick={() => setViewMode(viewMode === 'HISTORY' ? 'CREATE' : 'HISTORY')}
-            className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm transition-all ${viewMode === 'HISTORY' ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-slate-100 text-slate-600'
+            className={`px-6 py-2.5 rounded-xl font-semibold text-xs  tracking-wide shadow-sm transition-all ${viewMode === 'HISTORY' ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-slate-100 text-slate-600'
               }`}
           >
             <span className="inline-flex items-center gap-2">
@@ -1171,7 +1171,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-2xl px-4 py-3">
+        <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl px-4 py-3">
           {error}
         </div>
       )}
@@ -1179,20 +1179,20 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       {viewMode === 'CREATE' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 space-y-4">
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-4 relative">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Paso 1: Escaneo de Producto</p>
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 relative">
+              <p className="text-xs font-semibold text-slate-400  tracking-wide">Paso 1: Escaneo de Producto</p>
               <input
                 ref={scanInputRef}
                 type="text"
                 placeholder="Escanee el barcode o escriba el nombre"
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
                 value={barcodeInput}
                 onChange={(e) => setBarcodeInput(e.target.value)}
                 onKeyDown={handleBarcodeKey}
                 disabled={!branchId || isScanning}
               />
               {isSuggestionsOpen && productSuggestions.length > 0 && (
-                <div className="absolute left-6 right-6 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-20 max-h-64 overflow-y-auto">
+                <div className="absolute left-6 right-6 mt-2 bg-white border border-slate-200 rounded-xl shadow-sm z-20 max-h-64 overflow-y-auto">
                   {productSuggestions.map((product) => (
                     <button
                       key={product.id}
@@ -1205,33 +1205,33 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                       }}
                       className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-b-0"
                     >
-                      <p className="text-xs font-black text-slate-800">{product.name}</p>
-                      <p className="text-[10px] text-slate-500">{product.sku || '—'} · {product.barcode || 'Sin barcode'}</p>
+                      <p className="text-xs font-semibold text-slate-800">{product.name}</p>
+                      <p className="text-xs text-slate-500">{product.sku || '—'} · {product.barcode || 'Sin barcode'}</p>
                     </button>
                   ))}
                 </div>
               )}
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+              <div className="text-xs text-slate-400 font-bold  tracking-wide">
                 {branchId ? '1 scan = 1 producto (luego ingrese cantidad)' : 'Seleccione sucursal antes de escanear'}
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-4">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Proveedor y fecha</p>
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <p className="text-xs font-semibold text-slate-400  tracking-wide">Proveedor y fecha</p>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Proveedor</label>
+                  <label className="text-[11px] font-bold text-slate-500  tracking-wide">Proveedor</label>
                   <button
                     type="button"
                     onClick={() => setIsSupplierModalOpen(true)}
-                    className="text-[10px] font-black text-slate-600 uppercase tracking-widest"
+                    className="text-xs font-semibold text-slate-600  tracking-wide"
                     disabled={!branchId}
                   >
                     + Nuevo proveedor
                   </button>
                 </div>
                 <select
-                  className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
                   value={supplierId}
                   onChange={(e) => setSupplierId(e.target.value)}
                   disabled={!branchId}
@@ -1244,23 +1244,23 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                   ))}
                 </select>
                 {branchId && suppliers.length === 0 && (
-                  <p className="text-[10px] text-slate-400">No hay proveedores en esta sucursal.</p>
+                  <p className="text-xs text-slate-400">No hay proveedores en esta sucursal.</p>
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Fecha de compra</label>
+                  <label className="text-[11px] font-bold text-slate-500  tracking-wide">Fecha de compra</label>
                   <input
                     type="date"
-                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
                     value={purchaseDate}
                     onChange={(e) => setPurchaseDate(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Compra a crédito</label>
+                  <label className="text-[11px] font-bold text-slate-500  tracking-wide">Compra a crédito</label>
                   <select
-                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
                     value={isCredit ? 'SI' : 'NO'}
                     onChange={(e) => setIsCredit(e.target.value === 'SI')}
                   >
@@ -1271,18 +1271,18 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-4">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Referencia y notas</p>
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <p className="text-xs font-semibold text-slate-400  tracking-wide">Referencia y notas</p>
               <input
                 type="text"
                 placeholder="Referencia (Factura, Remisión, etc.)"
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
               />
               <textarea
                 placeholder="Notas"
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500 min-h-[120px]"
+                className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500 min-h-[120px]"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
@@ -1290,15 +1290,15 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
           </div>
 
           <div className="lg:col-span-7 space-y-4">
-            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden flex flex-col h-full">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
               <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Carrito de compra</p>
-                  <p className="text-xs font-black">{cartItems.length} productos</p>
+                  <p className="text-xs font-bold text-slate-400  tracking-wide">Carrito de compra</p>
+                  <p className="text-xs font-semibold">{cartItems.length} productos</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total estimado</p>
-                  <p className="text-2xl font-black">{formatCurrency(totalAmount)}</p>
+                  <p className="text-xs font-bold text-slate-400  tracking-wide">Total estimado</p>
+                  <p className="text-2xl font-semibold">{formatCurrency(totalAmount)}</p>
                 </div>
               </div>
 
@@ -1309,15 +1309,15 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 {cartItems.map((item) => (
                   <div
                     key={`${item.product_id}-${item.product_uom_id}`}
-                    className="bg-slate-50 p-4 rounded-3xl border border-slate-100 grid grid-cols-12 gap-4 items-center"
+                    className="bg-slate-50 p-4 rounded-2xl border border-slate-100 grid grid-cols-12 gap-4 items-center"
                   >
                     <div className="col-span-5">
-                      <p className="font-black text-xs text-slate-800 uppercase">{item.product_name}</p>
-                      <p className="text-[9px] text-slate-400 font-mono">{item.barcode}</p>
+                      <p className="font-semibold text-xs text-slate-800 ">{item.product_name}</p>
+                      <p className="text-[11px] text-slate-400 font-mono">{item.barcode}</p>
                       <div className="mt-2">
-                        <label className="text-[8px] font-black text-slate-400 uppercase block mb-1">Unidad de compra</label>
+                        <label className="text-[11px] font-semibold text-slate-400  block mb-1">Unidad de compra</label>
                         <select
-                          className="w-full p-2 bg-white border border-slate-200 rounded-xl font-black text-[11px] text-slate-700"
+                          className="w-full p-2 bg-white border border-slate-200 rounded-xl font-semibold text-[11px] text-slate-700"
                           value={item.product_uom_id}
                           onFocus={() => {
                             void ensurePurchaseUoms(item.product_id);
@@ -1337,7 +1337,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                             );
                           })}
                         </select>
-                        <p className="mt-1 text-[9px] font-semibold text-slate-500">
+                        <p className="mt-1 text-[11px] font-semibold text-slate-500">
                           Equivalencia: 1 {item.uom_code || item.uom_name} = {formatNumber(Number(item.factor_to_base))}{' '}
                           {(() => {
                             const product = catalogProducts.find((row) => String(row.id) === String(item.product_id));
@@ -1348,12 +1348,12 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                       </div>
                     </div>
                     <div className="col-span-3">
-                      <label className="text-[8px] font-black text-slate-400 uppercase block mb-1">Cantidad</label>
+                      <label className="text-[11px] font-semibold text-slate-400  block mb-1">Cantidad</label>
                       <input
                         type="number"
                         min={0}
                         step={item.is_divisible ? '0.01' : '1'}
-                        className="w-full p-2 bg-white border border-slate-200 rounded-xl font-black text-xs"
+                        className="w-full p-2 bg-white border border-slate-200 rounded-xl font-semibold text-xs"
                         value={item.qty}
                         onChange={(e) => {
                           const raw = Number(e.target.value);
@@ -1363,12 +1363,12 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                       />
                     </div>
                     <div className="col-span-3">
-                      <label className="text-[8px] font-black text-slate-400 uppercase block mb-1">Costo Unitario</label>
+                      <label className="text-[11px] font-semibold text-slate-400  block mb-1">Costo Unitario</label>
                       <input
                         type="number"
                         min={0}
                         step="0.01"
-                        className="w-full p-2 bg-white border border-slate-200 rounded-xl font-black text-xs text-red-600"
+                        className="w-full p-2 bg-white border border-slate-200 rounded-xl font-semibold text-xs text-red-600"
                         value={item.unit_price === 0 ? '' : item.unit_price}
                         onChange={(e) =>
                           updateCartItem(item.product_id, item.product_uom_id, {
@@ -1391,13 +1391,13 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
 
               <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
                 <div>
-                  <p className="text-[9px] font-black text-slate-400 uppercase">Total compra</p>
-                  <p className="text-3xl font-black text-slate-900">{formatCurrency(totalAmount)}</p>
+                  <p className="text-[11px] font-semibold text-slate-400 ">Total compra</p>
+                  <p className="text-3xl font-semibold text-slate-900">{formatCurrency(totalAmount)}</p>
                 </div>
                 <button
                   onClick={handleSavePurchase}
                   disabled={cartItems.length === 0 || isSaving || feedbackLoading}
-                  className={`px-12 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all ${cartItems.length > 0 && !isSaving
+                  className={`px-12 py-4 rounded-xl font-semibold text-xs  tracking-wide shadow-sm transition-all ${cartItems.length > 0 && !isSaving
                     ? 'bg-orange-500 text-white hover:bg-orange-600'
                     : 'bg-slate-200 text-slate-400'
                     }`}
@@ -1409,29 +1409,29 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="border-b border-slate-100 px-6 py-4">
             <input
               type="text"
               value={historySearch}
               onChange={(e) => setHistorySearch(e.target.value)}
               placeholder="Buscar por entrada, remisión, proveedor o monto total..."
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-orange-400 focus:bg-white"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-orange-400 focus:bg-white"
             />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-900 text-white">
-                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Fecha Compra</th>
-                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Fecha Registro</th>
-                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Proveedor</th>
-                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Crédito</th>
-                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Referencia</th>
-                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Notas</th>
-                  <th className="p-4 text-[10px] font-black uppercase tracking-widest text-center">Items</th>
-                  <th className="p-4 text-[10px] font-black uppercase tracking-widest text-right">Monto Total</th>
-                  <th className="p-4 text-[10px] font-black uppercase tracking-widest text-center">Acciones</th>
+                  <th className="p-4 text-xs font-semibold  tracking-wide">Fecha Compra</th>
+                  <th className="p-4 text-xs font-semibold  tracking-wide">Fecha Registro</th>
+                  <th className="p-4 text-xs font-semibold  tracking-wide">Proveedor</th>
+                  <th className="p-4 text-xs font-semibold  tracking-wide">Crédito</th>
+                  <th className="p-4 text-xs font-semibold  tracking-wide">Referencia</th>
+                  <th className="p-4 text-xs font-semibold  tracking-wide">Notas</th>
+                  <th className="p-4 text-xs font-semibold  tracking-wide text-center">Items</th>
+                  <th className="p-4 text-xs font-semibold  tracking-wide text-right">Monto Total</th>
+                  <th className="p-4 text-xs font-semibold  tracking-wide text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1441,27 +1441,27 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                     className="bg-white hover:bg-slate-50/60 transition-colors"
                   >
                     <td className="p-4">
-                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black text-slate-700">
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                         {p.purchase_date || '—'}
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black text-slate-700">
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                         {formatLocalDateTime(p.created_at)}
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-700">
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold  tracking-wide text-slate-700">
                         {p.supplier_name || '—'}
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest ${p.is_credit ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold  tracking-wide ${p.is_credit ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}`}>
                         {p.is_credit ? 'Sí' : 'No'}
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-700">
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold  tracking-wide text-slate-700">
                         {p.reference || 'S/N'}
                       </span>
                     </td>
@@ -1469,12 +1469,12 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                       <div className="line-clamp-2 max-w-xs">{p.notes || '—'}</div>
                     </td>
                     <td className="p-4 text-center">
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-[10px] font-black">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs font-semibold">
                         {p.items_count}
                       </span>
                     </td>
                     <td className="p-4 text-right">
-                      <span className="text-base font-black text-slate-900">
+                      <span className="text-base font-semibold text-slate-900">
                         {formatCurrency(p.total_amount)}
                       </span>
                     </td>
@@ -1540,7 +1540,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                     <button
                       key={page}
                       onClick={() => setHistoryPage(page)}
-                      className={`w-8 h-8 rounded-lg text-[11px] font-black ${historyPage === page ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                      className={`w-8 h-8 rounded-lg text-[11px] font-semibold ${historyPage === page ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
                         }`}
                     >
                       {page}
@@ -1552,7 +1552,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                     <span className="text-slate-400">…</span>
                     <button
                       onClick={() => setHistoryPage(totalHistoryPages)}
-                      className={`w-8 h-8 rounded-lg text-[11px] font-black ${historyPage === totalHistoryPages ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                      className={`w-8 h-8 rounded-lg text-[11px] font-semibold ${historyPage === totalHistoryPages ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
                         }`}
                     >
                       {totalHistoryPages}
@@ -1575,10 +1575,10 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
 
       {pendingUomSelection && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-black uppercase tracking-tighter">Seleccionar UOM de Compra</h3>
+                <h3 className="text-lg font-semibold  tracking-tight">Seleccionar UOM de Compra</h3>
                 <p className="text-slate-400 text-xs">{pendingUomSelection.product.name}</p>
               </div>
               <button
@@ -1598,12 +1598,12 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                       addToCart(pendingUomSelection.product, uom);
                       setPendingUomSelection(null);
                     }}
-                    className="w-full p-4 rounded-2xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
+                    className="w-full p-4 rounded-xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
                   >
-                    <p className="text-sm font-black text-slate-900">
+                    <p className="text-sm font-semibold text-slate-900">
                       {meta?.name ?? 'UOM'} {meta?.code ? `(${meta.code})` : ''}
                     </p>
-                    <p className="text-[10px] text-slate-500">Factor a base: {uom.factor_to_base}</p>
+                    <p className="text-xs text-slate-500">Factor a base: {uom.factor_to_base}</p>
                   </button>
                 );
               })}
@@ -1614,11 +1614,11 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
 
       {isSupplierModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
             <div className="bg-slate-900 p-6 text-white flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-black uppercase tracking-tighter">Nuevo proveedor</h3>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Sucursal {selectedBranchId || '—'}</p>
+                <h3 className="text-lg font-semibold  tracking-tight">Nuevo proveedor</h3>
+                <p className="text-xs text-slate-400  tracking-wide">Sucursal {selectedBranchId || '—'}</p>
               </div>
               <button
                 onClick={() => setIsSupplierModalOpen(false)}
@@ -1629,7 +1629,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
             </div>
             <div className="p-6 space-y-4">
               <div className="space-y-2">
-                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Nombre</label>
+                <label className="text-[11px] font-bold text-slate-500  tracking-wide">Nombre</label>
                 <input
                   type="text"
                   className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-orange-500"
@@ -1638,7 +1638,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Teléfono</label>
+                <label className="text-[11px] font-bold text-slate-500  tracking-wide">Teléfono</label>
                 <input
                   type="text"
                   className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-orange-500"
@@ -1647,7 +1647,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Correo</label>
+                <label className="text-[11px] font-bold text-slate-500  tracking-wide">Correo</label>
                 <input
                   type="email"
                   className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-orange-500"
@@ -1656,7 +1656,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Dirección</label>
+                <label className="text-[11px] font-bold text-slate-500  tracking-wide">Dirección</label>
                 <input
                   type="text"
                   className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-orange-500"
@@ -1668,7 +1668,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 <button
                   type="button"
                   onClick={() => setIsSupplierModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-slate-500 bg-slate-100"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold  tracking-wide text-slate-500 bg-slate-100"
                   disabled={isSavingSupplier}
                 >
                   Cancelar
@@ -1677,7 +1677,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                   type="button"
                   onClick={handleCreateSupplier}
                   disabled={isSavingSupplier || feedbackLoading}
-                  className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold  tracking-wide text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
                 >
                   {isSavingSupplier ? 'Guardando...' : 'Guardar proveedor'}
                 </button>
@@ -1768,10 +1768,10 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
 
       {isPurchaseDetailOpen && selectedPurchase && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[70vh] overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[70vh] overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-black uppercase tracking-tighter">Detalle de Compra</h3>
+                <h3 className="text-xl font-semibold  tracking-tight">Detalle de Compra</h3>
                 <p className="text-slate-400 text-xs">
                   {selectedPurchase.reference || 'S/N'} · {formatLocalDateTime(selectedPurchase.created_at)}
                 </p>
@@ -1798,14 +1798,14 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 <table className="w-full text-left">
                   <thead className="bg-slate-100 text-slate-600">
                     <tr>
-                      <th className="p-3 text-[10px] font-black uppercase tracking-widest">Producto</th>
-                      <th className="p-3 text-[10px] font-black uppercase tracking-widest">SKU</th>
-                      <th className="p-3 text-[10px] font-black uppercase tracking-widest">UOM</th>
-                      <th className="p-3 text-[10px] font-black uppercase tracking-widest text-right">Factor</th>
-                      <th className="p-3 text-[10px] font-black uppercase tracking-widest text-right">Cantidad</th>
-                      <th className="p-3 text-[10px] font-black uppercase tracking-widest text-right">Cantidad base</th>
-                      <th className="p-3 text-[10px] font-black uppercase tracking-widest text-right">Precio</th>
-                      <th className="p-3 text-[10px] font-black uppercase tracking-widest text-right">Subtotal</th>
+                      <th className="p-3 text-xs font-semibold  tracking-wide">Producto</th>
+                      <th className="p-3 text-xs font-semibold  tracking-wide">SKU</th>
+                      <th className="p-3 text-xs font-semibold  tracking-wide">UOM</th>
+                      <th className="p-3 text-xs font-semibold  tracking-wide text-right">Factor</th>
+                      <th className="p-3 text-xs font-semibold  tracking-wide text-right">Cantidad</th>
+                      <th className="p-3 text-xs font-semibold  tracking-wide text-right">Cantidad base</th>
+                      <th className="p-3 text-xs font-semibold  tracking-wide text-right">Precio</th>
+                      <th className="p-3 text-xs font-semibold  tracking-wide text-right">Subtotal</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1814,7 +1814,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                       const baseUom = item.product?.base_uom_id ? uomById[item.product.base_uom_id] : undefined;
                       return (
                         <tr key={item.id} className="hover:bg-slate-50">
-                          <td className="p-3 text-xs font-black text-slate-800 uppercase">
+                          <td className="p-3 text-xs font-semibold text-slate-800 ">
                             {item.product?.name ?? '—'}
                           </td>
                           <td className="p-3 text-xs font-mono text-slate-500">{item.product?.sku ?? '—'}</td>
@@ -1833,7 +1833,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                           <td className="p-3 text-xs font-bold text-slate-600 text-right">
                             {formatCurrency(Number(item.unit_price))}
                           </td>
-                          <td className="p-3 text-xs font-black text-slate-900 text-right">
+                          <td className="p-3 text-xs font-semibold text-slate-900 text-right">
                             {formatCurrency(subtotal)}
                           </td>
                         </tr>
@@ -1848,8 +1848,8 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 {selectedPurchase.notes ? `Notas: ${selectedPurchase.notes}` : 'Sin notas'}
               </div>
               <div className="text-right">
-                <p className="text-[9px] font-black text-slate-400 uppercase">Total</p>
-                <p className="text-2xl font-black text-slate-900">
+                <p className="text-[11px] font-semibold text-slate-400 ">Total</p>
+                <p className="text-2xl font-semibold text-slate-900">
                   {formatCurrency(selectedPurchase.total_amount)}
                 </p>
               </div>

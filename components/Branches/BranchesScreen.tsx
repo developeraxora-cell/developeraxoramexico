@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 
 import React, { useState } from 'react';
 import { Branch, User } from '../../types';
@@ -216,17 +217,17 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
         onCancel={() => setConfirmToggle({ isOpen: false, branch: null, nextActive: true })}
       />
       {/* Header de Gestión */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Centro de Expansión</h2>
-          <p className="text-sm text-slate-400 font-bold uppercase tracking-widest mt-1">Gestión de Puntos de Venta y Logística</p>
+          <h2 className="text-3xl font-semibold text-slate-900  tracking-tight">Centro de Expansión</h2>
+          <p className="text-sm text-slate-400 font-bold  tracking-wide mt-1">Gestión de Puntos de Venta y Logística</p>
         </div>
         {isFullAccessRole(currentUser.role) && (
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-orange-500/20 active:scale-95 flex items-center gap-2"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-semibold text-xs  tracking-wide transition-all shadow-sm shadow-orange-500/20 active:scale-95 flex items-center gap-2"
           >
-            <span>🏢</span> Nueva Sucursal
+            <span><AppIcon name="building" /></span> Nueva Sucursal
           </button>
         )}
       </div>
@@ -241,7 +242,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
           return (
             <div
               key={branch.id}
-              className={`group rounded-[2.5rem] border-2 transition-all duration-500 relative overflow-hidden ${isActive
+              className={`group rounded-2xl border-2 transition-all duration-500 relative overflow-hidden ${isActive
                   ? 'border-orange-500 shadow-2xl shadow-orange-500/10 scale-[1.02]'
                   : isInactive
                     ? 'bg-red-50 border-red-300 shadow-lg shadow-red-200/40'
@@ -251,23 +252,23 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
               {/* Indicador de Activa */}
               {isActive && (
                 <div className="absolute top-0 left-0 right-0 bg-orange-500 py-1.5 text-center">
-                  <span className="text-[9px] font-black text-white uppercase tracking-[0.2em]">Ubicación Seleccionada</span>
+                  <span className="text-[11px] font-semibold text-white  tracking-[0.2em]">Ubicación Seleccionada</span>
                 </div>
               )}
 
               <div className="p-8 pt-10">
                 <div className="flex justify-between items-start mb-4">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-all ${isActive
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all ${isActive
                     ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
                     : isInactive
                       ? 'bg-red-500 text-white shadow-lg shadow-red-400/30'
                       : 'bg-slate-100 text-slate-400 group-hover:bg-slate-900 group-hover:text-white'
                     }`}>
-                    {branch.name.includes('Bodega') ? '📦' : '🏗️'}
+                    {branch.name.includes('Bodega') ? <AppIcon name="package" /> : <AppIcon name="construction" />}
                   </div>
                   <div className="text-right space-y-2">
                     {branch.isActive === false && (
-                      <span className="block mt-1 text-[9px] font-black text-red-600 uppercase tracking-[0.2em]">Inactiva</span>
+                      <span className="block mt-1 text-[11px] font-semibold text-red-600  tracking-[0.2em]">Inactiva</span>
                     )}
                     {isFullAccessRole(currentUser.role) && (
                       <div className="flex items-center justify-end gap-2">
@@ -276,7 +277,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
                           className="w-10 h-10 bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-800 transition-all rounded-xl flex items-center justify-center text-base"
                           title="Editar"
                         >
-                          ✏️
+                          <AppIcon name="edit" />
                         </button>
                         <button
                           onClick={() => handleToggleActive(branch)}
@@ -286,27 +287,27 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
                             }`}
                           title={isInactive ? 'Activar' : 'Desactivar'}
                         >
-                          {isInactive ? '✅' : '⛔'}
+                          {isInactive ? <AppIcon name="success" /> : <AppIcon name="ban" />}
                         </button>
                       </div>
                     )}
                   </div>
                 </div>
 
-                <h3 className={`text-2xl font-black mb-2 tracking-tight uppercase ${isInactive ? 'text-red-700' : 'text-slate-900'}`}>{branch.name}</h3>
+                <h3 className={`text-2xl font-semibold mb-2 tracking-tight  ${isInactive ? 'text-red-700' : 'text-slate-900'}`}>{branch.name}</h3>
                 <p className={`text-xs font-medium leading-relaxed mb-8 flex items-start gap-2 h-10 overflow-hidden ${isInactive ? 'text-red-400' : 'text-slate-400'}`}>
-                  <span className={isInactive ? 'text-red-500' : 'text-orange-500'}>📍</span> {branch.address}
+                  <span className={isInactive ? 'text-red-500' : 'text-orange-500'}><AppIcon name="pin" /></span> {branch.address}
                 </p>
 
                 {/* Métricas Simuladas por Sucursal */}
                 <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock Valorizado</p>
-                    <p className="text-sm font-black text-slate-700">{formatCurrency(Math.random() * 500000 + 100000)}</p>
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <p className="text-[11px] font-semibold text-slate-400  tracking-wide mb-1">Stock Valorizado</p>
+                    <p className="text-sm font-semibold text-slate-700">{formatCurrency(Math.random() * 500000 + 100000)}</p>
                   </div>
-                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Ventas Hoy</p>
-                    <p className="text-sm font-black text-green-600">{formatCurrency(Math.random() * 45000 + 5000)}</p>
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <p className="text-[11px] font-semibold text-slate-400  tracking-wide mb-1">Ventas Hoy</p>
+                    <p className="text-sm font-semibold text-green-600">{formatCurrency(Math.random() * 45000 + 5000)}</p>
                   </div>
                 </div>
 
@@ -314,14 +315,14 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
                   <button
                     onClick={() => handleSwitchBranch(branch.id)}
                     disabled={isActive || isInactive}
-                    className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isActive
+                    className={`flex-1 py-4 rounded-xl text-xs font-semibold  tracking-wide transition-all ${isActive
                       ? 'bg-green-50 text-green-600 border border-green-100 cursor-default'
                       : isInactive
                         ? 'bg-red-100 text-red-500 border border-red-200 cursor-not-allowed'
                         : 'bg-slate-900 text-white hover:bg-orange-600 shadow-lg'
                       }`}
                   >
-                    {isActive ? '✅ Estás Aquí' : isInactive ? '⛔ Inactiva' : '🚀 Entrar a Sucursal'}
+                    {isActive ? <><AppIcon name="success" /> Estás aquí</> : isInactive ? <><AppIcon name="ban" /> Inactiva</> : <><AppIcon name="arrow" /> Entrar a sucursal</>}
                   </button>
 
                 </div>
@@ -334,36 +335,36 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
       {/* Modal de Alta/Edición */}
       {isModalOpen && !statusModal.isOpen && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-300">
             <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
               <div>
-                <h3 className="text-2xl font-black uppercase tracking-tighter">Configurar Sucursal</h3>
-                <p className="text-[10px] text-orange-400 font-black uppercase tracking-widest mt-1">Defina el Punto de Operación</p>
+                <h3 className="text-2xl font-semibold  tracking-tight">Configurar Sucursal</h3>
+                <p className="text-xs text-orange-400 font-semibold  tracking-wide mt-1">Defina el Punto de Operación</p>
               </div>
-              <button onClick={closeModal} className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-2xl hover:bg-red-500 transition-all">&times;</button>
+              <button onClick={closeModal} className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-2xl hover:bg-red-500 transition-all">&times;</button>
             </div>
             <form onSubmit={handleSave} className="p-10 space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre de la Ubicación</label>
+                <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Nombre de la Ubicación</label>
                 <input
                   type="text" required placeholder="Ej. Sucursal Poniente"
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-2xl outline-none font-bold text-slate-800 transition-all"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-bold text-slate-800 transition-all"
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dirección Física</label>
+                <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Dirección Física</label>
                 <textarea
                   required placeholder="Calle, Número, Colonia, CP..."
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-2xl outline-none font-medium text-slate-600 h-28 resize-none transition-all"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-medium text-slate-600 h-28 resize-none transition-all"
                   value={formData.address}
                   onChange={e => setFormData({ ...formData, address: e.target.value })}
                 />
               </div>
               <div className="pt-4 flex gap-4">
-                <button type="button" onClick={closeModal} className="flex-1 py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest">Cancelar</button>
-                <button type="submit" disabled={isSaving} className="flex-1 py-5 bg-orange-500 text-white font-black rounded-2xl shadow-xl shadow-orange-500/20 uppercase tracking-widest text-[10px] disabled:opacity-60 disabled:cursor-not-allowed">
+                <button type="button" onClick={closeModal} className="flex-1 py-4 text-slate-400 font-semibold text-xs  tracking-wide">Cancelar</button>
+                <button type="submit" disabled={isSaving} className="flex-1 py-5 bg-orange-500 text-white font-semibold rounded-xl shadow-sm shadow-orange-500/20  tracking-wide text-xs disabled:opacity-60 disabled:cursor-not-allowed">
                   {isSaving ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
               </div>

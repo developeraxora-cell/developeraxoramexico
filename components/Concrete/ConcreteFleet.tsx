@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 
 import React, { useMemo } from 'react';
 import { MixerTruck, ConcreteOrder, MixerStatus } from '../../types';
@@ -46,28 +47,28 @@ const ConcreteFleet: React.FC<ConcreteFleetProps> = ({ mixers, setMixers, orders
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Resumen de Flota */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Unidades</p>
-          <p className="text-3xl font-black text-slate-900">{stats.total}</p>
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p className="text-xs font-semibold text-slate-400  tracking-wide mb-1">Total Unidades</p>
+          <p className="text-3xl font-semibold text-slate-900">{stats.total}</p>
         </div>
-        <div className="bg-green-50 p-5 rounded-3xl border border-green-100 shadow-sm">
-          <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Disponibles</p>
-          <p className="text-3xl font-black text-green-700">{stats.available}</p>
+        <div className="bg-green-50 p-5 rounded-2xl border border-green-100 shadow-sm">
+          <p className="text-xs font-semibold text-green-600  tracking-wide mb-1">Disponibles</p>
+          <p className="text-3xl font-semibold text-green-700">{stats.available}</p>
         </div>
-        <div className="bg-blue-50 p-5 rounded-3xl border border-blue-100 shadow-sm">
-          <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">En Tránsito</p>
-          <p className="text-3xl font-black text-blue-700">{stats.onRoute}</p>
+        <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 shadow-sm">
+          <p className="text-xs font-semibold text-blue-600  tracking-wide mb-1">En Tránsito</p>
+          <p className="text-3xl font-semibold text-blue-700">{stats.onRoute}</p>
         </div>
-        <div className="bg-orange-50 p-5 rounded-3xl border border-orange-100 shadow-sm">
-          <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Mantenimiento</p>
-          <p className="text-3xl font-black text-orange-700">{stats.maintenance}</p>
+        <div className="bg-orange-50 p-5 rounded-2xl border border-orange-100 shadow-sm">
+          <p className="text-xs font-semibold text-orange-600  tracking-wide mb-1">Mantenimiento</p>
+          <p className="text-3xl font-semibold text-orange-700">{stats.maintenance}</p>
         </div>
       </div>
 
-      <div className="flex justify-between items-center bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Torre de Control Logístico</h2>
-          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Seguimiento de Unidades Mixer en Tiempo Real</p>
+          <h2 className="text-2xl font-semibold text-slate-800  tracking-tight">Torre de Control Logístico</h2>
+          <p className="text-xs text-slate-400 font-bold  tracking-wide">Seguimiento de Unidades Mixer en Tiempo Real</p>
         </div>
       </div>
 
@@ -76,21 +77,21 @@ const ConcreteFleet: React.FC<ConcreteFleetProps> = ({ mixers, setMixers, orders
           const activeOrder = getActiveOrderInfo(mixer.currentOrderId);
           
           return (
-            <div key={mixer.id} className={`bg-white rounded-3xl border-2 transition-all p-6 ${
+            <div key={mixer.id} className={`bg-white rounded-2xl border-2 transition-all p-6 ${
               mixer.status === 'DISPONIBLE' ? 'border-green-100' :
               mixer.status === 'CARGANDO' ? 'border-orange-500' :
-              mixer.status === 'EN_RUTA' ? 'border-blue-500 shadow-xl' :
+              mixer.status === 'EN_RUTA' ? 'border-blue-500 shadow-sm' :
               'border-slate-100'
             }`}>
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl">🚚</span>
-                    <h3 className="text-2xl font-black text-slate-900 tracking-tighter">{mixer.plate}</h3>
+                    <span className="text-2xl"><AppIcon name="truck" /></span>
+                    <h3 className="text-2xl font-semibold text-slate-900 tracking-tight">{mixer.plate}</h3>
                   </div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Capacidad: {mixer.capacityM3} m³</p>
+                  <p className="text-xs font-semibold text-slate-400  tracking-wide">Capacidad: {mixer.capacityM3} m³</p>
                 </div>
-                <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase ${
+                <span className={`px-4 py-1.5 rounded-full text-[11px] font-semibold  ${
                   mixer.status === 'DISPONIBLE' ? 'bg-green-100 text-green-700' :
                   mixer.status === 'CARGANDO' ? 'bg-orange-500 text-white animate-pulse' :
                   mixer.status === 'EN_RUTA' ? 'bg-blue-600 text-white' :
@@ -101,13 +102,13 @@ const ConcreteFleet: React.FC<ConcreteFleetProps> = ({ mixers, setMixers, orders
               </div>
 
               {activeOrder ? (
-                <div className="mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Orden Activa</p>
+                <div className="mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <p className="text-[11px] font-semibold text-slate-400  mb-2">Orden Activa</p>
                   <p className="font-bold text-slate-800 text-sm">{activeOrder.id}</p>
                   <p className="text-xs text-slate-500 font-medium">Carga: {activeOrder.qtyM3} m³ de Concreto</p>
                 </div>
               ) : (
-                <div className="mb-6 h-[72px] flex items-center justify-center border-2 border-dashed border-slate-50 rounded-2xl text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+                <div className="mb-6 h-[72px] flex items-center justify-center border-2 border-dashed border-slate-50 rounded-xl text-xs font-bold text-slate-300  tracking-wide">
                   Sin Carga Asignada
                 </div>
               )}
@@ -116,36 +117,36 @@ const ConcreteFleet: React.FC<ConcreteFleetProps> = ({ mixers, setMixers, orders
                 {mixer.status === 'EN_RUTA' && (
                   <button 
                     onClick={() => updateStatus(mixer.id, 'REGRESANDO')}
-                    className="col-span-2 bg-green-600 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-green-600/20 mb-2"
+                    className="col-span-2 bg-green-600 text-white py-3 rounded-xl font-semibold text-xs  tracking-wide shadow-lg shadow-green-600/20 mb-2"
                   >
-                    📍 Confirmar Entrega y Retorno
+                    <AppIcon name="pin" /> Confirmar Entrega y Retorno
                   </button>
                 )}
                 
                 {mixer.status === 'REGRESANDO' && (
                   <button 
                     onClick={() => updateStatus(mixer.id, 'DISPONIBLE')}
-                    className="col-span-2 bg-slate-900 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg mb-2"
+                    className="col-span-2 bg-slate-900 text-white py-3 rounded-xl font-semibold text-xs  tracking-wide shadow-lg mb-2"
                   >
-                    🏢 Llegada a Planta (Disponible)
+                    <AppIcon name="building" /> Llegada a Planta (Disponible)
                   </button>
                 )}
 
                 {mixer.status === 'DISPONIBLE' && (
                   <button 
                     onClick={() => updateStatus(mixer.id, 'MANTENIMIENTO')}
-                    className="py-2 bg-red-50 text-red-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-red-100"
+                    className="py-2 bg-red-50 text-red-600 rounded-lg text-[11px] font-semibold  tracking-wide border border-red-100"
                   >
-                    🔧 Taller
+                    <AppIcon name="wrench" /> Taller
                   </button>
                 )}
 
                 {mixer.status === 'MANTENIMIENTO' && (
                   <button 
                     onClick={() => updateStatus(mixer.id, 'DISPONIBLE')}
-                    className="py-2 bg-green-50 text-green-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-green-100"
+                    className="py-2 bg-green-50 text-green-600 rounded-lg text-[11px] font-semibold  tracking-wide border border-green-100"
                   >
-                    ✅ Liberar
+                    <AppIcon name="success" /> Liberar
                   </button>
                 )}
               </div>

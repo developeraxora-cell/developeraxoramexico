@@ -1,4 +1,5 @@
 import React from 'react';
+import AppIcon from './AppIcon';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -43,20 +44,20 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const disabled = isConfirmDisabled || isProcessing || isNoteInvalid;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
-      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in">
-        <div className="bg-amber-500 p-6 text-white flex justify-between items-center">
+    <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in">
+        <div className="crm-dialog-heading p-5 flex justify-between items-center gap-4">
           <div className="flex items-center gap-3">
-            {icon && <span className="text-xl">{icon}</span>}
-            <h3 className="text-lg font-black uppercase tracking-tighter">{title}</h3>
+            <span className="crm-dialog-icon"><AppIcon name={icon || 'warning'} /></span>
+            <h3 className="text-lg font-semibold  tracking-tight">{title}</h3>
           </div>
-          <button onClick={onCancel} className="text-2xl font-black" disabled={isProcessing}>&times;</button>
+          <button onClick={onCancel} aria-label="Cerrar confirmación" className="crm-dialog-close" disabled={isProcessing}><AppIcon name="close" /></button>
         </div>
         <div className="p-8 space-y-4">
           {description && <p className="text-sm text-slate-600 font-semibold whitespace-pre-line">{description}</p>}
           {onNoteChange && (
             <div className="space-y-2">
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500">
+              <label className="block text-xs font-semibold  tracking-wide text-slate-500">
                 {noteLabel ?? (noteRequired ? 'Observación *' : 'Observación')}
               </label>
               <textarea
@@ -65,7 +66,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 onChange={(event) => onNoteChange(event.target.value)}
                 placeholder={notePlaceholder}
                 disabled={isProcessing}
-                className="w-full p-3 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700 outline-none resize-none focus:ring-2 focus:ring-amber-500"
+                className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700 outline-none resize-none focus:ring-2 focus:ring-amber-500"
               />
               {noteError && (
                 <p className="text-xs font-bold text-red-600">{noteError}</p>
@@ -77,7 +78,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
               type="button"
               onClick={onCancel}
               disabled={isProcessing}
-              className="py-3 bg-slate-100 text-slate-600 font-black rounded-xl uppercase tracking-widest text-[10px]"
+              className="py-3 bg-slate-100 text-slate-600 font-semibold rounded-xl  tracking-wide text-xs"
             >
               {cancelText}
             </button>
@@ -85,7 +86,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
               type="button"
               onClick={onConfirm}
               disabled={disabled}
-              className="py-3 bg-amber-500 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-lg disabled:opacity-50 disabled:shadow-none"
+                className="py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm disabled:opacity-50"
             >
               {isProcessing ? 'Guardando...' : confirmText}
             </button>

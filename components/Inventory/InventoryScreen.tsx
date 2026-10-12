@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { History, PenLine, Trash2 } from 'lucide-react';
@@ -485,12 +486,12 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     <div className="space-y-6 animate-in fade-in duration-500">
       
       {/* HEADER */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
-            📦 Productos por Sucursal
+          <h2 className="text-2xl font-semibold text-slate-900  tracking-tight flex items-center gap-2">
+            <AppIcon name="package" /> Productos por Sucursal
           </h2>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+          <p className="text-xs font-bold text-slate-400  tracking-wide mt-1">
             Listado de productos activos por sucursal.
           </p>
         </div>
@@ -505,21 +506,21 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
               setPendingBarcode('');
               setIsNewProductOpen(true);
             }}
-            className="w-full lg:w-auto bg-slate-900 text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-orange-600 transition-all flex items-center justify-center gap-2"
+            className="w-full lg:w-auto bg-slate-900 text-white px-8 py-3 rounded-xl font-semibold text-xs  tracking-wide shadow-sm hover:bg-orange-600 transition-all flex items-center justify-center gap-2"
           >
-            ➕ Nuevo producto
+            <AppIcon name="plus" /> Nuevo producto
           </button>
         </div>
       </div>
 
       {/* BARRA DE BÚSQUEDA */}
-      <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
         <div className="relative flex-1">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"><AppIcon name="search" /></span>
           <input 
             type="text" 
             placeholder="Buscar por nombre, SKU o barcode..."
-            className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-orange-500 transition-all outline-none"
+            className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-orange-500 transition-all outline-none"
             value={productsSearch}
             onChange={(e) => setProductsSearch(e.target.value)}
           />
@@ -527,32 +528,32 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-700 border border-red-200 rounded-2xl p-4 text-sm">
+        <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-4 text-sm">
           {error}
         </div>
       )}
 
       {!branchId && (
-        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl p-10 text-center text-slate-400">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">
           Seleccione una sucursal para ver productos.
         </div>
       )}
 
       {/* TABLA PRINCIPAL */}
-      <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-900 text-white">
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest">Nombre</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest">SKU</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest">Fecha de creación</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest">Barcode</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest">Base</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-right">Precio Menor</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-right">Stock</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-right">Stock Mínimo</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-center">Acciones</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide">Nombre</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide">SKU</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide">Fecha de creación</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide">Barcode</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide">Base</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide text-right">Precio Menor</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide text-right">Stock</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide text-right">Stock Mínimo</th>
+                <th className="p-5 text-xs font-semibold  tracking-wide text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -584,7 +585,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                   key={product.id}
                   className={`transition-colors ${isActive ? 'hover:bg-emerald-50/60' : 'bg-red-50/60 hover:bg-red-50'}`}
                 >
-                  <td className="p-5 text-xs font-black uppercase">
+                  <td className="p-5 text-xs font-semibold ">
                     <div className={`flex items-center gap-2 border-l-4 pl-3 ${isActive ? 'border-emerald-500' : 'border-red-500'}`}>
                     <span className={isActive ? 'text-slate-800' : 'text-red-700'}>
                       {product.name}
@@ -597,10 +598,10 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                   </td>
                   <td className="p-5 text-xs font-mono text-slate-500">{product.barcode || '—'}</td>
                   <td className="p-5 text-xs font-bold text-slate-600">{baseLabel}</td>
-                  <td className="p-5 text-right text-xs font-black text-slate-900">
+                  <td className="p-5 text-right text-xs font-semibold text-slate-900">
                     {formatCurrency(Number((product as any).retail_price ?? (product as any).precio ?? 0))}
                   </td>
-                  <td className="p-5 text-right text-xs font-black">
+                  <td className="p-5 text-right text-xs font-semibold">
                     <span
                       className={`inline-flex items-center gap-2 rounded-full px-3 py-1 ${
                         stockStatus === 'low'
@@ -610,18 +611,18 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                             : 'bg-emerald-100 text-emerald-700'
                       }`}
                     >
-                      {stockLabel} <span className="text-[9px] font-black">{baseLabel}</span>
+                      {stockLabel} <span className="text-[11px] font-semibold">{baseLabel}</span>
                     </span>
                   </td>
-                  <td className="p-5 text-right text-xs font-black text-slate-600">
+                  <td className="p-5 text-right text-xs font-semibold text-slate-600">
                     {formatNumber(Number(minStock), undefined, { maximumFractionDigits: 3 })}{' '}
-                    <span className="text-[9px] font-black text-slate-400">{baseLabel}</span>
+                    <span className="text-[11px] font-semibold text-slate-400">{baseLabel}</span>
                   </td>
                   <td className="p-5 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => handleOpenEditProduct(product)}
-                        className="text-xs font-black px-3 py-1 rounded-lg bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
+                        className="text-xs font-semibold px-3 py-1 rounded-lg bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
                         title="Editar producto"
                         disabled={isSaving || isEditLoading}
                       >
@@ -646,7 +647,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                       {false && (
                         <button
                           onClick={() => handleOpenPriceModal(product)}
-                          className="text-xs font-black px-3 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          className="text-xs font-semibold px-3 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200"
                           title="Editar precio menor"
                           disabled={isSaving}
                         >
@@ -673,7 +674,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
 
       {/* PAGINACIÓN */}
       {branchId && filteredProducts.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-3">
           <p className="text-xs font-bold text-slate-500">
             Mostrando {paginatedProducts.length} de {filteredProducts.length} productos
           </p>
@@ -681,17 +682,17 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
             <button
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-2 rounded-lg border border-slate-200 text-[10px] font-black uppercase disabled:opacity-40"
+              className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold  disabled:opacity-40"
             >
               Anterior
             </button>
-            <span className="text-[11px] font-black text-slate-700">
+            <span className="text-[11px] font-semibold text-slate-700">
               {currentPage} / {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
-              className="px-3 py-2 rounded-lg border border-slate-200 text-[10px] font-black uppercase disabled:opacity-40"
+              className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold  disabled:opacity-40"
             >
               Siguiente
             </button>
@@ -700,7 +701,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       )}
 
       {/* FOOTER INFORMATIVO */}
-      <div className="bg-slate-900 p-4 rounded-2xl flex flex-col md:flex-row justify-between items-center text-white/50 text-[10px] font-black uppercase tracking-[0.2em]">
+      <div className="bg-slate-900 p-4 rounded-xl flex flex-col md:flex-row justify-between items-center text-white/50 text-xs font-semibold  tracking-[0.2em]">
         <div className="flex items-center gap-4">
            <span>Sucursal: <span className="text-orange-400">{selectedBranchId || '—'}</span></span>
            <span>Productos en vista: <span className="text-white">{paginatedProducts.length}</span></span>
@@ -770,10 +771,10 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
 
       {priceProduct && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-black uppercase tracking-tighter">Actualizar precio menor</h3>
+                <h3 className="text-lg font-semibold  tracking-tight">Actualizar precio menor</h3>
                 <p className="text-slate-400 text-xs">{priceProduct.name}</p>
               </div>
               <button onClick={() => setPriceProduct(null)} className="text-slate-400 hover:text-white text-2xl">
@@ -785,12 +786,12 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                 type="number"
                 min={0}
                 step="0.01"
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-lg outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full p-4 bg-slate-50 border-none rounded-xl font-semibold text-lg outline-none focus:ring-2 focus:ring-orange-500"
                 value={priceValue}
                 onChange={(e) => setPriceValue(e.target.value)}
               />
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Observación *</label>
+                <label className="text-xs font-semibold  tracking-wide text-slate-500">Observación *</label>
                 <textarea
                   rows={3}
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500 resize-none"
@@ -803,14 +804,14 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                 <button
                   onClick={() => setPriceProduct(null)}
                   disabled={feedbackLoading || isSaving}
-                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-semibold text-xs  disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSavePrice}
                   disabled={feedbackLoading || isSaving}
-                  className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-semibold text-xs  disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {feedbackLoading || isSaving ? 'Guardando...' : 'Guardar'}
                 </button>
@@ -822,10 +823,10 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
 
       {manualStockModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-black uppercase tracking-tighter">Editar stock</h3>
+                <h3 className="text-lg font-semibold  tracking-tight">Editar stock</h3>
                 <p className="text-slate-400 text-xs">{manualStockModal.product.name}</p>
               </div>
               <button
@@ -838,12 +839,12 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stock actual</p>
-                  <p className="text-2xl font-black text-slate-900 mt-1">{formatQty(manualStockModal.currentStock)}</p>
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                  <p className="text-xs font-semibold  tracking-wide text-slate-400">Stock actual</p>
+                  <p className="text-2xl font-semibold text-slate-900 mt-1">{formatQty(manualStockModal.currentStock)}</p>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Nuevo stock real</label>
+                  <label className="text-xs font-semibold  tracking-wide text-slate-500">Nuevo stock real</label>
                   <input
                     type="number"
                     min={0}
@@ -857,7 +858,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Motivo (opcional)</label>
+                <label className="text-xs font-semibold  tracking-wide text-slate-500">Motivo (opcional)</label>
                 <input
                   type="text"
                   maxLength={100}
@@ -870,7 +871,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Observación *</label>
+                <label className="text-xs font-semibold  tracking-wide text-slate-500">Observación *</label>
                 <textarea
                   rows={3}
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500 resize-none"
@@ -884,14 +885,14 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
               <div className="flex gap-2">
                 <button
                   onClick={closeManualStockModal}
-                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-semibold text-xs  tracking-wide disabled:opacity-50"
                   disabled={isSavingStock || feedbackLoading}
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSaveManualStock}
-                  className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
+                  className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-semibold text-xs  tracking-wide disabled:opacity-50"
                   disabled={isSavingStock || feedbackLoading}
                 >
                   {isSavingStock || feedbackLoading ? 'Guardando...' : 'Guardar ajuste'}
@@ -904,11 +905,11 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
 
       {historyProduct && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl overflow-hidden max-h-[92vh] flex flex-col">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl overflow-hidden max-h-[92vh] flex flex-col">
             <div className="bg-slate-900 px-6 py-5 text-white flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-black uppercase tracking-widest">Historial de producto</h3>
-                <p className="text-xs text-slate-300 uppercase tracking-wider mt-1">{historyProduct.name}</p>
+                <h3 className="text-lg font-semibold  tracking-wide">Historial de producto</h3>
+                <p className="text-xs text-slate-300  tracking-wider mt-1">{historyProduct.name}</p>
               </div>
               <button onClick={closeHistoryModal} className="text-slate-400 hover:text-white text-2xl">
                 &times;
@@ -917,7 +918,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
 
             <div className="p-6 overflow-y-auto space-y-4">
               {isHistoryLoading && (
-                <div className="p-8 rounded-2xl bg-slate-50 border border-slate-200 text-sm text-slate-500 text-center">
+                <div className="p-8 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-500 text-center">
                   Cargando historial del producto...
                 </div>
               )}
@@ -925,33 +926,33 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
               {!isHistoryLoading && historyData && (
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Stock actual</p>
-                      <p className="text-lg font-black text-slate-900 mt-1">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-xs font-semibold  text-slate-400 tracking-wider">Stock actual</p>
+                      <p className="text-lg font-semibold text-slate-900 mt-1">
                         {formatQty(Number(stockByProduct[historyProduct.id] ?? 0))}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3">
-                      <p className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">Comprado</p>
-                      <p className="text-lg font-black text-emerald-700 mt-1">
+                    <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+                      <p className="text-xs font-semibold  text-emerald-600 tracking-wider">Comprado</p>
+                      <p className="text-lg font-semibold text-emerald-700 mt-1">
                         {formatQty(historyData.summary.purchased_qty_base)}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-red-100 bg-red-50 p-3">
-                      <p className="text-[10px] font-black uppercase text-red-600 tracking-wider">Vendido</p>
-                      <p className="text-lg font-black text-red-700 mt-1">
+                    <div className="rounded-xl border border-red-100 bg-red-50 p-3">
+                      <p className="text-xs font-semibold  text-red-600 tracking-wider">Vendido</p>
+                      <p className="text-lg font-semibold text-red-700 mt-1">
                         {formatQty(historyData.summary.sold_qty_base)}
                       </p>
                     </div>
                     <div
-                      className={`rounded-2xl border p-3 ${
+                      className={`rounded-xl border p-3 ${
                         Number(historyData.summary.production_delta_qty_base ?? 0) < 0
                           ? 'border-red-100 bg-red-50'
                           : 'border-sky-100 bg-sky-50'
                       }`}
                     >
                       <p
-                        className={`text-[10px] font-black uppercase tracking-wider ${
+                        className={`text-xs font-semibold  tracking-wider ${
                           Number(historyData.summary.production_delta_qty_base ?? 0) < 0
                             ? 'text-red-600'
                             : 'text-sky-600'
@@ -960,7 +961,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                         Producción
                       </p>
                       <p
-                        className={`text-lg font-black mt-1 ${
+                        className={`text-lg font-semibold mt-1 ${
                           Number(historyData.summary.production_delta_qty_base ?? 0) < 0
                             ? 'text-red-700'
                             : 'text-sky-700'
@@ -970,36 +971,36 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                         {formatQty(Number(historyData.summary.production_delta_qty_base ?? 0))}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
-                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total compras</p>
-                      <p className="text-lg font-black text-slate-900 mt-1">
+                    <div className="rounded-xl border border-slate-200 bg-white p-3">
+                      <p className="text-xs font-semibold  text-slate-400 tracking-wider">Total compras</p>
+                      <p className="text-lg font-semibold text-slate-900 mt-1">
                         {formatCurrency(historyData.summary.purchased_total)}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
-                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total ventas</p>
-                      <p className="text-lg font-black text-slate-900 mt-1">
+                    <div className="rounded-xl border border-slate-200 bg-white p-3">
+                      <p className="text-xs font-semibold  text-slate-400 tracking-wider">Total ventas</p>
+                      <p className="text-lg font-semibold text-slate-900 mt-1">
                         {formatCurrency(historyData.summary.sold_total)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                  <div className="overflow-x-auto border border-slate-200 rounded-xl">
                     <table className="w-full min-w-[950px] border-collapse">
-                      <caption className="bg-slate-50 px-3 py-2 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">
+                      <caption className="bg-slate-50 px-3 py-2 text-left text-xs font-semibold  tracking-wider text-slate-500">
                         Movimientos recientes
                       </caption>
                       <thead>
                         <tr className="bg-slate-900 text-white">
-                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-left">Fecha</th>
-                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-left">Tipo</th>
-                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-left">Referencia</th>
-                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Cantidad</th>
-                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Unitario</th>
-                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Total</th>
-                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Saldo antes</th>
-                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-right">Saldo después</th>
-                          <th className="p-3 text-[10px] font-black uppercase tracking-wider text-left">Usuario</th>
+                          <th className="p-3 text-xs font-semibold  tracking-wider text-left">Fecha</th>
+                          <th className="p-3 text-xs font-semibold  tracking-wider text-left">Tipo</th>
+                          <th className="p-3 text-xs font-semibold  tracking-wider text-left">Referencia</th>
+                          <th className="p-3 text-xs font-semibold  tracking-wider text-right">Cantidad</th>
+                          <th className="p-3 text-xs font-semibold  tracking-wider text-right">Unitario</th>
+                          <th className="p-3 text-xs font-semibold  tracking-wider text-right">Total</th>
+                          <th className="p-3 text-xs font-semibold  tracking-wider text-right">Saldo antes</th>
+                          <th className="p-3 text-xs font-semibold  tracking-wider text-right">Saldo después</th>
+                          <th className="p-3 text-xs font-semibold  tracking-wider text-left">Usuario</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -1015,7 +1016,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                             <td className="p-3 text-xs font-semibold text-slate-600">{formatDateTime(row.created_at)}</td>
                             <td className="p-3">
                               <span
-                                className={`inline-flex rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-widest ${
+                                className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold  tracking-wide ${
                                   row.movement_type === 'PURCHASE'
                                     ? 'bg-emerald-100 text-emerald-700'
                                     : row.movement_type === 'SALE'
@@ -1036,20 +1037,20 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                             </td>
                             <td className="p-3 text-xs font-semibold text-slate-700">
                               {row.reference || '—'}
-                              {row.notes ? <p className="text-[10px] text-slate-400 mt-1">{row.notes}</p> : null}
+                              {row.notes ? <p className="text-xs text-slate-400 mt-1">{row.notes}</p> : null}
                             </td>
                             <td
-                              className={`p-3 text-xs font-black text-right ${
+                              className={`p-3 text-xs font-semibold text-right ${
                                 row.qty_base < 0 ? 'text-red-700' : 'text-emerald-700'
                               }`}
                             >
                               {row.qty_base < 0 ? '-' : '+'}
                               {formatQty(Math.abs(row.qty_base))}
                             </td>
-                            <td className="p-3 text-xs font-black text-right text-slate-700">
+                            <td className="p-3 text-xs font-semibold text-right text-slate-700">
                               {row.unit_price === null ? '—' : formatCurrency(row.unit_price)}
                             </td>
-                            <td className="p-3 text-xs font-black text-right text-slate-900">
+                            <td className="p-3 text-xs font-semibold text-right text-slate-900">
                               {row.total_amount > 0 ? formatCurrency(row.total_amount) : '—'}
                             </td>
                             <td className="p-3 text-xs text-right font-semibold text-slate-600">
