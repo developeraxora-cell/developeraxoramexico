@@ -982,7 +982,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                               });
                               return acc;
                             }
-                            const movementQty = row.status === 'INGRESO' ? Number(row.qty ?? 0) : -Number(row.qty ?? 0);
+                            const movementQty = row.status === 'INGRESO' || row.status === 'DEVOLUCION' ? Number(row.qty ?? 0) : -Number(row.qty ?? 0);
                             const runningQty = baselineQty + movementQty;
                             acc.push({
                               ...row,
@@ -995,6 +995,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                           return [...runningRows].reverse().map((row) => {
                           const badgeClass =
                             row.status === 'INGRESO' ? 'bg-green-100 text-green-700'
+                              : row.status === 'DEVOLUCION' ? 'bg-teal-100 text-teal-700'
                               : row.status === 'SALIDA' ? 'bg-orange-100 text-orange-700'
                                 : 'bg-blue-100 text-blue-700';
                           return (
@@ -1007,7 +1008,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                               </td>
                               <td className="px-4 py-3">
                                 <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black ${badgeClass}`}>
-                                  {row.status === 'INGRESO' ? 'COMPRA' : row.status === 'SALIDA' ? 'VENTA' : row.status}
+                                  {row.status === 'INGRESO' ? 'COMPRA' : row.status === 'SALIDA' ? 'VENTA' : row.status === 'DEVOLUCION' ? 'VENTA CANCELADA' : row.status}
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-sm font-bold text-slate-900">

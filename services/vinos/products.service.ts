@@ -49,7 +49,15 @@ export interface ProductWithStock extends VinosProduct {
   last_purchase_cost: number | null;
 }
 
-export type ProductHistoryStatus = 'INGRESO' | 'SALIDA' | 'ACTUALIZACION';
+export type ProductHistoryStatus = 'INGRESO' | 'SALIDA' | 'ACTUALIZACION' | 'DEVOLUCION';
+
+// Products whose historical cancellations were reconciled and must show the stock return.
+const RETURN_HISTORY_PRODUCT_IDS = new Set([
+  '5285790a-0dff-4c16-a268-9a401ad03336', // Tequila 30-30 Cristalino 750 ml
+  '5dcac76d-cdc7-4f00-865c-d2b6d7d3b3e2', // Tequila 30 30 Reposado 1.750L
+  '70fde86e-300d-4de6-8c11-4e02c7634641', // Agua Ciel 1L
+  '22290d5a-0b35-481d-9bad-0dd2288e42eb', // blue label 750ml
+]);
 
 export interface ProductHistoryRow {
   id: string;
@@ -492,6 +500,7 @@ export const vinosProductsService = {
         payment_method: string;
         branch_id: number;
         deleted_at: string | null;
+        delete_note?: string | null;
         created_by: string | null;
         customer?: { name: string } | { name: string }[] | null;
       } | Array<{
@@ -500,6 +509,7 @@ export const vinosProductsService = {
         payment_method: string;
         branch_id: number;
         deleted_at: string | null;
+        delete_note?: string | null;
         created_by: string | null;
         customer?: { name: string } | { name: string }[] | null;
       }> | null;
@@ -524,7 +534,7 @@ export const vinosProductsService = {
       line_total,
       price_type,
       uom:product_uoms(id, uom:uoms(name,symbol)),
-      sale:sales(id, created_at, payment_method, branch_id, deleted_at, created_by, customer:customers(name))
+      sale:sales(id, created_at, payment_method, branch_id, deleted_at, delete_note, created_by, customer:customers(name))
     `;
 
     const purchaseItemsQuery = supabaseVinos
@@ -564,6 +574,40 @@ export const vinosProductsService = {
 
     const purchaseItems = (purchaseRes.data ?? []) as PurchaseItemQueryRow[];
     const saleItems = (saleRes.data ?? []) as SaleItemQueryRow[];
+    const cancelledHistory: ProductHistoryRow[] = [];
+    if (RETURN_HISTORY_PRODUCT_IDS.has(productId)) {
+      const cancelledItems = saleItems
+        .map(item => ({ item, sale: asOne(item.sale) }))
+        .filter(({ sale }) => sale?.deleted_at && (!branchId || sale.branch_id === branchId));
+      const cancellationAudits = new Map<string, Awaited<ReturnType<typeof fetchAuditLogs>>['rows'][number]>();
+      for (const saleId of new Set(cancelledItems.map(({ sale }) => sale!.id))) {
+        const audit = await fetchAuditLogs({ module: 'vinos', entity_type: 'venta', action_type: 'ELIMINAR', search: saleId, page: 1, page_size: 100 })
+          .catch(() => ({ rows: [] }));
+        const cancellation = audit.rows.find(row => row.entity_id === saleId && row.action_type === 'ELIMINAR');
+        if (cancellation) cancellationAudits.set(saleId, cancellation);
+      }
+      for (const { item, sale } of cancelledItems) {
+        const code = `V-${sale!.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`;
+        const audit = cancellationAudits.get(sale!.id);
+        const reason = sale!.delete_note || audit?.observation || audit?.justification || 'Sin observación registrada';
+        const unit = asOne(asOne(item.uom)?.uom);
+        const original: ProductHistoryRow = {
+          id: `CANCELLED-SAL-${item.id}`, status: 'SALIDA', created_at: sale!.created_at,
+          qty: Number(item.qty_base ?? item.qty), unit_price: Number(item.unit_price),
+          subtotal: Number(item.line_total), price_type: item.price_type, profit: null,
+          source: `Venta ${code} · Cancelada posteriormente`,
+          detail: `Salida original de mercancía | Unidad: ${unit?.name ?? 'No registrada'} | No incluida en totales de ventas vigentes`,
+          stock_before: null, stock_after: null, user_id: sale!.created_by, user_name: null,
+        };
+        cancelledHistory.push(original, {
+          ...original, id: `RETURN-SAL-${item.id}`, status: 'DEVOLUCION',
+          created_at: sale!.deleted_at!, unit_price: null, subtotal: null, price_type: null,
+          source: `Venta cancelada ${code} · Devolución al stock`,
+          detail: `Reingreso de ${original.qty} unidades por eliminación de la venta | Motivo: ${reason} | Unidad: ${unit?.name ?? 'No registrada'}`,
+          user_id: audit?.user_id ?? null, user_name: audit?.user_name ?? 'No registrado',
+        });
+      }
+    }
 
     const purchaseRows = purchaseItems
       .map((item) => ({ item, purchase: asOne(item.purchase) }))
@@ -700,7 +744,7 @@ export const vinosProductsService = {
     const net_qty = purchased_qty - sold_qty;
     const estimated_profit = enrichedSaleRows.reduce((sum, row) => sum + Number(row.profit ?? 0), 0);
     const userIds = Array.from(new Set(
-      [...purchaseRows, ...enrichedSaleRows]
+      [...purchaseRows, ...enrichedSaleRows, ...cancelledHistory]
         .map((row) => row.user_id)
         .filter((id): id is string => !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
     ));
@@ -722,6 +766,7 @@ export const vinosProductsService = {
     const history = [
       ...purchaseRows.map(withUserNames),
       ...enrichedSaleRows.map(withUserNames),
+      ...cancelledHistory.map(withUserNames),
       ...updateRows,
     ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
