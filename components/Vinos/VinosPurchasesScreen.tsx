@@ -625,7 +625,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
 
   // ── render ──────────────────────────────────────────────
   return (
-    <div className="space-y-6">
+    <div className="crm-module space-y-6">
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -646,9 +646,9 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       </div>
 
       {/* Header con título + acción */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
+      <div className="crm-page-heading flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-100 text-brand-600">
             {tab === 'historial' ? <ArrowDownToLine size={20}/> : <Plus size={20}/>}
           </div>
           <div>
@@ -690,7 +690,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
             placeholder="Folio, proveedor, total…"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -743,7 +743,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <button onClick={() => openDetail(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Ver detalle"><Eye size={14}/></button>
-                          <button onClick={() => openEdit(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-orange-50 hover:text-orange-500" title="Editar datos"><Pencil size={14}/></button>
+                          <button onClick={() => openEdit(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-brand-50 hover:text-brand-500" title="Editar datos"><Pencil size={14}/></button>
                           <button onClick={() => { setDeleteTarget(p); setDeleteNote(''); }} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
                         </div>
                       </td>
@@ -771,7 +771,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-9 pr-4 text-sm outline-none focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-9 pr-4 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
                   placeholder="Escanee el barcode o escriba el nombre"
                   value={productSearch}
                   onChange={e => setProductSearch(e.target.value)}
@@ -783,14 +783,14 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                         key={p.id}
                         type="button"
                         onClick={() => addProductToCart(p)}
-                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-orange-50"
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-brand-50"
                       >
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-base"><AppIcon name="wine" /></div>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-base"><AppIcon name="wine" /></div>
                         <div className="flex-1 min-w-0">
                           <p className="truncate font-bold text-slate-800">{p.name}</p>
                           <p className="text-xs text-slate-400 font-mono">{p.sku}</p>
                         </div>
-                        <Plus size={14} className="text-orange-500"/>
+                        <Plus size={14} className="text-brand-500"/>
                       </button>
                     ))}
                     <button
@@ -824,13 +824,13 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   <button
                     type="button"
                     onClick={() => { setSupplierModalContext('newPurchase'); setSupplierModalOpen(true); }}
-                    className="text-xs font-semibold  tracking-wide text-orange-500 hover:text-orange-600"
+                    className="text-xs font-semibold  tracking-wide text-brand-500 hover:text-brand-600"
                   >
                     + Nuevo proveedor
                   </button>
                 </div>
                 <select
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-brand-400 focus:bg-white"
                   value={supplierId}
                   onChange={e => setSupplierId(e.target.value)}
                 >
@@ -847,7 +847,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Fecha de compra</label>
                   <input
                     type="date"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:bg-white"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-brand-400 focus:bg-white"
                     value={purchaseDate}
                     onChange={e => setPurchaseDate(e.target.value)}
                   />
@@ -855,7 +855,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                 <div>
                   <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Compra a crédito</label>
                   <select
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:bg-white"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-brand-400 focus:bg-white"
                     value={isCredit ? 'si' : 'no'}
                     onChange={e => setIsCredit(e.target.value === 'si')}
                   >
@@ -870,14 +870,14 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 space-y-3">
               <h3 className="text-xs font-semibold  tracking-[0.22em] text-slate-400">Referencia y notas</h3>
               <input
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:bg-white"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white"
                 placeholder="Referencia (Factura, Remisión, etc.)"
                 value={reference}
                 onChange={e => setReference(e.target.value)}
               />
               <textarea
                 rows={3}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:bg-white resize-none"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white resize-none"
                 placeholder="Notas"
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
@@ -941,7 +941,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                           <div>
                             <label className="block text-[11px] font-semibold  tracking-wide text-slate-400 mb-0.5">Unidad</label>
                             <select
-                              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-orange-400"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-brand-400"
                               value={it.product_uom_id}
                               onChange={e => changeCartItemUom(idx, e.target.value)}
                             >
@@ -956,7 +956,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                             <label className="block text-[11px] font-semibold  tracking-wide text-slate-400 mb-0.5">Cantidad</label>
                             <input
                               type="number" min="0" step="0.01"
-                              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-orange-400"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-brand-400"
                               value={it.qty_input}
                               onChange={e => updateCartItem(idx, { qty_input: normalizeQtyInput(e.target.value) })}
                             />
@@ -964,7 +964,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                           <div>
                             <label className="block text-[11px] font-semibold  tracking-wide text-slate-400 mb-0.5">Precio compra</label>
                             <input
-                              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-orange-400"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-brand-400"
                               type="text"
                               inputMode="decimal"
                               value={it.cost_per_unit_input}
@@ -989,7 +989,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
             <div className="border-t border-slate-100 bg-slate-50/50 px-6 py-4 space-y-3">
               <div className="flex items-baseline justify-between">
                 <span className="text-xs font-semibold  tracking-wide text-slate-500">Total compra</span>
-                <span className="text-2xl font-semibold text-orange-600">{formatCurrency(total)}</span>
+                <span className="text-2xl font-semibold text-brand-600">{formatCurrency(total)}</span>
               </div>
               <div className="flex gap-2">
                 <button
@@ -1002,7 +1002,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                 <button
                   onClick={handleSave}
                   disabled={saving || cart.length === 0}
-                  className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
+                  className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-brand-600/20 hover:bg-brand-500 disabled:opacity-40"
                 >
                   {saving && <Loader2 size={14} className="animate-spin"/>}
                   {saving ? 'Guardando…' : 'Registrar entrada'}
@@ -1041,13 +1041,13 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     <button
                       type="button"
                       onClick={() => { setSupplierModalContext('editPurchase'); setSupplierModalOpen(true); }}
-                      className="text-xs font-semibold  tracking-wide text-orange-500 hover:text-orange-600"
+                      className="text-xs font-semibold  tracking-wide text-brand-500 hover:text-brand-600"
                     >
                       + Nuevo proveedor
                     </button>
                   </div>
                   <select
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:bg-white"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-brand-400 focus:bg-white"
                     value={editForm.supplier_id}
                     onChange={e => setEditForm(prev => ({ ...prev, supplier_id: e.target.value }))}
                   >
@@ -1061,7 +1061,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Fecha de compra</label>
                     <input
                       type="date"
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:bg-white"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-brand-400 focus:bg-white"
                       value={editForm.purchase_date}
                       onChange={e => setEditForm(prev => ({ ...prev, purchase_date: e.target.value }))}
                     />
@@ -1069,7 +1069,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   <div>
                     <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Compra a crédito</label>
                     <select
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:bg-white"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:border-brand-400 focus:bg-white"
                       value={editForm.is_credit ? 'si' : 'no'}
                       onChange={e => setEditForm(prev => ({ ...prev, is_credit: e.target.value === 'si' }))}
                     >
@@ -1083,14 +1083,14 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
                 <h3 className="text-xs font-semibold  tracking-[0.22em] text-slate-400">Referencia y notas</h3>
                 <input
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white"
                   placeholder="Referencia (Factura, Remisión, etc.)"
                   value={editForm.reference}
                   onChange={e => setEditForm(prev => ({ ...prev, reference: e.target.value }))}
                 />
                 <textarea
                   rows={3}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:bg-white resize-none"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white resize-none"
                   placeholder="Notas"
                   value={editForm.notes}
                   onChange={e => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
@@ -1113,7 +1113,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               <button
                 onClick={handleEditSave}
                 disabled={editSaving}
-                className="flex items-center gap-2 rounded-xl bg-orange-600 px-6 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-50"
+                className="flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-brand-600/20 hover:bg-brand-500 disabled:opacity-50"
               >
                 {editSaving && <Loader2 size={14} className="animate-spin"/>}
                 {editSaving ? 'Guardando...' : 'Guardar cambios'}
@@ -1140,7 +1140,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     <div><p className="text-xs font-semibold  tracking-wide text-slate-400">Folio</p><p className="text-sm font-bold text-slate-900 font-mono">{detail.reference ?? '—'}</p></div>
                     <div><p className="text-xs font-semibold  tracking-wide text-slate-400">Fecha</p><p className="text-sm font-bold text-slate-900">{detail.purchase_date}</p></div>
                     <div><p className="text-xs font-semibold  tracking-wide text-slate-400">Proveedor</p><p className="text-sm font-bold text-slate-900">{detail.supplier?.name ?? '—'}</p></div>
-                    <div><p className="text-xs font-semibold  tracking-wide text-slate-400">Total</p><p className="text-sm font-semibold text-orange-600">{formatCurrency(detail.total)}</p></div>
+                    <div><p className="text-xs font-semibold  tracking-wide text-slate-400">Total</p><p className="text-sm font-semibold text-brand-600">{formatCurrency(detail.total)}</p></div>
                   </div>
                   {detail.notes && <p className="mb-4 text-xs text-slate-500 italic">Notas: {detail.notes}</p>}
                   <table className="w-full text-sm">
@@ -1186,7 +1186,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
             <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Motivo de eliminación *</label>
             <textarea
               rows={3}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 resize-none"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 resize-none"
               value={deleteNote}
               onChange={e => setDeleteNote(e.target.value)}
               placeholder="Explica por qué se elimina…"
@@ -1233,7 +1233,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                 <div className="relative w-full max-w-md">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                   <input
-                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                     placeholder="Buscar por nombre, RFC, teléfono o email..."
                     value={supplierManagerSearch}
                     onChange={(e) => setSupplierManagerSearch(e.target.value)}
@@ -1270,7 +1270,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                         <tr key={supplier.id} className="hover:bg-slate-50">
                           <td className="px-4 py-3">
                             <div className="flex items-start gap-3">
-                              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-100 text-brand-600">
                                 <Building2 size={15}/>
                               </div>
                               <div>
@@ -1340,28 +1340,28 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
             <div className="space-y-3">
               <div>
                 <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Nombre *</label>
-                <input className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400" value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)} />
+                <input className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-brand-400" value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Teléfono</label>
-                  <input className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400" value={newSupplierPhone} onChange={e => setNewSupplierPhone(e.target.value)} />
+                  <input className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-brand-400" value={newSupplierPhone} onChange={e => setNewSupplierPhone(e.target.value)} />
                 </div>
                 <div>
                   <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">RFC</label>
-                  <input className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400" value={newSupplierRfc} onChange={e => setNewSupplierRfc(e.target.value)} />
+                  <input className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-brand-400" value={newSupplierRfc} onChange={e => setNewSupplierRfc(e.target.value)} />
                 </div>
               </div>
               <div>
                 <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Email</label>
-                <input type="email" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400" value={newSupplierEmail} onChange={e => setNewSupplierEmail(e.target.value)} />
+                <input type="email" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-brand-400" value={newSupplierEmail} onChange={e => setNewSupplierEmail(e.target.value)} />
               </div>
               {supplierFormMode === 'edit' && (
                 <div>
                   <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Nota de edición *</label>
                   <textarea
                     rows={3}
-                    className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400"
+                    className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-brand-400"
                     value={newSupplierNotes}
                     onChange={e => setNewSupplierNotes(e.target.value)}
                     placeholder="Explica el cambio realizado…"
@@ -1377,7 +1377,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   !newSupplierName.trim() ||
                   (supplierFormMode === 'edit' && !newSupplierNotes.trim())
                 }
-                className="flex-1 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500 disabled:opacity-40"
+                className="flex-1 rounded-xl bg-brand-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-brand-500 disabled:opacity-40"
               >
                 {supplierFormMode === 'edit' ? 'Guardar cambios' : 'Crear'}
               </button>
@@ -1402,7 +1402,7 @@ const VinosPurchasesScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
             <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Nota de eliminación *</label>
             <textarea
               rows={3}
-              className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+              className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
               value={supplierDeleteNote}
               onChange={e => setSupplierDeleteNote(e.target.value)}
               placeholder="Explica por qué se elimina…"

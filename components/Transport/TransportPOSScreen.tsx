@@ -265,7 +265,7 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
   };
 
   return (
-    <div className="space-y-6">
+    <div className="crm-module space-y-6">
       {feedback && (
         <FeedbackModal
           isOpen={true}
@@ -294,7 +294,7 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
               placeholder="Buscar producto por nombre o SKU..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-400/20"
             />
           </div>
 
@@ -327,12 +327,12 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
                     className={`rounded-xl border bg-white p-4 text-left shadow-sm transition-all hover:shadow-md active:scale-95 ${
                       noStock
                         ? 'border-slate-100 opacity-50 cursor-not-allowed'
-                        : 'border-slate-200 hover:border-orange-300 hover:shadow-orange-100'
+                        : 'border-slate-200 hover:border-brand-300 hover:shadow-brand-100'
                     }`}
                   >
                     <p className="text-xs font-semibold text-slate-800 leading-tight line-clamp-2">{p.name}</p>
                     {p.sku && <p className="mt-1 font-mono text-xs text-slate-400">{p.sku}</p>}
-                    <p className="mt-2 text-sm font-semibold text-orange-600">{formatCurrency(price)}</p>
+                    <p className="mt-2 text-sm font-semibold text-brand-600">{formatCurrency(price)}</p>
                     <p className={`mt-1 text-xs font-bold ${noStock ? 'text-red-500' : 'text-slate-400'}`}>
                       Stock: {stock.toLocaleString('es-MX')} {uom?.uom?.code ?? ''}
                     </p>
@@ -371,7 +371,7 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
                           step="0.01"
                           value={item.qty}
                           onChange={(e) => updateCartQty(item.productId, item.productUomId, Number(e.target.value))}
-                          className="w-16 rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-orange-400 text-center"
+                          className="w-16 rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-brand-400 text-center"
                         />
                         <label className="text-xs text-slate-400 font-bold">Precio:</label>
                         <input
@@ -380,7 +380,7 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
                           step="0.01"
                           value={item.unitPrice}
                           onChange={(e) => updateCartPrice(item.productId, item.productUomId, Number(e.target.value))}
-                          className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-orange-400 text-right"
+                          className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-brand-400 text-right"
                         />
                       </div>
                     </div>
@@ -418,7 +418,7 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
                     onClick={() => setPaymentMethod(m)}
                     className={`py-2.5 rounded-xl text-xs font-semibold  tracking-wider transition-all ${
                       paymentMethod === m
-                        ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20'
+                        ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/20'
                         : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                     }`}
                   >
@@ -427,7 +427,7 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
                 ))}
               </div>
               {paymentMethod === 'CREDITO' && (
-                <p className="mt-2 text-xs text-orange-600 font-semibold bg-orange-50 rounded-lg px-3 py-1.5">
+                <p className="mt-2 text-xs text-brand-600 font-semibold bg-brand-50 rounded-lg px-3 py-1.5">
                   Crédito básico — gestión de pagarés y saldo en próxima entrega.
                 </p>
               )}
@@ -442,7 +442,7 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
                 placeholder="Nombre o razón social"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-400/20"
               />
             </div>
 
@@ -455,14 +455,14 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
                 placeholder="Referencia, número de orden, etc."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20 resize-none"
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-400/20 resize-none"
               />
             </div>
 
             <button
               onClick={handleCheckout}
               disabled={isSelling || cart.length === 0}
-              className="w-full py-4 rounded-xl bg-orange-600 text-white font-semibold  tracking-wide text-sm shadow-lg shadow-orange-600/30 hover:bg-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 rounded-xl bg-brand-600 text-white font-semibold  tracking-wide text-sm shadow-lg shadow-brand-600/30 hover:bg-brand-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSelling ? 'Procesando...' : `Confirmar venta — ${formatCurrency(cartTotal)}`}
             </button>
@@ -471,13 +471,13 @@ const TransportPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser }) 
       </div>
 
       {/* Sales history */}
-      <div className="rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+      <div className="crm-data-surface rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
           <p className="text-xs font-semibold  tracking-wide text-slate-500"><AppIcon name="clipboard" /> Últimas ventas</p>
           <button
             onClick={() => void loadHistory()}
             disabled={isHistoryLoading}
-            className="text-xs font-semibold  tracking-wide text-slate-400 hover:text-orange-600 transition-colors disabled:opacity-50"
+            className="text-xs font-semibold  tracking-wide text-slate-400 hover:text-brand-600 transition-colors disabled:opacity-50"
           >
             ↻ Actualizar
           </button>

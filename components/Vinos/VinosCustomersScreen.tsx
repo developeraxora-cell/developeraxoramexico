@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import PageHeading from '../common/PageHeading';
 import { Plus, Search, Pencil, Trash2, X, FileText, ExternalLink, CreditCard, Wallet, Upload, Loader2, Settings, MapPin, History, FileDown, Receipt, BanknoteIcon, FileSpreadsheet, Printer } from 'lucide-react';
 import { User, Branch } from '../../types';
 import {
@@ -40,7 +41,7 @@ const LOYALTY_CONFIG: Record<LoyaltyLevel, { label: string; bg: string; text: st
 const STATUS_CONFIG: Record<CustomerStatus, { label: string; dot: string }> = {
   ACTIVO:    { label: 'Activo',    dot: 'bg-green-500'  },
   DORMIDO:   { label: 'Dormido',   dot: 'bg-yellow-400' },
-  EN_RIESGO: { label: 'En riesgo', dot: 'bg-orange-500' },
+  EN_RIESGO: { label: 'En riesgo', dot: 'bg-brand-500' },
   PERDIDO:   { label: 'Perdido',   dot: 'bg-red-500'    },
 };
 
@@ -147,7 +148,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
         <button
           type="button"
           onClick={() => setOpen(o => !o)}
-          className="flex h-full items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+          className="flex h-full items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
         >
           <span className="text-base leading-none">{selected.flag}</span>
           <span className="font-bold text-slate-700">+{selected.dial}</span>
@@ -162,7 +163,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Buscar país o código…"
-                className="mb-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-orange-400"
+                className="mb-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-brand-400"
               />
               <div className="max-h-56 overflow-y-auto">
                 {filtered.length === 0 && <p className="px-2 py-3 text-center text-xs text-slate-400">Sin resultados</p>}
@@ -171,7 +172,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
                     key={c.code}
                     type="button"
                     onClick={() => { setDial(c.dial); onChange(buildPhone(c.dial, parsed.number)); setOpen(false); setSearch(''); }}
-                    className={`flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs hover:bg-orange-50 ${c.dial === dial ? 'bg-orange-50' : ''}`}
+                    className={`flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs hover:bg-brand-50 ${c.dial === dial ? 'bg-brand-50' : ''}`}
                   >
                     <span className="text-base leading-none">{c.flag}</span>
                     <span className="flex-1 font-semibold text-slate-700">{c.name}</span>
@@ -191,7 +192,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
           onChange(buildPhone(dial, digits));
         }}
         placeholder="987654321"
-        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
       />
     </div>
     <p className="mt-1 text-right text-xs font-bold text-slate-400">{parsed.number.length} / {MAX_PHONE_DIGITS} dígitos</p>
@@ -1262,14 +1263,15 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
 
   // ── render ──────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
+    <div className="crm-module space-y-6">
+      <PageHeading title="Clientes" description="Administra la relación con tus clientes y consulta su actividad." />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="crm-metrics-strip grid grid-cols-2 sm:grid-cols-4">
         {[
           { label: 'Total clientes', value: stats.total,   color: 'text-slate-900' },
           { label: 'Activos',        value: stats.activos, color: 'text-green-600'  },
-          { label: 'En riesgo',      value: stats.riesgo,  color: 'text-orange-500' },
+          { label: 'En riesgo',      value: stats.riesgo,  color: 'text-brand-500' },
           { label: 'ORO / BLACK',    value: stats.vip,     color: 'text-yellow-600' },
         ].map(s => (
           <div key={s.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -1284,7 +1286,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
             placeholder="Buscar por nombre, teléfono o email…"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -1292,14 +1294,14 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 transition-colors"
+          className="flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-brand-600/20 hover:bg-brand-500 transition-colors"
         >
           <Plus size={15} /> Nuevo cliente
         </button>
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="crm-data-surface overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <div className="py-16 text-center text-sm font-bold text-slate-400">Cargando clientes…</div>
         ) : filtered.length === 0 ? (
@@ -1327,7 +1329,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-100 font-semibold text-orange-600">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 font-semibold text-brand-600">
                             {c.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -1370,7 +1372,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => openManage(c)}
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-brand-50 hover:text-brand-600 transition-colors"
                             title="Gestionar cliente"
                           >
                             <Settings size={14} />
@@ -1420,7 +1422,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   <div>
                     <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Nombre *</label>
                     <input
-                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                       value={form.name}
                       onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                       placeholder="Nombre completo"
@@ -1437,7 +1439,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Email</label>
                     <input
                       type="email"
-                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                       value={form.email}
                       onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                       placeholder="correo@ejemplo.com"
@@ -1447,7 +1449,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Fecha de nacimiento</label>
                     <input
                       type="date"
-                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                       value={form.birthday}
                       onChange={e => setForm(f => ({ ...f, birthday: e.target.value }))}
                     />
@@ -1464,7 +1466,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   <button
                     type="button"
                     onClick={openTypeModal}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold  tracking-wide text-orange-700 transition-colors hover:border-orange-300 hover:bg-orange-100"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-3 py-2 text-xs font-semibold  tracking-wide text-brand-700 transition-colors hover:border-brand-300 hover:bg-brand-100"
                   >
                     <Plus size={13} /> Nuevo tipo
                   </button>
@@ -1476,16 +1478,16 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       <label
                         key={t.value}
                         className={`flex items-center gap-2 rounded-xl border bg-white px-3 py-2 cursor-pointer transition-colors ${
-                          active ? 'border-orange-400 bg-orange-50' : 'border-slate-200 hover:border-slate-300'
+                          active ? 'border-brand-400 bg-brand-50' : 'border-slate-200 hover:border-slate-300'
                         }`}
                       >
                         <input
                           type="checkbox"
-                          className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                          className="h-4 w-4 rounded border-slate-300 text-brand-500 focus:ring-brand-400"
                           checked={active}
                           onChange={() => toggleType(t.value)}
                         />
-                        <span className={`text-xs font-bold ${active ? 'text-orange-700' : 'text-slate-700'}`}>{t.label}</span>
+                        <span className={`text-xs font-bold ${active ? 'text-brand-700' : 'text-slate-700'}`}>{t.label}</span>
                       </label>
                     );
                   })}
@@ -1505,7 +1507,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       </div>
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                        className="h-4 w-4 rounded border-slate-300 text-brand-500 focus:ring-brand-400"
                         checked={form.allow_credit}
                         onChange={e => setForm(f => ({ ...f, allow_credit: e.target.checked }))}
                       />
@@ -1517,7 +1519,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                           type="number"
                           min="0"
                           step="0.01"
-                          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                           value={form.credit_limit}
                           onChange={e => setForm(f => ({ ...f, credit_limit: e.target.value }))}
                           placeholder="0.00"
@@ -1535,7 +1537,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                       </div>
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                        className="h-4 w-4 rounded border-slate-300 text-brand-500 focus:ring-brand-400"
                         checked={form.enable_wallet}
                         onChange={e => setForm(f => ({ ...f, enable_wallet: e.target.checked }))}
                       />
@@ -1547,7 +1549,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                           type="number"
                           min="0"
                           step="0.01"
-                          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                           value={form.wallet_balance}
                           onChange={e => setForm(f => ({ ...f, wallet_balance: e.target.value }))}
                           placeholder="0.00"
@@ -1573,7 +1575,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                           <p className="truncate text-xs font-bold text-slate-700">{d.file_name}</p>
                           {d.description && <p className="truncate text-xs text-slate-400">{d.description}</p>}
                         </div>
-                        <a href={d.file_url} target="_blank" rel="noopener noreferrer" className="ml-2 text-slate-400 hover:text-orange-500" title="Ver">
+                        <a href={d.file_url} target="_blank" rel="noopener noreferrer" className="ml-2 text-slate-400 hover:text-brand-500" title="Ver">
                           <ExternalLink size={14} />
                         </a>
                         <button onClick={() => removeExistingDoc(d)} className="ml-2 text-slate-400 hover:text-red-500" title="Eliminar">
@@ -1588,12 +1590,12 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                 {queuedFiles.length > 0 && (
                   <ul className="mb-3 space-y-1">
                     {queuedFiles.map((q, i) => (
-                      <li key={i} className="flex items-center justify-between rounded-xl border border-orange-200 bg-orange-50 px-3 py-2">
+                      <li key={i} className="flex items-center justify-between rounded-xl border border-brand-200 bg-brand-50 px-3 py-2">
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-bold text-orange-700">{q.file.name}</p>
-                          <p className="text-xs text-orange-400">{(q.file.size / 1024).toFixed(1)} KB</p>
+                          <p className="truncate text-xs font-bold text-brand-700">{q.file.name}</p>
+                          <p className="text-xs text-brand-400">{(q.file.size / 1024).toFixed(1)} KB</p>
                         </div>
-                        <button onClick={() => removeQueuedFile(i)} className="ml-2 text-orange-400 hover:text-red-500" title="Quitar de la cola">
+                        <button onClick={() => removeQueuedFile(i)} className="ml-2 text-brand-400 hover:text-red-500" title="Quitar de la cola">
                           <Trash2 size={14} />
                         </button>
                       </li>
@@ -1643,7 +1645,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-brand-600/20 hover:bg-brand-500 disabled:opacity-50 transition-colors"
               >
                 {saving && <Loader2 size={14} className="animate-spin" />}
                 {saving
@@ -1671,7 +1673,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Nombre del tipo</label>
               <input
                 autoFocus
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                 value={newTypeLabel}
                 onChange={e => {
                   setNewTypeLabel(e.target.value);
@@ -1698,7 +1700,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
               </button>
               <button
                 onClick={handleCreateCustomerType}
-                className="rounded-xl bg-orange-600 px-5 py-2 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500"
+                className="rounded-xl bg-brand-600 px-5 py-2 text-xs font-semibold  tracking-wider text-white shadow-md shadow-brand-600/20 hover:bg-brand-500"
               >
                 Agregar tipo
               </button>
@@ -1756,7 +1758,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
             <div className="flex items-center justify-between bg-gradient-to-r from-slate-900 to-slate-800 px-6 py-4 text-white">
               <div>
                 <h2 className="text-base font-semibold  tracking-tight">Gestionar cliente</h2>
-                <p className="mt-0.5 text-[11px] font-bold text-orange-400">{manageTarget.name.toUpperCase()}</p>
+                <p className="mt-0.5 text-[11px] font-bold text-brand-400">{manageTarget.name.toUpperCase()}</p>
               </div>
               <button onClick={closeManage} className="rounded-xl bg-slate-700 p-1.5 text-slate-200 hover:bg-slate-600"><X size={18}/></button>
             </div>
@@ -1784,8 +1786,8 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                     {/* Cliente */}
                     <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
                       <h4 className="text-xs font-semibold  tracking-wide text-slate-400 mb-3">Cliente</h4>
-                      <PanelButton icon={<Pencil size={16} className="text-orange-500"/>} title="Editar datos" subtitle="Modifica nombre, teléfono y límite" onClick={subEditDatos}/>
-                      <PanelButton icon={<FileDown size={16} className="text-orange-500"/>} title="Exportar PDF" subtitle="Estado de cuenta completo" onClick={exportStatementPdf}/>
+                      <PanelButton icon={<Pencil size={16} className="text-brand-500"/>} title="Editar datos" subtitle="Modifica nombre, teléfono y límite" onClick={subEditDatos}/>
+                      <PanelButton icon={<FileDown size={16} className="text-brand-500"/>} title="Exportar PDF" subtitle="Estado de cuenta completo" onClick={exportStatementPdf}/>
                     </div>
 
                     {/* Crédito */}
@@ -1972,7 +1974,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   <div className="mb-4 relative max-w-xl">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
                     <input
-                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-orange-400"
+                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand-400"
                       placeholder="Buscar por folio, nota de venta o referencia…"
                       value={searchPayments}
                       onChange={e => { setSearchPayments(e.target.value); setPgPayments(1); }}
@@ -2048,7 +2050,7 @@ const VinosCustomersScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                   <div className="mb-4 relative max-w-xl">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
                     <input
-                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-orange-400"
+                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand-400"
                       placeholder="Buscar por folio…"
                       value={searchCreditNotes}
                       onChange={e => { setSearchCreditNotes(e.target.value); setPgCreditNotes(1); }}
@@ -2591,11 +2593,11 @@ const EditPaymentModal: React.FC<{
         <div className="px-5 py-4 space-y-3">
           <div>
             <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Monto</label>
-            <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-base font-bold outline-none focus:border-orange-400"/>
+            <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-base font-bold outline-none focus:border-brand-400"/>
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Método</label>
-            <select value={method} onChange={e => setMethod(e.target.value as CreditPayment['payment_method'])} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400">
+            <select value={method} onChange={e => setMethod(e.target.value as CreditPayment['payment_method'])} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-400">
               <option value="EFECTIVO">Efectivo</option>
               <option value="TARJETA">Tarjeta</option>
               <option value="TRANSFERENCIA">Transferencia</option>
@@ -2605,17 +2607,17 @@ const EditPaymentModal: React.FC<{
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Referencia</label>
-            <input value={reference} onChange={e => setReference(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400"/>
+            <input value={reference} onChange={e => setReference(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"/>
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Notas</label>
-            <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400 resize-none"/>
+            <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400 resize-none"/>
           </div>
           {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-600">{err}</p>}
         </div>
         <div className="flex gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3">
           <button onClick={onClose} className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-xs font-semibold  tracking-wide text-slate-600 hover:bg-slate-100">Cancelar</button>
-          <button onClick={save} disabled={saving} className="flex-1 rounded-xl bg-orange-600 py-2 text-xs font-semibold  tracking-wide text-white hover:bg-orange-500 disabled:opacity-40">{saving ? 'Guardando…' : 'Guardar'}</button>
+          <button onClick={save} disabled={saving} className="flex-1 rounded-xl bg-brand-600 py-2 text-xs font-semibold  tracking-wide text-white hover:bg-brand-500 disabled:opacity-40">{saving ? 'Guardando…' : 'Guardar'}</button>
         </div>
       </div>
     </div>
@@ -2624,7 +2626,7 @@ const EditPaymentModal: React.FC<{
 
 // Sub-components reutilizables
 const PanelButton: React.FC<{ icon: React.ReactNode; title: string; subtitle: string; onClick: () => void }> = ({ icon, title, subtitle, onClick }) => (
-  <button onClick={onClick} className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition-all hover:border-orange-300 hover:bg-orange-50/40 hover:shadow-sm">
+  <button onClick={onClick} className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition-all hover:border-brand-300 hover:bg-brand-50/40 hover:shadow-sm">
     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50">{icon}</div>
     <div className="min-w-0 flex-1">
       <p className="text-sm font-bold text-slate-800">{title}</p>

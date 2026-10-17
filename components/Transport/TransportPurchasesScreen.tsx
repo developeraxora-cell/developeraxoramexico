@@ -243,7 +243,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
   };
 
   return (
-    <div className="space-y-6">
+    <div className="crm-module space-y-6">
       {feedback && (
         <FeedbackModal isOpen={true} type={feedback.type} title={feedback.title} description={feedback.description} onClose={() => setFeedback(null)} />
       )}
@@ -259,7 +259,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
           className={`px-5 py-2.5 rounded-xl text-xs font-semibold  tracking-wide transition-all shadow-sm ${
             showForm
               ? 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-              : 'bg-orange-600 text-white hover:bg-orange-700 shadow-orange-600/20'
+              : 'bg-brand-600 text-white hover:bg-brand-700 shadow-brand-600/20'
           }`}
         >
           {showForm ? <><AppIcon name="close" /> Cancelar</> : <><AppIcon name="plus" /> Nueva entrada</>}
@@ -278,7 +278,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
                 type="date"
                 value={purchaseDate}
                 onChange={(e) => setPurchaseDate(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-orange-400"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-brand-400"
               />
             </div>
             <div>
@@ -286,7 +286,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
               <select
                 value={selectedSupplierId}
                 onChange={(e) => setSelectedSupplierId(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-orange-400 bg-white"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-brand-400 bg-white"
               >
                 <option value="">Sin proveedor / libre</option>
                 {suppliers.map((s) => (
@@ -301,7 +301,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
                 placeholder="Ej. FAC-001"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-orange-400"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-brand-400"
               />
             </div>
           </div>
@@ -325,7 +325,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
               <select
                 value={selectedProductId}
                 onChange={(e) => setSelectedProductId(e.target.value)}
-                className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-orange-400 bg-white"
+                className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-brand-400 bg-white"
                 disabled={isLoading}
               >
                 <option value="">Selecciona un producto...</option>
@@ -370,7 +370,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
                           step="0.01"
                           value={l.qty}
                           onChange={(e) => updateLine(l.productId, l.productUomId, 'qty', Number(e.target.value))}
-                          className="w-16 rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-center outline-none focus:border-orange-400"
+                          className="w-16 rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-center outline-none focus:border-brand-400"
                         />
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -380,7 +380,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
                           step="0.01"
                           value={l.unitCost}
                           onChange={(e) => updateLine(l.productId, l.productUomId, 'unitCost', Number(e.target.value))}
-                          className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-right outline-none focus:border-orange-400"
+                          className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-right outline-none focus:border-brand-400"
                         />
                       </td>
                       <td className="px-4 py-3 text-right text-xs font-semibold text-slate-900">{formatCurrency(l.lineTotal)}</td>
@@ -410,7 +410,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
               placeholder="Observaciones, condiciones de pago, etc."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-orange-400 resize-none"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-brand-400 resize-none"
             />
           </div>
 
@@ -424,7 +424,7 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
             <button
               onClick={handleSubmit}
               disabled={isSaving || lines.length === 0}
-              className="px-6 py-2.5 rounded-xl bg-orange-600 text-white text-xs font-semibold  tracking-wider hover:bg-orange-700 disabled:opacity-50 transition-all shadow-lg shadow-orange-600/20"
+              className="px-6 py-2.5 rounded-xl bg-brand-600 text-white text-xs font-semibold  tracking-wider hover:bg-brand-700 disabled:opacity-50 transition-all shadow-lg shadow-brand-600/20"
             >
               {isSaving ? 'Guardando...' : 'Confirmar entrada'}
             </button>
@@ -433,10 +433,10 @@ const TransportPurchasesScreen: React.FC<Props> = ({ selectedBranchId, currentUs
       )}
 
       {/* History */}
-      <div className="rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+      <div className="crm-data-surface rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
           <p className="text-xs font-semibold  tracking-wide text-slate-500"><AppIcon name="clipboard" /> Historial de entradas</p>
-          <button onClick={() => void loadHistory()} disabled={isHistoryLoading} className="text-xs font-semibold  tracking-wide text-slate-400 hover:text-orange-600 disabled:opacity-50">
+          <button onClick={() => void loadHistory()} disabled={isHistoryLoading} className="text-xs font-semibold  tracking-wide text-slate-400 hover:text-brand-600 disabled:opacity-50">
             ↻ Actualizar
           </button>
         </div>

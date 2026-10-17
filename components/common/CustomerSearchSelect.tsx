@@ -91,7 +91,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => handleSelect(null)}
             className={`w-full px-4 py-3 text-left border-b border-slate-100 transition-colors ${
-              !selectedCustomer ? 'bg-orange-50 text-orange-700' : 'hover:bg-slate-50 text-slate-700'
+              !selectedCustomer ? 'bg-brand-50 text-brand-700' : 'hover:bg-slate-50 text-slate-700'
             }`}
           >
             <p className="text-sm font-semibold">{publicLabel}</p>

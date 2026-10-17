@@ -14,7 +14,7 @@ const DieselTankCard: React.FC<DieselTankCardProps> = ({ tank }) => {
     <div className="bg-white p-4 md:p-8 rounded-2xl md:rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-2xl transition-all duration-700">
       <div className="flex justify-between items-start mb-8">
         <div>
-          <span className="text-xs font-semibold text-orange-500  tracking-[0.2em] mb-1 block">Depósito Estacionario</span>
+          <span className="text-xs font-semibold text-brand-500  tracking-[0.2em] mb-1 block">Depósito Estacionario</span>
           <h3 className="text-2xl font-semibold text-slate-800  tracking-tight font-outfit">{tank.name}</h3>
         </div>
         <div className="flex items-center gap-2">
@@ -26,7 +26,7 @@ const DieselTankCard: React.FC<DieselTankCardProps> = ({ tank }) => {
 
       <div className="relative mx-auto w-48 h-72 bg-slate-100 rounded-2xl border-8 border-slate-900 overflow-hidden shadow-[inset_0_10px_30px_rgba(0,0,0,0.1)] group-hover:scale-105 transition-transform duration-500">
         <div
-          className={`absolute bottom-0 left-0 right-0 transition-all duration-[2000ms] ease-in-out bg-gradient-to-t ${isCritical ? 'from-red-600 to-red-400' : 'from-orange-500 via-orange-400 to-amber-300'
+          className={`absolute bottom-0 left-0 right-0 transition-all duration-[2000ms] ease-in-out bg-gradient-to-t ${isCritical ? 'from-red-600 to-red-400' : 'from-brand-500 via-brand-400 to-amber-300'
             }`}
           style={{ height: `${percentage}%` }}
         >
@@ -39,7 +39,7 @@ const DieselTankCard: React.FC<DieselTankCardProps> = ({ tank }) => {
 
         <div className="absolute inset-0 flex flex-col items-center justify-center z-30 pointer-events-none">
           <div className="bg-slate-900/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-slate-700 shadow-2xl">
-            <p className="text-2xl font-mono font-semibold text-orange-400">
+            <p className="text-2xl font-mono font-semibold text-brand-400">
               {percentage.toFixed(1)}%
             </p>
           </div>

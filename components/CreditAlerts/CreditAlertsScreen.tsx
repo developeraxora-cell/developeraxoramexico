@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import PageHeading from '../common/PageHeading';
 import { AlertTriangle, Clock3, CreditCard, Search } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { formatCurrency, formatNumber } from '../../services/currency';
@@ -184,7 +185,7 @@ const getAlertTypeBadge = (type: AlertRow['alertType']) => {
     case 'TIEMPO':
       return 'bg-blue-50 text-blue-700 border border-blue-200';
     case 'LIMITE':
-      return 'bg-orange-50 text-orange-700 border border-orange-200';
+      return 'bg-brand-50 text-brand-700 border border-brand-200';
     case 'MIXTO':
       return 'bg-violet-50 text-violet-700 border border-violet-200';
     default:
@@ -370,11 +371,12 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
   const moduleLabel = module === 'concretera' ? 'CONCRETERA' : module === 'transporteria' ? 'TRANSPORTERÍA' : 'MATERIALES';
 
   return (
-    <div className="space-y-8">
-      <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_20px_60px_-45px_rgba(15,23,42,0.35)]">
-        <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_42%,#f8fafc_100%)] px-6 py-7">
+    <div className="crm-module crm-credit-alerts space-y-6">
+      <PageHeading title="Alertas de crédito" description="Identifica vencimientos y da seguimiento a la cartera de clientes." />
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div>
           <div className="flex flex-col gap-6">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+            <div className="crm-metrics-strip grid sm:grid-cols-2 xl:grid-cols-6">
               <div className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3.5">
                 <p className="text-xs font-semibold  tracking-[0.18em] text-sky-600">Deudas activas</p>
                 <p className="mt-1.5 text-[2rem] font-semibold leading-none text-slate-900">{kpis.openNotesCount}</p>
@@ -409,7 +411,7 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
           </div>
         </div>
       </div>
-      <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-45px_rgba(15,23,42,0.35)]">
+      <div className="crm-data-surface rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-45px_rgba(15,23,42,0.35)]">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap gap-2">
@@ -428,7 +430,7 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
                   }}
                   className={`rounded-xl px-4 py-2 text-xs font-semibold  tracking-[0.18em] transition ${filter === option.id
                     ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/15'
-                    : 'border border-slate-200 bg-white text-slate-500 hover:border-orange-200 hover:text-orange-500'
+                    : 'border border-slate-200 bg-white text-slate-500 hover:border-brand-200 hover:text-brand-500'
                     }`}
                 >
                   <span className="block">
@@ -449,13 +451,13 @@ const CreditAlertsScreen: React.FC<CreditAlertsScreenProps> = ({ selectedBranchI
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Buscar por cliente, teléfono o observación..."
-                className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-orange-300"
+                className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-brand-300"
               />
             </div>
           </div>
         </div>
 
-        <div className="mt-6 overflow-hidden rounded-[28px] border border-slate-200">
+        <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-900 text-white">

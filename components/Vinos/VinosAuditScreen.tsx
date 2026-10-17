@@ -16,7 +16,7 @@ const ACTION_CONFIG: Record<string, { label: string; icon: React.ElementType; bg
   CREAR:      { label: 'Crear',      icon: Plus,    bg: 'bg-green-100',  text: 'text-green-700'  },
   ACTUALIZAR: { label: 'Editar',     icon: Edit,    bg: 'bg-blue-100',   text: 'text-blue-700'   },
   ELIMINAR:   { label: 'Eliminar',   icon: Trash2,  bg: 'bg-red-100',    text: 'text-red-700'    },
-  VENTA:      { label: 'Venta',      icon: ShoppingCart, bg: 'bg-orange-100', text: 'text-orange-700' },
+  VENTA:      { label: 'Venta',      icon: ShoppingCart, bg: 'bg-brand-100', text: 'text-brand-700' },
   COMPRA:     { label: 'Compra',     icon: ClipboardList, bg: 'bg-purple-100', text: 'text-purple-700' },
 };
 
@@ -176,7 +176,7 @@ const VinosAuditScreen: React.FC<Props> = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="crm-module space-y-6">
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -198,7 +198,7 @@ const VinosAuditScreen: React.FC<Props> = () => {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
             placeholder="Buscar por usuario, descripción, motivo…"
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
@@ -215,11 +215,11 @@ const VinosAuditScreen: React.FC<Props> = () => {
       </div>
 
       {/* Filtros */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 rounded-xl border border-slate-200 bg-white p-4">
+      <div className="crm-toolbar grid grid-cols-1 sm:grid-cols-4 gap-3 rounded-xl border border-slate-200 bg-white p-4">
         <div>
           <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Entidad</label>
           <select value={entityFilter} onChange={e => { setEntityFilter(e.target.value); setPage(1); }}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-orange-400">
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-brand-400">
             <option value="">Todas</option>
             <option value="venta">Ventas</option>
             <option value="compra">Compras</option>
@@ -232,7 +232,7 @@ const VinosAuditScreen: React.FC<Props> = () => {
         <div>
           <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Acción</label>
           <select value={actionFilter} onChange={e => { setActionFilter(e.target.value); setPage(1); }}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-orange-400">
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-brand-400">
             <option value="">Todas</option>
             <option value="CREAR">Crear</option>
             <option value="ACTUALIZAR">Actualizar</option>
@@ -244,17 +244,17 @@ const VinosAuditScreen: React.FC<Props> = () => {
         <div>
           <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Desde</label>
           <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-orange-400" />
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-brand-400" />
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Hasta</label>
           <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-orange-400" />
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-brand-400" />
         </div>
       </div>
 
       {/* Tabla */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="crm-data-surface overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <div className="py-16 text-center text-sm font-bold text-slate-400">Cargando…</div>
         ) : rows.length === 0 ? (

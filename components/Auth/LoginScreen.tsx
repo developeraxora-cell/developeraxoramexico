@@ -35,7 +35,7 @@ const HumanCheckbox: React.FC<{ verified: boolean; onVerify: () => void }> = ({ 
           onClick={handleClick}
           aria-label="No soy un robot"
           style={{ cursor: verified ? 'default' : 'pointer' }}
-          className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded border-2 border-[#c1c1c1] bg-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+          className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded border-2 border-[#c1c1c1] bg-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         >
           {verifying && (
             <svg className="h-4 w-4 animate-spin text-slate-400" viewBox="0 0 24 24" fill="none">
@@ -73,9 +73,9 @@ const InputField: React.FC<{
   children: React.ReactNode;
 }> = ({ label, icon, right, children }) => (
   <div className="space-y-1.5">
-    <span className="block text-xs font-semibold  tracking-[0.22em] text-slate-400">{label}</span>
-    <div className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 transition-all focus-within:border-orange-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-orange-500/10">
-      <span className="text-slate-400 transition group-focus-within:text-orange-500">{icon}</span>
+    <span className="block text-xs font-medium text-slate-600">{label}</span>
+    <div className="crm-login-field group flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 transition-all focus-within:bg-white">
+      <span className="text-slate-400 transition group-focus-within:text-brand-500">{icon}</span>
       {children}
       {right}
     </div>
@@ -174,7 +174,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ isSupabaseConfigured, error, 
 
           {/* Top: small logo badge */}
           <div className="flex items-center gap-3">
-            <div className="h-9 w-1 rounded-full bg-orange-400" />
+            <div className="h-9 w-1 rounded-full bg-brand-400" />
             <div>
               <p className="text-sm font-semibold tracking-[.12em] text-white">GRUPO LOPAR</p>
               <p className="mt-1 text-xs text-slate-300">Plataforma de gestión empresarial</p>
@@ -183,19 +183,19 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ isSupabaseConfigured, error, 
 
           {/* Center: hero branding */}
           <div>
-            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-[20px] bg-gradient-to-br from-orange-500 to-orange-700 shadow-2xl shadow-orange-900/60 ring-4 ring-white/10">
+            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-[20px] bg-gradient-to-br from-brand-500 to-brand-700 shadow-2xl shadow-brand-900/60 ring-4 ring-white/10">
               <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none">
                 <path d="M3 17h18v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" fill="white" fillOpacity="0.95"/>
                 <path d="M12 3C8.5 3 5.5 5.5 5 9H4a1 1 0 00-1 1v4h18v-4a1 1 0 00-1-1h-1C18.5 5.5 15.5 3 12 3z" fill="white"/>
               </svg>
-              <Zap className="absolute h-3 w-3 translate-x-5 translate-y-4 fill-orange-300 text-orange-300" />
+              <Zap className="absolute h-3 w-3 translate-x-5 translate-y-4 fill-orange-300 text-brand-300" />
             </div>
 
             <h1 className="max-w-lg text-4xl font-semibold leading-[1.12] tracking-tight text-white xl:text-6xl">
               Toda tu operación.<br />
-              <span className="text-orange-300">En un solo lugar.</span>
+              <span className="text-brand-300">En un solo lugar.</span>
             </h1>
-            <p className="mt-6 text-xs font-medium uppercase tracking-[.18em] text-orange-200">
+            <p className="mt-6 text-xs font-medium uppercase tracking-[.18em] text-brand-200">
               Industrial OS · Grupo Lopar
             </p>
             <p className="mt-4 max-w-sm text-base font-normal leading-relaxed text-slate-200">
@@ -243,8 +243,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ isSupabaseConfigured, error, 
             {/* Step indicator */}
             <div className="mb-7 flex items-center gap-3">
               <div className="flex gap-1.5">
-                <span className={`h-1.5 rounded-full transition-all duration-300 ${step === 1 ? 'w-6 bg-orange-500' : 'w-3 bg-slate-200'}`} />
-                <span className={`h-1.5 rounded-full transition-all duration-300 ${step === 2 ? 'w-6 bg-orange-500' : 'w-3 bg-slate-200'}`} />
+                <span className={`h-1.5 rounded-full transition-all duration-300 ${step === 1 ? 'w-6 bg-brand-500' : 'w-3 bg-slate-200'}`} />
+                <span className={`h-1.5 rounded-full transition-all duration-300 ${step === 2 ? 'w-6 bg-brand-500' : 'w-3 bg-slate-200'}`} />
               </div>
               <span className="text-xs font-semibold  tracking-[0.2em] text-slate-400">
                 Paso {step} de 2
@@ -275,7 +275,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ isSupabaseConfigured, error, 
 
             {/* Supabase warning */}
             {!isSupabaseConfigured && (
-              <div className="mb-5 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-800">
+              <div className="mb-5 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-800">
                 Configura <code className="font-semibold">VITE_SUPABASE_URL</code> y <code className="font-semibold">VITE_SUPABASE_ANON_KEY</code>.
               </div>
             )}
@@ -285,6 +285,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ isSupabaseConfigured, error, 
               <form onSubmit={goToStep2} className="space-y-5">
                 <InputField label="Usuario o correo" icon={<UserRound className="h-4 w-4" />}>
                   <input
+                    aria-label="Usuario o correo"
                     value={identifier}
                     onChange={e => setIdentifier(e.target.value)}
                     className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400"
@@ -310,15 +311,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ isSupabaseConfigured, error, 
                 {/* Identifier pill (read-only) */}
                 <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-100">
-                      <UserRound className="h-3.5 w-3.5 text-orange-600" />
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100">
+                      <UserRound className="h-3.5 w-3.5 text-brand-600" />
                     </div>
                     <span className="text-sm font-semibold text-slate-700">{identifier}</span>
                   </div>
                   <button
                     type="button"
                     onClick={goBack}
-                    className="flex items-center gap-1 text-[11px] font-semibold  tracking-wider text-orange-500 transition hover:text-orange-700"
+                    className="flex items-center gap-1 text-[11px] font-semibold  tracking-wider text-brand-500 transition hover:text-brand-700"
                   >
                     <ArrowLeft className="h-3 w-3" />
                     Cambiar
@@ -342,6 +343,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ isSupabaseConfigured, error, 
                 >
                   <input
                     type={showPass ? 'text' : 'password'}
+                    aria-label="Contraseña"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400"

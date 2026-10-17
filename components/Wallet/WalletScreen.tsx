@@ -256,7 +256,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
   };
 
   return (
-    <div className="flex h-full flex-col gap-6 overflow-hidden p-6">
+    <div className="crm-module flex h-full flex-col gap-6 overflow-hidden p-6">
       <div className="grid gap-4 xl:grid-cols-4">
         <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-xs font-semibold  tracking-wide text-sky-500">Saldos a favor activos</p>
@@ -267,7 +267,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
           <p className="mt-3 text-4xl font-semibold tracking-tight text-emerald-600">{formatCurrency(totals.balance)}</p>
         </div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold  tracking-wide text-orange-500">Recargas hoy</p>
+          <p className="text-xs font-semibold  tracking-wide text-brand-500">Recargas hoy</p>
           <p className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">{totals.rechargesToday}</p>
         </div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
@@ -276,7 +276,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
         </div>
       </div>
 
-      <div className="flex items-center gap-4 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="crm-toolbar flex items-center gap-4 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
         <input
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -293,7 +293,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ selectedBranchId, branches,
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm">
+      <div className="crm-data-surface overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-900 text-xs font-semibold  tracking-wide text-white">
             <tr>

@@ -9,9 +9,9 @@ interface Props {
 
 const TransportCustomersScreen: React.FC<Props> = () => {
   return (
-    <div className="space-y-6">
-      <div className="rounded-[32px] border border-dashed border-orange-200 bg-orange-50 p-10 text-center shadow-sm">
-        <p className="text-sm font-semibold  tracking-[0.26em] text-orange-400">Módulo en construcción</p>
+    <div className="crm-module space-y-6">
+      <div className="rounded-[32px] border border-dashed border-brand-200 bg-brand-50 p-10 text-center shadow-sm">
+        <p className="text-sm font-semibold  tracking-[0.26em] text-brand-400">Módulo en construcción</p>
         <p className="mt-4 text-2xl font-semibold tracking-tight text-slate-900">Clientes / Crédito — Transportería</p>
         <p className="mt-2 text-sm font-semibold text-slate-500 max-w-md mx-auto">
           La gestión de clientes con crédito, pagarés y saldo a favor para Transportería estará disponible en la próxima entrega.
@@ -25,8 +25,8 @@ const TransportCustomersScreen: React.FC<Props> = () => {
             'Abonos y pagos',
             'Alertas de vencimiento',
           ].map((feat) => (
-            <div key={feat} className="flex items-center gap-2 rounded-xl bg-white border border-orange-100 px-3 py-2">
-              <span className="text-orange-400 text-xs">◉</span>
+            <div key={feat} className="flex items-center gap-2 rounded-xl bg-white border border-brand-100 px-3 py-2">
+              <span className="text-brand-400 text-xs">◉</span>
               <span className="text-xs font-semibold text-slate-600">{feat}</span>
             </div>
           ))}

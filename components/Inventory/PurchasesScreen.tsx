@@ -1323,10 +1323,10 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
   }, [historySearch, filteredHistory.length]);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white px-6 py-5 rounded-2xl border border-slate-200 shadow-sm">
+    <div className="crm-module space-y-6 animate-in fade-in duration-500">
+      <div className="crm-page-heading flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white px-6 py-5 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-brand-50 text-brand-500 flex items-center justify-center">
             <History className="w-5 h-5" />
           </div>
           <div>
@@ -1346,7 +1346,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 setClearHistoryObservationError(null);
                 setIsClearHistoryOpen(true);
               }}
-              className="px-5 py-2.5 rounded-xl font-semibold text-xs  tracking-wide border border-orange-200 text-orange-600 bg-orange-50 hover:bg-orange-100"
+              className="px-5 py-2.5 rounded-xl font-semibold text-xs  tracking-wide border border-brand-200 text-brand-600 bg-brand-50 hover:bg-brand-100"
             >
               <span className="inline-flex items-center gap-2">
                 <Brush className="w-4 h-4" />
@@ -1395,7 +1395,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 ref={scanInputRef}
                 type="text"
                 placeholder="Escanee el barcode o escriba el nombre"
-                className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-brand-500"
                 value={barcodeInput}
                 onChange={(e) => setBarcodeInput(e.target.value)}
                 onKeyDown={handleBarcodeKey}
@@ -1441,7 +1441,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                   </button>
                 </div>
                 <select
-                  className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-brand-500"
                   value={supplierId}
                   onChange={(e) => setSupplierId(e.target.value)}
                   disabled={!branchId}
@@ -1462,7 +1462,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                   <label className="text-[11px] font-bold text-slate-500  tracking-wide">Fecha de compra</label>
                   <input
                     type="date"
-                    className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-brand-500"
                     value={purchaseDate}
                     onChange={(e) => setPurchaseDate(e.target.value)}
                   />
@@ -1470,7 +1470,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 <div className="space-y-2">
                   <label className="text-[11px] font-bold text-slate-500  tracking-wide">Compra a crédito</label>
                   <select
-                    className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-brand-500"
                     value={isCredit ? 'SI' : 'NO'}
                     onChange={(e) => setIsCredit(e.target.value === 'SI')}
                   >
@@ -1486,13 +1486,13 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
               <input
                 type="text"
                 placeholder="Referencia (Factura, Remisión, etc.)"
-                className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-brand-500"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
               />
               <textarea
                 placeholder="Notas"
-                className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500 min-h-[120px]"
+                className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-brand-500 min-h-[120px]"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
@@ -1501,7 +1501,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
 
           <div className="lg:col-span-7 space-y-4">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
-              <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
+              <div className="crm-form-header p-6 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold text-slate-400  tracking-wide">Carrito de compra</p>
                   <p className="text-xs font-semibold">{cartItems.length} productos</p>
@@ -1608,7 +1608,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                   onClick={handleSavePurchase}
                   disabled={cartItems.length === 0 || isSaving || feedbackLoading}
                   className={`px-12 py-4 rounded-xl font-semibold text-xs  tracking-wide shadow-sm transition-all ${cartItems.length > 0 && !isSaving
-                    ? 'bg-orange-500 text-white hover:bg-orange-600'
+                    ? 'bg-brand-500 text-white hover:bg-brand-600'
                     : 'bg-slate-200 text-slate-400'
                     }`}
                 >
@@ -1626,7 +1626,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
               value={historySearch}
               onChange={(e) => setHistorySearch(e.target.value)}
               placeholder="Buscar por entrada, remisión, proveedor o monto total..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-orange-400 focus:bg-white"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-brand-400 focus:bg-white"
             />
           </div>
           <div className="overflow-x-auto">
@@ -1666,7 +1666,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold  tracking-wide ${p.is_credit ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold  tracking-wide ${p.is_credit ? 'bg-brand-100 text-brand-600' : 'bg-emerald-100 text-emerald-600'}`}>
                         {p.is_credit ? 'Sí' : 'No'}
                       </span>
                     </td>
@@ -1786,7 +1786,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       {pendingUomSelection && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <div className="crm-form-header p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-semibold  tracking-tight">Seleccionar UOM de Compra</h3>
                 <p className="text-slate-400 text-xs">{pendingUomSelection.product.name}</p>
@@ -1808,7 +1808,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                       addToCart(pendingUomSelection.product, uom);
                       setPendingUomSelection(null);
                     }}
-                    className="w-full p-4 rounded-xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
+                    className="w-full p-4 rounded-xl border border-slate-200 text-left hover:border-brand-500 hover:bg-brand-50/30 transition-all"
                   >
                     <p className="text-sm font-semibold text-slate-900">
                       {meta?.name ?? 'UOM'} {meta?.code ? `(${meta.code})` : ''}
@@ -1825,7 +1825,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       {isSupplierModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="bg-slate-900 p-6 text-white flex items-center justify-between">
+            <div className="crm-form-header p-6 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold  tracking-tight">Nuevo proveedor</h3>
                 <p className="text-xs text-slate-400  tracking-wide">Sucursal {selectedBranchId || '—'}</p>
@@ -1842,7 +1842,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 <label className="text-[11px] font-bold text-slate-500  tracking-wide">Nombre</label>
                 <input
                   type="text"
-                  className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-orange-500"
+                  className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-brand-500"
                   value={supplierName}
                   onChange={(e) => setSupplierName(e.target.value)}
                 />
@@ -1851,7 +1851,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 <label className="text-[11px] font-bold text-slate-500  tracking-wide">Teléfono</label>
                 <input
                   type="text"
-                  className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-orange-500"
+                  className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-brand-500"
                   value={supplierPhone}
                   onChange={(e) => setSupplierPhone(e.target.value)}
                 />
@@ -1860,7 +1860,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 <label className="text-[11px] font-bold text-slate-500  tracking-wide">Correo</label>
                 <input
                   type="email"
-                  className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-orange-500"
+                  className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-brand-500"
                   value={supplierEmail}
                   onChange={(e) => setSupplierEmail(e.target.value)}
                 />
@@ -1869,7 +1869,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                 <label className="text-[11px] font-bold text-slate-500  tracking-wide">Dirección</label>
                 <input
                   type="text"
-                  className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-orange-500"
+                  className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl outline-none text-sm font-semibold focus:border-brand-500"
                   value={supplierAddress}
                   onChange={(e) => setSupplierAddress(e.target.value)}
                 />
@@ -1887,7 +1887,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                   type="button"
                   onClick={handleCreateSupplier}
                   disabled={isSavingSupplier || feedbackLoading}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold  tracking-wide text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold  tracking-wide text-white bg-brand-500 hover:bg-brand-600 disabled:opacity-60"
                 >
                   {isSavingSupplier ? 'Guardando...' : 'Guardar proveedor'}
                 </button>
@@ -1900,7 +1900,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       {isSupplierManagerOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[75vh] overflow-hidden flex flex-col">
-            <div className="bg-slate-900 p-6 text-white flex items-center justify-between">
+            <div className="crm-form-header p-6 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold  tracking-tight">Proveedores</h3>
                 <p className="text-xs text-slate-400  tracking-wide">Sucursal {selectedBranchLabel}</p>
@@ -1936,7 +1936,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
                             type="text"
                             value={supplierEditName}
                             onChange={(event) => setSupplierEditName(event.target.value)}
-                            className="w-full rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-orange-500"
+                            className="w-full rounded-xl border border-brand-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
                             disabled={isBusy}
                             autoFocus
                           />
@@ -2104,7 +2104,7 @@ const PurchasesScreen: React.FC<PurchasesScreenProps> = ({ selectedBranchId, cur
       {isPurchaseDetailOpen && selectedPurchase && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[70vh] overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <div className="crm-form-header p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-semibold  tracking-tight">Detalle de Compra</h3>
                 <p className="text-slate-400 text-xs">

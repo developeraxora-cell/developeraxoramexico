@@ -218,7 +218,7 @@ const isCasaTahonaBranch = (branch: Branch) => {
 };
 
 const inputCls =
-  'w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-500/10';
+  'w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/10';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -234,7 +234,7 @@ const RoleBadge: React.FC<{ roleKey: string }> = ({ roleKey }) => {
 const Avatar: React.FC<{ name: string; active: boolean }> = ({ name, active }) => {
   const initials = name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?';
   return (
-    <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-semibold text-sm text-white shadow-sm ${active ? 'bg-gradient-to-br from-orange-500 to-orange-600' : 'bg-slate-400'}`}>
+    <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-semibold text-sm text-white shadow-sm ${active ? 'bg-gradient-to-br from-brand-500 to-brand-600' : 'bg-slate-400'}`}>
       {initials}
       <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${active ? 'bg-emerald-500' : 'bg-slate-400'}`} />
     </div>
@@ -296,12 +296,12 @@ const AccessSection: React.FC<{
                 key={b.id}
                 className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition
                   ${disabled ? 'cursor-not-allowed opacity-40 bg-slate-100 border-slate-200' :
-                    checked  ? 'cursor-pointer border-orange-300 bg-orange-50' :
+                    checked  ? 'cursor-pointer border-brand-300 bg-brand-50' :
                                'cursor-pointer border-slate-200 bg-slate-50 hover:bg-white'}`}
               >
                 <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition
                   ${disabled ? 'border-slate-300 bg-slate-200' :
-                    checked  ? 'border-orange-600 bg-orange-600' : 'border-slate-300'}`}>
+                    checked  ? 'border-brand-600 bg-brand-600' : 'border-slate-300'}`}>
                   {checked && !disabled && <span className="text-xs font-semibold text-white"><AppIcon name="check" /></span>}
                 </div>
                 <input
@@ -332,12 +332,12 @@ const AccessSection: React.FC<{
                 key={u.value}
                 className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition
                   ${disabled ? 'cursor-not-allowed opacity-40 bg-slate-100 border-slate-200' :
-                    checked  ? 'cursor-pointer border-orange-300 bg-orange-50' :
+                    checked  ? 'cursor-pointer border-brand-300 bg-brand-50' :
                                'cursor-pointer border-slate-200 bg-slate-50 hover:bg-white'}`}
               >
                 <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition
                   ${disabled ? 'border-slate-300 bg-slate-200' :
-                    checked  ? 'border-orange-600 bg-orange-600' : 'border-slate-300'}`}>
+                    checked  ? 'border-brand-600 bg-brand-600' : 'border-slate-300'}`}>
                   {checked && !disabled && <span className="text-xs font-semibold text-white"><AppIcon name="check" /></span>}
                 </div>
                 <input
@@ -384,7 +384,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
       {/* Header */}
       <div className="flex shrink-0 items-start justify-between bg-slate-900 px-7 py-6 text-white">
         <div>
-          <p className="text-[11px] font-semibold  tracking-[0.22em] text-orange-400">
+          <p className="text-[11px] font-semibold  tracking-[0.22em] text-brand-400">
             {mode === 'create' ? 'Nuevo empleado' : 'Editar empleado'}
           </p>
           <h3 className="mt-1 text-xl font-semibold tracking-tight">
@@ -419,7 +419,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
             </Field>
             {mode === 'create' && (
               <Field label="Contraseña inicial" className="md:col-span-2">
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-orange-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-orange-500/10">
+                <div className="crm-field-shell flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:bg-white">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={form.password}
@@ -460,13 +460,13 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                 <ul className="space-y-1.5">
                   {info.modules.map((m, i) => (
                     <li key={i} className="flex items-start gap-2 text-xs font-bold text-slate-600">
-                      <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                      <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
                       {m}
                     </li>
                   ))}
                 </ul>
                 {info.note && (
-                  <p className="pt-1 text-xs font-medium text-orange-700"><AppIcon name="lock" /> {info.note.replace(/^🔒\s*/, '')}</p>
+                  <p className="pt-1 text-xs font-medium text-brand-700"><AppIcon name="lock" /> {info.note.replace(/^🔒\s*/, '')}</p>
                 )}
               </div>
             );
@@ -494,7 +494,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
         <button
           disabled={saving}
           onClick={() => void onSave()}
-          className="flex flex-[2] items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3.5 text-xs font-semibold  tracking-wide text-white shadow-lg transition hover:bg-orange-600 disabled:opacity-50"
+          className="flex flex-[2] items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3.5 text-xs font-semibold  tracking-wide text-white shadow-lg transition hover:bg-brand-600 disabled:opacity-50"
         >
           {saving ? 'Guardando...' : mode === 'create' ? '+ Crear usuario' : 'Guardar cambios'}
         </button>
@@ -536,7 +536,7 @@ const PasswordModal: React.FC<{ userId: string; userName: string; onClose: () =>
       <div className="w-full max-w-md overflow-hidden rounded-[28px] bg-white shadow-2xl">
         <div className="flex items-start justify-between bg-slate-900 px-7 py-6 text-white">
           <div>
-            <p className="text-[11px] font-semibold  tracking-[0.22em] text-orange-400">Seguridad de acceso</p>
+            <p className="text-[11px] font-semibold  tracking-[0.22em] text-brand-400">Seguridad de acceso</p>
             <h3 className="mt-1 text-xl font-semibold tracking-tight">Cambiar contraseña</h3>
             <p className="mt-1 text-xs font-bold text-slate-400 truncate max-w-[260px]">{userName}</p>
           </div>
@@ -550,7 +550,7 @@ const PasswordModal: React.FC<{ userId: string; userName: string; onClose: () =>
           {success && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700"><AppIcon name="check" /> Contraseña actualizada correctamente</div>}
 
           <Field label="Nueva contraseña">
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-orange-500 focus-within:bg-white">
+            <div className="crm-field-shell flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:bg-white">
               <input
                 autoFocus
                 type={show ? 'text' : 'password'}
@@ -586,7 +586,7 @@ const PasswordModal: React.FC<{ userId: string; userName: string; onClose: () =>
           <button
             disabled={saving || success}
             onClick={() => void save()}
-            className="flex flex-[2] items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3.5 text-xs font-semibold  tracking-wide text-white shadow-lg transition hover:bg-orange-600 disabled:opacity-50"
+            className="flex flex-[2] items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3.5 text-xs font-semibold  tracking-wide text-white shadow-lg transition hover:bg-brand-600 disabled:opacity-50"
           >
             <KeyRound className="h-4 w-4" />
             {saving ? 'Guardando...' : 'Actualizar contraseña'}
@@ -985,10 +985,10 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
+    <div className="crm-module space-y-6">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="crm-page-heading flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-900 text-white shadow-lg">
             <UserCog className="h-7 w-7" />
@@ -1007,7 +1007,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
           </button>
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-semibold  tracking-wide text-white shadow-lg shadow-slate-900/15 transition hover:bg-orange-600"
+            className="flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-semibold  tracking-wide text-white shadow-lg shadow-slate-900/15 transition hover:bg-brand-600"
           >
             <Plus className="h-4 w-4" />
             Nuevo usuario
@@ -1033,9 +1033,9 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
       </div>
 
       {/* ── Filters ────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
+      <div className="crm-toolbar flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
         {/* Search */}
-        <div className="flex flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-orange-500 focus-within:bg-white">
+        <div className="crm-field-shell flex flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:bg-white">
           <Search className="h-4 w-4 shrink-0 text-slate-400" />
           <input
             value={search}
@@ -1075,7 +1075,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
       </div>
 
       {/* ── Table ──────────────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+      <div className="crm-data-surface overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
@@ -1143,7 +1143,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
                         {user.business_units.length === 0
                           ? <span className="text-xs font-bold text-slate-400">Sin área</span>
                           : user.business_units.map(u => (
-                            <span key={u} className="rounded-lg bg-orange-50 px-2 py-1 text-xs font-semibold text-orange-700 capitalize">{u}</span>
+                            <span key={u} className="rounded-lg bg-brand-50 px-2 py-1 text-xs font-semibold text-brand-700 capitalize">{u}</span>
                           ))
                         }
                       </div>
@@ -1168,7 +1168,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ branches }) => {
                         <button
                           onClick={() => openPassword(user)}
                           title="Cambiar contraseña"
-                          className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-orange-600 hover:text-white"
+                          className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-brand-600 hover:text-white"
                         >
                           <KeyRound className="h-4 w-4" />
                         </button>

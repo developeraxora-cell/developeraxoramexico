@@ -110,7 +110,7 @@ const ProductionScreen: React.FC<ProductionScreenProps> = ({ selectedBranchId, c
   }, [branchDbId, currentUser.id, currentUser.name, loadList, selectedBranch?.name]);
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-300">
+    <div className="crm-module space-y-4 animate-in fade-in duration-300">
       {mode === 'list' && (
         <ProductionListView
           productions={productions}
@@ -154,7 +154,7 @@ const ProductionScreen: React.FC<ProductionScreenProps> = ({ selectedBranchId, c
 const ScreenHeader: React.FC<{ title: string; right: React.ReactNode }> = ({ title, right }) => (
   <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
     <div className="flex items-center gap-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-500">
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-500">
         <Factory size={18} />
       </div>
       <div>
@@ -242,7 +242,7 @@ const ProductionListView: React.FC<{
           value={search}
           onChange={(event) => onSearch(event.target.value)}
           placeholder="Buscar producción por fecha, responsable u observación..."
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
         />
 
         <div className="mt-4 overflow-hidden rounded-xl border border-slate-100">
@@ -361,7 +361,7 @@ const MovementsModal: React.FC<{
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-500">
               <ArrowLeftRight size={15} />
             </div>
             <h2 className="text-sm font-semibold tracking-tight text-slate-900">Entradas y Salidas</h2>
@@ -376,7 +376,7 @@ const MovementsModal: React.FC<{
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por producción, tipo o producto..."
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
         </div>
 
@@ -489,7 +489,7 @@ const ProductorSelect: React.FC<{
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+          className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
         >
           <option value="">{loading ? 'Cargando...' : list.length === 0 ? 'Sin productores — agregá uno' : 'Seleccionar productor...'}</option>
           {list.map((p) => (
@@ -612,10 +612,10 @@ const ProductoresAdminModal: React.FC<{
         aria-label="Administrar productores"
       >
         {/* Header con gradiente */}
-        <header className="relative overflow-hidden border-b border-slate-100 bg-gradient-to-br from-orange-50 via-white to-white px-5 py-4">
+        <header className="relative overflow-hidden border-b border-slate-100 bg-gradient-to-br from-brand-50 via-white to-white px-5 py-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-sm">
                 <Users size={18} />
               </div>
               <div>
@@ -644,7 +644,7 @@ const ProductoresAdminModal: React.FC<{
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
               placeholder="Nombre completo..."
-              className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100"
+              className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-100"
             />
             <button
               type="button"
@@ -685,9 +685,9 @@ const ProductoresAdminModal: React.FC<{
             {!loading && list.map((p) => (
               <div
                 key={p.id}
-                className="group flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2.5 transition hover:border-orange-200 hover:bg-orange-50/40"
+                className="group flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2.5 transition hover:border-brand-200 hover:bg-brand-50/40"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold  text-slate-500 group-hover:bg-orange-100 group-hover:text-orange-600">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold  text-slate-500 group-hover:bg-brand-100 group-hover:text-brand-600">
                   {p.name.slice(0, 2)}
                 </div>
                 <span className="flex-1 truncate text-sm font-bold text-slate-700">{p.name}</span>
@@ -911,7 +911,7 @@ const NewProductionView: React.FC<{
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
           </label>
 
@@ -935,7 +935,7 @@ const NewProductionView: React.FC<{
               value={observation}
               onChange={(e) => setObservation(e.target.value)}
               placeholder="Notas adicionales"
-              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
           </label>
         </div>
@@ -970,7 +970,7 @@ const NewProductionView: React.FC<{
       {/* Materia prima: ALAMBON */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
-          <Package className="text-orange-500" size={17} />
+          <Package className="text-brand-500" size={17} />
           <h2 className="text-xs font-semibold  tracking-wide text-slate-700">Materia Prima (Alambón)</h2>
         </div>
         <div className="grid gap-3 p-4 sm:grid-cols-4">
@@ -979,7 +979,7 @@ const NewProductionView: React.FC<{
             <select
               value={alambonId}
               onChange={(e) => setAlambonId(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-orange-500"
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-brand-500"
             >
               {alambonProducts.length === 0 && <option value="">Sin alambón disponible</option>}
               {alambonProducts.map((p) => (
@@ -1019,7 +1019,7 @@ const NewProductionView: React.FC<{
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
           <div className="flex items-center gap-2">
-            <Package className="text-orange-500" size={17} />
+            <Package className="text-brand-500" size={17} />
             <h2 className="text-xs font-semibold  tracking-wide text-slate-700">Productos Terminados (Anillos)</h2>
           </div>
           <div className="flex gap-2">
@@ -1064,7 +1064,7 @@ const NewProductionView: React.FC<{
                       <select
                         value={row.productId}
                         onChange={(e) => updateRow(row.key, { productId: e.target.value })}
-                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-orange-500"
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-brand-500"
                       >
                         <option value="">Seleccionar anillo...</option>
                         {anilloProducts.map((p) => (
@@ -1086,7 +1086,7 @@ const NewProductionView: React.FC<{
                         value={row.pareas}
                         onChange={(e) => updateRow(row.key, { pareas: e.target.value })}
                         placeholder="0"
-                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center font-bold text-slate-900 outline-none focus:border-orange-500"
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center font-bold text-slate-900 outline-none focus:border-brand-500"
                       />
                     </td>
                     <td className="px-3 py-2.5 text-center font-semibold text-slate-600">{product ? fmt(peso) : '-'}</td>
@@ -1181,7 +1181,7 @@ const PesoModal: React.FC<{
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-500">
               <Scale size={15} />
             </div>
             <h2 className="text-sm font-semibold tracking-tight text-slate-900">Editar Peso de Anillos</h2>
@@ -1196,7 +1196,7 @@ const PesoModal: React.FC<{
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar anillo..."
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
         </div>
 
@@ -1218,7 +1218,7 @@ const PesoModal: React.FC<{
                   step="0.001"
                   value={current}
                   onChange={(e) => setValues((prev) => ({ ...prev, [id]: e.target.value }))}
-                  className="w-24 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-center text-xs font-bold text-slate-900 outline-none focus:border-orange-500"
+                  className="w-24 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-center text-xs font-bold text-slate-900 outline-none focus:border-brand-500"
                 />
                 <span className="w-12 text-xs font-semibold  tracking-wide text-slate-400">{uomLabel(p)}</span>
                 <button
@@ -1326,7 +1326,7 @@ const DeleteProductionModal: React.FC<{
               rows={3}
               placeholder="Motivo de la eliminación..."
               className={`mt-1.5 w-full rounded-xl border bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:ring-2 ${
-                obsError ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 focus:border-orange-500 focus:ring-orange-100'
+                obsError ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 focus:border-brand-500 focus:ring-brand-100'
               }`}
             />
             {obsError && <span className="mt-1 block text-[11px] font-semibold text-red-500">{obsError}</span>}

@@ -1015,12 +1015,12 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
   };
 
   return (
-    <div className="h-full w-full overflow-y-auto px-3 py-4 sm:px-4 md:px-6 xl:px-8">
+    <div className="crm-module h-full w-full overflow-y-auto px-3 py-4 sm:px-4 md:px-6 xl:px-8">
       <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 lg:gap-6">
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5 xl:p-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <p className="text-[11px] font-semibold  tracking-[0.3em] text-orange-500">Reporte Gerencial</p>
+              <p className="text-[11px] font-semibold  tracking-[0.3em] text-brand-500">Reporte Gerencial</p>
               <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Resumen ejecutivo del negocio</h2>
               <p className="mt-1 text-sm font-semibold text-slate-500">
                 {branchName}. Comparativo del periodo seleccionado contra {previousPeriodLabel}.
@@ -1112,20 +1112,20 @@ const ExecutiveDashboardScreen: React.FC<ExecutiveDashboardScreenProps> = ({ sel
           <article className="rounded-2xl border border-slate-200 bg-slate-900 p-5 text-white shadow-lg shadow-slate-900/15 md:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[11px] font-semibold  tracking-[0.3em] text-orange-300">Director General Digital</p>
+                <p className="text-[11px] font-semibold  tracking-[0.3em] text-brand-300">Director General Digital</p>
                 <h3 className="mt-3 text-2xl font-semibold tracking-tight">Buenos días.</h3>
                 <p className="mt-2 text-sm font-semibold text-slate-300">
                   Detecté estas situaciones importantes para {unitConfig[unit].label.toLowerCase()}.
                 </p>
               </div>
-              <div className="rounded-xl bg-white/10 p-3 text-orange-300">
+              <div className="rounded-xl bg-white/10 p-3 text-brand-300">
                 <Bot size={20} />
               </div>
             </div>
             <div className="mt-5 space-y-3">
               {morningHighlights.map((item, index) => (
                 <div key={`${item}-${index}`} className="flex gap-3 rounded-xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-500 text-xs font-semibold text-white">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-500 text-xs font-semibold text-white">
                     {index + 1}
                   </span>
                   <p className="text-sm font-semibold leading-6 text-slate-100">{item}</p>

@@ -38,10 +38,10 @@ const WalletCreateModal: React.FC<WalletCreateModalProps> = ({
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-sm">
       <div className="w-full max-w-3xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
-        <div className="flex items-start justify-between bg-slate-900 p-6 text-white">
+        <div className="crm-form-header flex items-start justify-between p-6">
           <div>
             <h3 className="text-2xl font-semibold tracking-tight">Agregar cliente</h3>
-            <p className="mt-1 text-xs font-bold  tracking-wide text-orange-300">Habilitar saldo a favor</p>
+            <p className="mt-1 text-xs font-bold  tracking-wide text-brand-300">Habilitar saldo a favor</p>
           </div>
           <button
             type="button"

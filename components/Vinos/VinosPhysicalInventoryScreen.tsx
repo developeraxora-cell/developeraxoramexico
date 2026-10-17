@@ -446,7 +446,7 @@ const PhysicalInventoryScreen: React.FC<PhysicalInventoryScreenProps> = ({ selec
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="crm-module space-y-6 animate-in fade-in duration-500">
       {mode === 'list' && (
         <InventoryListView
           inventories={filteredInventories}
@@ -621,7 +621,7 @@ const Metric: React.FC<{ label: string; value: string | number; tone: 'blue' | '
     blue: 'text-slate-800 bg-slate-100',
     green: 'text-emerald-600 bg-emerald-50',
     amber: 'text-amber-600 bg-amber-50',
-    cyan: 'text-orange-600 bg-orange-50',
+    cyan: 'text-brand-600 bg-brand-50',
     red: 'text-red-500 bg-red-50',
   };
   return (
@@ -647,13 +647,13 @@ const Input: React.FC<{
       value={value}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
-      className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-orange-600"
+      className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-brand-600"
     />
   </label>
 );
 
 const ReadOnlyBox: React.FC<{ label: string; value: string; tone?: 'red' | 'green' | 'cyan' }> = ({ label, value, tone }) => {
-  const toneClass = tone === 'red' ? 'text-red-500' : tone === 'cyan' ? 'text-orange-600' : tone === 'green' ? 'text-emerald-600' : 'text-slate-900';
+  const toneClass = tone === 'red' ? 'text-red-500' : tone === 'cyan' ? 'text-brand-600' : tone === 'green' ? 'text-emerald-600' : 'text-slate-900';
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
       <p className="text-xs font-semibold  tracking-wide text-slate-400">{label}</p>
@@ -705,7 +705,7 @@ const InventoryListView: React.FC<{
   <div className="space-y-6">
     <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm md:flex-row md:items-center md:justify-between">
       <div className="flex items-center gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50 text-orange-500">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-500">
           <ClipboardList size={21} />
         </div>
         <div>
@@ -728,7 +728,7 @@ const InventoryListView: React.FC<{
         value={inventorySearch}
         onChange={(event) => onSearch(event.target.value)}
         placeholder="Buscar inventario por nombre, fecha o estado..."
-        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
       />
 
       <div className="mt-5 overflow-hidden rounded-2xl border border-slate-100 bg-white">
@@ -834,7 +834,7 @@ const NewInventoryView: React.FC<{
   <div className="space-y-6">
     <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm md:flex-row md:items-center md:justify-between">
       <div className="flex items-center gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50 text-orange-500">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-500">
           <ClipboardList size={21} />
         </div>
         <div>
@@ -864,7 +864,7 @@ const NewInventoryView: React.FC<{
           <select
             value={isActive ? 'ACTIVE' : 'INACTIVE'}
             onChange={(event) => onActiveChange(event.target.value === 'ACTIVE')}
-            className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           >
             <option value="ACTIVE">Activo</option>
             <option value="INACTIVE">Cerrado</option>
@@ -931,7 +931,7 @@ const CaptureInventoryView: React.FC<{
   <div className="space-y-6">
     <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm md:flex-row md:items-center md:justify-between">
       <div className="flex items-center gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50 text-orange-500">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-500">
           <PackageSearch size={21} />
         </div>
         <div>
@@ -970,13 +970,13 @@ const CaptureInventoryView: React.FC<{
     <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div>
         <div className="mb-4 flex items-center gap-3">
-          <Search className="text-orange-600" size={42} />
+          <Search className="text-brand-600" size={42} />
           <h2 className="text-xl font-semibold text-slate-900">Captura de Productos</h2>
         </div>
         <label className="text-sm font-semibold text-slate-700">Buscar Producto:</label>
         <div className="relative mt-2 max-w-3xl">
           <div className="flex">
-            <div className="flex w-10 items-center justify-center rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 text-orange-500">
+            <div className="flex w-10 items-center justify-center rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 text-brand-500">
               <Search size={17} />
             </div>
             <input
@@ -984,7 +984,7 @@ const CaptureInventoryView: React.FC<{
               onChange={(event) => onProductSearch(event.target.value)}
               disabled={!selectedInventory?.is_active || isSaving}
               placeholder="Escriba minimo 3 letras, nombre o codigo de barras..."
-              className="min-w-0 flex-1 rounded-r-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+              className="min-w-0 flex-1 rounded-r-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
           </div>
           {productSearch.trim().length > 0 && productSearch.trim().length < 3 && (
@@ -997,7 +997,7 @@ const CaptureInventoryView: React.FC<{
                   key={product.id}
                   type="button"
                   onClick={() => onSelectProduct(product)}
-                  className="flex w-full items-center justify-between border-b border-slate-100 px-4 py-2 text-left last:border-b-0 hover:bg-orange-50"
+                  className="flex w-full items-center justify-between border-b border-slate-100 px-4 py-2 text-left last:border-b-0 hover:bg-brand-50"
                 >
                   <span className="text-sm font-semibold text-slate-800">{product.name}</span>
                   <span className="text-[11px] font-semibold text-slate-500">
@@ -1035,7 +1035,7 @@ const CaptureInventoryView: React.FC<{
                 const physicalQty = parseQuantity(draft.physicalQty);
                 const difference = physicalQty - draft.systemQty;
                 return (
-                  <tr key={draft.product.id} className="bg-orange-50">
+                  <tr key={draft.product.id} className="bg-brand-50">
                     <td className="px-4 py-3 font-bold">{index + 1}</td>
                     <td className="px-4 py-3 font-bold">{draft.product.name}</td>
                     <td className="px-4 py-3 text-center font-semibold text-slate-600">{draft.baseUom}</td>
@@ -1048,10 +1048,10 @@ const CaptureInventoryView: React.FC<{
                         disabled={!selectedInventory?.is_active || isSaving}
                         value={draft.physicalQty}
                         onChange={(event) => onDraftPhysicalQtyChange(draft.product.id, event.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 font-bold text-slate-900 outline-none focus:border-orange-500"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 font-bold text-slate-900 outline-none focus:border-brand-500"
                       />
                     </td>
-                    <td className={`px-4 py-3 text-center font-semibold ${difference < 0 ? 'text-red-500' : difference > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                    <td className={`px-4 py-3 text-center font-semibold ${difference < 0 ? 'text-red-500' : difference > 0 ? 'text-brand-600' : 'text-emerald-600'}`}>
                       {formatNumber(difference, undefined, { maximumFractionDigits: 3 })}
                     </td>
                     <td className="px-4 py-3">
@@ -1061,7 +1061,7 @@ const CaptureInventoryView: React.FC<{
                         disabled={difference === 0 || !selectedInventory?.is_active || isSaving}
                         aria-label={`Observacion de ${draft.product.name}`}
                         placeholder={difference === 0 ? 'Sin diferencia' : 'Comentario obligatorio'}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none focus:border-orange-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none focus:border-brand-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                       />
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -1079,7 +1079,7 @@ const CaptureInventoryView: React.FC<{
                   <td className="px-4 py-3 text-center font-semibold text-slate-600">{item.base_uom_code || '-'}</td>
                   <td className="px-4 py-3 text-center">{formatNumber(Number(item.system_qty), undefined, { maximumFractionDigits: 3 })}</td>
                   <td className="px-4 py-3 text-center font-bold text-slate-900">{formatNumber(Number(item.physical_qty), undefined, { maximumFractionDigits: 3 })}</td>
-                  <td className={`px-4 py-3 text-center font-bold ${Number(item.difference_qty) < 0 ? 'text-red-500' : Number(item.difference_qty) > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                  <td className={`px-4 py-3 text-center font-bold ${Number(item.difference_qty) < 0 ? 'text-red-500' : Number(item.difference_qty) > 0 ? 'text-brand-600' : 'text-emerald-600'}`}>
                     {formatNumber(Number(item.difference_qty), undefined, { maximumFractionDigits: 3 })}
                   </td>
                   <td className="px-4 py-3">{item.observation || '-'}</td>

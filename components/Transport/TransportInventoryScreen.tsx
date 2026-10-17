@@ -55,13 +55,13 @@ const TransportInventoryScreen: React.FC<Props> = ({ selectedBranchId, currentUs
   };
 
   return (
-    <div className="space-y-6">
+    <div className="crm-module space-y-6">
       {/* Notice banner */}
-      <div className="rounded-xl bg-orange-50 border border-orange-200 px-5 py-3 flex items-center gap-3">
+      <div className="rounded-xl bg-brand-50 border border-brand-200 px-5 py-3 flex items-center gap-3">
         <span className="text-xl"><AppIcon name="construction" /></span>
         <div>
-          <p className="text-xs font-semibold  tracking-wide text-orange-600">Gestión de catálogo — próximamente</p>
-          <p className="text-xs text-orange-700 font-semibold mt-0.5">
+          <p className="text-xs font-semibold  tracking-wide text-brand-600">Gestión de catálogo — próximamente</p>
+          <p className="text-xs text-brand-700 font-semibold mt-0.5">
             Alta, edición y baja de productos estará disponible en la siguiente entrega. Por ahora puedes consultar el inventario actual.
           </p>
         </div>
@@ -92,7 +92,7 @@ const TransportInventoryScreen: React.FC<Props> = ({ selectedBranchId, currentUs
               placeholder="Buscar por nombre o SKU..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-400/20"
             />
             <button
               onClick={() => void loadData()}

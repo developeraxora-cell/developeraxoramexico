@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import PageHeading from '../common/PageHeading';
 import {
   Area,
   AreaChart,
@@ -647,8 +648,9 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
   };
 
   return (
-    <div className="h-full w-full overflow-y-auto px-3 py-4 sm:px-4 md:px-6 xl:px-8">
+    <div className="crm-module w-full">
       <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 lg:gap-6">
+        <PageHeading title="Reportes" description="Consulta el desempeño de la concretera en el período seleccionado." />
         <section className={`${cardBaseClass} p-4 md:p-5 xl:p-6`}>
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
@@ -764,7 +766,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
               value: formatCurrency(kpis.salesTotal),
               help: `${kpis.salesCount} ventas en el periodo`,
               icon: ShoppingCart,
-              tone: 'from-orange-500 to-orange-600 text-white border-orange-500 shadow-orange-500/20',
+              tone: 'from-brand-500 to-brand-600 text-white border-brand-500 shadow-brand-500/20',
               iconTone: 'bg-white/15 text-white',
             },
             {
@@ -817,7 +819,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
                 <h3 className="text-sm font-semibold  tracking-[0.24em] text-slate-700">Ventas en el tiempo</h3>
                 <p className="mt-1 text-xs text-slate-500">Evolución acumulada por periodo seleccionado.</p>
               </div>
-              <div className="rounded-xl bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-600">{salesSeries.length} puntos</div>
+              <div className="rounded-xl bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-600">{salesSeries.length} puntos</div>
             </div>
             <div className="h-72 rounded-xl bg-slate-50/80 p-0 md:h-80 md:p-1">
               <ResponsiveContainer width="100%" height="100%">

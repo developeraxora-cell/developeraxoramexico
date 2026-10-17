@@ -8,7 +8,7 @@ interface Props {
 
 const TransportReportsScreen: React.FC<Props> = () => {
   return (
-    <div className="space-y-6">
+    <div className="crm-module space-y-6">
       <div className="rounded-[32px] border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
         <p className="text-sm font-semibold  tracking-[0.26em] text-slate-400">Módulo en construcción</p>
         <p className="mt-4 text-2xl font-semibold tracking-tight text-slate-900">Reportes — Transportería</p>

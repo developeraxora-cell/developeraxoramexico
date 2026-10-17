@@ -195,12 +195,12 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 ">
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between gap-4">
+    <div className="crm-module space-y-6 animate-in fade-in duration-500 ">
+      <div className="crm-page-heading bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between gap-4">
         {(title || subtitle) && (
           <div>
             <h2 className="text-2xl font-semibold text-slate-900  tracking-tight flex items-center gap-3">
-              <ClipboardList className="w-7 h-7 text-orange-500" />
+              <ClipboardList className="w-7 h-7 text-brand-500" />
               {title}
             </h2>
             <p className="text-xs font-bold text-slate-400  tracking-wide mt-1">
@@ -216,14 +216,14 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por descripción, usuario, entidad u observación (mín. 3 letras)..."
-              className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
 
           <select
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500"
           >
             <option value="">Todas las acciones</option>
             <option value="CREAR">Crear</option>
@@ -236,7 +236,7 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
           <select
             value={entityFilter}
             onChange={(e) => setEntityFilter(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500"
           >
             <option value="">Todas las entidades</option>
             <option value="producto">Producto</option>
@@ -252,13 +252,13 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500"
             />
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
         </div>
@@ -278,7 +278,7 @@ const AuditScreen: React.FC<AuditScreenProps> = ({
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="crm-data-surface bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px] border-collapse">
             <thead>

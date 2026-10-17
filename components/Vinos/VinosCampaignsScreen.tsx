@@ -370,10 +370,10 @@ const VinosCampaignsScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
   const STEPS = ['Datos', 'Clientes', 'Mensaje', 'Verificación'];
 
   return (
-    <div className="space-y-6">
+    <div className="crm-module space-y-6">
       {feedback && <Toast type={feedback.type} message={feedback.msg} onClose={() => setFeedback(null)} />}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="crm-page-heading flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-purple-100 p-2.5 text-purple-600"><Megaphone size={20} /></div>
           <div>

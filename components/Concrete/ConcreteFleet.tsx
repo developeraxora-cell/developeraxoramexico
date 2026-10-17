@@ -59,9 +59,9 @@ const ConcreteFleet: React.FC<ConcreteFleetProps> = ({ mixers, setMixers, orders
           <p className="text-xs font-semibold text-blue-600  tracking-wide mb-1">En Tránsito</p>
           <p className="text-3xl font-semibold text-blue-700">{stats.onRoute}</p>
         </div>
-        <div className="bg-orange-50 p-5 rounded-2xl border border-orange-100 shadow-sm">
-          <p className="text-xs font-semibold text-orange-600  tracking-wide mb-1">Mantenimiento</p>
-          <p className="text-3xl font-semibold text-orange-700">{stats.maintenance}</p>
+        <div className="bg-brand-50 p-5 rounded-2xl border border-brand-100 shadow-sm">
+          <p className="text-xs font-semibold text-brand-600  tracking-wide mb-1">Mantenimiento</p>
+          <p className="text-3xl font-semibold text-brand-700">{stats.maintenance}</p>
         </div>
       </div>
 
@@ -79,7 +79,7 @@ const ConcreteFleet: React.FC<ConcreteFleetProps> = ({ mixers, setMixers, orders
           return (
             <div key={mixer.id} className={`bg-white rounded-2xl border-2 transition-all p-6 ${
               mixer.status === 'DISPONIBLE' ? 'border-green-100' :
-              mixer.status === 'CARGANDO' ? 'border-orange-500' :
+              mixer.status === 'CARGANDO' ? 'border-brand-500' :
               mixer.status === 'EN_RUTA' ? 'border-blue-500 shadow-sm' :
               'border-slate-100'
             }`}>
@@ -93,7 +93,7 @@ const ConcreteFleet: React.FC<ConcreteFleetProps> = ({ mixers, setMixers, orders
                 </div>
                 <span className={`px-4 py-1.5 rounded-full text-[11px] font-semibold  ${
                   mixer.status === 'DISPONIBLE' ? 'bg-green-100 text-green-700' :
-                  mixer.status === 'CARGANDO' ? 'bg-orange-500 text-white animate-pulse' :
+                  mixer.status === 'CARGANDO' ? 'bg-brand-500 text-white animate-pulse' :
                   mixer.status === 'EN_RUTA' ? 'bg-blue-600 text-white' :
                   'bg-slate-100 text-slate-500'
                 }`}>

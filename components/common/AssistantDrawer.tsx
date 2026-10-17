@@ -698,7 +698,7 @@ function renderInline(text: string, keyBase: string): React.ReactNode[] {
     if (m[1] !== undefined) {
       parts.push(<strong key={`${keyBase}-b${k++}`} className="font-semibold text-slate-900"><IconText>{m[1]}</IconText></strong>);
     } else {
-      parts.push(<code key={`${keyBase}-c${k++}`} className="rounded bg-slate-100 px-1 py-0.5 text-[12px] text-orange-600">{m[2]}</code>);
+      parts.push(<code key={`${keyBase}-c${k++}`} className="rounded bg-slate-100 px-1 py-0.5 text-[12px] text-brand-600">{m[2]}</code>);
     }
     last = regex.lastIndex;
   }
@@ -716,7 +716,7 @@ const MessageContent: React.FC<{ text: string }> = ({ text }) => {
           const depth = Math.min(Math.floor(bullet[1].replace(/\t/g, '  ').length / 2), 4);
           return (
             <div key={i} className="flex gap-2" style={{ paddingLeft: depth * 14 }}>
-              <span className="mt-[2px] text-orange-500">•</span>
+              <span className="mt-[2px] text-brand-500">•</span>
               <span className="flex-1">{renderInline(bullet[2], `l${i}`)}</span>
             </div>
           );
@@ -1569,9 +1569,11 @@ ORDER BY s.qty_base ASC, p.name ASC`;
       {/* Backdrop */}
       <div
         onClick={handleClose}
-        className={`fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${
+        aria-hidden={!isOpen}
+        className={`crm-assistant-backdrop fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
+        style={{ opacity: isOpen ? 1 : 0, pointerEvents: isOpen ? 'auto' : 'none' }}
       />
 
       {/* Drawer */}
@@ -1584,14 +1586,15 @@ ORDER BY s.qty_base ASC, p.name ASC`;
         inert={!isOpen}
         aria-modal="true"
         aria-label="Asistente IA"
+        style={{ transform: isOpen ? 'translateX(0)' : 'translateX(100%)' }}
       >
         {/* Header */}
         <header className="relative overflow-hidden bg-slate-900 px-5 py-5">
-          <div className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full bg-orange-500/30 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-12 left-10 h-32 w-32 rounded-full bg-orange-600/20 blur-3xl" />
+          <div className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full bg-brand-500/30 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-12 left-10 h-32 w-32 rounded-full bg-brand-600/20 blur-3xl" />
           <div className="relative flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-lg shadow-orange-500/30">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-lg shadow-brand-500/30">
                 <SparkIcon className="h-6 w-6" />
               </div>
               <div>
@@ -1677,9 +1680,9 @@ ORDER BY s.qty_base ASC, p.name ASC`;
               <button
                 key={c.id}
                 onClick={() => loadConversation(c)}
-                className="group flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition-all hover:border-orange-400 hover:shadow-md hover:shadow-orange-500/10"
+                className="group flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition-all hover:border-brand-400 hover:shadow-md hover:shadow-brand-500/10"
               >
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white">
                   <SparkIcon className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -1706,7 +1709,7 @@ ORDER BY s.qty_base ASC, p.name ASC`;
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-5">
               {messages.length === 0 && (
                 <div className="mx-auto flex h-full max-w-md flex-col items-center justify-center px-6 text-center">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-sm shadow-orange-500/30">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-sm shadow-brand-500/30">
                     <SparkIcon className="h-8 w-8" />
                   </div>
                   <h3 className="text-2xl font-semibold tracking-tight text-slate-900">
@@ -1722,11 +1725,11 @@ ORDER BY s.qty_base ASC, p.name ASC`;
                       <button
                         key={p.label}
                         onClick={() => send(p.prompt)}
-                        className="group flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-orange-400 hover:shadow-md hover:shadow-orange-500/10"
+                        className="group flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-brand-400 hover:shadow-md hover:shadow-brand-500/10"
                       >
-                        <SparkIcon className="h-4 w-4 text-orange-500" />
+                        <SparkIcon className="h-4 w-4 text-brand-500" />
                         <span className="flex-1">{p.label}</span>
-                        <span className="text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-orange-500">→</span>
+                        <span className="text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-500">→</span>
                       </button>
                     ))}
                   </div>
@@ -1737,7 +1740,7 @@ ORDER BY s.qty_base ASC, p.name ASC`;
               {messages.map((m) => (
                 <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   {m.role === 'assistant' && (
-                    <div className="mr-2 mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-md shadow-orange-500/20">
+                    <div className="mr-2 mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-md shadow-brand-500/20">
                       <SparkIcon className="h-4 w-4" />
                     </div>
                   )}
@@ -1753,7 +1756,7 @@ ORDER BY s.qty_base ASC, p.name ASC`;
                       <button
                         type="button"
                         onClick={() => downloadFile(m.attachment!.content, m.attachment!.filename, m.attachment!.mimeType)}
-                        className="mt-3 flex max-w-full items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-left text-xs font-bold text-orange-700 transition-colors hover:border-orange-300 hover:bg-orange-100"
+                        className="mt-3 flex max-w-full items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-left text-xs font-bold text-brand-700 transition-colors hover:border-brand-300 hover:bg-brand-100"
                         title={m.attachment.filename}
                       >
                         <svg className="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1768,14 +1771,14 @@ ORDER BY s.qty_base ASC, p.name ASC`;
 
               {isTyping && (
                 <div className="flex justify-start">
-                  <div className="mr-2 mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-md">
+                  <div className="mr-2 mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-md">
                     <SparkIcon className="h-4 w-4" />
                   </div>
                   <div className="flex items-center gap-2 rounded-xl rounded-bl-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
                     <span className="flex items-center gap-1">
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-orange-400 [animation-delay:-0.3s]" />
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-orange-400 [animation-delay:-0.15s]" />
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-orange-400" />
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-brand-400 [animation-delay:-0.3s]" />
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-brand-400 [animation-delay:-0.15s]" />
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-brand-400" />
                     </span>
                     {statusLabel && (
                       <span className="text-xs font-semibold text-slate-500">{statusLabel}</span>
@@ -1803,7 +1806,7 @@ ORDER BY s.qty_base ASC, p.name ASC`;
                     <div className="space-y-2 border-t border-slate-100 px-3 py-2">
                       {debugQueries.map((q, i) => (
                         <div key={i} className="rounded-lg bg-slate-900 p-2.5">
-                          <pre className="overflow-x-auto whitespace-pre-wrap break-words text-[11px] leading-snug text-orange-300">{q.sql}</pre>
+                          <pre className="overflow-x-auto whitespace-pre-wrap break-words text-[11px] leading-snug text-brand-300">{q.sql}</pre>
                           <p className={`mt-1.5 text-xs font-bold ${q.error ? 'text-red-400' : 'text-green-400'}`}>
                             {q.error ? `✕ ${q.error}` : `✓ ${q.rows ?? 0} fila(s)`}
                           </p>
@@ -1818,7 +1821,7 @@ ORDER BY s.qty_base ASC, p.name ASC`;
 
             {/* Composer */}
             <div className="border-t border-slate-200 bg-white px-4 py-3">
-              <div className="mx-auto flex w-full max-w-2xl items-end gap-2 rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 transition-colors focus-within:border-orange-400 focus-within:bg-white">
+              <div className="crm-field-shell mx-auto flex w-full max-w-2xl items-end gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 transition-colors focus-within:bg-white">
                 <textarea
                   ref={inputRef}
                   value={input}
@@ -1831,7 +1834,7 @@ ORDER BY s.qty_base ASC, p.name ASC`;
                 <button
                   onClick={() => send(input)}
                   disabled={!input.trim() || isTyping}
-                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-md shadow-orange-500/30 transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
+                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-md shadow-brand-500/30 transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
                   aria-label="Enviar"
                 >
                   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

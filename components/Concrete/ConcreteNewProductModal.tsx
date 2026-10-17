@@ -521,7 +521,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col">
-        <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+        <div className="crm-form-header p-6 flex justify-between items-center">
           <div>
             <h3 className="text-xl font-semibold  tracking-tight">
               {mode === 'reactivate' ? 'Reactivar Producto' : mode === 'edit' ? 'Editar Producto' : 'Nuevo Producto'}
@@ -586,7 +586,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                   barcodeMode === 'without'
                     ? 'bg-gray-100 text-gray-400'
                     : allowBarcodeEdit && mode === 'create'
-                      ? 'bg-gray-50 focus:border-orange-500'
+                      ? 'bg-gray-50 focus:border-brand-500'
                       : 'bg-gray-100'
                 }`}
                 placeholder={barcodeMode === 'without' ? 'Se generará automáticamente al guardar' : ''}
@@ -598,7 +598,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 type="number"
                 min={0}
                 step="0.01"
-                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-semibold text-sm"
+                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-brand-500 rounded-xl outline-none font-semibold text-sm"
                 value={minStock}
                 onChange={(e) => setMinStock(e.target.value)}
               />
@@ -608,7 +608,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
               <input
                 type="text"
                 required
-                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-semibold text-sm"
+                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-brand-500 rounded-xl outline-none font-semibold text-sm"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -616,7 +616,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-500  tracking-wide">Unidad Base</label>
               <select
-                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
+                className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-brand-500 rounded-xl outline-none text-xs"
                 value={baseUomId}
                 onChange={(e) => setBaseUomId(e.target.value)}
               >
@@ -633,7 +633,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsNewUomModalOpen(true)}
-                className="text-xs font-semibold  tracking-wide text-orange-600 hover:text-orange-700"
+                className="text-xs font-semibold  tracking-wide text-brand-600 hover:text-brand-700"
               >
                 + Nueva unidad base
               </button>
@@ -661,7 +661,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                   <div key={`${row.uom_id}-${index}`} className="bg-slate-50 p-4 rounded-xl space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
                       <select
-                        className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
+                        className="w-full p-2 bg-white border-2 border-transparent focus:border-brand-500 rounded-xl outline-none text-xs"
                         value={row.uom_id}
                         onChange={(e) => updateSaleUom(index, { uom_id: e.target.value })}
                       >
@@ -676,7 +676,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                         type="number"
                         min={0}
                         step="0.0001"
-                        className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs"
+                        className="w-full p-2 bg-white border-2 border-transparent focus:border-brand-500 rounded-xl outline-none text-xs"
                         value={row.factor_to_base}
                         onChange={(e) => updateSaleUom(index, { factor_to_base: Number(e.target.value) })}
                       />
@@ -684,7 +684,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                         type="number"
                         min={0}
                         step="0.01"
-                        className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs font-semibold"
+                        className="w-full p-2 bg-white border-2 border-transparent focus:border-brand-500 rounded-xl outline-none text-xs font-semibold"
                         value={row.wholesale_price}
                         onChange={(e) => updateSaleUom(index, { wholesale_price: Number(e.target.value || 0) })}
                       />
@@ -692,7 +692,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                         type="number"
                         min={0}
                         step="0.01"
-                        className="w-full p-2 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-xs font-semibold"
+                        className="w-full p-2 bg-white border-2 border-transparent focus:border-brand-500 rounded-xl outline-none text-xs font-semibold"
                         value={row.retail_price}
                         onChange={(e) => updateSaleUom(index, { retail_price: Number(e.target.value || 0) })}
                       />
@@ -732,7 +732,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
             <button
               type="submit"
               disabled={saving || !isCatalogReady}
-                className={`px-8 py-3 rounded-xl text-xs font-semibold  tracking-wide shadow-sm ${saving || !isCatalogReady ? 'bg-slate-200 text-slate-400' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
+                className={`px-8 py-3 rounded-xl text-xs font-semibold  tracking-wide shadow-sm ${saving || !isCatalogReady ? 'bg-slate-200 text-slate-400' : 'bg-brand-500 text-white hover:bg-brand-600'}`}
               >
               {saving
                 ? 'Guardando...'
@@ -777,7 +777,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
       {isNewUomModalOpen && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <div className="crm-form-header p-6 flex justify-between items-center">
               <div>
                 <h4 className="text-lg font-semibold  tracking-tight">Nueva unidad base</h4>
                 <p className="text-slate-400 text-xs">Disponible solo para Concretera.</p>
@@ -796,7 +796,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 <input
                   type="text"
                   placeholder="Ej: M3"
-                  className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-sm"
+                  className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-brand-500 rounded-xl outline-none text-sm"
                   value={newUomCode}
                   onChange={(e) => setNewUomCode(e.target.value)}
                 />
@@ -806,7 +806,7 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
                 <input
                   type="text"
                   placeholder="Ej: Metro cúbico"
-                  className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none text-sm"
+                  className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-brand-500 rounded-xl outline-none text-sm"
                   value={newUomName}
                   onChange={(e) => setNewUomName(e.target.value)}
                 />

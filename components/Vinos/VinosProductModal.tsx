@@ -358,7 +358,7 @@ const VinosProductModal: React.FC<Props> = ({
               <div>
                 <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Código de barras</label>
                 <input
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-mono outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-mono outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                   value={form.barcode}
                   onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))}
                   placeholder="Opcional"
@@ -370,7 +370,7 @@ const VinosProductModal: React.FC<Props> = ({
                 <input
                   type="number"
                   min="0"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                   value={form.min_stock}
                   onChange={e => setForm(f => ({ ...f, min_stock: e.target.value }))}
                 />
@@ -379,7 +379,7 @@ const VinosProductModal: React.FC<Props> = ({
               <div>
                 <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Nombre *</label>
                 <input
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="Casa Madero Cabernet 750ml"
@@ -389,7 +389,7 @@ const VinosProductModal: React.FC<Props> = ({
               <div>
                 <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Categoría</label>
                 <select
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                   value={form.category_id}
                   onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
                 >
@@ -401,7 +401,7 @@ const VinosProductModal: React.FC<Props> = ({
               <div>
                 <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">Unidad base</label>
                 <select
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                   value={form.uom_id}
                   onChange={e => setForm(f => ({ ...f, uom_id: e.target.value }))}
                 >
@@ -411,7 +411,7 @@ const VinosProductModal: React.FC<Props> = ({
                 <label className="mt-2 flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    className="h-3.5 w-3.5 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                    className="h-3.5 w-3.5 rounded border-slate-300 text-brand-500 focus:ring-brand-400"
                     checked={form.is_divisible}
                     onChange={e => setForm(f => ({ ...f, is_divisible: e.target.checked }))}
                   />
@@ -425,7 +425,7 @@ const VinosProductModal: React.FC<Props> = ({
                   type="number"
                   min="0"
                   step="0.01"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                   value={form.purchase_cost}
                   onChange={e => handlePurchaseCostChange(e.target.value)}
                   placeholder="Precio por unidad base"
@@ -439,7 +439,7 @@ const VinosProductModal: React.FC<Props> = ({
                 <label className="flex cursor-pointer items-start gap-3">
                   <input
                     type="checkbox"
-                    className="mt-1 h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-500 focus:ring-brand-400"
                     checked={form.single_price_mode}
                     onChange={e => handleSinglePriceModeChange(e.target.checked)}
                   />
@@ -460,7 +460,7 @@ const VinosProductModal: React.FC<Props> = ({
                       type="number"
                       min="0.0001"
                       step="0.0001"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                       value={form.price_mid_wholesale_min_qty}
                       onChange={e => setForm(f => ({ ...f, price_mid_wholesale_min_qty: e.target.value }))}
                       placeholder="Cantidad base"
@@ -474,7 +474,7 @@ const VinosProductModal: React.FC<Props> = ({
                       type="number"
                       min="0.0001"
                       step="0.0001"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                       value={form.price_wholesale_min_qty}
                       onChange={e => setForm(f => ({ ...f, price_wholesale_min_qty: e.target.value }))}
                       placeholder="Cantidad base"
@@ -520,17 +520,17 @@ const VinosProductModal: React.FC<Props> = ({
                 {equivalences.map((eq, idx) => {
                   const isBase = Number(eq.factor_to_base) === 1 && eq.uom_id === form.uom_id;
                   return (
-                    <div key={idx} className={`grid grid-cols-2 ${form.single_price_mode ? 'md:grid-cols-[1fr_100px_130px_32px]' : 'md:grid-cols-[1fr_100px_100px_100px_100px_32px]'} gap-2 rounded-xl border p-2 ${isBase ? 'border-orange-300 bg-orange-50' : 'border-slate-200 bg-white'}`}>
+                    <div key={idx} className={`grid grid-cols-2 ${form.single_price_mode ? 'md:grid-cols-[1fr_100px_130px_32px]' : 'md:grid-cols-[1fr_100px_100px_100px_100px_32px]'} gap-2 rounded-xl border p-2 ${isBase ? 'border-brand-300 bg-brand-50' : 'border-slate-200 bg-white'}`}>
                       {isBase ? (
                         <div className="flex items-center gap-2 px-2 py-1.5">
-                          <span className="rounded-md bg-orange-200 px-1.5 py-0.5 text-[11px] font-semibold  tracking-wide text-orange-800">Base</span>
+                          <span className="rounded-md bg-brand-200 px-1.5 py-0.5 text-[11px] font-semibold  tracking-wide text-brand-800">Base</span>
                           <span className="text-xs font-bold text-slate-700 truncate">
                             {uoms.find(u => u.id === eq.uom_id)?.name ?? '—'}
                           </span>
                         </div>
                       ) : (
                         <select
-                          className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400"
+                          className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-brand-400"
                           value={eq.uom_id}
                           onChange={e => updateEquivalence(idx, { uom_id: e.target.value })}
                         >
@@ -543,14 +543,14 @@ const VinosProductModal: React.FC<Props> = ({
                       <input
                         type="number" min="0" step="0.0001"
                         disabled={isBase}
-                        className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400 disabled:bg-slate-100 disabled:text-slate-500"
+                        className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-brand-400 disabled:bg-slate-100 disabled:text-slate-500"
                         placeholder="ej: 12"
                         value={eq.factor_to_base}
                         onChange={e => updateEquivalence(idx, { factor_to_base: e.target.value })}
                       />
                       <input
                         type="number" min="0" step="0.01"
-                        className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400"
+                        className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-brand-400"
                         placeholder={form.single_price_mode ? 'Precio' : 'Menudeo'}
                         value={eq.price_retail}
                         onChange={e => updateEquivalence(idx, { price_retail: e.target.value })}
@@ -558,7 +558,7 @@ const VinosProductModal: React.FC<Props> = ({
                       {!form.single_price_mode && (
                         <input
                           type="number" min="0" step="0.01"
-                          className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400"
+                          className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-brand-400"
                           placeholder="M.May."
                           value={eq.price_mid_wholesale}
                           onChange={e => updateEquivalence(idx, { price_mid_wholesale: e.target.value })}
@@ -567,7 +567,7 @@ const VinosProductModal: React.FC<Props> = ({
                       {!form.single_price_mode && (
                         <input
                           type="number" min="0" step="0.01"
-                          className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-orange-400"
+                          className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-brand-400"
                           placeholder="Mayoreo"
                           value={eq.price_wholesale}
                           onChange={e => updateEquivalence(idx, { price_wholesale: e.target.value })}
@@ -605,7 +605,7 @@ const VinosProductModal: React.FC<Props> = ({
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 rounded-xl bg-orange-600 px-6 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-brand-600/20 hover:bg-brand-500 disabled:opacity-50"
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? 'Guardando...' : editTarget ? 'Guardar cambios' : 'Crear producto'}

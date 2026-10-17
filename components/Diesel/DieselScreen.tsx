@@ -856,7 +856,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
   };
 
   return (
-    <div className="bg-slate-50 pb-8 antialiased text-slate-900">
+    <div className="crm-module bg-slate-50 pb-8 antialiased text-slate-900">
       <style>{`
         .font-outfit { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
         @keyframes diesel-wave { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
@@ -876,7 +876,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
           </div>
           <div className="col-span-2 md:col-span-1 bg-white p-4 md:p-6 rounded-2xl md:rounded-2xl shadow-lg shadow-slate-100 border border-slate-100 animate-in zoom-in duration-500 delay-400">
             <p className="text-[11px] md:text-[11px] font-bold text-slate-300  tracking-[0.15em] mb-1">Despachos</p>
-            <p className="text-2xl md:text-3xl lg:text-5xl font-semibold font-outfit text-orange-600">-{analytics.monthlyDispatches.toLocaleString()}L</p>
+            <p className="text-2xl md:text-3xl lg:text-5xl font-semibold font-outfit text-brand-600">-{analytics.monthlyDispatches.toLocaleString()}L</p>
           </div>
         </div>
 
@@ -1041,7 +1041,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                           <tr key={log.id} className={`hover:bg-slate-50 transition-colors ${isDeleted ? 'opacity-60' : ''}`}>
                             <td className="p-6 text-xs text-slate-500 font-bold">{formatDieselDateTime(log.createdAt)}</td>
                             <td className="p-6">
-                              <span className={`px-3 py-1 rounded-full text-[11px] font-semibold  ${log.type === 'CARGA' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
+                              <span className={`px-3 py-1 rounded-full text-[11px] font-semibold  ${log.type === 'CARGA' ? 'bg-brand-50 text-brand-600' : 'bg-blue-50 text-blue-600'}`}>
                                 {log.type === 'CARGA' ? 'Salida' : 'Entrada'}
                               </span>
                             </td>
@@ -1096,7 +1096,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                           <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-xl"><AppIcon name="truck" /></div>
                           <div>
                             <p className="text-sm font-semibold">{v.description}</p>
-                            <p className="text-xs font-mono text-orange-600 font-bold tracking-wider">{v.plate}</p>
+                            <p className="text-xs font-mono text-brand-600 font-bold tracking-wider">{v.plate}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1180,21 +1180,21 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
       {isCargaModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in my-auto">
-            <div className="bg-orange-500 p-8 text-white flex justify-between items-center shadow-lg shadow-orange-500/20">
+            <div className="bg-brand-500 p-8 text-white flex justify-between items-center shadow-lg shadow-brand-500/20">
               <h3 className="text-xl font-semibold  tracking-tight">Despachar Diésel</h3>
               <button onClick={() => setIsCargaModalOpen(false)} className="bg-white/10 w-10 h-10 rounded-xl text-xl font-semibold">×</button>
             </div>
             <form onSubmit={handleCarga} className="p-8 space-y-5">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Tanque</label>
-                <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-semibold text-xs  appearance-none" value={cargaData.tankId} onChange={e => setCargaData({ ...cargaData, tankId: e.target.value })}>
+                <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-brand-500 rounded-xl outline-none font-semibold text-xs  appearance-none" value={cargaData.tankId} onChange={e => setCargaData({ ...cargaData, tankId: e.target.value })}>
                   <option value="">Seleccionar...</option>
                   {branchTanks.map(tank => <option key={tank.id} value={tank.id}>{tank.name} ({tank.currentQty} L)</option>)}
                 </select>
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Unidad</label>
-                <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-semibold text-xs  appearance-none" value={cargaData.vehicleId} onChange={e => setCargaData({ ...cargaData, vehicleId: e.target.value })}>
+                <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-brand-500 rounded-xl outline-none font-semibold text-xs  appearance-none" value={cargaData.vehicleId} onChange={e => setCargaData({ ...cargaData, vehicleId: e.target.value })}>
                   <option value="">Seleccionar...</option>
                   {vehicles.filter(v => v.active).map(v => <option key={v.id} value={v.id}>{v.description} - {v.plate}</option>)}
                 </select>
@@ -1207,24 +1207,24 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
                     required
                     min={1}
                     max={selectedCargaTank?.currentQty || undefined}
-                    className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl font-semibold text-center text-lg"
+                    className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-brand-500 rounded-xl font-semibold text-center text-lg"
                     value={cargaData.amount || ''}
                     onChange={e => setCargaData({ ...cargaData, amount: Number(e.target.value) })}
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Km</label>
-                  <input type="number" required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl font-semibold text-center text-lg text-orange-600" value={cargaData.odometer || ''} onChange={e => setCargaData({ ...cargaData, odometer: Number(e.target.value) })} />
+                  <input type="number" required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-brand-500 rounded-xl font-semibold text-center text-lg text-brand-600" value={cargaData.odometer || ''} onChange={e => setCargaData({ ...cargaData, odometer: Number(e.target.value) })} />
                 </div>
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Operador</label>
-                <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-semibold text-xs  appearance-none" value={cargaData.driverId} onChange={e => setCargaData({ ...cargaData, driverId: e.target.value })}>
+                <select required className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-brand-500 rounded-xl outline-none font-semibold text-xs  appearance-none" value={cargaData.driverId} onChange={e => setCargaData({ ...cargaData, driverId: e.target.value })}>
                   <option value="">Seleccionar...</option>
                   {drivers.filter(d => d.active).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
-              <button type="submit" disabled={isLoading} className="w-full py-5 bg-slate-900 text-white font-semibold rounded-xl shadow-sm  tracking-wide text-xs hover:bg-orange-600 transition-colors">
+              <button type="submit" disabled={isLoading} className="w-full py-5 bg-slate-900 text-white font-semibold rounded-xl shadow-sm  tracking-wide text-xs hover:bg-brand-600 transition-colors">
                 {isLoading ? 'Procesando...' : 'Validar y Cargar'}
               </button>
             </form>
@@ -1352,7 +1352,7 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
       {isAssetModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <div className="crm-form-header p-6 flex justify-between items-center">
               <h3 className="text-lg font-semibold  tracking-tight">
                 {isAssetModalOpen === 'vehicle'
                   ? editingVehicleId
@@ -1372,16 +1372,16 @@ const DieselScreen: React.FC<DieselScreenProps> = ({
             </div>
             {isAssetModalOpen === 'vehicle' ? (
               <form onSubmit={handleAddVehicle} className="p-8 space-y-4">
-                <input required placeholder="PLACA (EX. KW-22-MX)" className="w-full p-4 bg-slate-50 rounded-xl font-semibold text-xs  appearance-none border-2 border-transparent focus:border-orange-500 outline-none" value={newVehicle.plate} onChange={e => setNewVehicle({ ...newVehicle, plate: e.target.value })} />
-                <input required placeholder="DESCRIPCIÓN" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-sm border-2 border-transparent focus:border-orange-500 outline-none" value={newVehicle.description} onChange={e => setNewVehicle({ ...newVehicle, description: e.target.value })} />
-                <button type="submit" disabled={isLoading} className="w-full py-4 bg-orange-500 text-white font-semibold rounded-xl  tracking-wide text-xs shadow-lg">
+                <input required placeholder="PLACA (EX. KW-22-MX)" className="w-full p-4 bg-slate-50 rounded-xl font-semibold text-xs  appearance-none border-2 border-transparent focus:border-brand-500 outline-none" value={newVehicle.plate} onChange={e => setNewVehicle({ ...newVehicle, plate: e.target.value })} />
+                <input required placeholder="DESCRIPCIÓN" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-sm border-2 border-transparent focus:border-brand-500 outline-none" value={newVehicle.description} onChange={e => setNewVehicle({ ...newVehicle, description: e.target.value })} />
+                <button type="submit" disabled={isLoading} className="w-full py-4 bg-brand-500 text-white font-semibold rounded-xl  tracking-wide text-xs shadow-lg">
                   {editingVehicleId ? 'GUARDAR CAMBIOS' : 'AGREGAR UNIDAD'}
                 </button>
               </form>
             ) : (
               <form onSubmit={handleAddDriver} className="p-8 space-y-4">
-                <input required placeholder="NOMBRE COMPLETO" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-sm border-2 border-transparent focus:border-orange-500 outline-none" value={newDriver.name} onChange={e => setNewDriver({ ...newDriver, name: e.target.value })} />
-                <input required placeholder="LICENCIA / ID" className="w-full p-4 bg-slate-50 rounded-xl font-mono text-sm border-2 border-transparent focus:border-orange-500 outline-none" value={newDriver.license} onChange={e => setNewDriver({ ...newDriver, license: e.target.value })} />
+                <input required placeholder="NOMBRE COMPLETO" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-sm border-2 border-transparent focus:border-brand-500 outline-none" value={newDriver.name} onChange={e => setNewDriver({ ...newDriver, name: e.target.value })} />
+                <input required placeholder="LICENCIA / ID" className="w-full p-4 bg-slate-50 rounded-xl font-mono text-sm border-2 border-transparent focus:border-brand-500 outline-none" value={newDriver.license} onChange={e => setNewDriver({ ...newDriver, license: e.target.value })} />
                 <button type="submit" disabled={isLoading} className="w-full py-4 bg-blue-600 text-white font-semibold rounded-xl  tracking-wide text-xs shadow-lg">
                   {editingDriverId ? 'GUARDAR CAMBIOS' : 'AGREGAR OPERADOR'}
                 </button>

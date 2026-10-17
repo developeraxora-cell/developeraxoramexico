@@ -22,7 +22,7 @@ const EditCapacityModal: React.FC<EditCapacityModalProps> = ({
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in">
-        <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+        <div className="crm-form-header p-6 flex justify-between items-center">
           <h3 className="text-lg font-semibold  tracking-tight">Editar Capacidad Máxima</h3>
           <button onClick={onCancel} className="text-2xl font-semibold">&times;</button>
         </div>
@@ -33,7 +33,7 @@ const EditCapacityModal: React.FC<EditCapacityModalProps> = ({
               type="number"
               required
               min={1}
-              className="w-full p-4 bg-slate-50 rounded-xl font-semibold text-center text-lg border-2 border-transparent focus:border-orange-500 outline-none"
+              className="w-full p-4 bg-slate-50 rounded-xl font-semibold text-center text-lg border-2 border-transparent focus:border-brand-500 outline-none"
               value={value || ''}
               onChange={e => onChange(Number(e.target.value))}
             />
@@ -41,7 +41,7 @@ const EditCapacityModal: React.FC<EditCapacityModalProps> = ({
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-4 bg-orange-500 text-white font-semibold rounded-xl  tracking-wide text-xs shadow-lg"
+            className="w-full py-4 bg-brand-500 text-white font-semibold rounded-xl  tracking-wide text-xs shadow-lg"
           >
             {isLoading ? 'Guardando...' : 'Actualizar Capacidad'}
           </button>

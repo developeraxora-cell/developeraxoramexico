@@ -483,16 +483,16 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
   }, [currentPage, totalPages]);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="crm-module crm-list-page animate-in fade-in duration-500">
       
       {/* HEADER */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="crm-page-heading flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-2xl font-semibold text-slate-900  tracking-tight flex items-center gap-2">
-            <AppIcon name="package" /> Productos por Sucursal
+            Productos
           </h2>
           <p className="text-xs font-bold text-slate-400  tracking-wide mt-1">
-            Listado de productos activos por sucursal.
+            Administra el catálogo y las existencias de esta sucursal.
           </p>
         </div>
 
@@ -506,7 +506,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
               setPendingBarcode('');
               setIsNewProductOpen(true);
             }}
-            className="w-full lg:w-auto bg-slate-900 text-white px-8 py-3 rounded-xl font-semibold text-xs  tracking-wide shadow-sm hover:bg-orange-600 transition-all flex items-center justify-center gap-2"
+            className="w-full lg:w-auto bg-slate-900 text-white px-8 py-3 rounded-xl font-semibold text-xs  tracking-wide shadow-sm hover:bg-brand-600 transition-all flex items-center justify-center gap-2"
           >
             <AppIcon name="plus" /> Nuevo producto
           </button>
@@ -514,13 +514,13 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       </div>
 
       {/* BARRA DE BÚSQUEDA */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="crm-toolbar bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
         <div className="relative flex-1">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"><AppIcon name="search" /></span>
           <input 
             type="text" 
             placeholder="Buscar por nombre, SKU o barcode..."
-            className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-orange-500 transition-all outline-none"
+            className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-500 transition-all outline-none"
             value={productsSearch}
             onChange={(e) => setProductsSearch(e.target.value)}
           />
@@ -540,7 +540,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       )}
 
       {/* TABLA PRINCIPAL */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="crm-data-surface bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -700,17 +700,6 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
         </div>
       )}
 
-      {/* FOOTER INFORMATIVO */}
-      <div className="bg-slate-900 p-4 rounded-xl flex flex-col md:flex-row justify-between items-center text-white/50 text-xs font-semibold  tracking-[0.2em]">
-        <div className="flex items-center gap-4">
-           <span>Sucursal: <span className="text-orange-400">{selectedBranchId || '—'}</span></span>
-           <span>Productos en vista: <span className="text-white">{paginatedProducts.length}</span></span>
-        </div>
-        <div className="flex items-center gap-2 text-orange-400">
-          Usuario: {currentUser.name}
-        </div>
-      </div>
-
       <ConfirmModal
         isOpen={Boolean(productToDelete)}
         title={productToDelete?.is_active === false ? 'Restaurar producto' : 'Eliminar producto'}
@@ -772,7 +761,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       {priceProduct && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <div className="crm-form-header p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-semibold  tracking-tight">Actualizar precio menor</h3>
                 <p className="text-slate-400 text-xs">{priceProduct.name}</p>
@@ -786,7 +775,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                 type="number"
                 min={0}
                 step="0.01"
-                className="w-full p-4 bg-slate-50 border-none rounded-xl font-semibold text-lg outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full p-4 bg-slate-50 border-none rounded-xl font-semibold text-lg outline-none focus:ring-2 focus:ring-brand-500"
                 value={priceValue}
                 onChange={(e) => setPriceValue(e.target.value)}
               />
@@ -794,7 +783,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                 <label className="text-xs font-semibold  tracking-wide text-slate-500">Observación *</label>
                 <textarea
                   rows={3}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 resize-none"
                   placeholder="Explique por qué se actualiza el precio"
                   value={priceObservation}
                   onChange={(e) => setPriceObservation(e.target.value)}
@@ -824,7 +813,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       {manualStockModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <div className="crm-form-header p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-semibold  tracking-tight">Editar stock</h3>
                 <p className="text-slate-400 text-xs">{manualStockModal.product.name}</p>
@@ -849,7 +838,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                     type="number"
                     min={0}
                     step="0.001"
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500"
                     value={manualStockValue}
                     onChange={(e) => setManualStockValue(e.target.value)}
                     disabled={isSavingStock}
@@ -862,7 +851,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                 <input
                   type="text"
                   maxLength={100}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500"
                   placeholder="Ej: Conteo físico"
                   value={manualStockReason}
                   onChange={(e) => setManualStockReason(e.target.value)}
@@ -874,7 +863,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                 <label className="text-xs font-semibold  tracking-wide text-slate-500">Observación *</label>
                 <textarea
                   rows={3}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 resize-none"
                   placeholder="Detalle obligatorio del ajuste manual"
                   value={manualStockNotes}
                   onChange={(e) => setManualStockNotes(e.target.value)}
@@ -906,7 +895,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       {historyProduct && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl overflow-hidden max-h-[92vh] flex flex-col">
-            <div className="bg-slate-900 px-6 py-5 text-white flex items-center justify-between">
+            <div className="crm-form-header px-6 py-5 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold  tracking-wide">Historial de producto</h3>
                 <p className="text-xs text-slate-300  tracking-wider mt-1">{historyProduct.name}</p>

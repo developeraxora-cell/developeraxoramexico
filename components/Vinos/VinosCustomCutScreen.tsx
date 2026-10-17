@@ -184,14 +184,14 @@ const VinosCustomCutScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
   }, [branchDbId, branchName, cashierOptions, cashierId, currentUser.name, endAt, selectedBranch?.code, selectedBranchId, startAt]);
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-[28px] border border-slate-200 bg-slate-50 px-5 py-4 shadow-sm">
+    <div className="crm-module space-y-6">
+      <div className="crm-page-heading rounded-[28px] border border-slate-200 bg-slate-50 px-5 py-4 shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+          <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-600">
             <Printer size={20} />
           </div>
           <div>
-            <p className="text-[11px] font-semibold  tracking-[0.28em] text-orange-600">Casa Tahona</p>
+            <p className="text-[11px] font-semibold  tracking-[0.28em] text-brand-600">Casa Tahona</p>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">Corte personalizado</h1>
             <p className="mt-1 text-sm font-semibold text-slate-500">
               Reconstruye un corte para cualquier rango de fecha y hora, aunque cruce medianoche.
@@ -203,8 +203,8 @@ const VinosCustomCutScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
       <PanelCard title="Reimprimir corte de caja" subtitle="Genera e imprime el mismo ticket del corte normal usando cualquier rango personalizado.">
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-4">
-            <div className="rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
-              <p className="text-sm font-bold leading-relaxed text-orange-800">
+            <div className="rounded-xl border border-brand-100 bg-brand-50 px-4 py-3">
+              <p className="text-sm font-bold leading-relaxed text-brand-800">
                 Este corte reconstruye las ventas dentro del rango seleccionado. No modifica las cajas guardadas ni el cierre automático.
               </p>
             </div>
@@ -215,7 +215,7 @@ const VinosCustomCutScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                 type="datetime-local"
                 value={startAt}
                 onChange={(event) => setStartAt(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
               />
             </label>
 
@@ -225,7 +225,7 @@ const VinosCustomCutScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                 type="datetime-local"
                 value={endAt}
                 onChange={(event) => setEndAt(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
               />
             </label>
 
@@ -235,7 +235,7 @@ const VinosCustomCutScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
                 value={cashierId}
                 onChange={(event) => setCashierId(event.target.value)}
                 disabled={cashiersLoading}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:opacity-60"
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 disabled:opacity-60"
               >
                 <option value="">{cashiersLoading ? 'Cargando empleados...' : 'Todos los cajeros'}</option>
                 {cashierOptions.map((cashier) => (
@@ -283,7 +283,7 @@ const VinosCustomCutScreen: React.FC<Props> = ({ selectedBranchId, branches, cur
           <button
             onClick={handleGenerate}
             disabled={loading}
-            className="inline-flex min-w-[240px] items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500 disabled:opacity-60"
+            className="inline-flex min-w-[240px] items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-xs font-semibold  tracking-wider text-white hover:bg-brand-500 disabled:opacity-60"
           >
             {loading ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
             Generar e imprimir

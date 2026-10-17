@@ -141,7 +141,7 @@ const ConcreteOps: React.FC<ConcreteOpsProps> = ({
         </div>
         <button
           onClick={() => setIsNewOrderModalOpen(true)}
-          className="bg-slate-900 text-white px-8 py-3 rounded-xl font-semibold text-xs  tracking-wide shadow-sm hover:bg-orange-600 transition-all"
+          className="bg-slate-900 text-white px-8 py-3 rounded-xl font-semibold text-xs  tracking-wide shadow-sm hover:bg-brand-600 transition-all"
         >
           + Programar Colado
         </button>
@@ -156,15 +156,15 @@ const ConcreteOps: React.FC<ConcreteOpsProps> = ({
               const customer = customers.find(c => c.id === order.customerId);
               const formula = formulas.find(f => f.id === order.formulaId);
               return (
-                <div key={order.id} className={`bg-white p-5 rounded-2xl border-2 transition-all ${order.status === 'PRODUCIENDO' ? 'border-orange-500 bg-orange-50/10' : 'border-slate-100'}`}>
+                <div key={order.id} className={`bg-white p-5 rounded-2xl border-2 transition-all ${order.status === 'PRODUCIENDO' ? 'border-brand-500 bg-brand-50/10' : 'border-slate-100'}`}>
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <p className="text-xs font-semibold text-orange-500 ">{formula?.name}</p>
+                      <p className="text-xs font-semibold text-brand-500 ">{formula?.name}</p>
                       <h4 className="text-lg font-semibold text-slate-800 tracking-tight">{customer?.name}</h4>
                       <p className="text-xs text-slate-400 font-bold ">{order.qtyM3} m³ • {new Date(order.scheduledDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hrs</p>
                     </div>
                     <span className={`px-4 py-1.5 rounded-full text-[11px] font-semibold  ${order.status === 'PENDIENTE' ? 'bg-slate-100 text-slate-500' :
-                      order.status === 'PRODUCIENDO' ? 'bg-orange-500 text-white animate-pulse' :
+                      order.status === 'PRODUCIENDO' ? 'bg-brand-500 text-white animate-pulse' :
                         'bg-blue-100 text-blue-600'
                       }`}>
                       {order.status}
@@ -209,7 +209,7 @@ const ConcreteOps: React.FC<ConcreteOpsProps> = ({
                     <p className="text-[11px] font-bold text-slate-400 ">Capacidad: {mixer.capacityM3}m³</p>
                   </div>
                   <div className={`px-3 py-1 rounded-lg text-[11px] font-semibold  ${mixer.status === 'DISPONIBLE' ? 'bg-green-500 text-white' :
-                    mixer.status === 'CARGANDO' ? 'bg-orange-500 text-white' :
+                    mixer.status === 'CARGANDO' ? 'bg-brand-500 text-white' :
                       'bg-blue-500 text-white'
                     }`}>
                     {mixer.status}
@@ -231,7 +231,7 @@ const ConcreteOps: React.FC<ConcreteOpsProps> = ({
       {isNewOrderModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center shadow-lg">
+            <div className="crm-form-header p-6 flex justify-between items-center shadow-lg">
               <h3 className="text-xl font-semibold  tracking-tight">Programar Colado</h3>
               <button onClick={() => setIsNewOrderModalOpen(false)} className="text-2xl">&times;</button>
             </div>
@@ -278,7 +278,7 @@ const ConcreteOps: React.FC<ConcreteOpsProps> = ({
                   onChange={e => setNewOrder({ ...newOrder, scheduledDate: e.target.value })}
                 />
               </div>
-              <button type="submit" className="w-full py-4 bg-orange-500 text-white font-semibold rounded-xl shadow-lg  tracking-wide text-xs mt-4">Confirmar Agenda</button>
+              <button type="submit" className="w-full py-4 bg-brand-500 text-white font-semibold rounded-xl shadow-lg  tracking-wide text-xs mt-4">Confirmar Agenda</button>
             </form>
           </div>
         </div>

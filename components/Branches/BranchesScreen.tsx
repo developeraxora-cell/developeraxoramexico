@@ -197,7 +197,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="crm-module space-y-8 animate-in fade-in duration-500">
       <StatusModal
         isOpen={statusModal.isOpen}
         type={statusModal.type}
@@ -217,7 +217,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
         onCancel={() => setConfirmToggle({ isOpen: false, branch: null, nextActive: true })}
       />
       {/* Header de Gestión */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="crm-page-heading flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-3xl font-semibold text-slate-900  tracking-tight">Centro de Expansión</h2>
           <p className="text-sm text-slate-400 font-bold  tracking-wide mt-1">Gestión de Puntos de Venta y Logística</p>
@@ -225,7 +225,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
         {isFullAccessRole(currentUser.role) && (
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-semibold text-xs  tracking-wide transition-all shadow-sm shadow-orange-500/20 active:scale-95 flex items-center gap-2"
+            className="bg-brand-500 hover:bg-brand-600 text-white px-8 py-4 rounded-xl font-semibold text-xs  tracking-wide transition-all shadow-sm shadow-brand-500/20 active:scale-95 flex items-center gap-2"
           >
             <span><AppIcon name="building" /></span> Nueva Sucursal
           </button>
@@ -243,7 +243,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
             <div
               key={branch.id}
               className={`group rounded-2xl border-2 transition-all duration-500 relative overflow-hidden ${isActive
-                  ? 'border-orange-500 shadow-2xl shadow-orange-500/10 scale-[1.02]'
+                  ? 'border-brand-500 shadow-2xl shadow-brand-500/10 scale-[1.02]'
                   : isInactive
                     ? 'bg-red-50 border-red-300 shadow-lg shadow-red-200/40'
                     : 'bg-white border-slate-100 hover:border-slate-300'
@@ -251,7 +251,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
             >
               {/* Indicador de Activa */}
               {isActive && (
-                <div className="absolute top-0 left-0 right-0 bg-orange-500 py-1.5 text-center">
+                <div className="absolute top-0 left-0 right-0 bg-brand-500 py-1.5 text-center">
                   <span className="text-[11px] font-semibold text-white  tracking-[0.2em]">Ubicación Seleccionada</span>
                 </div>
               )}
@@ -259,7 +259,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
               <div className="p-8 pt-10">
                 <div className="flex justify-between items-start mb-4">
                   <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all ${isActive
-                    ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                    ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/30'
                     : isInactive
                       ? 'bg-red-500 text-white shadow-lg shadow-red-400/30'
                       : 'bg-slate-100 text-slate-400 group-hover:bg-slate-900 group-hover:text-white'
@@ -296,7 +296,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
 
                 <h3 className={`text-2xl font-semibold mb-2 tracking-tight  ${isInactive ? 'text-red-700' : 'text-slate-900'}`}>{branch.name}</h3>
                 <p className={`text-xs font-medium leading-relaxed mb-8 flex items-start gap-2 h-10 overflow-hidden ${isInactive ? 'text-red-400' : 'text-slate-400'}`}>
-                  <span className={isInactive ? 'text-red-500' : 'text-orange-500'}><AppIcon name="pin" /></span> {branch.address}
+                  <span className={isInactive ? 'text-red-500' : 'text-brand-500'}><AppIcon name="pin" /></span> {branch.address}
                 </p>
 
                 {/* Métricas Simuladas por Sucursal */}
@@ -319,7 +319,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
                       ? 'bg-green-50 text-green-600 border border-green-100 cursor-default'
                       : isInactive
                         ? 'bg-red-100 text-red-500 border border-red-200 cursor-not-allowed'
-                        : 'bg-slate-900 text-white hover:bg-orange-600 shadow-lg'
+                        : 'bg-slate-900 text-white hover:bg-brand-600 shadow-lg'
                       }`}
                   >
                     {isActive ? <><AppIcon name="success" /> Estás aquí</> : isInactive ? <><AppIcon name="ban" /> Inactiva</> : <><AppIcon name="arrow" /> Entrar a sucursal</>}
@@ -339,7 +339,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
             <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
               <div>
                 <h3 className="text-2xl font-semibold  tracking-tight">Configurar Sucursal</h3>
-                <p className="text-xs text-orange-400 font-semibold  tracking-wide mt-1">Defina el Punto de Operación</p>
+                <p className="text-xs text-brand-400 font-semibold  tracking-wide mt-1">Defina el Punto de Operación</p>
               </div>
               <button onClick={closeModal} className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-2xl hover:bg-red-500 transition-all">&times;</button>
             </div>
@@ -348,7 +348,7 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
                 <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Nombre de la Ubicación</label>
                 <input
                   type="text" required placeholder="Ej. Sucursal Poniente"
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-bold text-slate-800 transition-all"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-brand-500 rounded-xl outline-none font-bold text-slate-800 transition-all"
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                 />
@@ -357,14 +357,14 @@ const BranchesScreen: React.FC<BranchesScreenProps> = ({
                 <label className="text-xs font-semibold text-slate-400  tracking-wide ml-1">Dirección Física</label>
                 <textarea
                   required placeholder="Calle, Número, Colonia, CP..."
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl outline-none font-medium text-slate-600 h-28 resize-none transition-all"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-brand-500 rounded-xl outline-none font-medium text-slate-600 h-28 resize-none transition-all"
                   value={formData.address}
                   onChange={e => setFormData({ ...formData, address: e.target.value })}
                 />
               </div>
               <div className="pt-4 flex gap-4">
                 <button type="button" onClick={closeModal} className="flex-1 py-4 text-slate-400 font-semibold text-xs  tracking-wide">Cancelar</button>
-                <button type="submit" disabled={isSaving} className="flex-1 py-5 bg-orange-500 text-white font-semibold rounded-xl shadow-sm shadow-orange-500/20  tracking-wide text-xs disabled:opacity-60 disabled:cursor-not-allowed">
+                <button type="submit" disabled={isSaving} className="flex-1 py-5 bg-brand-500 text-white font-semibold rounded-xl shadow-sm shadow-brand-500/20  tracking-wide text-xs disabled:opacity-60 disabled:cursor-not-allowed">
                   {isSaving ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
               </div>

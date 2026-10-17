@@ -1,4 +1,5 @@
 import AppIcon from '../common/AppIcon';
+import PageHeading from '../common/PageHeading';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Plus, Search, Pencil, Trash2, Package, TrendingUp, AlertTriangle, X, Settings, RefreshCw, Check, ChevronDown, Save, BarChart3, Loader2,
@@ -559,14 +560,15 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
 
   // ── render ────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
+    <div className="crm-module space-y-6">
+      <PageHeading title="Productos" description="Organiza el catálogo y consulta las existencias de Casa Tahona." />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="crm-metrics-strip grid grid-cols-2 sm:grid-cols-4">
         {[
           { label: 'Total productos',  value: stats.total,      icon: Package,        color: 'text-slate-900'  },
           { label: 'Activos',          value: stats.activos,    icon: TrendingUp,     color: 'text-green-600'  },
-          { label: 'Stock bajo',       value: stats.bajos,      icon: AlertTriangle,  color: 'text-orange-500', action: () => setShowLowStockOnly(prev => !prev), active: showLowStockOnly },
+          { label: 'Stock bajo',       value: stats.bajos,      icon: AlertTriangle,  color: 'text-brand-500', action: () => setShowLowStockOnly(prev => !prev), active: showLowStockOnly },
           { label: 'Unidades totales', value: stats.unidades,   icon: Package,        color: 'text-slate-900'  },
         ].map(s => (
           <button
@@ -575,9 +577,9 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
             onClick={s.action}
             className={`rounded-xl border p-4 text-left shadow-sm transition-colors ${
               s.active
-                ? 'border-orange-300 bg-orange-50 ring-2 ring-orange-100'
+                ? 'border-brand-300 bg-brand-50 ring-2 ring-brand-100'
                 : s.action
-                  ? 'border-slate-200 bg-white hover:border-orange-200 hover:bg-orange-50/50'
+                  ? 'border-slate-200 bg-white hover:border-brand-200 hover:bg-brand-50/50'
                   : 'border-slate-200 bg-white'
             }`}
           >
@@ -596,7 +598,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
               placeholder="Buscar por nombre, SKU o código…"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -623,10 +625,10 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                   <button
                     type="button"
                     onClick={() => setCategoryFilters([])}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-bold text-slate-600 hover:bg-orange-50"
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-bold text-slate-600 hover:bg-brand-50"
                   >
                     <span>Limpiar selección</span>
-                    {categoryFilters.length === 0 && <Check size={14} className="text-orange-500" />}
+                    {categoryFilters.length === 0 && <Check size={14} className="text-brand-500" />}
                   </button>
                   <div className="border-t border-slate-100" />
                   {categories.length === 0 ? (
@@ -635,15 +637,15 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                     const count = products.filter(p => p.category_id === c.id).length;
                     const active = categoryFilters.includes(c.id);
                     return (
-                      <label key={c.id} className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-slate-50 ${active ? 'bg-orange-50/60' : ''}`}>
+                      <label key={c.id} className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-slate-50 ${active ? 'bg-brand-50/60' : ''}`}>
                         <div className="flex items-center gap-2">
                           <input
                             type="checkbox"
-                            className="h-3.5 w-3.5 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                            className="h-3.5 w-3.5 rounded border-slate-300 text-brand-500 focus:ring-brand-400"
                             checked={active}
                             onChange={() => toggleCategoryFilter(c.id)}
                           />
-                          <span className={`font-bold ${active ? 'text-orange-700' : 'text-slate-700'}`}>{c.name}</span>
+                          <span className={`font-bold ${active ? 'text-brand-700' : 'text-slate-700'}`}>{c.name}</span>
                         </div>
                         <span className="text-xs text-slate-400">{count}</span>
                       </label>
@@ -661,7 +663,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
             onClick={() => setShowLowStockOnly(prev => !prev)}
             className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold  tracking-wider ${
               showLowStockOnly
-                ? 'border-orange-300 bg-orange-50 text-orange-700'
+                ? 'border-brand-300 bg-brand-50 text-brand-700'
                 : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
             }`}
             title="Mostrar productos con stock bajo"
@@ -682,13 +684,13 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
             PDF
           </button>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500">
+        <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-brand-600/20 hover:bg-brand-500">
           <Plus size={15} /> Nuevo producto
         </button>
       </div>
 
       {/* Tabla */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="crm-data-surface overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <div className="py-16 text-center text-sm font-bold text-slate-400">Cargando productos…</div>
         ) : filtered.length === 0 ? (
@@ -714,7 +716,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
               <tbody className="divide-y divide-slate-100">
                 {filtered.map(p => {
                   const lowStock = p.total_stock <= Number(p.min_stock || 0);
-                  const stockClass = lowStock ? 'bg-red-100 text-red-700' : p.total_stock <= 20 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700';
+                  const stockClass = lowStock ? 'bg-red-100 text-red-700' : p.total_stock <= 20 ? 'bg-brand-100 text-brand-700' : 'bg-green-100 text-green-700';
                   return (
                     <tr key={p.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3">
@@ -722,7 +724,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                           {p.image_url ? (
                             <img src={p.image_url} alt={p.name} className="h-10 w-10 rounded-xl object-cover" />
                           ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-lg"><AppIcon name="wine" /></div>
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-lg"><AppIcon name="wine" /></div>
                           )}
                           <div className="min-w-0">
                             <p className="font-bold text-slate-900 truncate max-w-[260px]">{p.name}</p>
@@ -742,7 +744,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                       </td>
                       <td className="px-4 py-3 text-xs font-bold text-slate-800">
                         {formatCurrency(p.price_retail)}
-                        {p.single_price_mode && <p className="mt-0.5 text-[11px] font-semibold  tracking-wide text-orange-500">Único</p>}
+                        {p.single_price_mode && <p className="mt-0.5 text-[11px] font-semibold  tracking-wide text-brand-500">Único</p>}
                       </td>
                       <td className="px-4 py-3 text-xs font-bold text-slate-800">{p.single_price_mode ? '—' : formatCurrency(p.price_mid_wholesale)}</td>
                       <td className="px-4 py-3 text-xs font-bold text-slate-800">{p.single_price_mode ? '—' : formatCurrency(p.price_wholesale)}</td>
@@ -754,7 +756,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                           <button onClick={() => openStockAdjust(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600" title="Editar stock manual">
                             <SlidersHorizontal size={14}/>
                           </button>
-                          <button onClick={() => openPurchaseCostAdjust(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-orange-50 hover:text-orange-600" title="Editar precio compra">
+                          <button onClick={() => openPurchaseCostAdjust(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-brand-50 hover:text-brand-600" title="Editar precio compra">
                             <DollarSign size={14}/>
                           </button>
                           <button onClick={() => openEdit(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Editar"><Pencil size={14}/></button>
@@ -824,7 +826,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                   onChange={e => setStockNote(e.target.value)}
                   rows={4}
                   placeholder="Ej. Conteo físico, merma, ajuste por captura incorrecta..."
-                  className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                 />
               </label>
 
@@ -837,7 +839,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
               <button onClick={closeStockAdjust} disabled={stockSaving} className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50">
                 Cancelar
               </button>
-              <button onClick={handleStockAdjust} disabled={stockSaving} className="flex-1 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500 disabled:opacity-50">
+              <button onClick={handleStockAdjust} disabled={stockSaving} className="flex-1 rounded-xl bg-brand-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-brand-500 disabled:opacity-50">
                 {stockSaving ? 'Guardando...' : 'Guardar ajuste'}
               </button>
             </div>
@@ -885,7 +887,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                   onChange={e => setPurchaseCostNote(e.target.value)}
                   rows={4}
                   placeholder="Ej. Corrección de costo capturado, actualización por factura..."
-                  className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                 />
               </label>
 
@@ -898,7 +900,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
               <button onClick={closePurchaseCostAdjust} disabled={purchaseCostSaving} className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50">
                 Cancelar
               </button>
-              <button onClick={handlePurchaseCostAdjust} disabled={purchaseCostSaving} className="flex-1 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500 disabled:opacity-50">
+              <button onClick={handlePurchaseCostAdjust} disabled={purchaseCostSaving} className="flex-1 rounded-xl bg-brand-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-brand-500 disabled:opacity-50">
                 {purchaseCostSaving ? 'Guardando...' : 'Guardar precio'}
               </button>
             </div>
@@ -920,7 +922,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
               {historyLoading ? (
                 <div className="py-20 text-center">
-                  <Loader2 size={28} className="mx-auto animate-spin text-orange-500" />
+                  <Loader2 size={28} className="mx-auto animate-spin text-brand-500" />
                   <p className="mt-3 text-sm font-bold text-slate-400">Cargando historial…</p>
                 </div>
               ) : historyError ? (
@@ -941,7 +943,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                     </div>
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                       <p className="text-xs font-semibold  tracking-wide text-slate-400">Salidas</p>
-                      <p className="mt-1 text-xl font-semibold text-orange-600">{formatCurrency(historyData.sold_total)}</p>
+                      <p className="mt-1 text-xl font-semibold text-brand-600">{formatCurrency(historyData.sold_total)}</p>
                       <p className="text-xs font-bold text-slate-400">{historyData.sold_qty} unidades</p>
                     </div>
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -996,7 +998,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                           return [...runningRows].reverse().map((row) => {
                           const badgeClass =
                             row.status === 'INGRESO' ? 'bg-green-100 text-green-700'
-                              : row.status === 'SALIDA' ? 'bg-orange-100 text-orange-700'
+                              : row.status === 'SALIDA' ? 'bg-brand-100 text-brand-700'
                                 : 'bg-blue-100 text-blue-700';
                           return (
                             <tr key={row.id} className="hover:bg-slate-50">
@@ -1076,12 +1078,12 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                       value={deleteVerificationCode}
                       onChange={e => setDeleteVerificationCode(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && verifyDeleteCode()}
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                       placeholder="Contraseña del SUPERADMIN"
                       autoComplete="current-password"
                     />
                   </div>
-                  <p className="rounded-xl bg-orange-50 px-4 py-3 text-xs font-bold leading-relaxed text-orange-700">
+                  <p className="rounded-xl bg-brand-50 px-4 py-3 text-xs font-bold leading-relaxed text-brand-700">
                     Para continuar se debe validar la contraseña del usuario SUPERADMIN actual: {currentUser.name}.
                   </p>
                 </>
@@ -1142,7 +1144,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                 <h3 className="mb-3 text-xs font-semibold  tracking-wide text-slate-400">Categorías</h3>
                 <div className="flex gap-2 mb-3">
                   <input
-                    className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400"
+                    className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
                     placeholder="Nueva categoría…"
                     value={newCategoryName}
                     onChange={e => setNewCategoryName(e.target.value)}
@@ -1158,23 +1160,23 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                   ) : categories.map(c => {
                     const editing = editingCategoryId === c.id;
                     return (
-                      <li key={c.id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${editing ? 'border-orange-300 bg-orange-50' : 'border-slate-200'}`}>
+                      <li key={c.id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${editing ? 'border-brand-300 bg-brand-50' : 'border-slate-200'}`}>
                         {editing ? (
                           <>
                             <input
                               autoFocus
-                              className="flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm outline-none focus:border-orange-500"
+                              className="flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm outline-none focus:border-brand-500"
                               value={editingCategoryName}
                               onChange={e => setEditingCategoryName(e.target.value)}
                               onKeyDown={e => { if (e.key === 'Enter') saveEditCategory(); if (e.key === 'Escape') cancelEditCategory(); }}
                             />
-                            <button onClick={saveEditCategory} className="rounded-md bg-orange-600 p-1.5 text-white hover:bg-orange-500" title="Guardar"><Save size={14}/></button>
+                            <button onClick={saveEditCategory} className="rounded-md bg-brand-600 p-1.5 text-white hover:bg-brand-500" title="Guardar"><Save size={14}/></button>
                             <button onClick={cancelEditCategory} className="rounded-md border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50" title="Cancelar"><X size={14}/></button>
                           </>
                         ) : (
                           <>
                             <span className="flex-1 text-slate-700">{c.name}</span>
-                            <button onClick={() => startEditCategory(c)} className="text-slate-400 hover:text-orange-500" title="Editar"><Pencil size={14}/></button>
+                            <button onClick={() => startEditCategory(c)} className="text-slate-400 hover:text-brand-500" title="Editar"><Pencil size={14}/></button>
                             <button onClick={() => removeCategory(c.id)} className="text-slate-400 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
                           </>
                         )}
@@ -1189,13 +1191,13 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                 <h3 className="mb-3 text-xs font-semibold  tracking-wide text-slate-400">Unidades de medida</h3>
                 <div className="grid grid-cols-[1fr_70px_auto] gap-2 mb-3">
                   <input
-                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400"
+                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
                     placeholder="Nombre (Botella…)"
                     value={newUomName}
                     onChange={e => setNewUomName(e.target.value)}
                   />
                   <input
-                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400"
+                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
                     placeholder="Símb."
                     value={newUomSymbol}
                     onChange={e => setNewUomSymbol(e.target.value)}
@@ -1210,30 +1212,30 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                   ) : uoms.map(u => {
                     const editing = editingUomId === u.id;
                     return (
-                      <li key={u.id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${editing ? 'border-orange-300 bg-orange-50' : 'border-slate-200'}`}>
+                      <li key={u.id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${editing ? 'border-brand-300 bg-brand-50' : 'border-slate-200'}`}>
                         {editing ? (
                           <>
                             <input
                               autoFocus
-                              className="flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm outline-none focus:border-orange-500"
+                              className="flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm outline-none focus:border-brand-500"
                               placeholder="Nombre"
                               value={editingUomName}
                               onChange={e => setEditingUomName(e.target.value)}
                               onKeyDown={e => { if (e.key === 'Enter') saveEditUom(); if (e.key === 'Escape') cancelEditUom(); }}
                             />
                             <input
-                              className="w-16 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm outline-none focus:border-orange-500"
+                              className="w-16 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm outline-none focus:border-brand-500"
                               placeholder="Símb."
                               value={editingUomSymbol}
                               onChange={e => setEditingUomSymbol(e.target.value)}
                             />
-                            <button onClick={saveEditUom} className="rounded-md bg-orange-600 p-1.5 text-white hover:bg-orange-500" title="Guardar"><Save size={14}/></button>
+                            <button onClick={saveEditUom} className="rounded-md bg-brand-600 p-1.5 text-white hover:bg-brand-500" title="Guardar"><Save size={14}/></button>
                             <button onClick={cancelEditUom} className="rounded-md border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50" title="Cancelar"><X size={14}/></button>
                           </>
                         ) : (
                           <>
                             <span className="flex-1 text-slate-700">{u.name}{u.symbol ? <span className="text-slate-400"> ({u.symbol})</span> : null}</span>
-                            <button onClick={() => startEditUom(u)} className="text-slate-400 hover:text-orange-500" title="Editar"><Pencil size={14}/></button>
+                            <button onClick={() => startEditUom(u)} className="text-slate-400 hover:text-brand-500" title="Editar"><Pencil size={14}/></button>
                             <button onClick={() => removeUom(u.id)} className="text-slate-400 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
                           </>
                         )}

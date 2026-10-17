@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import PageHeading from '../common/PageHeading';
 import { PDFDocument, PDFPage, rgb } from 'pdf-lib';
 import { Branch, User } from '../../types';
 import { creditService, type CashSaleHistory, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentEvidence, type CreditPaymentMethod, type CreditSummary, type CustomerAddress, type CustomerDocument, type SalePaymentEvidence } from '../../services/credit/credit.service';
@@ -2568,8 +2569,9 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+    <div className="crm-module space-y-6">
+      <PageHeading title="Clientes" description="Consulta contactos, créditos y movimientos de tus clientes." />
+      <div className="crm-toolbar flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <input
           type="text"
           placeholder="Buscar cliente..."
@@ -2673,7 +2675,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         }}
       />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="crm-data-surface bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="border-b border-slate-200 px-4 py-3 text-xs font-semibold  tracking-wide text-slate-500">
           Seleccionados {selectedCustomerIds.length}
         </div>
@@ -2907,10 +2909,10 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         return (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[55] flex items-center justify-center p-3 sm:p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col">
-            <div className="bg-slate-900 p-6 text-white flex items-start justify-between">
+            <div className="crm-form-header p-6 flex items-start justify-between">
               <div>
                 <h3 className="text-2xl font-semibold tracking-tight">Gestionar cliente</h3>
-                <p className="mt-1 text-xs font-bold  tracking-wide text-orange-300">{selectedCustomer.name}</p>
+                <p className="mt-1 text-xs font-bold  tracking-wide text-brand-300">{selectedCustomer.name}</p>
               </div>
               <button
                 type="button"
@@ -2952,12 +2954,12 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                       </div>
                       <Pencil className="h-5 w-5 shrink-0 text-sky-700" />
                     </button>
-                    <button type="button" onClick={() => { void handleOpenAddresses(selectedCustomer); }} className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-left hover:border-orange-200 hover:bg-orange-50">
+                    <button type="button" onClick={() => { void handleOpenAddresses(selectedCustomer); }} className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-left hover:border-brand-200 hover:bg-brand-50">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">Direcciones</p>
                         <p className="text-xs font-semibold text-slate-500">Administra las direcciones disponibles para venta.</p>
                       </div>
-                      <MapPin className="h-5 w-5 shrink-0 text-orange-700" />
+                      <MapPin className="h-5 w-5 shrink-0 text-brand-700" />
                     </button>
                     <button type="button" onClick={() => { void handleDownloadCustomerPdf(selectedCustomer); }} className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-left hover:border-slate-300 hover:bg-slate-100">
                       <div>
@@ -3206,10 +3208,10 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       {isAddressModalOpen && addressCustomer && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
-            <div className="bg-orange-600 p-6 text-white flex items-start justify-between gap-4">
+            <div className="bg-brand-600 p-6 text-white flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-xl font-semibold  tracking-tight">Direcciones del cliente</h3>
-                <p className="text-xs font-bold  tracking-wide text-orange-100">{addressCustomer.name}</p>
+                <p className="text-xs font-bold  tracking-wide text-brand-100">{addressCustomer.name}</p>
               </div>
               <button
                 onClick={() => {
@@ -3240,7 +3242,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                     setIsAddressFormModalOpen(true);
                   }}
                   disabled={feedbackLoading || isLoading}
-                  className="rounded-xl bg-orange-600 px-4 py-3 text-xs font-semibold  tracking-wide text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="rounded-xl bg-brand-600 px-4 py-3 text-xs font-semibold  tracking-wide text-white disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   + Nueva dirección
                 </button>
@@ -3300,11 +3302,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       {isAddressFormModalOpen && addressCustomer && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden">
-            <div className="bg-orange-600 p-6 text-white">
+            <div className="bg-brand-600 p-6 text-white">
               <h3 className="text-xl font-semibold  tracking-tight">
                 {editingAddress ? 'Editar dirección' : 'Nueva dirección'}
               </h3>
-              <p className="text-xs font-bold  tracking-wide text-orange-100">{addressCustomer.name}</p>
+              <p className="text-xs font-bold  tracking-wide text-brand-100">{addressCustomer.name}</p>
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-3">
@@ -3348,7 +3350,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                   type="button"
                   onClick={() => void handleSaveAddress()}
                   disabled={feedbackLoading || isLoading}
-                  className="rounded-xl bg-orange-600 px-4 py-3 text-xs font-semibold  tracking-wide text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="rounded-xl bg-brand-600 px-4 py-3 text-xs font-semibold  tracking-wide text-white disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {feedbackLoading || isLoading ? 'Guardando...' : editingAddress ? 'Guardar cambios' : 'Agregar dirección'}
                 </button>
@@ -3365,7 +3367,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
               <h3 className="text-xl font-semibold  tracking-tight">
                 {noteModalMode === 'create' ? 'Nuevo crédito' : 'Editar crédito'}
               </h3>
-              <p className="text-xs font-bold  tracking-wide text-orange-300">
+              <p className="text-xs font-bold  tracking-wide text-brand-300">
                 {selectedCustomer.name}
               </p>
             </div>
@@ -3470,7 +3472,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       {isDocumentsModalOpen && selectedCustomer && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="bg-slate-900 p-6 text-white flex items-start justify-between">
+            <div className="crm-form-header p-6 flex items-start justify-between">
               <div>
                 <h3 className="text-xl font-semibold tracking-tight">Documentos de identidad</h3>
                 <p className="mt-1 text-xs font-bold  tracking-wide text-emerald-300">{selectedCustomer.name}</p>
@@ -3551,10 +3553,10 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       {isHistoryModalOpen && selectedCustomer && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-4xl h-[80vh] overflow-hidden flex flex-col">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-start">
+            <div className="crm-form-header p-6 flex justify-between items-start">
               <div>
                 <h3 className="text-2xl font-semibold tracking-tight">{historyView === 'CASH' ? 'Ventas en Efectivo' : 'Notas de Crédito'}</h3>
-                <p className="text-orange-400 font-bold tracking-wide  text-xs mt-1">{selectedCustomer.name}</p>
+                <p className="text-brand-400 font-bold tracking-wide  text-xs mt-1">{selectedCustomer.name}</p>
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -3596,7 +3598,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
                           className={`rounded-xl px-4 py-3 text-[11px] font-semibold  tracking-[0.16em] transition ${
                             historyStatusFilter === option.id
                               ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/15'
-                              : 'border border-slate-200 bg-white text-slate-500 hover:border-orange-200 hover:text-orange-500'
+                              : 'border border-slate-200 bg-white text-slate-500 hover:border-brand-200 hover:text-brand-500'
                           }`}
                         >
                           {option.label}
@@ -4183,7 +4185,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       {isPaymentEvidenceModalOpen && selectedPaymentForEvidence && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[45] flex items-center justify-center p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-start">
+            <div className="crm-form-header p-6 flex justify-between items-start">
               <div>
                 <h3 className="text-2xl font-semibold tracking-tight">Evidencias del Abono</h3>
                 <p className="text-slate-300 font-bold tracking-wide  text-xs mt-1">
@@ -4326,7 +4328,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       {isSaleEvidenceModalOpen && selectedSaleForEvidence && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[45] flex items-center justify-center p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-start">
+            <div className="crm-form-header p-6 flex justify-between items-start">
               <div>
                 <h3 className="text-2xl font-semibold tracking-tight">{saleEvidenceModalMode === 'upload' ? 'Subir Comprobante' : 'Documentos de Pago'}</h3>
                 <p className="text-slate-300 font-bold tracking-wide  text-xs mt-1">

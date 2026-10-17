@@ -970,7 +970,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       return { label: 'SALDO',    color: '#a855f7', bg: 'bg-purple-100', text: 'text-purple-700' };
     }
     if (s.payment_method === 'CREDITO' && Number(s.split_payment_amount ?? 0) > 0) {
-      return { label: 'MIXTO', color: '#f97316', bg: 'bg-orange-100', text: 'text-orange-700' };
+      return { label: 'MIXTO', color: '#f97316', bg: 'bg-brand-100', text: 'text-brand-700' };
     }
     if (s.payment_method === 'CREDITO') {
       return { label: 'CREDITO',  color: '#ef4444', bg: 'bg-red-100',    text: 'text-red-700' };
@@ -1458,7 +1458,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
   // ── render ──────────────────────────────────────────────
   return (
-    <div className="relative grid flex-1 h-full min-h-0 grid-cols-1 gap-4 overflow-y-auto p-4 lg:overflow-hidden lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_460px]">
+    <div className="crm-module relative grid flex-1 h-full min-h-0 grid-cols-1 gap-4 overflow-y-auto p-4 lg:overflow-hidden lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_460px]">
 
       {/* ─── Catálogo ──────────────────────────────────── */}
       <div className="flex min-h-[380px] lg:min-h-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -1467,7 +1467,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input
-                className="w-full rounded-xl border border-slate-200 py-2 pl-8 pr-3 text-xs outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                className="w-full rounded-xl border border-slate-200 py-2 pl-8 pr-3 text-xs outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
                 placeholder={isCashRegisterOpen ? 'Buscar producto por nombre, SKU o código…' : 'Inicia caja para ver el catálogo'}
                 value={search}
                 aria-label="Buscar producto por nombre, SKU o código de barras"
@@ -1487,7 +1487,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           {cashSession && (
             <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5">
               <div className="mr-auto flex items-center gap-2 text-[11px] font-bold text-slate-600">
-                <Clock size={14} className="text-orange-500" />
+                <Clock size={14} className="text-brand-500" />
                 <span>Caja abierta desde {formatDateTime(cashSession.opened_at)}</span>
               </div>
               <button
@@ -1510,19 +1510,19 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
         <div className="flex-1 overflow-y-auto p-3">
           {!isCashRegisterOpen ? (
-            <div className="flex min-h-full items-center justify-center rounded-xl border border-dashed border-orange-200 bg-orange-50/40 px-6 py-16 text-center">
+            <div className="flex min-h-full items-center justify-center rounded-xl border border-dashed border-brand-200 bg-brand-50/40 px-6 py-16 text-center">
               <div className="max-w-sm">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-orange-600 text-white shadow-lg shadow-orange-600/20">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-brand-600 text-white shadow-lg shadow-brand-600/20">
                   <Store size={28} />
                 </div>
-                <p className="mt-5 text-[11px] font-semibold  tracking-[0.24em] text-orange-600">Caja requerida</p>
+                <p className="mt-5 text-[11px] font-semibold  tracking-[0.24em] text-brand-600">Caja requerida</p>
                 <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Inicia caja para ver productos</h2>
                 <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
                   El catálogo y la venta permanecen bloqueados hasta registrar la apertura de caja.
                 </p>
                 <button
                   onClick={openCashOpeningForm}
-                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-xs font-semibold  tracking-wider text-white shadow-lg shadow-orange-600/20 hover:bg-orange-500"
+                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-xs font-semibold  tracking-wider text-white shadow-lg shadow-brand-600/20 hover:bg-brand-500"
                 >
                   <UnlockKeyhole size={15} /> Iniciar caja
                 </button>
@@ -1552,12 +1552,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 <button
                   key={p.id}
                   onClick={() => openAddProduct(p)}
-                  className="flex min-h-[88px] flex-col gap-0.5 rounded-xl border border-slate-200 bg-white p-2.5 text-left transition-all hover:border-orange-300 hover:shadow-sm"
+                  className="flex min-h-[88px] flex-col gap-0.5 rounded-xl border border-slate-200 bg-white p-2.5 text-left transition-all hover:border-brand-300 hover:shadow-sm"
                 >
                   <p className="flex-1 text-[11px] font-semibold leading-4 text-slate-900 line-clamp-2">{p.name}</p>
                   <p className="text-[11px] font-mono text-slate-400">{p.sku}</p>
                   <div className="flex items-end justify-between gap-2 pt-0.5">
-                    <p className="text-sm font-semibold text-orange-600">{formatCurrency(p.price_retail)}</p>
+                    <p className="text-sm font-semibold text-brand-600">{formatCurrency(p.price_retail)}</p>
                     <p className="text-[11px] font-bold text-slate-500">Stock: {p.total_stock}</p>
                   </div>
                 </button>
@@ -1574,13 +1574,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         <div className="border-b border-slate-100 px-3 py-2">
           <p className="mb-1 text-[11px] font-semibold  tracking-wide text-slate-400">Cliente</p>
           {selectedCustomer ? (
-            <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-1.5">
+            <div className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-3 py-1.5">
               <button
                 onClick={() => setCustomerSelectorOpen(true)}
                 className="flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left"
                 title="Cambiar cliente"
               >
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-600 text-xs font-semibold text-white">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-xs font-semibold text-white">
                   {selectedCustomer.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -1596,7 +1596,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               </button>
             </div>
           ) : (
-            <button onClick={() => setCustomerSelectorOpen(true)} className="flex w-full items-center gap-2.5 rounded-xl border border-dashed border-slate-300 px-3 py-1.5 text-left hover:border-orange-400 hover:bg-orange-50/40">
+            <button onClick={() => setCustomerSelectorOpen(true)} className="flex w-full items-center gap-2.5 rounded-xl border border-dashed border-slate-300 px-3 py-1.5 text-left hover:border-brand-400 hover:bg-brand-50/40">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
                 <UserIcon size={14}/>
               </div>
@@ -1649,12 +1649,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         <div className="space-y-2.5 border-t border-slate-100 bg-slate-50/50 p-3">
           <div className="flex items-baseline justify-between border-t border-slate-200 pt-2.5">
             <span className="text-xs font-semibold  tracking-wide text-slate-500">Subtotal</span>
-            <span className="text-xl font-semibold text-orange-600">{formatCurrency(subtotal)}</span>
+            <span className="text-xl font-semibold text-brand-600">{formatCurrency(subtotal)}</span>
           </div>
           <button
             onClick={() => setCheckoutOpen(true)}
             disabled={cart.length === 0 || !isCashRegisterOpen}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-brand-600/20 hover:bg-brand-500 disabled:opacity-40"
           >
             Continuar a cobro
           </button>
@@ -1664,16 +1664,16 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       {/* ─── MODAL BLOQUEANTE INICIAR CAJA ────────────── */}
       {shouldShowCashStartGate && (
         <div className="absolute inset-0 z-40 flex items-center justify-center rounded-xl bg-slate-950/70 p-4 backdrop-blur-md">
-          <div className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-orange-100 bg-white p-8 shadow-2xl sm:p-10">
+          <div className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-brand-100 bg-white p-8 shadow-2xl sm:p-10">
             <div className="mb-6 flex items-center gap-3">
               <div className="relative">
-                <div className="absolute inset-0 animate-ping rounded-xl bg-orange-300 opacity-30" />
-                <div className="relative flex h-16 w-16 items-center justify-center rounded-xl bg-orange-600 text-white shadow-lg shadow-orange-600/25">
+                <div className="absolute inset-0 animate-ping rounded-xl bg-brand-300 opacity-30" />
+                <div className="relative flex h-16 w-16 items-center justify-center rounded-xl bg-brand-600 text-white shadow-lg shadow-brand-600/25">
                   <Store size={29} />
                 </div>
               </div>
               <div>
-                <p className="text-[11px] font-semibold  tracking-[0.22em] text-orange-600">Casa Tahona</p>
+                <p className="text-[11px] font-semibold  tracking-[0.22em] text-brand-600">Casa Tahona</p>
                 <p className="text-sm font-bold text-slate-600">{branchName}</p>
               </div>
             </div>
@@ -1685,7 +1685,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
             <button
               onClick={openCashOpeningForm}
-              className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-4 text-sm font-semibold  tracking-wider text-white shadow-sm shadow-orange-600/20 transition hover:bg-orange-500"
+              className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-4 text-sm font-semibold  tracking-wider text-white shadow-sm shadow-brand-600/20 transition hover:bg-brand-500"
             >
               Continuar <ArrowRight size={18} />
             </button>
@@ -1713,7 +1713,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   step="0.01"
                   value={openingCash}
                   onChange={e => setOpeningCash(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-xl font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-xl font-semibold text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                   autoFocus
                 />
               </label>
@@ -1724,14 +1724,14 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   value={openingObservations}
                   onChange={e => setOpeningObservations(e.target.value)}
                   placeholder="Opcional..."
-                  className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                 />
               </label>
               {cashError && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{cashError}</p>}
             </div>
             <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
               <button onClick={() => { setCashOpenModal(false); if (!cashSession) setCashStartPromptOpen(true); }} disabled={cashLoading} className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-40">Regresar</button>
-              <button onClick={handleOpenCash} disabled={cashLoading} className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500 disabled:opacity-40">
+              <button onClick={handleOpenCash} disabled={cashLoading} className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-brand-500 disabled:opacity-40">
                 {cashLoading && <Loader2 size={14} className="animate-spin"/>}
                 Iniciar caja
               </button>
@@ -1757,7 +1757,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
               {cashLoading && !cashSummary ? (
                 <div className="py-16 text-center">
-                  <Loader2 size={28} className="mx-auto animate-spin text-orange-500" />
+                  <Loader2 size={28} className="mx-auto animate-spin text-brand-500" />
                   <p className="mt-3 text-sm font-bold text-slate-400">Calculando corte...</p>
                 </div>
               ) : cashSummary ? (
@@ -1770,7 +1770,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                       { label: 'Cortesías', value: cashSummary.courtesy_total, icon: Gift, box: 'border-purple-200 bg-purple-50', iconBox: 'bg-purple-100 text-purple-700', valueClass: 'text-purple-700' },
                       { label: 'Descuentos', value: cashSummary.discounts_total, icon: Tag, box: 'border-blue-200 bg-blue-50', iconBox: 'bg-blue-100 text-blue-700', valueClass: 'text-blue-700' },
                       { label: 'Cancelaciones', value: cashSummary.cancellations_total, icon: Trash2, box: 'border-red-200 bg-red-50', iconBox: 'bg-red-100 text-red-700', valueClass: 'text-red-700' },
-                      { label: 'Total vendido', value: cashSummary.total_sold, icon: Receipt, box: 'border-orange-200 bg-orange-50', iconBox: 'bg-orange-100 text-orange-700', valueClass: 'text-orange-700' },
+                      { label: 'Total vendido', value: cashSummary.total_sold, icon: Receipt, box: 'border-brand-200 bg-brand-50', iconBox: 'bg-brand-100 text-brand-700', valueClass: 'text-brand-700' },
                       { label: 'Efectivo esperado', value: cashSummary.expected_cash, icon: Wallet, box: 'border-slate-200 bg-slate-50', iconBox: 'bg-slate-200 text-slate-700', valueClass: 'text-slate-900' },
                     ].map(row => (
                       <div key={row.label} className={`rounded-xl border p-4 ${row.box}`}>
@@ -1796,7 +1796,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                         step="0.01"
                         value={deliveredCash}
                         onChange={e => setDeliveredCash(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400"
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-brand-400"
                       />
                       <span className={`text-xs font-semibold ${Number(deliveredCash || 0) - cashSummary.expected_cash === 0 ? 'text-slate-500' : Number(deliveredCash || 0) - cashSummary.expected_cash > 0 ? 'text-green-600' : 'text-red-600'}`}>
                         Dif. {formatCurrency(Number(deliveredCash || 0) - cashSummary.expected_cash)}
@@ -1811,7 +1811,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                       value={closingObservations}
                       onChange={e => setClosingObservations(e.target.value)}
                       placeholder="Opcional..."
-                      className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                     />
                   </label>
                 </>
@@ -1821,7 +1821,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
 
             <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
               <button onClick={() => setCashCloseModal(false)} disabled={cashLoading} className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-40">Cancelar</button>
-              <button onClick={handleCloseCash} disabled={cashLoading || !cashSummary} className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500 disabled:opacity-40">
+              <button onClick={handleCloseCash} disabled={cashLoading || !cashSummary} className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-brand-500 disabled:opacity-40">
                 {cashLoading && <Loader2 size={14} className="animate-spin"/>}
                 Cerrar caja
               </button>
@@ -1836,7 +1836,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
           <div className="w-full max-w-6xl rounded-xl border border-slate-200 bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100 text-brand-600">
                   <Clock size={18}/>
                 </div>
                 <div>
@@ -1852,7 +1852,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                   <input
-                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-xs font-bold text-slate-700 outline-none placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-xs font-bold text-slate-700 outline-none placeholder:text-slate-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                     placeholder="Buscar por nombre de cajera..."
                     value={cashHistoryCashierSearch}
                     onChange={(e) => setCashHistoryCashierSearch(e.target.value)}
@@ -1860,7 +1860,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 </div>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                   value={cashHistoryOpenDate}
                   onChange={(e) => setCashHistoryOpenDate(e.target.value)}
                 />
@@ -1896,7 +1896,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {pagedCashHistory.map(row => (
-                      <tr key={row.id} className="hover:bg-orange-50/30">
+                      <tr key={row.id} className="hover:bg-brand-50/30">
                         <td className="px-3 py-3 text-xs font-bold text-slate-800">{row.cashier_name}</td>
                         <td className="px-3 py-3 text-xs text-slate-600 whitespace-nowrap">{formatDateTime(row.opened_at)}</td>
                         <td className="px-3 py-3 text-xs text-slate-600 whitespace-nowrap">{formatDateTime(row.closed_at)}</td>
@@ -1965,7 +1965,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               <div>
                 <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">1. Unidad de medida</label>
                 <select
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-400"
                   value={stepUomId}
                   onChange={e => setStepUomId(e.target.value)}
                 >
@@ -1982,17 +1982,17 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 <label className="mb-1 block text-[11px] font-semibold  tracking-wide text-slate-500">2. Cantidad</label>
                 <input
                   type="number" min="0" step="0.01" autoFocus
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-base font-bold outline-none focus:border-orange-400"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-base font-bold outline-none focus:border-brand-400"
                   value={stepQty}
                   onChange={e => setStepQty(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleAddToCart(); }}
                 />
               </div>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 hover:border-orange-200 hover:bg-orange-50/40">
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 hover:border-brand-200 hover:bg-brand-50/40">
                 <input
                   type="checkbox"
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500"
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                   checked={stepSpecialPriceEnabled}
                   onChange={e => setStepSpecialPriceEnabled(e.target.checked)}
                 />
@@ -2017,7 +2017,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                             type="number"
                             min="0"
                             step="0.01"
-                            className="w-full rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400"
+                            className="w-full rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-brand-400"
                             value={stepSpecialPrice}
                             onChange={e => setStepSpecialPrice(e.target.value)}
                             placeholder="0.00"
@@ -2025,13 +2025,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                         </div>
                         <div className="rounded-xl border border-amber-200 bg-white px-3 py-2">
                           <p className="text-xs font-semibold  tracking-wide text-amber-700">Total</p>
-                          <p className="mt-1 text-lg font-semibold text-orange-600">{formatCurrency(qty * specialUnitPrice)}</p>
+                          <p className="mt-1 text-lg font-semibold text-brand-600">{formatCurrency(qty * specialUnitPrice)}</p>
                         </div>
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-semibold  tracking-wide text-amber-700">¿Quién autoriza?</label>
                         <textarea
-                          className="min-h-[84px] w-full resize-none rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-orange-400"
+                          className="min-h-[84px] w-full resize-none rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-brand-400"
                           value={stepSpecialAuthorization}
                           onChange={e => setStepSpecialAuthorization(e.target.value)}
                           placeholder="Nombre o motivo de autorización..."
@@ -2043,17 +2043,17 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 const autoPrice = getAutoPriceForQty(addProductTarget, pu, qty);
                 const tierRows = getTierRangeRows(addProductTarget, pu);
                 return (
-                  <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+                  <div className="rounded-xl border border-brand-200 bg-brand-50 px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs font-semibold  tracking-wide text-orange-700">Precio aplicado</p>
+                        <p className="text-xs font-semibold  tracking-wide text-brand-700">Precio aplicado</p>
                         <p className="mt-1 text-sm font-semibold text-slate-950">{PRICE_TIER_LABEL[autoPrice.tier]}</p>
                         <p className="mt-0.5 text-xs font-bold text-slate-500">
                           {autoPrice.qtyBase.toLocaleString('es-MX', { maximumFractionDigits: 4 })} en unidad base
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-base font-semibold text-orange-600">{formatCurrency(autoPrice.unitPrice)}</p>
+                        <p className="text-base font-semibold text-brand-600">{formatCurrency(autoPrice.unitPrice)}</p>
                         <p className="mt-1 text-[11px] font-bold text-slate-500">
                           Subtotal: <span className="font-semibold text-slate-900">{formatCurrency(qty * autoPrice.unitPrice)}</span>
                         </p>
@@ -2065,13 +2065,13 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                         return (
                           <div
                             key={row.tier}
-                            className={`rounded-xl border px-2 py-2 ${active ? 'border-orange-400 bg-white' : 'border-orange-100 bg-orange-100/40'}`}
+                            className={`rounded-xl border px-2 py-2 ${active ? 'border-brand-400 bg-white' : 'border-brand-100 bg-brand-100/40'}`}
                           >
-                            <p className={`text-[11px] font-semibold  tracking-wide ${active ? 'text-orange-700' : 'text-slate-500'}`}>
+                            <p className={`text-[11px] font-semibold  tracking-wide ${active ? 'text-brand-700' : 'text-slate-500'}`}>
                               {PRICE_TIER_LABEL[row.tier]}
                             </p>
                             <p className="mt-1 text-xs font-semibold text-slate-700">{row.range}</p>
-                            <p className={`mt-1 text-xs font-semibold ${active ? 'text-orange-600' : 'text-slate-900'}`}>
+                            <p className={`mt-1 text-xs font-semibold ${active ? 'text-brand-600' : 'text-slate-900'}`}>
                               {formatCurrency(row.price)}
                             </p>
                           </div>
@@ -2084,7 +2084,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             </div>
             <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4 bg-slate-50/50">
               <button onClick={closeAddProduct} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-100">Cancelar</button>
-              <button onClick={handleAddToCart} className="rounded-xl bg-orange-600 px-5 py-2 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500">Agregar</button>
+              <button onClick={handleAddToCart} className="rounded-xl bg-brand-600 px-5 py-2 text-xs font-semibold  tracking-wider text-white hover:bg-brand-500">Agregar</button>
             </div>
           </div>
         </div>
@@ -2103,7 +2103,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
                 <input
                   autoFocus
-                  className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-orange-400"
+                  className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-brand-400"
                   placeholder="Buscar por nombre, teléfono o email…"
                   value={customerSearch}
                   onChange={e => setCustomerSearch(e.target.value)}
@@ -2117,9 +2117,9 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 <button
                   key={c.id}
                   onClick={() => { setCustomerId(c.id); setCustomerSelectorOpen(false); setCustomerSearch(''); }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-orange-50"
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-brand-50"
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 font-semibold text-orange-600">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-100 font-semibold text-brand-600">
                     {c.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -2159,12 +2159,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               <div>
                 <label className="flex items-center justify-between cursor-pointer">
                   <div className="flex items-center gap-2">
-                    <Gift size={14} className="text-orange-500"/>
+                    <Gift size={14} className="text-brand-500"/>
                     <span className="text-sm font-bold text-slate-700">¿Usar cupón?</span>
                   </div>
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                    className="h-4 w-4 rounded border-slate-300 text-brand-500 focus:ring-brand-400"
                     checked={useCoupon}
                     onChange={e => { setUseCoupon(e.target.checked); if (!e.target.checked) removeCoupon(); }}
                   />
@@ -2179,7 +2179,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     <>
                       <div className="mt-2 flex gap-2">
                         <input
-                          className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs  outline-none focus:border-orange-400"
+                          className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs  outline-none focus:border-brand-400"
                           placeholder="Código del cupón"
                           value={couponCode}
                           onChange={e => setCouponCode(e.target.value)}
@@ -2198,12 +2198,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               <div className="border-t border-slate-200 pt-4">
                 <label className="flex items-center justify-between cursor-pointer">
                   <div className="flex items-center gap-2">
-                    <Tag size={14} className="text-orange-500"/>
+                    <Tag size={14} className="text-brand-500"/>
                     <span className="text-sm font-bold text-slate-700">¿Aplicar descuento?</span>
                   </div>
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                    className="h-4 w-4 rounded border-slate-300 text-brand-500 focus:ring-brand-400"
                     checked={Boolean(manualDiscountApplied)}
                     onChange={e => {
                       if (e.target.checked) openManualDiscountModal();
@@ -2216,7 +2216,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     <span className="font-bold text-green-700">
                       {manualDiscountApplied.percent}% · -{formatCurrency(manualDiscountAmount)}
                     </span>
-                    <button onClick={openManualDiscountModal} className="text-green-700 hover:text-orange-600">Editar</button>
+                    <button onClick={openManualDiscountModal} className="text-green-700 hover:text-brand-600">Editar</button>
                   </div>
                 )}
               </div>
@@ -2243,11 +2243,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                         title={p.disabled ? 'Selecciona un cliente primero' : ''}
                         className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 transition-colors ${
                           p.disabled ? 'border-slate-100 bg-slate-50 opacity-40 cursor-not-allowed' :
-                          active ? 'border-orange-500 bg-orange-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                          active ? 'border-brand-500 bg-brand-50' : 'border-slate-200 bg-white hover:border-slate-300'
                         }`}
                       >
-                        <p.icon size={15} className={active && !p.disabled ? 'text-orange-700' : 'text-slate-500'} />
-                        <span className={`text-center text-xs font-semibold leading-3 ${active && !p.disabled ? 'text-orange-700' : 'text-slate-600'}`}>{p.label}</span>
+                        <p.icon size={15} className={active && !p.disabled ? 'text-brand-700' : 'text-slate-500'} />
+                        <span className={`text-center text-xs font-semibold leading-3 ${active && !p.disabled ? 'text-brand-700' : 'text-slate-600'}`}>{p.label}</span>
                       </button>
                     );
                   })}
@@ -2288,7 +2288,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                           <select
                             value={creditRemainderMethod}
                             onChange={e => setCreditRemainderMethod(e.target.value as 'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA')}
-                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-orange-400"
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-brand-400"
                           >
                             <option value="EFECTIVO">Efectivo</option>
                             <option value="TRANSFERENCIA">Transferencia</option>
@@ -2325,7 +2325,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     </div>
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                      className="h-4 w-4 rounded border-slate-300 text-brand-500 focus:ring-brand-400"
                       checked={useWallet}
                       onChange={e => { setUseWallet(e.target.checked); if (e.target.checked) setWalletAmount(String(Math.min(walletAvailable, totalAfterCoupon))); }}
                     />
@@ -2334,7 +2334,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   {useWallet && (
                     <input
                       type="number" min="0" step="0.01" max={Math.min(walletAvailable, totalAfterCoupon)}
-                      className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs outline-none focus:border-orange-400"
+                      className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs outline-none focus:border-brand-400"
                       value={walletAmount}
                       onChange={e => setWalletAmount(e.target.value)}
                       placeholder="Monto a usar"
@@ -2348,7 +2348,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Observaciones de la venta</label>
                 <textarea
                   rows={3}
-                  className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                   placeholder="Opcional…"
                   value={saleNotes}
                   onChange={e => setSaleNotes(e.target.value)}
@@ -2367,7 +2367,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     min="0"
                     step="0.01"
                     inputMode="decimal"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-base font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-base font-semibold text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                     placeholder="Ej. 100.00"
                     value={cashReceived}
                     onChange={e => setCashReceived(e.target.value)}
@@ -2398,7 +2398,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     min="0"
                     step="0.01"
                     inputMode="decimal"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-base font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-base font-semibold text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                     placeholder="Ej. 200.00"
                     value={creditRemainderCashReceived}
                     onChange={e => setCreditRemainderCashReceived(e.target.value)}
@@ -2443,7 +2443,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   <div className="flex justify-between text-indigo-600"><span>Comisión bancaria (3%)</span><span>{formatCurrency(cardCommissionAmount)}</span></div>
                 )}
                 <div className="flex justify-between border-t border-slate-200 pt-1.5 text-lg font-semibold text-slate-900">
-                  <span>{isTarjeta || (isCredito && creditRemainderMethod === 'TARJETA') ? 'Total a cobrar' : 'Total'}</span><span className="text-orange-600">{formatCurrency(total)}</span>
+                  <span>{isTarjeta || (isCredito && creditRemainderMethod === 'TARJETA') ? 'Total a cobrar' : 'Total'}</span><span className="text-brand-600">{formatCurrency(total)}</span>
                 </div>
               </section>
               </div>
@@ -2456,7 +2456,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               <button
                 onClick={handleCharge}
                 disabled={charging || cart.length === 0 || cashPaymentInvalid || creditPaymentInvalid}
-                className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
+                className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-brand-600/20 hover:bg-brand-500 disabled:opacity-40"
               >
                 {charging && <Loader2 size={14} className="animate-spin"/>}
                 {charging ? 'Procesando…' : `Confirmar venta ${formatCurrency(total)}`}
@@ -2482,7 +2482,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               <section className="space-y-4">
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold  tracking-wide text-slate-400">Porcentaje de descuento</span>
-                  <div className="flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100">
+                  <div className="crm-field-shell flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5">
                     <input
                       type="number"
                       min="0.01"
@@ -2504,7 +2504,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     value={manualDiscountJustification}
                     onChange={e => { setManualDiscountJustification(e.target.value); setManualDiscountError(''); }}
                     placeholder="Ej. Promoción autorizada..."
-                    className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                   />
                   <p className={`mt-1 text-xs font-bold ${manualDiscountJustificationValid ? 'text-slate-600' : 'text-slate-400'}`}>
                     Mínimo 5 caracteres.
@@ -2521,7 +2521,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               <button onClick={() => setManualDiscountOpen(false)} className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold  tracking-wider text-slate-600 hover:bg-slate-50">
                 Cancelar
               </button>
-              <button onClick={confirmManualDiscount} className="flex-[2] rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-orange-500">
+              <button onClick={confirmManualDiscount} className="flex-[2] rounded-xl bg-brand-600 py-2.5 text-xs font-semibold  tracking-wider text-white hover:bg-brand-500">
                 Confirmar descuento
               </button>
             </div>
@@ -2537,7 +2537,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100 text-brand-600">
                   <Receipt size={18}/>
                 </div>
                 <div>
@@ -2553,12 +2553,12 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               <div>
                 <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Desde</label>
                 <input type="date" value={historyFrom} onChange={e => setHistoryFrom(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-400"/>
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-brand-400"/>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Hasta</label>
                 <input type="date" value={historyTo} onChange={e => setHistoryTo(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-400"/>
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-brand-400"/>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Cajero</label>
@@ -2566,7 +2566,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                   value={historyCashierId}
                   onChange={e => setHistoryCashierId(e.target.value)}
                   disabled={historyCashiersLoading}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-orange-400 disabled:opacity-60"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-brand-400 disabled:opacity-60"
                 >
                   <option value="">{historyCashiersLoading ? 'Cargando...' : 'Todos los cajeros'}</option>
                   {historyCashiers.map(cashier => (
@@ -2578,7 +2578,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 <label className="mb-1 block text-xs font-semibold  tracking-wide text-slate-500">Buscar</label>
                 <input value={historySearch} onChange={e => setHistorySearch(e.target.value)}
                   placeholder="Cliente, total, código…"
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-400"/>
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-brand-400"/>
               </div>
               <button onClick={clearHistoryFilters} className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold  tracking-wide text-white hover:bg-slate-700">
                 Limpiar filtro
@@ -2610,7 +2610,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                       const employeeName = historyEmployeeNames[s.created_by] ?? s.created_by ?? '—';
                       const saleCode = `V-${String(s.id).replace(/-/g, '').slice(0, 6).toUpperCase()}`;
                       return (
-                        <tr key={s.id} className="hover:bg-orange-50/30 border-l-4" style={{ borderLeftColor: typeInfo.color }}>
+                        <tr key={s.id} className="hover:bg-brand-50/30 border-l-4" style={{ borderLeftColor: typeInfo.color }}>
                           <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{new Date(s.created_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}</td>
                           <td className="px-4 py-3 text-xs font-mono font-semibold text-slate-700 whitespace-nowrap" title={saleCode}>
                             {saleCode}
@@ -2643,7 +2643,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                               </div>
                             )}
                             {s.payment_method === 'CREDITO' && Number(s.split_payment_amount ?? 0) > 0 && (
-                              <div className="mt-0.5 text-xs font-bold text-orange-600">
+                              <div className="mt-0.5 text-xs font-bold text-brand-600">
                                 Crédito {formatCurrency(Number(s.credit_used ?? 0))} + {s.split_payment_method?.toLowerCase()} {formatCurrency(Number(s.split_payment_amount ?? 0))}
                               </div>
                             )}
@@ -2651,7 +2651,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                           <td className="px-4 py-3 text-xs text-slate-500 italic truncate max-w-[200px]">{s.notes ?? '—'}</td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
-                              <button onClick={() => openEditType(s)} title="Editar tipo de venta" className="rounded-md border border-slate-200 p-1.5 text-orange-500 hover:bg-orange-50 hover:border-orange-300">
+                              <button onClick={() => openEditType(s)} title="Editar tipo de venta" className="rounded-md border border-slate-200 p-1.5 text-brand-500 hover:bg-brand-50 hover:border-brand-300">
                                 <Pencil size={13}/>
                               </button>
                               <button onClick={() => exportSalePdf(s)} title="Exportar PDF" className="rounded-md border border-slate-200 p-1.5 text-blue-500 hover:bg-blue-50 hover:border-blue-300">
@@ -2703,7 +2703,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
             <div className="flex items-center justify-between bg-slate-900 px-6 py-4 text-white">
               <div>
                 <h3 className="text-base font-semibold  tracking-tight">Gestionar cliente</h3>
-                <p className="text-[11px] font-bold text-orange-400">{selectedCustomer.name.toUpperCase()}</p>
+                <p className="text-[11px] font-bold text-brand-400">{selectedCustomer.name.toUpperCase()}</p>
               </div>
               <button onClick={() => setCustomerDetailOpen(false)} className="rounded-xl bg-slate-800 p-1.5 text-slate-300 hover:bg-slate-700"><X size={18}/></button>
             </div>
@@ -2869,7 +2869,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                     <span>{formatCurrency(getStoredCardCommission(saleDetailRow))}</span>
                   </div>
                 )}
-                <div className="flex justify-between border-t border-slate-200 pt-1 text-base font-semibold text-slate-900"><span>Total</span><span className="text-orange-600">{formatCurrency(saleDetailRow.total)}</span></div>
+                <div className="flex justify-between border-t border-slate-200 pt-1 text-base font-semibold text-slate-900"><span>Total</span><span className="text-brand-600">{formatCurrency(saleDetailRow.total)}</span></div>
                 {saleDetailRow.payment_method === 'EFECTIVO' && Number(saleDetailRow.cash_received ?? 0) > 0 && (
                   <>
                     <div className="flex justify-between text-slate-500"><span>Pagó con</span><span>{formatCurrency(Number(saleDetailRow.cash_received ?? 0))}</span></div>
@@ -2894,7 +2894,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4">
           <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-orange-600 to-orange-500 px-6 py-4 text-white">
+            <div className="bg-gradient-to-r from-brand-600 to-brand-500 px-6 py-4 text-white">
               <h3 className="text-base font-semibold  tracking-tight">Editar tipo de venta</h3>
               <p className="text-[11px] font-bold opacity-90">V-{editTypeRow.id.replace(/-/g, '').slice(0, 6).toUpperCase()} · {formatCurrency(editTypeRow.total)}</p>
             </div>
@@ -2935,11 +2935,11 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                         onClick={() => setEditTypeValue(t)}
                         className={`rounded-xl border-2 px-4 py-3 text-left transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
                           active
-                            ? 'border-orange-500 bg-orange-50'
+                            ? 'border-brand-500 bg-brand-50'
                             : 'border-slate-200 bg-white hover:border-slate-300'
                         }`}
                       >
-                        <p className={`text-xs font-semibold  tracking-wide ${active ? 'text-orange-700' : 'text-slate-600'}`}>{t}</p>
+                        <p className={`text-xs font-semibold  tracking-wide ${active ? 'text-brand-700' : 'text-slate-600'}`}>{t}</p>
                         <p className="mt-0.5 text-xs text-slate-400">
                           {t === 'EFECTIVO' ? 'Pago completo / al contado' : 'Se descuenta del crédito'}
                         </p>
@@ -2971,7 +2971,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                       </div>
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                        className="h-4 w-4 rounded border-slate-300 text-brand-500 focus:ring-brand-400"
                         checked={editTypeUseWallet}
                         onChange={e => {
                           setEditTypeUseWallet(e.target.checked);
@@ -2998,7 +2998,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 </label>
                 <textarea
                   rows={3}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 resize-none"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 resize-none"
                   placeholder="Explica por qué se está modificando el tipo de venta…"
                   value={editTypeObservation}
                   onChange={e => setEditTypeObservation(e.target.value)}
@@ -3027,7 +3027,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
               <button
                 onClick={saveEditType}
                 disabled={editTypeSaving || !editTypeObservation.trim()}
-                className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-orange-600/20 hover:bg-orange-500 disabled:opacity-40"
+                className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-xs font-semibold  tracking-wider text-white shadow-md shadow-brand-600/20 hover:bg-brand-500 disabled:opacity-40"
               >
                 {editTypeSaving && <Loader2 size={14} className="animate-spin"/>}
                 {editTypeSaving ? 'Aplicando…' : 'Guardar cambio'}
@@ -3055,7 +3055,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
                 value={deleteSaleNote}
                 onChange={e => setDeleteSaleNote(e.target.value)}
                 placeholder="Explica por qué se elimina…"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400 resize-none"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400 resize-none"
               />
               <p className="rounded-xl bg-red-50 px-3 py-2 text-[11px] text-red-700">La venta quedará cancelada y el stock de los productos se restaurará automáticamente.</p>
             </div>
@@ -3072,7 +3072,7 @@ const VinosPOSScreen: React.FC<Props> = ({ selectedBranchId, currentUser, branch
       {printModalOpen && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-2xl">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
               <Loader2 size={28} className="animate-spin" />
             </div>
             <h3 className="mt-4 text-base font-semibold  tracking-tight text-slate-900">Generando documento</h3>

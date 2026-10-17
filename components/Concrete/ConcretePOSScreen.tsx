@@ -2335,7 +2335,7 @@ const POSScreen: React.FC<POSProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:h-[calc(100dvh-140px)]">
+    <div className="crm-module grid grid-cols-1 lg:grid-cols-12 gap-5 lg:h-[calc(100dvh-140px)]">
       <div className="lg:col-span-7 min-h-0 min-w-0 flex flex-col gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-wrap items-center gap-4 shadow-sm">
           <div className="flex-1 min-w-[160px]">
@@ -2428,7 +2428,7 @@ const POSScreen: React.FC<POSProps> = ({
         <input
           type="text"
           placeholder="Buscar por nombre, SKU o barcode..."
-          className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-orange-500 outline-none text-lg shadow-sm"
+          className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-brand-500 outline-none text-lg shadow-sm"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyDown={(e) => {
@@ -2454,7 +2454,7 @@ const POSScreen: React.FC<POSProps> = ({
                 <button
                   key={product.id}
                   onClick={() => handleAddFromCatalog(product)}
-                  className={`bg-white p-4 rounded-xl border border-slate-200 hover:border-orange-400 hover:shadow-sm transition-all text-left flex flex-col justify-between ${stockQty <= 0 ? 'opacity-70' : ''
+                  className={`bg-white p-4 rounded-xl border border-slate-200 hover:border-brand-400 hover:shadow-sm transition-all text-left flex flex-col justify-between ${stockQty <= 0 ? 'opacity-70' : ''
                     }`}
                 >
                   <div>
@@ -2508,10 +2508,28 @@ const POSScreen: React.FC<POSProps> = ({
                 <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold tracking-wide text-slate-700">
                   Unitario {formatCurrency(Number(item.unitPrice ?? 0))}
                 </span>
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => openSpecialPriceModal(item)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200"
+                  >
+                    <BadgeDollarSign className="w-3.5 h-3.5" />
+                    Precio especial
+                  </button>
+                  {item.specialUnitPrice !== null && item.specialUnitPrice !== undefined && (
+                    <button
+                      onClick={() => clearSpecialPrice(item.id)}
+                      className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Restablecer
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="mb-2 flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 empty:hidden [&:not(:empty)]:mb-2">
                 {item.customLabel && (
-                  <p className="text-xs font-semibold text-orange-500  tracking-wide">
+                  <p className="text-xs font-semibold text-brand-500  tracking-wide">
                     {item.customLabel}
                   </p>
                 )}
@@ -2597,37 +2615,14 @@ const POSScreen: React.FC<POSProps> = ({
                 })()}
                 <span className="font-semibold text-slate-900 ml-auto flex items-center">{formatCurrency(item.subtotal)}</span>
               </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="text-xs font-bold text-slate-500">
-                  Unitario: <span className="text-slate-800">{formatCurrency(Number(item.unitPrice ?? 0))}</span>
-                  {item.specialPriceNote && (
-                    <span className="ml-2 text-amber-700">• {item.specialPriceNote}</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => openSpecialPriceModal(item)}
-                    className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold  tracking-wide text-slate-600 hover:bg-slate-200"
-                  >
-                    <BadgeDollarSign className="w-3.5 h-3.5" />
-                    Precio especial
-                  </button>
-                  {item.specialUnitPrice !== null && item.specialUnitPrice !== undefined && (
-                    <button
-                      onClick={() => clearSpecialPrice(item.id)}
-                      className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold  tracking-wide text-amber-700 hover:bg-amber-100"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      Restablecer
-                    </button>
-                  )}
-                </div>
-              </div>
+              {item.specialPriceNote && (
+                <p className="mt-2 text-xs text-amber-700">{item.specialPriceNote}</p>
+              )}
             </div>
           ))}
         </div>
 
-        <div className="p-6 bg-slate-900 text-white border-t border-slate-800">
+        <div className="crm-checkout p-6 bg-white text-slate-900 border-t border-slate-200">
           <div className="grid grid-cols-3 gap-2 mb-6">
             {(['EFECTIVO', 'CREDITO', 'SIN_COSTO'] as const).map((m) => (
               <button
@@ -2635,7 +2630,7 @@ const POSScreen: React.FC<POSProps> = ({
                 disabled={feedbackLoading}
                 onClick={() => handleSelectPaymentMethod(m)}
                 className={`py-3 text-xs font-semibold rounded-xl border-2 transition-all ${paymentMethod === m
-                  ? 'bg-orange-500 border-orange-400 text-white shadow-lg'
+                  ? 'bg-brand-500 border-brand-400 text-white shadow-lg'
                   : 'bg-slate-800 border-slate-700 text-slate-300'
                   }`}
               >
@@ -2647,14 +2642,14 @@ const POSScreen: React.FC<POSProps> = ({
           <div className="flex justify-between items-end mb-6">
             <div>
               <p className="text-xs font-medium text-slate-300">Total a pagar</p>
-              <p className="text-4xl font-semibold text-orange-400 tracking-tight">{formatCurrency(paymentMethod === 'SIN_COSTO' ? 0 : cartTotal)}</p>
+              <p className="text-4xl font-semibold text-brand-400 tracking-tight">{formatCurrency(paymentMethod === 'SIN_COSTO' ? 0 : cartTotal)}</p>
             </div>
           </div>
 
           <button
             disabled={cart.length === 0 || feedbackLoading}
             onClick={handleCheckout}
-            className={`w-full py-4 rounded-xl font-semibold text-sm transition-colors ${cart.length > 0 ? 'bg-orange-600 hover:bg-orange-700' : 'bg-slate-800 text-slate-400'
+            className={`w-full py-4 rounded-xl font-semibold text-sm transition-colors ${cart.length > 0 ? 'bg-brand-600 hover:bg-brand-700' : 'bg-slate-800 text-slate-400'
               }`}
           >
             <AppIcon name="success" /> Finalizar venta
@@ -2665,7 +2660,7 @@ const POSScreen: React.FC<POSProps> = ({
       {isCreditBlockedOpen && creditCheck && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <div className="crm-form-header p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-semibold  tracking-tight">Crédito bloqueado</h3>
                 <p className="text-slate-400 text-xs">Notas vencidas detectadas</p>
@@ -2763,7 +2758,7 @@ const POSScreen: React.FC<POSProps> = ({
                 <button
                   disabled={feedbackLoading}
                   onClick={openPaymentForVencidas}
-                  className="px-4 py-2 rounded-xl bg-orange-500 text-white text-xs font-semibold "
+                  className="px-4 py-2 rounded-xl bg-brand-500 text-white text-xs font-semibold "
                 >
                   Cobrar/Abonar ahora
                 </button>
@@ -2785,7 +2780,7 @@ const POSScreen: React.FC<POSProps> = ({
       {isCreditLimitOpen && creditCheck && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <div className="crm-form-header p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-semibold  tracking-tight">Crédito insuficiente</h3>
                 <p className="text-slate-400 text-xs">La venta excede el límite disponible</p>
@@ -2829,7 +2824,7 @@ const POSScreen: React.FC<POSProps> = ({
       {isPaymentModalOpen && creditCheck && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <div className="crm-form-header p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-semibold  tracking-tight">Abonar vencidas</h3>
                 <p className="text-slate-400 text-xs">Debe liquidar para continuar a crédito</p>
@@ -2896,7 +2891,7 @@ const POSScreen: React.FC<POSProps> = ({
                 <button
                   disabled={feedbackLoading}
                   onClick={handleSubmitPayments}
-                  className="px-4 py-2 rounded-xl bg-orange-500 text-white text-xs font-semibold "
+                  className="px-4 py-2 rounded-xl bg-brand-500 text-white text-xs font-semibold "
                 >
                   Registrar abonos
                 </button>
@@ -2909,7 +2904,7 @@ const POSScreen: React.FC<POSProps> = ({
       {isSaleUomSelectOpen && pendingCatalogProduct && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <div className="crm-form-header p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-semibold  tracking-tight">Unidad de venta</h3>
                 <p className="text-slate-400 text-xs">{pendingCatalogProduct.name}</p>
@@ -2934,7 +2929,7 @@ const POSScreen: React.FC<POSProps> = ({
                 <label className="text-xs font-semibold  tracking-wide text-slate-500">Observación *</label>
                 <textarea
                   rows={3}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 resize-none"
                   placeholder="Explique por qué se actualizará la unidad de venta"
                   value={saleUomObservation}
                   onChange={(e) => {
@@ -2992,7 +2987,7 @@ const POSScreen: React.FC<POSProps> = ({
                       alert('No se pudo guardar la unidad de venta.');
                     }
                   }}
-                  className="w-full p-4 rounded-xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
+                  className="w-full p-4 rounded-xl border border-slate-200 text-left hover:border-brand-500 hover:bg-brand-50/30 transition-all"
                 >
                   <p className="text-sm font-semibold text-slate-900">
                     {uom.uom?.name ?? 'UOM'} {uom.uom?.code ? `(${uom.uom?.code})` : ''}
@@ -3008,7 +3003,7 @@ const POSScreen: React.FC<POSProps> = ({
       {isSaleTypeOpen && pendingCatalogProduct && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <div className="crm-form-header p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-semibold  tracking-tight">Tipo de venta</h3>
                 <p className="text-slate-400 text-xs">{pendingCatalogProduct.name}</p>
@@ -3032,7 +3027,7 @@ const POSScreen: React.FC<POSProps> = ({
                   setUnitSelectionSaleType('MENOR');
                   setIsUnitSelectOpen(true);
                 }}
-                className="w-full p-4 rounded-xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
+                className="w-full p-4 rounded-xl border border-slate-200 text-left hover:border-brand-500 hover:bg-brand-50/30 transition-all"
               >
                 <p className="text-sm font-semibold text-slate-900">Venta por menor</p>
                 <p className="text-xs text-slate-500">Selecciona medida base o equivalencia (bolsa, caja, etc.).</p>
@@ -3043,7 +3038,7 @@ const POSScreen: React.FC<POSProps> = ({
                   setUnitSelectionSaleType('MAYOR');
                   setIsUnitSelectOpen(true);
                 }}
-                className="w-full p-4 rounded-xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
+                className="w-full p-4 rounded-xl border border-slate-200 text-left hover:border-brand-500 hover:bg-brand-50/30 transition-all"
               >
                 <p className="text-sm font-semibold text-slate-900">Venta por mayor</p>
                 <p className="text-xs text-slate-500">Usa precio mayorista y permite elegir equivalencias configuradas.</p>
@@ -3056,7 +3051,7 @@ const POSScreen: React.FC<POSProps> = ({
       {isUnitSelectOpen && pendingCatalogProduct && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <div className="crm-form-header p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-semibold  tracking-tight">Seleccionar unidad</h3>
                 <p className="text-slate-400 text-xs">{pendingCatalogProduct.name}</p>
@@ -3121,7 +3116,7 @@ const POSScreen: React.FC<POSProps> = ({
                         setPendingStockValue(undefined);
                         setUnitSelectionSaleType('MENOR');
                       }}
-                      className="w-full p-4 rounded-xl border border-slate-200 text-left hover:border-orange-500 hover:bg-orange-50/30 transition-all"
+                      className="w-full p-4 rounded-xl border border-slate-200 text-left hover:border-brand-500 hover:bg-brand-50/30 transition-all"
                     >
                       <p className="text-sm font-semibold text-slate-900">{formatSaleUomLabel(productId, uom)}</p>
                       <p className="text-xs text-slate-500">Factor a base: {uom.factor_to_base}</p>
@@ -3160,7 +3155,7 @@ const POSScreen: React.FC<POSProps> = ({
       {specialPriceModal && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
-            <div className="bg-slate-900 px-6 py-5 text-white flex items-start justify-between gap-4">
+            <div className="crm-form-header px-6 py-5 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-xl font-semibold  tracking-tight">Precio especial</h3>
                 <p className="text-slate-400 text-xs mt-1">{specialPriceModal.itemName}</p>
@@ -3182,7 +3177,7 @@ const POSScreen: React.FC<POSProps> = ({
                     setSpecialPriceValue(e.target.value);
                     setSpecialPriceError(null);
                   }}
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </label>
               <label className="block">
@@ -3195,7 +3190,7 @@ const POSScreen: React.FC<POSProps> = ({
                     setSpecialPriceError(null);
                   }}
                   placeholder="Explique por qué está aplicando un precio especial."
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 resize-none"
                 />
               </label>
               {specialPriceError && (
@@ -3212,7 +3207,7 @@ const POSScreen: React.FC<POSProps> = ({
                 </button>
                 <button
                   onClick={handleSaveSpecialPrice}
-                  className="px-4 py-3 rounded-xl bg-orange-500 text-white font-semibold text-xs  tracking-wide hover:bg-orange-600"
+                  className="px-4 py-3 rounded-xl bg-brand-500 text-white font-semibold text-xs  tracking-wide hover:bg-brand-600"
                 >
                   Guardar precio
                 </button>
@@ -3225,7 +3220,7 @@ const POSScreen: React.FC<POSProps> = ({
       {isSaleDetailOpen && saleDetail && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[75vh] overflow-hidden flex flex-col">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <div className="crm-form-header p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-semibold  tracking-tight">Detalle de venta</h3>
                 <p className="text-slate-400 text-xs">
@@ -3291,7 +3286,7 @@ const POSScreen: React.FC<POSProps> = ({
       {isSalesHistoryOpen && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[70vh] overflow-hidden flex flex-col">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <div className="crm-form-header p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-semibold  tracking-tight">Historial de Ventas</h3>
                 <p className="text-slate-400 text-xs">Sucursal {selectedBranchId || '—'}</p>
@@ -3314,7 +3309,7 @@ const POSScreen: React.FC<POSProps> = ({
                       setSalesHistoryDateFrom(e.target.value);
                       setSalesHistoryPage(1);
                     }}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </label>
                 <label className="flex flex-col gap-1">
@@ -3326,7 +3321,7 @@ const POSScreen: React.FC<POSProps> = ({
                       setSalesHistoryDateTo(e.target.value);
                       setSalesHistoryPage(1);
                     }}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </label>
                 <label className="flex flex-col gap-1">
@@ -3340,7 +3335,7 @@ const POSScreen: React.FC<POSProps> = ({
                       setSalesHistorySaleNumber(e.target.value.replace(/\D/g, ''));
                       setSalesHistoryPage(1);
                     }}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </label>
                 <div className="flex items-end">
@@ -3507,7 +3502,7 @@ const POSScreen: React.FC<POSProps> = ({
           <div className="w-full max-w-lg overflow-hidden rounded-[32px] bg-white shadow-2xl">
             <div className="bg-slate-900 p-6 text-white">
               <h3 className="text-xl font-semibold  tracking-tight">Editar tipo de venta</h3>
-              <p className="mt-1 text-xs font-bold  tracking-wide text-orange-300">
+              <p className="mt-1 text-xs font-bold  tracking-wide text-brand-300">
                 Venta #{salePaymentEditTarget.id} · {salePaymentEditTarget.nombre_cliente || 'Público General'}
               </p>
             </div>
@@ -3527,7 +3522,7 @@ const POSScreen: React.FC<POSProps> = ({
                     className={`rounded-xl border-2 px-4 py-4 text-sm font-semibold  tracking-wide transition ${
                       salePaymentMethodDraft === method
                         ? 'border-slate-900 bg-slate-900 text-white'
-                        : 'border-slate-200 bg-white text-slate-500 hover:border-orange-300 hover:text-orange-500'
+                        : 'border-slate-200 bg-white text-slate-500 hover:border-brand-300 hover:text-brand-500'
                     }`}
                   >
                     {method}
@@ -3621,7 +3616,7 @@ const POSScreen: React.FC<POSProps> = ({
           <div className="w-full max-w-2xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
             <div className="bg-slate-900 p-6 text-white">
               <h3 className="text-xl font-semibold  tracking-tight">Confirmar pedido</h3>
-              <p className="mt-1 text-xs font-bold  tracking-wide text-orange-300">{selectedCustomer?.name ?? 'PÚBLICO GENERAL'}</p>
+              <p className="mt-1 text-xs font-bold  tracking-wide text-brand-300">{selectedCustomer?.name ?? 'PÚBLICO GENERAL'}</p>
             </div>
             <div className="space-y-4 p-6">
               {walletEligible && paymentMethod !== 'SIN_COSTO' && (
@@ -3674,7 +3669,7 @@ const POSScreen: React.FC<POSProps> = ({
                         setNewSaleAddressValue('');
                         setIsNewSaleAddressModalOpen(true);
                       }}
-                      className="mt-2 text-[11px] font-semibold  tracking-wide text-orange-500 transition hover:text-orange-600"
+                      className="mt-2 text-[11px] font-semibold  tracking-wide text-brand-500 transition hover:text-brand-600"
                     >
                       + Agregar direccion
                     </button>
@@ -3746,9 +3741,9 @@ const POSScreen: React.FC<POSProps> = ({
       {isNewSaleAddressModalOpen && selectedCustomer && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
-            <div className="bg-orange-600 p-6 text-white">
+            <div className="bg-brand-600 p-6 text-white">
               <h3 className="text-xl font-semibold  tracking-tight">Nueva dirección</h3>
-              <p className="mt-1 text-xs font-bold  tracking-wide text-orange-100">{selectedCustomer.name}</p>
+              <p className="mt-1 text-xs font-bold  tracking-wide text-brand-100">{selectedCustomer.name}</p>
             </div>
             <div className="space-y-4 p-6">
               <div>
@@ -3795,7 +3790,7 @@ const POSScreen: React.FC<POSProps> = ({
                 <button
                   type="button"
                   onClick={() => void handleCreateSaleAddress()}
-                  className="flex-1 rounded-xl bg-orange-600 px-4 py-3 text-xs font-semibold  tracking-wide text-white"
+                  className="flex-1 rounded-xl bg-brand-600 px-4 py-3 text-xs font-semibold  tracking-wide text-white"
                 >
                   Guardar dirección
                 </button>
