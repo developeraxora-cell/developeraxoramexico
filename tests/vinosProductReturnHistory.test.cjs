@@ -7,7 +7,7 @@ const ts = require('typescript');
 
 const target = '5285790a-0dff-4c16-a268-9a401ad03336';
 const reconciledReturnTarget = '70fde86e-300d-4de6-8c11-4e02c7634641';
-function setup({ auditAvailable = true, branch = 1 } = {}) {
+function setup({ auditAvailable = true, branch = 1, consumption = false } = {}) {
   const calls = [];
   const purchase = (id, qty, date) => ({ id, qty, qty_base: qty, cost_per_unit: 10, subtotal: qty * 10,
     purchase: { id, branch_id: 1, purchase_date: date.slice(0, 10), created_at: date, deleted_at: null } });
@@ -18,9 +18,16 @@ function setup({ auditAvailable = true, branch = 1 } = {}) {
     sale_items: [sale('active-before', 62, '2026-07-24T12:00:00Z'), sale('cancelled', 6, '2026-07-24T13:00:00Z', '2026-07-28T14:00:00Z'), sale('active-after', 122, '2026-08-01T10:00:00Z')],
     product_stocks: [{ qty: 39 }],
   };
+  if (consumption) {
+    data.sale_items.push(sale('consumed', 6, '2026-10-15T13:00:00Z'));
+    data.vinos_consumption_movements = [
+      { id:1,event:'SALIDA',qty:-10,stock_before:39,stock_after:29,created_at:'2026-10-14T12:00:00Z',actor_id:'seller',consumption:{folio:1,sale_id:'consumed'} },
+      { id:2,event:'DEVOLUCION',qty:4,stock_before:29,stock_after:33,created_at:'2026-10-15T13:00:00Z',actor_id:'seller',consumption:{folio:1,sale_id:'consumed'} },
+    ];
+  }
   const client = { from(table) {
     const query = {};
-    for (const method of ['select', 'eq', 'limit', 'in']) query[method] = () => query;
+    for (const method of ['select', 'eq', 'limit', 'in', 'order', 'range']) query[method] = () => query;
     query.then = (resolve, reject) => Promise.resolve({ data: data[table] ?? [], error: null }).then(resolve, reject);
     return query;
   } };
@@ -101,4 +108,16 @@ test('Sin auditoria conserva fecha y motivo de la venta y no atribuye la cancela
   assert.equal(returned.user_id, null);
   assert.equal(returned.user_name, 'No registrado');
   assert.match(returned.detail, /Devolucion de mercancia/);
+});
+
+test('Consumo registra salida y retorno sin descontar otra vez la venta de liquidacion', async () => {
+  const { service } = setup({ consumption:true });
+  const report = await service.getProductInsights(target,1);
+  assert.equal(report.history.find(row=>row.id==='CON-1').stock_movement_qty,-10);
+  assert.equal(report.history.find(row=>row.id==='CON-2').stock_movement_qty,4);
+  const sale=report.history.find(row=>row.id==='SAL-consumed');
+  assert.equal(sale.stock_movement_qty,0);
+  assert.equal(sale.qty,6);
+  assert.equal(report.sold_qty,190);
+  assert.match(sale.detail,/stock descontado en la salida/);
 });

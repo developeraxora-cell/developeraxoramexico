@@ -60,6 +60,7 @@ const RETURN_HISTORY_PRODUCT_IDS = new Set([
 ]);
 
 export interface ProductHistoryRow {
+  stock_movement_qty?: number;
   id: string;
   status: ProductHistoryStatus;
   created_at: string;
@@ -763,7 +764,40 @@ export const vinosProductsService = {
       user_name: row.user_name ?? (row.user_id ? userNames.get(row.user_id) ?? row.user_id : null),
     });
 
+    const consumptionHistory: ProductHistoryRow[] = [];
+    const consumptionSaleIds = new Set<string>();
+    for (let offset = 0; ; offset += 500) {
+      let query = supabaseVinos.from('vinos_consumption_movements')
+        .select('*, consumption:vinos_consumptions(folio,sale_id)').eq('product_id', productId)
+        .order('id').range(offset, offset + 499);
+      if (branchId) query = query.eq('branch_id', branchId);
+      const { data, error } = await query;
+      if (error) {
+        if (error.code === 'PGRST205' || error.code === '42P01') break;
+        throw error;
+      }
+      for (const movement of data ?? []) {
+        const consumption = asOne(movement.consumption) as { folio: number; sale_id: string | null } | null;
+        if (consumption?.sale_id) consumptionSaleIds.add(consumption.sale_id);
+        consumptionHistory.push({
+          id: `CON-${movement.id}`, status: movement.event === 'SALIDA' ? 'SALIDA' : 'DEVOLUCION',
+          created_at: movement.created_at, qty: Math.abs(Number(movement.qty)), stock_movement_qty: Number(movement.qty),
+          stock_before: Number(movement.stock_before), stock_after: Number(movement.stock_after),
+          unit_price: null, subtotal: null, price_type: null, profit: null,
+          source: `${movement.event === 'SALIDA' ? 'Salida a consumo' : 'Devolucion de consumo'} CON-${consumption?.folio ?? ''}`,
+          detail: 'Movimiento de inventario registrado al confirmar el consumo.', user_id: movement.actor_id, user_name: null,
+        });
+      }
+      if ((data ?? []).length < 500) break;
+    }
+    for (const row of enrichedSaleRows) {
+      if (saleItems.some(item => consumptionSaleIds.has(asOne(item.sale)?.id ?? '') && row.id.split('+').includes(`SAL-${item.id}`))) {
+        (row as ProductHistoryRow).stock_movement_qty = 0;
+        row.detail = `${row.detail ?? ''} | Liquidacion de consumo: stock descontado en la salida`;
+      }
+    }
     const history = [
+      ...consumptionHistory,
       ...purchaseRows.map(withUserNames),
       ...enrichedSaleRows.map(withUserNames),
       ...cancelledHistory.map(withUserNames),

@@ -14,6 +14,7 @@ import {
 import { vinosCatalogService, type Category, type Uom } from '../../services/vinos/catalog.service';
 import { vinosCustomersService } from '../../services/vinos/customers.service';
 import { logVinosAudit } from '../../services/audit/audit.service';
+import { consumptionService } from '../../services/vinos/consumption.service';
 import { generateVinosProductsListPdf } from '../../services/vinos/productsListPdf';
 import VinosProductModal from './VinosProductModal';
 
@@ -48,6 +49,7 @@ const formatHistoryTime = (value: string) => {
 
 const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, currentUser }) => {
   const [products, setProducts] = useState<ProductWithStock[]>([]);
+  const [inConsumption, setInConsumption] = useState<Record<string, number> | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [uoms, setUoms] = useState<Uom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,6 +119,17 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
       .catch(() => { if (!cancelled) setBranchDbId(null); });
     return () => { cancelled = true; };
   }, [selectedBranch?.code, selectedBranchId]);
+
+  useEffect(() => {
+    let active = true;
+    setInConsumption(null);
+    const refresh = () => { if(branchDbId) consumptionService.outstanding(branchDbId).then(data=>{if(active)setInConsumption(data);}).catch(()=>{if(active)setInConsumption(null);}); };
+    refresh();
+    window.addEventListener('focus',refresh);
+    window.addEventListener('vinos-consumption-changed',refresh);
+    const timer=window.setInterval(refresh,60000);
+    return ()=>{active=false;clearInterval(timer);window.removeEventListener('focus',refresh);window.removeEventListener('vinos-consumption-changed',refresh);};
+  }, [branchDbId]);
 
   // ── load all ─────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -705,7 +718,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
-                  {['Producto','Categoría','Unidad','Stock','Prec. Compra','Menudeo','M. Mayoreo','Mayoreo',''].map(h => (
+                  {['Producto','Categoría','Unidad','Stock','En consumo','Prec. Compra','Menudeo','M. Mayoreo','Mayoreo',''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
                   ))}
                 </tr>
@@ -736,6 +749,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                           {p.total_stock}
                         </span>
                       </td>
+                      <td className="px-4 py-3 text-xs font-bold text-blue-700" title={inConsumption === null ? 'No se pudo consultar Consumo' : 'Piezas en consumos sin liquidar'}>{inConsumption === null ? '—' : inConsumption[p.id] ?? 0}</td>
                       <td className="px-4 py-3 text-xs font-bold text-slate-800">
                         {p.last_purchase_cost != null ? formatCurrency(p.last_purchase_cost) : '—'}
                       </td>
@@ -982,12 +996,13 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                               });
                               return acc;
                             }
-                            const movementQty = row.status === 'INGRESO' || row.status === 'DEVOLUCION' ? Number(row.qty ?? 0) : -Number(row.qty ?? 0);
-                            const runningQty = baselineQty + movementQty;
+                            const movementQty = row.stock_movement_qty ?? (row.status === 'INGRESO' || row.status === 'DEVOLUCION' ? Number(row.qty ?? 0) : -Number(row.qty ?? 0));
+                            const previousQty = row.id.startsWith('CON-') ? row.stock_before ?? baselineQty : baselineQty;
+                            const runningQty = row.id.startsWith('CON-') ? row.stock_after ?? previousQty + movementQty : baselineQty + movementQty;
                             acc.push({
                               ...row,
                               movementQty,
-                              previousQty: baselineQty,
+                              previousQty,
                               runningQty,
                             });
                             return acc;
@@ -1008,7 +1023,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                               </td>
                               <td className="px-4 py-3">
                                 <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black ${badgeClass}`}>
-                                  {row.status === 'INGRESO' ? 'COMPRA' : row.status === 'SALIDA' ? 'VENTA' : row.status === 'DEVOLUCION' ? 'VENTA CANCELADA' : row.status}
+                                  {row.id.startsWith('CON-') ? row.status === 'SALIDA' ? 'SALIDA A CONSUMO' : 'DEVOLUCION CONSUMO' : row.status === 'INGRESO' ? 'COMPRA' : row.status === 'SALIDA' ? 'VENTA' : row.status === 'DEVOLUCION' ? 'VENTA CANCELADA' : row.status}
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-sm font-bold text-slate-900">

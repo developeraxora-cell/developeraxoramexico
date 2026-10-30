@@ -1,5 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
+import { PackageCheck } from 'lucide-react';
+import VinosConsumptionAlerts from './Vinos/VinosConsumptionAlerts';
 import { User, Branch, Role } from '../types';
 import { userCanAccessBranch, userCanAccessTab } from '../services/auth/permissions';
 import AssistantDrawer, { AssistantAgent } from './common/AssistantDrawer';
@@ -163,6 +165,7 @@ const Layout: React.FC<LayoutProps> = ({
         { id: 'vinos-pos', label: 'Caja / Venta', icon: '🛒' },
         { id: 'vinos-purchases', label: 'Compras / Entradas', icon: '📥' },
         { id: 'vinos-inventory', label: 'Productos', icon: '📦' },
+        { id: 'vinos-consumption', label: 'Consumo', icon: <PackageCheck size={20} /> },
         { id: 'vinos-physical-inventory', label: 'Inventario', icon: '📋' },
         { id: 'vinos-customers', label: 'Clientes', icon: '👥' },
         { id: 'vinos-reports', label: 'Reportes / CRM', icon: '📊' },
@@ -682,6 +685,7 @@ const Layout: React.FC<LayoutProps> = ({
                 </p>
               </div>
             </div>
+            {isCasaTahonaModule && activeTab !== 'vinos-consumption' && userCanAccessTab(currentUser, 'vinos-consumption') && <VinosConsumptionAlerts branchCode={branches.find(b => b.id === selectedBranchId)?.code ?? selectedBranchId} onOpen={() => setActiveTab('vinos-consumption')} />}
             {children}
           </div>
         </div>

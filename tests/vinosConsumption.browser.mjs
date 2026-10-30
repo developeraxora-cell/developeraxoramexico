@@ -1,0 +1,32 @@
+import { chromium } from '/tmp/tahona-consumption-tests/node_modules/playwright/index.mjs';
+import assert from 'node:assert/strict';
+const browser=await chromium.launch({headless:true,executablePath:'/home/carlos-calderon/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome',args:['--no-sandbox']});
+try {
+  const page=await browser.newPage({viewport:{width:1440,height:1000}});
+  await page.addInitScript(()=>{window.print=()=>{};});
+  await page.goto('http://127.0.0.1:5174/tests/consumption.preview.html');
+  await page.getByText('CON-00042',{exact:true}).waitFor();
+  await page.screenshot({path:'/tmp/consumption-desktop.png',fullPage:true});
+  await page.getByRole('button',{name:'Liquidar CON-00042'}).click();
+  await page.getByLabel('Regresan Tequila Cristalino 750 ml').fill('4');
+  await page.getByLabel('Metodo de pago').selectOption('CREDITO');
+  await page.getByText('Credito del cliente',{exact:true}).waitFor();
+  await page.screenshot({path:'/tmp/consumption-settlement.png'});
+  await page.getByRole('button',{name:'Liquidar e imprimir'}).click();
+  await page.getByText('Consumo liquidado.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Cerrar',exact:true}).click();
+  await page.getByRole('button',{name:'Nueva salida a consumo'}).click();
+  await page.locator('.consumption-form select').first().selectOption('customer');
+  await page.getByRole('button',{name:/Tequila Cristalino 750 ml/}).click();
+  await page.getByLabel('Piezas Tequila Cristalino 750 ml').fill('8');
+  await page.getByRole('button',{name:'Confirmar salida e imprimir'}).click();
+  await page.getByText('Salida registrada.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Cerrar',exact:true}).click();
+  await page.setViewportSize({width:390,height:844});
+  await page.screenshot({path:'/tmp/consumption-mobile.png',fullPage:true});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true,'Sin desborde de pagina');
+  await page.getByRole('button',{name:'Liquidar CON-00043'}).click();
+  await page.screenshot({path:'/tmp/consumption-mobile-modal.png'});
+  assert.equal(await page.locator('dialog').evaluate(el=>el.getBoundingClientRect().width<=window.innerWidth),true);
+  console.log('OK: escritorio, movil, nueva salida, credito, liquidacion y dialogos.');
+} finally { await browser.close(); }
