@@ -132,7 +132,7 @@ export default function VinosConsumptionScreen({ selectedBranchId, branches, cur
         <td>{money(r.status==='OPEN'?r.items.reduce((s,i)=>s+i.qty_out*i.unit_price,0):0)}</td><td>{r.status==='SETTLED'?money(r.total):'—'}</td><td><span className={`consumption-status ${consumptionState(r,today)==='Vencido'?'late':r.status==='SETTLED'?'done':''}`}>{consumptionState(r,today)}</span></td>
         <td><div className="consumption-actions"><button aria-label={`Ver ${consumptionFolio(r.folio)}`} title="Detalle" onClick={()=>openDetail(r,'detail')}><Eye size={18}/></button>{r.status==='OPEN'&&<button title="Liquidar" aria-label={`Liquidar ${consumptionFolio(r.folio)}`} onClick={()=>openDetail(r,'settle')}><PackageCheck size={18}/></button>}</div></td>
       </tr>)}</tbody></table></div>
-    <dialog ref={dialog} className="consumption-dialog" onCancel={e=>{if(busy)e.preventDefault();else setMode(null);}}>
+    <dialog ref={dialog} className="consumption-dialog" style={{ position: 'fixed', inset: 'auto', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', margin: 0 }} onCancel={e=>{if(busy)e.preventDefault();else setMode(null);}}>
       <header><div><h2>{mode==='new'?'Nueva salida a consumo':mode==='settle'?'Devolucion y cobro':selected?consumptionFolio(selected.folio):'Detalle'}</h2>{mode!=='new'&&<p>{selected?.customer_name} · Fecha limite: {selected?.due_date}</p>}</div><button disabled={busy} aria-label="Cerrar" title="Cerrar" onClick={()=>setMode(null)}><X size={20}/></button></header>
       <div className="consumption-dialog-body">
         {mode==='new' ? <>
