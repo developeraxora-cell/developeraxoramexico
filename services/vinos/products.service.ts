@@ -784,8 +784,8 @@ export const vinosProductsService = {
           created_at: movement.created_at, qty: Math.abs(Number(movement.qty)), stock_movement_qty: Number(movement.qty),
           stock_before: Number(movement.stock_before), stock_after: Number(movement.stock_after),
           unit_price: null, subtotal: null, price_type: null, profit: null,
-          source: `${movement.event === 'SALIDA' ? 'Salida a consumo' : 'Devolucion de consumo'} CON-${consumption?.folio ?? ''}`,
-          detail: 'Movimiento de inventario registrado al confirmar el consumo.', user_id: movement.actor_id, user_name: null,
+          source: `${movement.event === 'SALIDA' ? 'Salida a consumo' : movement.event === 'CANCELACION' ? 'Cancelacion de consumo' : 'Devolucion de consumo'} CON-${consumption?.folio ?? ''}`,
+          detail: movement.event === 'CANCELACION' ? 'Salida cancelada; piezas devueltas al stock.' : 'Movimiento de inventario registrado al confirmar el consumo.', user_id: movement.actor_id, user_name: null,
         });
       }
       if ((data ?? []).length < 500) break;

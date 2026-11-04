@@ -1,4 +1,5 @@
 import { supabaseVinos } from '../vinosClient';
+import { auditService } from '../audit/audit.service';
 
 export interface ConsumptionItem {
   id: string; product_id: string; product_uom_id: string;
@@ -8,9 +9,9 @@ export interface ConsumptionItem {
 export interface Consumption {
   id: string; folio: number; branch_id: number; customer_id: string;
   customer_name: string; due_date: string; created_at: string;
-  settled_at: string | null; status: 'OPEN' | 'SETTLED';
+  settled_at: string | null; status: 'OPEN' | 'SETTLED' | 'CANCELLED';
   price_type: string; payment_method: string | null; sale_id: string | null;
-  total: number; items: ConsumptionItem[];
+  total: number; items: ConsumptionItem[]; cancelled_at: string | null; cancelled_by: string | null; cancel_reason: string | null;
 }
 export interface ConsumptionCredit {
   credit_limit: number; debt: number; available: number;
@@ -19,7 +20,7 @@ export interface ConsumptionCredit {
 }
 export const mexicoToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 export const consumptionState = (row: Consumption, today = mexicoToday()) => row.status === 'SETTLED'
-  ? 'Liquidado' : row.due_date < today ? 'Vencido' : row.due_date === today ? 'Vence hoy' : 'En consumo';
+  ? 'Liquidado' : row.status === 'CANCELLED' ? 'Cancelado' : row.due_date < today ? 'Vencido' : row.due_date === today ? 'Vence hoy' : 'En consumo';
 export const consumptionFolio = (n: number) => `CON-${String(n).padStart(5, '0')}`;
 
 export const consumptionService = {
@@ -56,5 +57,29 @@ export const consumptionService = {
     });
     if (error) throw new Error(error.message);
     return data;
+  },
+  async cancel(input: { consumption: Consumption; actorId: string; actorName: string; branchCode: string; branchName: string; reason: string }): Promise<void> {
+    const reason = input.reason.trim();
+    if (!reason) throw new Error('La observación es obligatoria.');
+    const row = input.consumption;
+    try {
+      const recorded = await auditService.writeRequired({
+        branch_id: String(row.branch_id), branch_name: input.branchName,
+        user_id: input.actorId, user_name: input.actorName,
+        action_type: 'ELIMINAR', module: 'vinos', entity_type: 'inventario', entity_id: row.id,
+        description: `Eliminación de salida a consumo ${consumptionFolio(row.folio)} (${row.customer_name})`,
+        justification: reason,
+        previous_data: { id: row.id, folio: consumptionFolio(row.folio), customer_name: row.customer_name, status: row.status },
+        new_data: { deletion_stage: 'AUTHORIZED', observation: reason },
+      });
+      if (!recorded) throw new Error('La API no confirmó el registro.');
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'No se pudo registrar la observación.';
+      throw new Error(`El consumo no fue eliminado. ${detail}`);
+    }
+    const { error } = await supabaseVinos.rpc('cancel_vinos_consumption', {
+      p_id: row.id, p_actor_id: input.actorId, p_reason: reason,
+    });
+    if (error) throw new Error(`La observación quedó en Auditoría, pero el consumo no se eliminó: ${error.message}`);
   },
 };

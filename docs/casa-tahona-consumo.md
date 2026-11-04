@@ -6,8 +6,9 @@ Implementación basada en `consumo.html`. La migración se entrega para la base 
 
 1. Respaldar la base de VINOS y comprobar primero en una copia con el esquema real.
 2. Ejecutar **una sola vez** `vinos_consumo.sql` en el SQL Editor del proyecto VINOS. El archivo completo es una transacción; si falla, no aplicar fragmentos por separado. No ejecutarlo en Materiales ni en el proyecto de auditoría.
-3. Publicar el frontend después de la migración. El acceso es Casa Tahona → Consumo (`/vinos/consumo`), con el permiso existente de ventas de VINOS.
-4. Probar salida, devolución parcial, crédito, ticket y corte de caja con un cliente de prueba antes de operar.
+3. Para cancelar salidas abiertas, ejecutar `vinos_consumo_cancelacion.sql` después de la migración principal. Es aditiva y conserva las tablas existentes.
+4. Publicar el frontend después de las migraciones. El acceso es Casa Tahona → Consumo (`/vinos/consumo`), con el permiso existente de ventas de VINOS.
+5. Probar salida, cancelación, devolución parcial, crédito, ticket y corte de caja con un cliente de prueba antes de operar.
 
 El script agrega `customers.credit_days` con 30 días predeterminados y `sales.credit_due_date`. Completa las fechas faltantes de créditos existentes usando la fecha original de venta en México más el plazo del cliente. Revisar esa regla contra los acuerdos históricos antes de ejecutar. Los plazos particulares pueden configurarse en `customers.credit_days`; las ventas futuras toman ese valor. No se modifica el stock histórico al instalar.
 
@@ -32,6 +33,8 @@ El script agrega `customers.credit_days` con 30 días predeterminados y `sales.c
 Las operaciones usan bloqueos y transacciones. Reintentar una salida con el mismo identificador no duplica el descuento; cambiar sus datos después de guardarla se rechaza. Repetir una liquidación ya confirmada devuelve la venta original.
 
 Las ventas ligadas a consumos liquidados no admiten la cancelación convencional, porque esta repondría stock sin conciliar el consumo. Un flujo de reversión de liquidaciones no forma parte de esta entrega.
+
+Una salida abierta sí puede eliminarse desde su fila. La acción solicita una observación, la registra primero en Auditoría y luego devuelve todas las piezas al stock dentro de una transacción. El folio queda cancelado con fecha, responsable y motivo en VINOS, y deja de aparecer en la lista general. Las liquidaciones no se pueden cancelar desde esta acción.
 
 Se conserva la autenticación externa actual de VINOS: lectura con `anon`/`authenticated`, escritura de Consumo mediante RPC y responsable enviado por la aplicación. No se ha incorporado autenticación Supabase por usuario ni una nueva frontera de permisos de sucursal. Las pruebas no acreditan la seguridad global del sistema ni corrigen las operaciones antiguas de stock del POS.
 
