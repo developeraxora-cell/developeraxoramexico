@@ -7,6 +7,7 @@ import { convert, getPriceForUnit } from '../../services/conversionEngine';
 import { creditService, type CreditCustomer, type CreditNoteWithStatus, type CreditPaymentMethod, type CustomerAddress } from '../../services/concretera/credit.service';
 import { catalogService, type Product as CatalogProduct, type ProductUom, type Uom } from '../../services/concretera/catalog.service';
 import { purchasesService } from '../../services/concretera/purchases.service';
+import { getConcreteSaleDisplayNumber } from '../../services/concretera/saleDisplay';
 import { concreteWalletService, type CustomerWalletSummary } from '../../services/concretera/wallet.service';
 import { supabase } from '../../services/supabaseClient';
 import { formatCurrency, formatNumber } from '../../services/currency';
@@ -97,7 +98,7 @@ const POSScreen: React.FC<POSProps> = ({
   const [isCustomerSearchLoading, setIsCustomerSearchLoading] = useState(false);
   const [creditCheck, setCreditCheck] = useState<{
     allowedCredit: boolean;
-    reason: 'VENCIDAS' | 'LIMITE' | null;
+    reason: 'SIN_CREDITO' | 'VENCIDAS' | 'LIMITE' | null;
     policy: CreditCustomer['policy'];
     allowCash: boolean;
     vencidas: CreditNoteWithStatus[];
@@ -442,7 +443,7 @@ const POSScreen: React.FC<POSProps> = ({
         countQuery = countQuery.lte('created_at', `${salesHistoryDateTo}T23:59:59.999`);
       }
       if (saleNumberRaw) {
-        countQuery = countQuery.eq('id', parsedSaleNumber);
+        countQuery = countQuery.or(`reference.eq.${saleNumberRaw},id.eq.${parsedSaleNumber}`);
       }
 
       const { count, error: countError } = await countQuery;
@@ -465,7 +466,7 @@ const POSScreen: React.FC<POSProps> = ({
         transactionsQuery = transactionsQuery.lte('created_at', `${salesHistoryDateTo}T23:59:59.999`);
       }
       if (saleNumberRaw) {
-        transactionsQuery = transactionsQuery.eq('id', parsedSaleNumber);
+        transactionsQuery = transactionsQuery.or(`reference.eq.${saleNumberRaw},id.eq.${parsedSaleNumber}`);
       }
 
       const { data: transactions, error: txError } = await transactionsQuery
@@ -1370,7 +1371,7 @@ const POSScreen: React.FC<POSProps> = ({
       });
 
       await generateSalePdf({
-        saleId: sale.id,
+        saleId: getConcreteSaleDisplayNumber(sale),
         createdAt: sale.created_at,
         items: lines,
         paymentMethod: sale.payment_method,
@@ -1593,7 +1594,9 @@ const POSScreen: React.FC<POSProps> = ({
       const result = await runCreditCheck();
       if (!result) return;
       if (!result.allowedCredit) {
-        if (result.reason === 'VENCIDAS') {
+        if (result.reason === 'SIN_CREDITO') {
+          showFeedback('alert', 'Crédito no habilitado', 'Este cliente solo puede comprar de contado.');
+        } else if (result.reason === 'VENCIDAS') {
           setIsCreditBlockedOpen(true);
         } else if (result.reason === 'LIMITE') {
           setIsCreditLimitOpen(true);
@@ -1629,6 +1632,9 @@ const POSScreen: React.FC<POSProps> = ({
         Number(result?.disponible ?? 0) >= cartTotal
       );
       if (!result?.allowedCredit && !canProceedWithOverride) {
+        if (result?.reason === 'SIN_CREDITO') {
+          showFeedback('alert', 'Crédito no habilitado', 'Este cliente solo puede comprar de contado.');
+        }
         if (result?.reason === 'VENCIDAS') setIsCreditBlockedOpen(true);
         if (result?.reason === 'LIMITE') setIsCreditLimitOpen(true);
         return;
@@ -1729,6 +1735,7 @@ const POSScreen: React.FC<POSProps> = ({
           barcode_scanned: item.barcodeScanned ?? null,
         })),
       });
+      const displaySaleNumber = getConcreteSaleDisplayNumber(transaction);
 
       if (walletSnapshot && walletAppliedSnapshot > 0) {
         await concreteWalletService.applyWalletToSale({
@@ -1795,8 +1802,8 @@ const POSScreen: React.FC<POSProps> = ({
           customer_id: customerSnapshot.id,
           total: creditAmountSnapshot,
           credit_days_applied: saleCreditDays,
-          folio: String(transaction.id),
-          sale_reference: String(transaction.id),
+          folio: displaySaleNumber,
+          sale_reference: displaySaleNumber,
           inventory_transaction_id: transaction.id,
         });
       }
@@ -1865,7 +1872,7 @@ const POSScreen: React.FC<POSProps> = ({
       window.setTimeout(() => {
         void generateSalePdf({
           ...pdfPayload,
-          saleId: String(transaction.id),
+          saleId: displaySaleNumber,
           createdAt: transaction.created_at ?? new Date().toISOString(),
         }).catch((pdfError) => {
           console.error('Error generating sale PDF:', pdfError);
@@ -3382,7 +3389,7 @@ const POSScreen: React.FC<POSProps> = ({
                     )}
                     {!isSalesHistoryLoading && salesHistory.map((sale) => (
                       <tr key={sale.id} className="hover:bg-slate-50">
-                        <td className="p-4 text-center text-xs font-black text-slate-700">#{sale.id}</td>
+                        <td className="p-4 text-center text-xs font-black text-slate-700">#{getConcreteSaleDisplayNumber(sale)}</td>
                         <td className="p-4 text-xs font-bold text-slate-700">{formatLocalDateTime(sale.created_at)}</td>
                         <td className="p-4 text-xs font-bold text-slate-700">{sale.nombre_cliente || 'Público General'}</td>
                         <td className="p-4 text-xs font-semibold text-slate-500">{sale.notes?.trim() || '—'}</td>

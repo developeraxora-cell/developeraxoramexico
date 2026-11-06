@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+concre45_crm.sql
+migration/concretera_jesus_maria/out/
+output/
 
 # Asistentes IA / documentacion interna (no publicar)
 .claude/

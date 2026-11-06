@@ -15,6 +15,7 @@ import {
 import { AlertTriangle, Download, Filter, ShoppingCart, TrendingUp, Truck } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import { catalogService } from '../../services/concretera/catalog.service';
+import { getConcreteSaleDisplayNumber } from '../../services/concretera/saleDisplay';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { Branch } from '../../types';
 import ManagerInsightsPanel, { ManagerInsight } from '../common/ManagerInsightsPanel';
@@ -173,7 +174,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
   const [topProducts, setTopProducts] = useState<Array<{ name: string; qty: number; total: number }>>([]);
   const [lowProducts, setLowProducts] = useState<Array<{ name: string; qty: number; total: number }>>([]);
   const [stockTable, setStockTable] = useState<Array<{ name: string; stock: number; min: number; status: string }>>([]);
-  const [salesTable, setSalesTable] = useState<Array<{ id: number; date: string; customer: string; items: number; total: number }>>([]);
+  const [salesTable, setSalesTable] = useState<Array<{ id: number; folio: string; date: string; customer: string; items: number; total: number }>>([]);
   const [purchasesTable, setPurchasesTable] = useState<Array<{ id: number; date: string; supplier: string; items: number; total: number; credit: boolean }>>([]);
   const [managerInsights, setManagerInsights] = useState<ManagerInsight[]>([]);
   const [stockVisibleCount, setStockVisibleCount] = useState(4);
@@ -476,6 +477,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
 
       const salesTableRows = salesTx.map((tx) => ({
         id: tx.id,
+        folio: getConcreteSaleDisplayNumber(tx),
         date: new Date(normalizeISO(tx.created_at)).toLocaleString(),
         customer: tx.nombre_cliente ?? 'Mostrador',
         items: txItemsCount[tx.id] ?? 0,
@@ -997,7 +999,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ selectedBranchId, branche
                       <p className="truncate text-sm font-black text-slate-800">{row.customer}</p>
                       <p className="mt-1 text-xs text-slate-500">{row.date}</p>
                     </div>
-                    <div className="rounded-xl bg-white px-3 py-1 text-[11px] font-black text-slate-600 shadow-sm">#{row.id}</div>
+                    <div className="rounded-xl bg-white px-3 py-1 text-[11px] font-black text-slate-600 shadow-sm">#{row.folio}</div>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-xl bg-white px-3 py-2">

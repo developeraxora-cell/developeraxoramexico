@@ -943,9 +943,12 @@ export const creditService = {
     const vencidas = summary.notas_vencidas;
 
     let allowedCredit = true;
-    let reason: 'VENCIDAS' | 'LIMITE' | null = null;
+    let reason: 'SIN_CREDITO' | 'VENCIDAS' | 'LIMITE' | null = null;
 
-    if (vencidas.length > 0) {
+    if (Number(input.customer.default_credit_days) === 0) {
+      allowedCredit = false;
+      reason = 'SIN_CREDITO';
+    } else if (vencidas.length > 0) {
       allowedCredit = false;
       reason = 'VENCIDAS';
     } else if (saldo_total + input.totalVenta > limite) {

@@ -410,7 +410,7 @@ export const purchasesService = {
           payment_notes: payment_notes || null,
         },
       ])
-      .select('id, created_at')
+      .select('id, reference, created_at')
       .single();
 
     if (txError) throw txError;

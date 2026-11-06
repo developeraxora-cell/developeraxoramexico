@@ -3,6 +3,7 @@ import { PDFDocument, PDFPage, rgb } from 'pdf-lib';
 import { Branch, User } from '../../types';
 import { creditService, type CashSaleHistory, type CreditCustomer, type CreditNote, type CreditNoteWithStatus, type CreditPayment, type CreditPaymentEvidence, type CreditPaymentMethod, type CreditSummary, type CustomerAddress, type SalePaymentEvidence } from '../../services/concretera/credit.service';
 import { concreteWalletService, type CustomerWalletMovement, type CustomerWalletSummary } from '../../services/concretera/wallet.service';
+import { getConcreteSaleDisplayNumber } from '../../services/concretera/saleDisplay';
 import { CreditCard, Eye, FileDown, FileImage, History, MapPin, Paperclip, Pencil, Plus, Search, Trash2, Wallet } from 'lucide-react';
 import { formatCurrency, formatNumber } from '../../services/currency';
 import { generateCustomerStatementPdf } from '../../services/pdf/customerStatementPdf';
@@ -351,7 +352,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         rowKey: `cash:${sale.id}`,
         kind: 'cash' as const,
         saleId: String(sale.id),
-        displayCode: String(sale.id),
+        displayCode: getConcreteSaleDisplayNumber(sale),
         issue_date: String(sale.created_at ?? '').slice(0, 10),
         due_date: null,
         total: Number(cashSaleTotalsById[String(sale.id)] ?? noteSaleSummaries[`cash:${sale.id}`]?.total_amount ?? 0),
@@ -1911,6 +1912,10 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
   };
 
   const openCreateNoteModal = (customer: CreditCustomer) => {
+    if (Number(customer.default_credit_days) === 0) {
+      showFeedback('alert', 'Crédito no habilitado', 'Este cliente solo puede comprar de contado.');
+      return;
+    }
     setSelectedCustomer(customer);
     setEditingNote(null);
     setNoteModalMode('create');
@@ -2172,7 +2177,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       phone: customer.phone ?? '',
       address: customer.address ?? '',
       credit_limit: Number(customer.credit_limit ?? 0),
-      default_credit_days: Number(customer.default_credit_days) === 15 ? 15 : 30,
+      default_credit_days: Number(customer.default_credit_days),
       policy: 'CERO_TOLERANCIA',
       allow_cash_if_blocked: customer.allow_cash_if_blocked ?? true,
       justification: '',
@@ -2289,7 +2294,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
         phone: formData.phone || null,
         address: formData.address || null,
         credit_limit: Number(formData.credit_limit),
-        default_credit_days: Number(selectedCustomer.default_credit_days) === 15 ? 15 : 30,
+        default_credit_days: Number(selectedCustomer.default_credit_days),
         policy: 'CERO_TOLERANCIA',
         allow_cash_if_blocked: formData.allow_cash_if_blocked,
       });
