@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Consumo Casa Tahona</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sidebar oscuro del sistema + contenido: header, alertas, KPIs, tabla; modales para salida, liquidación y detalle */
+:root{
+  --bg:#f5f6f8; --card:#ffffff; --fg:#111827; --muted:#7b8494; --line:#eceef2; --soft:#f8f9fb;
+  --accent:#ee5f12; --accent-soft:#fff1e8; --accent-fg:#ffffff;
+  --ok:#16a34a; --ok-soft:#e8f7ee; --warn:#d97706; --warn-soft:#fff6e0; --bad:#dc2626; --bad-soft:#fdecec;
+  --info:#2563eb; --info-soft:#e9f0ff;
+  --side:#121a33; --side-fg:#c3c9d8; --side-line:#212a45;
+  --navy:#141a2a; --navy-fg:#ffffff;
+  --display:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1218; --card:#171b24; --fg:#eef0f4; --muted:#8a93a3; --line:#262c38; --soft:#1c212c;
+  --accent:#ff7a2e; --accent-soft:#3a2214; --ok:#34c26b; --ok-soft:#14301f; --warn:#f0a531; --warn-soft:#332611; --bad:#f26464; --bad-soft:#3a1818;
+  --info:#6b9bff; --info-soft:#17233d; --side:#0b1022; --side-line:#1b2238;
+  --navy:#eef0f4; --navy-fg:#141a2a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1218; --card:#171b24; --fg:#eef0f4; --muted:#8a93a3; --line:#262c38; --soft:#1c212c;
+  --accent:#ff7a2e; --accent-soft:#3a2214; --ok:#34c26b; --ok-soft:#14301f; --warn:#f0a531; --warn-soft:#332611; --bad:#f26464; --bad-soft:#3a1818;
+  --info:#6b9bff; --info-soft:#17233d; --side:#0b1022; --side-line:#1b2238;
+  --navy:#eef0f4; --navy-fg:#141a2a; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--display);font-size:14px;margin:0}
+.app{display:grid;grid-template-columns:270px 1fr;min-height:100%}
+
+/* sidebar */
+aside{background:var(--side);color:var(--side-fg);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.side-group{display:flex;align-items:center;gap:12px;padding:22px 24px;font-weight:800;letter-spacing:.12em;font-size:12.5px;text-transform:uppercase;color:#e7eaf2}
+.side-group .car{margin-left:auto;font-size:10px;opacity:.7}
+nav{display:flex;flex-direction:column;gap:4px;padding:0 14px 0 20px;border-left:1px solid var(--side-line);margin-left:14px;overflow:auto;flex:1}
+nav a{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;color:var(--side-fg);text-decoration:none;font-size:14px}
+nav a:hover{background:rgba(255,255,255,.05)}
+nav a.on{background:#ee5f12;color:#fff;font-weight:800;box-shadow:0 6px 18px rgba(238,95,18,.35)}
+nav svg{width:18px;height:18px;flex:none}
+.side-user{margin:16px;padding:12px;border:1px solid var(--side-line);border-radius:14px;display:flex;gap:12px;align-items:center}
+.side-user .av{width:40px;height:40px;border-radius:10px;background:#ee5f12;color:#fff;display:grid;place-items:center;font-weight:800}
+.side-user b{display:block;color:#fff;font-size:12.5px}
+.side-user small{color:#ff8a4c;font-size:10px;font-weight:800;letter-spacing:.08em}
+
+main{min-width:0}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:24px 28px 8px}
+.ttl h1{margin:0;font-size:17px;font-weight:800;letter-spacing:-.01em;text-transform:uppercase}
+.ttl p{margin:4px 0 0;color:var(--muted);font-size:12px;font-weight:600}
+.eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.wrap{padding:16px 28px 60px;display:flex;flex-direction:column;gap:18px}
+
+/* bell */
+.bellwrap{position:relative}
+.bell{position:relative;width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);display:grid;place-items:center;cursor:pointer}
+.bell .dot{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--bad);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;border:2px solid var(--bg)}
+.drop{position:absolute;right:0;top:52px;width:min(360px,calc(100vw - 32px));background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px rgba(10,14,22,.18);z-index:15;overflow:hidden}
+.drop header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.drop .it{display:flex;gap:10px;padding:12px 16px;border-top:1px solid var(--line);cursor:pointer;align-items:flex-start}
+.drop .it:first-of-type{border-top:0}
+.drop .it:hover{background:var(--soft)}
+.drop .it b{display:block;font-size:13px}
+.drop .it small{color:var(--muted);font-size:12px}
+.sev{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:none}
+
+/* alerta banner */
+.alert{display:flex;gap:14px;align-items:center;flex-wrap:wrap;border-radius:14px;padding:14px 18px;border:1px solid}
+.alert.bad{background:var(--bad-soft);border-color:color-mix(in srgb,var(--bad) 30%,transparent);color:var(--bad)}
+.alert.warn{background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 30%,transparent);color:var(--warn)}
+.alert .txt{flex:1;min-width:200px;color:var(--fg);font-size:13px;line-height:1.5}
+.alert .txt b{color:inherit}
+.alert .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--card);flex:none}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.kpi b{font-size:25px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi small{color:var(--muted);font-size:12px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.bar .grow{flex:1}
+input,select{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-width:0}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn{font:inherit;font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:10px;padding:10px 14px;cursor:pointer;display:inline-flex;gap:8px;align-items:center;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);border-radius:999px;padding:11px 20px}
+.btn.sm{padding:6px 10px;font-size:11px}
+.btn.sm.primary{border-radius:10px;padding:6px 10px}
+.btn.ghost{border-color:transparent;background:none;color:var(--muted)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{text-align:left;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:14px 16px;background:var(--soft);white-space:nowrap}
+td{padding:14px 16px;border-top:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+td .sub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px}
+td.num,th.num{text-align:right}
+tr.hl td{background:var(--warn-soft)}
+.pill{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:999px}
+.p-open{background:var(--accent-soft);color:var(--accent)}
+.p-today{background:var(--warn-soft);color:var(--warn)}
+.p-late{background:var(--bad-soft);color:var(--bad)}
+.p-done{background:var(--ok-soft);color:var(--ok)}
+.qty{display:inline-grid;place-items:center;min-width:28px;height:24px;padding:0 7px;border-radius:7px;font-weight:800;font-size:12px}
+.q-out{background:var(--accent-soft);color:var(--accent)}
+.q-back{background:var(--ok-soft);color:var(--ok)}
+.q-used{background:var(--warn-soft);color:var(--warn)}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+.red{color:var(--bad);font-weight:700}
+.amber{color:var(--warn);font-weight:700}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(10,14,22,.5);display:grid;place-items:center;padding:16px;z-index:30}
+.sheet{background:var(--card);border-radius:18px;width:min(860px,100%);max-height:92vh;overflow:auto;display:flex;flex-direction:column}
+.sheet.small{width:min(460px,100%)}
+.sheet>header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;background:var(--card);z-index:1}
+.sheet h2{margin:0;font-size:17px;font-weight:800}
+.sheet .body{padding:20px 22px;display:flex;flex-direction:column;gap:18px}
+.sheet footer{padding:16px 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;bottom:0;background:var(--card)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+label.f{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+label.f input,label.f select{text-transform:none;letter-spacing:0;font-size:14px;font-weight:500}
+.total{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.note{background:var(--soft);border:1px dashed var(--line);border-radius:10px;padding:10px 14px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.note b{color:var(--fg)}
+.err{color:var(--bad);font-size:12.5px;font-weight:600}
+.credbox{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--soft)}
+.credbox div{display:flex;flex-direction:column;gap:4px}
+.credbox b{font-size:16px;font-variant-numeric:tabular-nums}
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--navy);color:var(--navy-fg);padding:12px 18px;border-radius:10px;font-weight:600;z-index:40;max-width:calc(100vw - 32px)}
+
+@media (max-width:960px){
+  .app{grid-template-columns:1fr}
+  aside{display:none}
+  header.top,.wrap{padding-left:16px;padding-right:16px}
+}
+@media (max-width:600px){.kpi b{font-size:21px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="side-group">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff8a9b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8l-1 6a3 3 0 0 1-6 0z"/><path d="M12 12v8"/><path d="M8 21h8"/></svg>
+      Casa Tahona <span class="car">▲</span>
+    </div>
+    <nav>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 4h2l2 11h11l2-8H6"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg>Caja / Venta</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="7" width="16" height="13" rx="2"/><path d="M12 3v8M9 8l3 3 3-3"/></svg>Compras / Entradas</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></svg>Productos</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Inventario</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c2.8 0 5 2.2 5 5"/></svg>Clientes</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Reportes / CRM</a>
+      <a href="#" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3h8l-1 6a3 3 0 0 1-6 0z"/><path d="M12 12v6"/><path d="M8 21h8"/><path d="M17 15l3 2-3 2"/></svg>Consumo</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="9" width="14" height="9" rx="2"/><path d="M8 9V4h8v5M8 14h8"/></svg>Corte personalizado</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l15-6v14L3 13z"/><path d="M7 13v5"/></svg>Campañas</a>
+    </nav>
+    <div class="side-user"><div class="av">A</div><div><b>ABRAHAM CHURAPE</b><small>SUPERADMIN</small></div></div>
+  </aside>
+
+  <main>
+    <header class="top">
+      <div class="ttl"><h1>Consumo</h1><p>Producto a consumo: salidas sin pago, devoluciones y cobro de lo consumido</p></div>
+      <div class="bar">
+        <button class="btn" id="notifBtn" hidden>Activar avisos del navegador</button>
+        <div class="bellwrap">
+          <button class="bell" id="bell" aria-label="Alertas de fecha límite">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>
+            <span class="dot" id="bellDot" hidden></span>
+          </button>
+          <div class="drop" id="drop" hidden>
+            <header><span class="eyebrow">Alertas de consumo</span><button class="btn ghost sm" id="dropClose">✕</button></header>
+            <div id="dropList"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="wrap">
+      <div id="alerts" style="display:flex;flex-direction:column;gap:10px"></div>
+      <section class="kpis" id="kpis"></section>
+
+      <section id="v-consumos">
+        <div class="bar" style="margin-bottom:14px">
+          <input id="q" placeholder="Buscar cliente o folio" style="width:240px">
+          <select id="fEstado">
+            <option value="">Todos los estados</option>
+            <option value="abierto">En consumo</option>
+            <option value="hoy">Vencen hoy</option>
+            <option value="vencido">Vencidos</option>
+            <option value="liquidado">Liquidados</option>
+          </select>
+          <span class="grow"></span>
+          <button class="btn" id="reset">↺ Datos ejemplo</button>
+          <button class="btn primary" id="nuevo">+ Nueva salida a consumo</button>
+        </div>
+        <div class="panel"><div class="scroll"><table>
+          <thead><tr><th>Folio / Cliente</th><th>Salida</th><th>Fecha límite</th><th class="num">Salieron</th><th class="num">Regresaron</th><th class="num">Consumidas</th><th class="num">Valor en consumo</th><th class="num">Cobrado</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table></div></div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- Nueva salida -->
+<div class="modal" id="mNuevo" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="tNuevo">
+    <header><h2 id="tNuevo">Nueva salida a consumo</h2><button class="btn ghost" data-close>✕</button></header>
+    <div class="body">
+      <div class="grid">
+        <label class="f">Cliente / establecimiento<input id="nCliente" list="clientes" placeholder="Ej. Bar La Cantina"><datalist id="clientes"></datalist></label>
+        <label class="f">Lista de precio<select id="nLista"><option value="menudeo">Menudeo</option><option value="mmayoreo">Medio mayoreo</option><option value="mayoreo">Mayoreo</option></select></label>
+        <label class="f">Fecha límite de devolución<input type="date" id="nLimite"></label>
+      </div>
+      <div class="bar">
+        <select id="nProd" style="flex:1;min-width:200px"></select>
+        <input type="number" id="nQty" min="1" value="1" style="width:90px">
+        <button class="btn" id="nAdd">+ Agregar</button>
+      </div>
+      <div class="panel"><div class="scroll"><table>
+        <thead><tr><th>Producto</th><th class="num">Disponible</th><th class="num">Piezas</th><th class="num">Precio</th><th class="num">Importe</th><th></th></tr></thead>
+        <tbody id="nLines"></tbody>
+      </table></div></div>
+      <div class="note">Al guardar, las piezas se descuentan del stock y quedan <b>en consumo</b>. No se cobra nada hasta la devolución.</div>
+      <div class="err" id="nErr"></div>
+    </div>
+    <footer><div><div class="eyebrow">Valor que sale</div><div class="total" id="nTotal">$0.00</div></div><button class="btn primary" id="nSave">Registrar salida</button></footer>
+  </div>
+</div>
+
+<!-- Devolución y cobro -->
+<div class="modal" id="mLiq" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="tLiq">
+    <header><div><h2 id="tLiq">Devolución y cobro</h2><div class="eyebrow" id="lSub"></div></div><button class="btn ghost" data-close>✕</button></header>
+    <div class="body">
+      <div class="panel"><div class="scroll"><table>
+        <thead><tr><th>Producto</th><th class="num">Salieron</th><th class="num">Regresan</th><th class="num">Consumidas</th><th class="num">Precio</th><th class="num">A cobrar</th></tr></thead>
+        <tbody id="lLines"></tbody>
+      </table></div></div>
+      <div class="grid">
+        <label class="f">Método de pago
+          <select id="lPago"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Crédito</option></select>
+        </label>
+        <div class="bar" style="align-items:flex-end"><button class="btn sm" id="lTodo">Regresó todo</button><button class="btn sm" id="lNada">No regresó nada</button></div>
+      </div>
+      <div id="lCred" hidden></div>
+      <div class="note" id="lNote"></div>
+      <div class="err" id="lErr"></div>
+    </div>
+    <footer><div><div class="eyebrow" id="lTotLbl">Total a cobrar</div><div class="total" id="lTotal">$0.00</div></div><button class="btn primary" id="lSave">Cobrar y cerrar consumo</button></footer>
+  </div>
+</div>
+
+<!-- Detalle -->
+<div class="modal" id="mVer" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="tVer">
+    <header><div><h2 id="tVer"></h2><div class="eyebrow" id="vSub"></div></div><button class="btn ghost" data-close>✕</button></header>
+    <div class="body" id="vBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ---------- utilidades ---------- */
+const localISO = d => { const z=new Date(d.getTime()-d.getTimezoneOffset()*60000); return z.toISOString().slice(0,10); };
+const TODAY = localISO(new Date());
+const fmt = n => '$' + Number(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fDate = d => { if(!d) return '—'; const [y,m,dd]=d.slice(0,10).split('-'); return `${dd}/${m}/${y}`; };
+const addDays = (d,n)=>{const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+n);return localISO(x)};
+const diffDays = (a,b)=>Math.round((new Date(a+'T12:00:00')-new Date(b+'T12:00:00'))/864e5);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LISTAS = {menudeo:'Menudeo',mmayoreo:'Medio mayoreo',mayoreo:'Mayoreo'};
+const $ = id => document.getElementById(id);
+
+/* ---------- datos de ejemplo ---------- */
+/* CREDITOS simula el módulo de Créditos que ya existe en el sistema (solo lectura aquí).
+   limite = crédito autorizado · usado = saldo que ya debe · vencido = tiene saldo vencido */
+function seed(){
+  const productos = [
+    {id:1,sku:'PRO-579663',nombre:'1800 MILENIO 700ml',stock:4,compra:2540,menudeo:3000,mmayoreo:2880,mayoreo:2760},
+    {id:2,sku:'PRO-074148',nombre:'30 30 BLANCO 1.750L',stock:11,compra:483.33,menudeo:604.16,mmayoreo:579.99,mayoreo:555.82},
+    {id:3,sku:'PRO-492387',nombre:'30-30 CRISTALINO MINI 50ML',stock:24,compra:145,menudeo:181.25,mmayoreo:181.25,mayoreo:181.25},
+    {id:4,sku:'PRO-353009',nombre:'400 CONEJOS CUISHE 700ml',stock:6,compra:515,menudeo:644,mmayoreo:618,mayoreo:593},
+    {id:5,sku:'PRO-491543',nombre:'400 CONEJOS JOVEN 750ml',stock:8,compra:415,menudeo:519,mmayoreo:498,mayoreo:478},
+    {id:6,sku:'PRO-436613',nombre:'400 CONEJOS MEXICANO 700ml',stock:6,compra:735,menudeo:919,mmayoreo:882,mayoreo:846},
+    {id:7,sku:'PRO-270873',nombre:'400 CONEJOS TOBALÁ 750ml',stock:6,compra:505,menudeo:632,mmayoreo:606,mayoreo:581},
+    {id:8,sku:'PRO-969288',nombre:'ABSOLUT MANDRIN 750ml',stock:10,compra:175,menudeo:218.75,mmayoreo:210,mayoreo:201.25},
+  ];
+  const creditos = {
+    'Bar La Cantina':        {limite:15000, usado:2300,  vencido:false},
+    'Salón Los Arcos':       {limite:20000, usado:9100,  vencido:false},
+    'Restaurante El Portal': {limite:12000, usado:4200,  vencido:false},
+    'Fiesta XV Mendoza':     {limite:5000,  usado:4800,  vencido:false},
+    'Cantina El Güero':      {limite:8000,  usado:3500,  vencido:true},
+  };
+  const consumos = [
+    {id:1,folio:'CON-0001',cliente:'Bar La Cantina',lista:'mayoreo',salida:addDays(TODAY,-20),limite:addDays(TODAY,-6),estado:'liquidado',liquida:addDays(TODAY,-5),pago:'Transferencia',
+     lineas:[{pid:5,salen:6,regresan:2,precio:478,costo:415},{pid:8,salen:6,regresan:1,precio:201.25,costo:175}]},
+    {id:2,folio:'CON-0002',cliente:'Boda Familia Ramírez',lista:'mmayoreo',salida:addDays(TODAY,-9),limite:addDays(TODAY,-2),estado:'abierto',
+     lineas:[{pid:2,salen:12,regresan:0,precio:579.99,costo:483.33},{pid:4,salen:4,regresan:0,precio:618,costo:515},{pid:3,salen:24,regresan:0,precio:181.25,costo:145}]},
+    {id:3,folio:'CON-0003',cliente:'Restaurante El Portal',lista:'mayoreo',salida:addDays(TODAY,-6),limite:TODAY,estado:'abierto',
+     lineas:[{pid:6,salen:3,regresan:0,precio:846,costo:735},{pid:7,salen:3,regresan:0,precio:581,costo:505}]},
+    {id:4,folio:'CON-0004',cliente:'Salón Los Arcos',lista:'mmayoreo',salida:addDays(TODAY,-15),limite:addDays(TODAY,-8),estado:'liquidado',liquida:addDays(TODAY,-7),pago:'Crédito',
+     lineas:[{pid:1,salen:2,regresan:1,precio:2880,costo:2540},{pid:2,salen:6,regresan:2,precio:579.99,costo:483.33}]},
+    {id:5,folio:'CON-0005',cliente:'Fiesta XV Mendoza',lista:'menudeo',salida:addDays(TODAY,-1),limite:addDays(TODAY,4),estado:'abierto',
+     lineas:[{pid:8,salen:4,regresan:0,precio:218.75,costo:175}]},
+  ];
+  return {productos,creditos,consumos,next:6};
+}
+
+let S;
+try{ S = JSON.parse(localStorage.getItem('consumo_v3')) }catch(e){}
+if(!S) S = seed();
+const save=()=>{try{localStorage.setItem('consumo_v3',JSON.stringify(S))}catch(e){}};
+const P = id => S.productos.find(p=>p.id===id);
+
+/* ---------- reglas ---------- */
+function estado(c){
+  if(c.estado==='liquidado') return 'liquidado';
+  if(c.limite === TODAY) return 'hoy';
+  return c.limite < TODAY ? 'vencido' : 'abierto';
+}
+const salen = c => c.lineas.reduce((a,l)=>a+l.salen,0);
+const regresan = c => c.lineas.reduce((a,l)=>a+l.regresan,0);
+const valor = c => c.lineas.reduce((a,l)=>a+l.salen*l.precio,0);
+const importeConsumido = c => c.lineas.reduce((a,l)=>a+(l.salen-l.regresan)*l.precio,0);
+const credito = cliente => S.creditos[cliente] || null;
+// Bloqueo de nuevas salidas: consumo vencido sin liquidar o crédito con saldo vencido
+function motivoBloqueo(cliente){
+  const venc = S.consumos.filter(c=>c.cliente.toLowerCase()===cliente.toLowerCase() && estado(c)==='vencido');
+  if(venc.length) return `${cliente} tiene consumo vencido sin liquidar (${venc.map(c=>c.folio).join(', ')}). Liquida antes de dar otra salida.`;
+  const cr = Object.entries(S.creditos).find(([k])=>k.toLowerCase()===cliente.toLowerCase());
+  if(cr && cr[1].vencido) return `${cliente} tiene saldo de crédito vencido. Debe pagar antes de sacar producto a consumo.`;
+  return '';
+}
+
+function toast(t){const e=$('toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,2800)}
+
+/* ---------- alertas ---------- */
+function getAlertas(){
+  const out=[];
+  S.consumos.forEach(c=>{
+    const e=estado(c);
+    if(e==='hoy') out.push({c,sev:'warn',titulo:`${c.cliente} · vence hoy`,det:`${c.folio} · ${salen(c)} piezas fuera · ${fmt(valor(c))}`});
+    if(e==='vencido'){const d=diffDays(TODAY,c.limite);out.push({c,sev:'bad',titulo:`${c.cliente} · vencido hace ${d} día${d===1?'':'s'}`,det:`${c.folio} · ${salen(c)} piezas fuera · ${fmt(valor(c))}`});}
+  });
+  return out.sort((a,b)=>(a.sev==='bad'?0:1)-(b.sev==='bad'?0:1));
+}
+
+function renderAlertas(){
+  const al=getAlertas(), hoy=al.filter(a=>a.sev==='warn'), venc=al.filter(a=>a.sev==='bad');
+  const dot=$('bellDot'); dot.hidden=!al.length; dot.textContent=al.length;
+  $('dropList').innerHTML = al.length ? al.map(a=>`<div class="it" data-ver="${a.c.id}"><span class="sev" style="background:var(--${a.sev})"></span><div><b>${esc(a.titulo)}</b><small>${a.det}</small></div></div>`).join('')
+    : `<div class="empty" style="padding:24px">Sin consumos por vencer hoy.</div>`;
+  const icon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>`;
+  let h='';
+  if(venc.length) h+=`<div class="alert bad"><div class="ic">${icon}</div><div class="txt"><b>${venc.length} vencido${venc.length===1?'':'s'}:</b> ${venc.map(a=>esc(a.c.cliente)).join(', ')}. Contacta al cliente para la devolución y el pago.</div><button class="btn sm" data-filtro="vencido">Ver vencidos</button></div>`;
+  if(hoy.length) h+=`<div class="alert warn"><div class="ic">${icon}</div><div class="txt"><b>Vence${hoy.length===1?'':'n'} hoy (${hoy.length}):</b> ${hoy.map(a=>esc(a.c.cliente)).join(', ')}.</div><button class="btn sm" data-filtro="hoy">Ver de hoy</button></div>`;
+  $('alerts').innerHTML=h;
+}
+
+/* Aviso del navegador: funciona en el sistema (http/https). Se lanza 1 vez por día. */
+function notifSupported(){ try{ return 'Notification' in window }catch(e){ return false } }
+function lanzarAvisoNavegador(){
+  if(!notifSupported() || Notification.permission!=='granted') return;
+  let ultimo=null; try{ultimo=localStorage.getItem('consumo_aviso')}catch(e){}
+  if(ultimo===TODAY) return;
+  const al=getAlertas(); if(!al.length) return;
+  try{
+    new Notification('Consumo · Casa Tahona',{body:al.slice(0,4).map(a=>a.titulo).join('\n')+(al.length>4?`\n+${al.length-4} más`:'')});
+    localStorage.setItem('consumo_aviso',TODAY);
+  }catch(e){}
+}
+function initNotif(){
+  if(!notifSupported()) return;
+  if(Notification.permission==='default') $('notifBtn').hidden=false;
+  $('notifBtn').onclick=async()=>{
+    try{ const r=await Notification.requestPermission(); $('notifBtn').hidden=true;
+      if(r==='granted'){ toast('Avisos activados'); lanzarAvisoNavegador(); } else toast('El navegador bloqueó los avisos; las alertas siguen en la campana');
+    }catch(e){ $('notifBtn').hidden=true; toast('Este navegador no permite avisos; usa la campana'); }
+  };
+  lanzarAvisoNavegador();
+}
+
+/* ---------- render ---------- */
+function renderKPIs(){
+  const abiertos = S.consumos.filter(c=>c.estado!=='liquidado');
+  const venc = abiertos.filter(c=>estado(c)==='vencido').length, hoy=abiertos.filter(c=>estado(c)==='hoy').length;
+  const fuera = abiertos.reduce((a,c)=>a+salen(c),0);
+  const val = abiertos.reduce((a,c)=>a+valor(c),0);
+  const mes = TODAY.slice(0,7);
+  const cobr = S.consumos.filter(c=>c.estado==='liquidado'&&c.liquida.slice(0,7)===mes).reduce((a,c)=>a+importeConsumido(c),0);
+  $('kpis').innerHTML = [
+    ['Consumos abiertos',abiertos.length,`${hoy} vence${hoy===1?'':'n'} hoy · ${venc} vencido${venc===1?'':'s'}`,venc?'var(--bad)':'var(--fg)'],
+    ['Piezas fuera',fuera,'Descontadas del stock','var(--accent)'],
+    ['Valor en consumo',fmt(val),'A precio pactado','var(--fg)'],
+    ['Cobrado este mes',fmt(cobr),'Incluye ventas a crédito','var(--ok)'],
+  ].map(([l,v,s,c])=>`<div class="kpi"><span class="eyebrow">${l}</span><b style="color:${c}">${v}</b><small>${s}</small></div>`).join('');
+}
+
+const PILL = {
+  abierto:'<span class="pill p-open">En consumo</span>',
+  hoy:'<span class="pill p-today">Vence hoy</span>',
+  vencido:'<span class="pill p-late">Vencido</span>',
+  liquidado:'<span class="pill p-done">Liquidado</span>'
+};
+
+function renderTabla(){
+  const q=$('q').value.toLowerCase(), fe=$('fEstado').value;
+  const orden={vencido:0,hoy:1,abierto:2,liquidado:3};
+  const rows = S.consumos.filter(c=>(!q||(c.cliente+c.folio).toLowerCase().includes(q))&&(!fe||estado(c)===fe))
+    .sort((a,b)=>orden[estado(a)]-orden[estado(b)] || b.id-a.id);
+  $('tbody').innerHTML = rows.length? rows.map(c=>{
+    const e=estado(c), liq=c.estado==='liquidado', s=salen(c), r=regresan(c);
+    const cob = liq ? `<b style="color:var(--ok)">${fmt(importeConsumido(c))}</b><div class="sub">${c.pago}</div>` : '—';
+    let acc=`<button class="btn sm" data-ver="${c.id}">Ver</button>`;
+    if(!liq) acc+=` <button class="btn sm primary" data-liq="${c.id}">Devolución</button>`;
+    return `<tr class="${e==='hoy'?'hl':''}">
+      <td><b>${esc(c.cliente)}</b><div class="sub">${c.folio} · ${LISTAS[c.lista]}</div></td>
+      <td>${fDate(c.salida)}</td>
+      <td class="${e==='vencido'?'red':e==='hoy'?'amber':''}">${fDate(c.limite)}</td>
+      <td class="num"><span class="qty q-out">${s}</span></td>
+      <td class="num">${liq?`<span class="qty q-back">${r}</span>`:'—'}</td>
+      <td class="num">${liq?`<span class="qty q-used">${s-r}</span>`:'—'}</td>
+      <td class="num"><b>${fmt(valor(c))}</b></td>
+      <td class="num">${cob}</td>
+      <td>${PILL[e]}</td>
+      <td style="text-align:right">${acc}</td>
+    </tr>`}).join('') : `<tr><td colspan="10" class="empty">No hay consumos con ese filtro.</td></tr>`;
+}
+
+function renderAll(){renderAlertas();renderKPIs();renderTabla()}
+
+/* ---------- eventos generales ---------- */
+$('q').oninput=renderTabla; $('fEstado').onchange=renderTabla;
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').hidden=true);
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.hidden=true}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.modal').forEach(m=>m.hidden=true);$('drop').hidden=true}});
+$('bell').onclick=e=>{e.stopPropagation();$('drop').hidden=!$('drop').hidden};
+$('dropClose').onclick=()=>$('drop').hidden=true;
+document.addEventListener('click',e=>{if(!e.target.closest('.bellwrap'))$('drop').hidden=true});
+$('dropList').addEventListener('click',e=>{const it=e.target.closest('[data-ver]');if(it){$('drop').hidden=true;openVer(+it.dataset.ver)}});
+$('alerts').addEventListener('click',e=>{const b=e.target.closest('[data-filtro]');if(b){$('fEstado').value=b.dataset.filtro;renderTabla()}});
+
+let resetArm=false;
+$('reset').onclick=()=>{ if(!resetArm){resetArm=true;$('reset').textContent='¿Confirmar? Clic otra vez';setTimeout(()=>{resetArm=false;$('reset').textContent='↺ Datos ejemplo'},3000);return}
+  S=seed();save();renderAll();resetArm=false;$('reset').textContent='↺ Datos ejemplo';toast('Datos de ejemplo restaurados')};
+
+/* ---------- nueva salida ---------- */
+let lines=[];
+function renderN(){
+  const lista=$('nLista').value;
+  $('nProd').innerHTML = S.productos.map(p=>`<option value="${p.id}" ${p.stock<1?'disabled':''}>${esc(p.nombre)} — stock ${p.stock}</option>`).join('');
+  $('nLines').innerHTML = lines.length? lines.map((l,i)=>{const p=P(l.pid),pr=p[lista];return `<tr>
+    <td><b>${esc(p.nombre)}</b><div class="sub">${p.sku}</div></td><td class="num">${p.stock}</td>
+    <td class="num"><input type="number" min="1" max="${p.stock}" value="${l.qty}" data-nq="${i}" style="width:72px;text-align:right"></td>
+    <td class="num">${fmt(pr)}</td><td class="num"><b>${fmt(pr*l.qty)}</b></td>
+    <td><button class="btn ghost sm" data-nd="${i}">✕</button></td></tr>`}).join('') : `<tr><td colspan="6" class="empty">Agrega los productos que se llevan.</td></tr>`;
+  totN();
+}
+function totN(){const lista=$('nLista').value;$('nTotal').textContent=fmt(lines.reduce((a,l)=>a+P(l.pid)[lista]*l.qty,0))}
+function checkCliente(){const m=$('nCliente').value.trim()?motivoBloqueo($('nCliente').value.trim()):'';$('nErr').textContent=m;$('nSave').disabled=!!m;$('nSave').style.opacity=m?.45:1;}
+$('nuevo').onclick=()=>{lines=[];$('nCliente').value='';$('nLimite').value=addDays(TODAY,7);$('nErr').textContent='';$('nSave').disabled=false;$('nSave').style.opacity=1;
+  $('clientes').innerHTML=[...new Set([...S.consumos.map(c=>c.cliente),...Object.keys(S.creditos)])].map(c=>`<option value="${esc(c)}">`).join('');renderN();$('mNuevo').hidden=false;$('nCliente').focus()};
+$('nCliente').addEventListener('input',checkCliente);
+$('nLista').onchange=renderN;
+$('nAdd').onclick=()=>{const pid=+$('nProd').value,q=Math.max(1,+$('nQty').value||1),ex=lines.find(l=>l.pid===pid);
+  if(ex) ex.qty+=q; else lines.push({pid,qty:q}); $('nQty').value=1; renderN();};
+$('nLines').addEventListener('input',e=>{if(e.target.dataset.nq!==undefined){lines[+e.target.dataset.nq].qty=Math.max(1,+e.target.value||1);totN()}});
+$('nLines').addEventListener('change',renderN);
+$('nLines').addEventListener('click',e=>{const b=e.target.closest('[data-nd]');if(b){lines.splice(+b.dataset.nd,1);renderN()}});
+$('nSave').onclick=()=>{
+  const cliente=$('nCliente').value.trim(),lista=$('nLista').value,limite=$('nLimite').value;
+  if(!cliente) return $('nErr').textContent='Escribe el cliente o establecimiento.';
+  const bloq=motivoBloqueo(cliente); if(bloq) return $('nErr').textContent=bloq;
+  if(!lines.length) return $('nErr').textContent='Agrega al menos un producto.';
+  if(!limite||limite<TODAY) return $('nErr').textContent='La fecha límite debe ser hoy o posterior.';
+  const sin=lines.find(l=>l.qty>P(l.pid).stock); if(sin) return $('nErr').textContent=`No hay stock suficiente de ${P(sin.pid).nombre} (disponible: ${P(sin.pid).stock}).`;
+  const folio='CON-'+String(S.next).padStart(4,'0');
+  const c={id:S.next++,folio,cliente,lista,salida:TODAY,limite,estado:'abierto',
+    lineas:lines.map(l=>{const p=P(l.pid);return{pid:l.pid,salen:l.qty,regresan:0,precio:p[lista],costo:p.compra}})};
+  c.lineas.forEach(l=>P(l.pid).stock-=l.salen);
+  S.consumos.push(c);save();renderAll();$('mNuevo').hidden=true;toast(`${folio} registrado · ${salen(c)} piezas descontadas del stock · imprimiendo ticket de salida`);
+};
+
+/* ---------- devolución y cobro ---------- */
+let cur=null, ret=[], bloqueoCred='';
+function calcL(){
+  let tot=0,util=0,back=0,used=0;
+  cur.lineas.forEach((l,i)=>{const u=l.salen-ret[i];tot+=u*l.precio;util+=u*(l.precio-l.costo);back+=ret[i];used+=u;
+    $('lc'+i).textContent=u;$('lt'+i).textContent=fmt(u*l.precio)});
+  const cred=$('lPago').value==='Crédito';
+  $('lTotal').textContent=fmt(tot);
+  $('lTotLbl').textContent=cred?'Se carga al crédito':'Total a cobrar';
+  $('lSave').textContent=cred?'Cargar a crédito y cerrar':'Cobrar y cerrar consumo';
+  $('lNote').innerHTML=`Regresan <b>${back}</b> piezas al stock · Se cobran <b>${used}</b> piezas consumidas · Utilidad estimada <b>${fmt(util)}</b>`;
+  // corroborar crédito del cliente (viene del módulo de Créditos)
+  bloqueoCred='';
+  const box=$('lCred'); box.hidden=!cred;
+  if(cred){
+    const cr=credito(cur.cliente);
+    if(!cr){ bloqueoCred=`${cur.cliente} no tiene crédito autorizado. Elige otro método de pago.`;
+      box.innerHTML=`<div class="alert bad"><div class="txt"><b>Sin crédito:</b> ${esc(cur.cliente)} no está registrado en el módulo de Créditos.</div></div>`; }
+    else{
+      const disp=cr.limite-cr.usado, despues=cr.usado+tot;
+      if(cr.vencido) bloqueoCred='El cliente tiene saldo de crédito vencido. Cobra con otro método.';
+      else if(tot>disp) bloqueoCred=`El consumo (${fmt(tot)}) supera el crédito disponible (${fmt(disp)}).`;
+      box.innerHTML=`<div class="credbox">
+        <div><span class="eyebrow">Crédito autorizado</span><b>${fmt(cr.limite)}</b></div>
+        <div><span class="eyebrow">Saldo actual</span><b>${fmt(cr.usado)}</b></div>
+        <div><span class="eyebrow">Disponible</span><b style="color:${disp>=tot?'var(--ok)':'var(--bad)'}">${fmt(disp)}</b></div>
+        <div><span class="eyebrow">Saldo tras consumo</span><b>${fmt(despues)}</b></div>
+      </div>`;
+    }
+  }
+  $('lErr').textContent=bloqueoCred;
+  $('lSave').disabled=!!bloqueoCred; $('lSave').style.opacity=bloqueoCred?.45:1;
+}
+function openLiq(id){
+  cur=S.consumos.find(c=>c.id===id);ret=cur.lineas.map(()=>0);$('lErr').textContent='';$('lPago').value='Efectivo';
+  $('lSub').textContent=`${cur.folio} · ${cur.cliente} · salió ${fDate(cur.salida)}`;
+  $('lLines').innerHTML=cur.lineas.map((l,i)=>`<tr><td><b>${esc(P(l.pid).nombre)}</b></td><td class="num"><span class="qty q-out">${l.salen}</span></td>
+    <td class="num"><input type="number" min="0" max="${l.salen}" value="0" data-ri="${i}" id="lr${i}" style="width:72px;text-align:right"></td>
+    <td class="num"><span class="qty q-used" id="lc${i}"></span></td><td class="num">${fmt(l.precio)}</td><td class="num"><b id="lt${i}"></b></td></tr>`).join('');
+  calcL();$('mLiq').hidden=false;
+}
+$('lPago').onchange=calcL;
+$('lLines').addEventListener('input',e=>{const i=e.target.dataset.ri;if(i===undefined)return;let v=Math.floor(+e.target.value||0);
+  const max=cur.lineas[i].salen; if(v>max){v=max;e.target.value=max} if(v<0){v=0;e.target.value=0} ret[i]=v;calcL()});
+$('lTodo').onclick=()=>{cur.lineas.forEach((l,i)=>{ret[i]=l.salen;$('lr'+i).value=l.salen});calcL()};
+$('lNada').onclick=()=>{cur.lineas.forEach((l,i)=>{ret[i]=0;$('lr'+i).value=0});calcL()};
+$('lSave').onclick=()=>{
+  if(bloqueoCred) return;
+  const pago=$('lPago').value;
+  cur.lineas.forEach((l,i)=>{l.regresan=ret[i];P(l.pid).stock+=ret[i]});
+  cur.estado='liquidado';cur.liquida=TODAY;cur.pago=pago;
+  const total=importeConsumido(cur);
+  if(pago==='Crédito') credito(cur.cliente).usado+=total;
+  save();renderAll();$('mLiq').hidden=true;
+  toast(`${cur.folio} liquidado · ${fmt(total)} ${pago==='Crédito'?'cargado al crédito':'cobrado'} · imprimiendo ticket`);
+};
+
+/* ---------- detalle ---------- */
+function openVer(id){
+  const c=S.consumos.find(x=>x.id===id),liq=c.estado==='liquidado',e=estado(c);
+  $('tVer').textContent=`${c.folio} · ${c.cliente}`;
+  let sub=`${LISTAS[c.lista]} · salida ${fDate(c.salida)} · límite ${fDate(c.limite)}`;
+  if(liq) sub+=` · liquidado ${fDate(c.liquida)} (${c.pago})`;
+  $('vSub').textContent=sub;
+  $('vBody').innerHTML=`<div>${PILL[e]}</div>
+  <div class="panel"><div class="scroll"><table><thead><tr><th>Producto</th><th class="num">Salieron</th><th class="num">Regresaron</th><th class="num">Consumidas</th><th class="num">Precio</th><th class="num">${liq?'Cobrado':'Valor'}</th></tr></thead><tbody>
+  ${c.lineas.map(l=>`<tr><td><b>${esc(P(l.pid).nombre)}</b><div class="sub">${P(l.pid).sku}</div></td><td class="num">${l.salen}</td><td class="num">${liq?l.regresan:'—'}</td><td class="num">${liq?l.salen-l.regresan:'—'}</td><td class="num">${fmt(l.precio)}</td><td class="num"><b>${fmt((liq?l.salen-l.regresan:l.salen)*l.precio)}</b></td></tr>`).join('')}
+  </tbody></table></div></div>
+  <div class="bar"><span class="grow"></span><div style="text-align:right"><div class="eyebrow">${liq?`Total cobrado · ${c.pago}`:'Valor en consumo'}</div><div class="total">${fmt(liq?importeConsumido(c):valor(c))}</div></div></div>`;
+  $('mVer').hidden=false;
+}
+$('tbody').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.liq)openLiq(+b.dataset.liq); if(b.dataset.ver)openVer(+b.dataset.ver)});
+
+renderAll();
+initNotif();
+</script>
+</body>
+</html>
