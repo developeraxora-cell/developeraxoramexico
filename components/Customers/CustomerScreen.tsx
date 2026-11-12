@@ -342,7 +342,7 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
       total: Number(note.total ?? 0),
       balance: Number(note.balance ?? 0),
       status: note.status,
-      reference: historyNoteReferences[note.id] ?? noteSaleSummaries[note.id]?.reference ?? null,
+      reference: note.sale_reference?.trim() || historyNoteReferences[note.id] || noteSaleSummaries[note.id]?.reference || null,
       note,
       sale: null,
     }));
@@ -1160,11 +1160,12 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
   const fetchNoteSaleSummary = async (note: CreditNoteWithStatus): Promise<SaleSummaryData> => {
     const transactionId = await resolveSaleTransactionId(note);
-    return fetchSaleSummaryByTransactionId(transactionId, {
+    const summary = await fetchSaleSummaryByTransactionId(transactionId, {
       customerName: selectedCustomer?.name ?? null,
       customerAddress: selectedCustomer?.address ?? null,
       totalAmount: Number(note.total ?? 0),
     });
+    return { ...summary, reference: note.sale_reference?.trim() || summary.reference };
   };
 
   const fetchCashSaleSummary = async (sale: CashSaleHistory): Promise<SaleSummaryData> => {
