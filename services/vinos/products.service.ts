@@ -49,7 +49,7 @@ export interface ProductWithStock extends VinosProduct {
   last_purchase_cost: number | null;
 }
 
-export type ProductHistoryStatus = 'INGRESO' | 'SALIDA' | 'ACTUALIZACION' | 'DEVOLUCION';
+export type ProductHistoryStatus = 'INGRESO' | 'SALIDA' | 'ACTUALIZACION' | 'DEVOLUCION' | 'AJUSTE';
 
 // Products whose historical cancellations were reconciled and must show the stock return.
 const RETURN_HISTORY_PRODUCT_IDS = new Set([
@@ -780,12 +780,12 @@ export const vinosProductsService = {
         const consumption = asOne(movement.consumption) as { folio: number; sale_id: string | null } | null;
         if (consumption?.sale_id) consumptionSaleIds.add(consumption.sale_id);
         consumptionHistory.push({
-          id: `CON-${movement.id}`, status: movement.event === 'SALIDA' ? 'SALIDA' : 'DEVOLUCION',
+          id: `CON-${movement.id}`, status: movement.event === 'SALIDA' ? 'SALIDA' : movement.event === 'AJUSTE_EDICION' ? 'AJUSTE' : 'DEVOLUCION',
           created_at: movement.created_at, qty: Math.abs(Number(movement.qty)), stock_movement_qty: Number(movement.qty),
           stock_before: Number(movement.stock_before), stock_after: Number(movement.stock_after),
           unit_price: null, subtotal: null, price_type: null, profit: null,
-          source: `${movement.event === 'SALIDA' ? 'Salida a consumo' : movement.event === 'CANCELACION' ? 'Cancelacion de consumo' : 'Devolucion de consumo'} CON-${consumption?.folio ?? ''}`,
-          detail: movement.event === 'CANCELACION' ? 'Salida cancelada; piezas devueltas al stock.' : 'Movimiento de inventario registrado al confirmar el consumo.', user_id: movement.actor_id, user_name: null,
+          source: `${movement.event === 'SALIDA' ? 'Salida a consumo' : movement.event === 'CANCELACION' ? 'Cancelacion de consumo' : movement.event === 'AJUSTE_EDICION' ? 'Ajuste por edicion de consumo' : 'Devolucion de consumo'} CON-${consumption?.folio ?? ''}`,
+          detail: movement.event === 'CANCELACION' ? 'Salida cancelada; piezas devueltas al stock.' : movement.event === 'AJUSTE_EDICION' ? 'Existencia ajustada al editar una salida abierta.' : 'Movimiento de inventario registrado al confirmar el consumo.', user_id: movement.actor_id, user_name: null,
         });
       }
       if ((data ?? []).length < 500) break;

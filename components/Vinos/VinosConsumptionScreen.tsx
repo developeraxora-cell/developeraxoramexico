@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Plus, Eye, Printer, RefreshCw, Trash2, PackageCheck, Bell, X } from 'lucide-react';
+import { Plus, Eye, Printer, RefreshCw, Trash2, PackageCheck, Bell, X, Pencil } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { vinosCustomersService, VinosCustomer } from '../../services/vinos/customers.service';
 import { vinosProductsService, ProductWithStock } from '../../services/vinos/products.service';
@@ -26,7 +26,7 @@ export default function VinosConsumptionScreen({ selectedBranchId, branches, cur
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('');
   const [today, setToday] = useState(mexicoToday());
-  const [mode, setMode] = useState<'new' | 'settle' | 'detail' | 'cancel' | null>(null);
+  const [mode, setMode] = useState<'new' | 'edit' | 'settle' | 'detail' | 'cancel' | null>(null);
   const [selected, setSelected] = useState<Consumption | null>(null);
   const [customer, setCustomer] = useState('');
   const [tier, setTier] = useState('MENUDEO');
@@ -40,6 +40,7 @@ export default function VinosConsumptionScreen({ selectedBranchId, branches, cur
   const [busy, setBusy] = useState(false);
   const [modalError, setModalError] = useState('');
   const [cancelReason, setCancelReason] = useState('');
+  const [editReason, setEditReason] = useState('');
   const requestId = useRef('');
   const submitting = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -61,7 +62,7 @@ export default function VinosConsumptionScreen({ selectedBranchId, branches, cur
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => { const timer = window.setInterval(() => { setToday(mexicoToday()); if(!submitting.current) void refresh(); }, 60000); return () => clearInterval(timer); }, [refresh]);
   useEffect(() => { if(mode) dialog.current?.showModal(); else dialog.current?.close(); }, [mode]);
-  const activeCustomer = mode === 'new' ? customer : selected?.customer_id;
+  const activeCustomer = mode === 'new' || mode === 'edit' ? customer : selected?.customer_id;
   useEffect(() => {
     let active = true; setCredit(null); setCreditError('');
     if(activeCustomer && mode) consumptionService.credit(activeCustomer).then(c => { if(active) setCredit(c); }).catch(e => { if(active) setCreditError(message(e)); });
@@ -70,9 +71,10 @@ export default function VinosConsumptionScreen({ selectedBranchId, branches, cur
   const open = rows.filter(r => r.status === 'OPEN');
   const overdue = open.filter(r => r.due_date < today);
   const dueToday = open.filter(r => r.due_date === today);
-  const total = mode === 'new' ? draft.reduce((s,i) => s+i.qty*i.unit_price,0)
+  const total = mode === 'new' || mode === 'edit' ? draft.reduce((s,i) => s+i.qty*i.unit_price,0)
     : (selected?.items ?? []).reduce((s,i) => s+(i.qty_out-(returned[i.id] ?? 0))*i.unit_price,0);
-  const blocked = mode === 'new' && credit && (credit.overdue || credit.overdue_consumption || credit.unknown_due_dates);
+  const blocked = !!credit && (credit.overdue || credit.overdue_consumption || credit.unknown_due_dates)
+    && (mode === 'new' || (mode === 'edit' && customer !== selected?.customer_id));
   const invalidCredit = payment === 'CREDITO' && total > 0 && (!credit || credit.credit_limit<=0 || credit.overdue || credit.unknown_due_dates || total>credit.available);
   const visible = rows.filter(r => (filter ? consumptionState(r,today)===filter : r.status!=='CANCELLED') && `${r.customer_name} ${consumptionFolio(r.folio)}`.toLowerCase().includes(search.toLowerCase()));
   function openDetail(row: Consumption, next: 'detail' | 'settle') {
@@ -94,12 +96,21 @@ export default function VinosConsumptionScreen({ selectedBranchId, branches, cur
     finally { submitting.current = false; setBusy(false); }
   }
   function newConsumption() {
-    requestId.current=crypto.randomUUID(); setCustomer(''); setDraft([]); setDue(today); setTier('MENUDEO'); setProductSearch(''); setModalError(''); setMode('new');
+    requestId.current=crypto.randomUUID(); setCustomer(''); setDraft([]); setDue(today); setTier('MENUDEO'); setProductSearch(''); setEditReason(''); setModalError(''); setMode('new');
+  }
+  function editConsumption(row: Consumption) {
+    setSelected(row); setCustomer(row.customer_id); setDue(row.due_date); setTier(row.price_type); setProductSearch(''); setEditReason(''); setModalError('');
+    setDraft(row.items.map(item => ({ product_id:item.product_id,name:item.product_name,qty:item.qty_out,
+      unit_price:Number(item.unit_price),available:(products.find(product => product.id===item.product_id)?.total_stock ?? 0)+item.qty_out })));
+    setMode('edit');
+  }
+  function getEditableStock(product: ProductWithStock) {
+    return product.total_stock + (mode==='edit' ? selected?.items.find(item => item.product_id===product.id)?.qty_out ?? 0 : 0);
   }
   function addProduct(p: ProductWithStock) {
     if(draft.some(i => i.product_id===p.id)) return;
     const price = p.single_price_mode || tier==='MENUDEO' ? p.price_retail : tier==='MAYOREO' ? p.price_wholesale : p.price_mid_wholesale;
-    setDraft([...draft,{ product_id:p.id,name:p.name,qty:1,unit_price:Number(price),available:p.total_stock }]);
+    setDraft([...draft,{ product_id:p.id,name:p.name,qty:1,unit_price:Number(price),available:getEditableStock(p) }]);
   }
   function print(row: Consumption, settlement: boolean) {
     try { printConsumptionTicket(row,settlement,window.open('','_blank')); } catch(e) { setModalError(message(e)); }
@@ -107,26 +118,29 @@ export default function VinosConsumptionScreen({ selectedBranchId, branches, cur
   async function submit() {
     if(submitting.current || !branch) return;
     setModalError('');
-    if(mode==='new' && (!customer || !draft.length || !credit || blocked || !due || due<today || draft.some(i=>!Number.isInteger(i.qty)||i.qty<=0||i.qty>i.available||!Number.isFinite(i.unit_price)||i.unit_price<0))) {
+    if((mode==='new' || mode==='edit') && (!customer || !draft.length || !credit || blocked || !due || due<today || draft.some(i=>!Number.isInteger(i.qty)||i.qty<=0||i.qty>i.available||!Number.isFinite(i.unit_price)||i.unit_price<0))) {
       setModalError('Revisa cliente, fecha, piezas disponibles y precios.'); return;
     }
+    if(mode==='edit' && !editReason.trim()) { setModalError('Escribe el motivo de la edicion.'); return; }
     if(mode==='settle' && (invalidCredit || selected?.items.some(i=>!Number.isInteger(returned[i.id])||returned[i.id]<0||returned[i.id]>i.qty_out))) {
       setModalError('Revisa las devoluciones y el credito disponible.'); return;
     }
     const isNew = mode==='new';
-    const ticketWindow = window.open('','_blank');
+    const isEdit = mode==='edit';
+    const ticketWindow = isNew || mode==='settle' ? window.open('','_blank') : null;
     submitting.current=true; setBusy(true);
     let committed = false;
     try {
       let id = selected?.id;
       if(isNew) id=await consumptionService.create({ id:requestId.current,branch_id:branch,customer_id:customer,due_date:due,actor_id:currentUser.id,price_type:tier,items:draft });
+      else if(isEdit && id) await consumptionService.edit({ id,customer_id:customer,due_date:due,actor_id:currentUser.id,price_type:tier,reason:editReason.trim(),items:draft.map(({product_id,qty,unit_price})=>({product_id,qty,unit_price})) });
       else if(id) await consumptionService.settle(id,currentUser.id,payment,selected!.items.map(i=>({id:i.id,qty:returned[i.id]})));
       committed=true;
       const updated=await consumptionService.list(branch);
       setRows(updated); const saved=updated.find(r=>r.id===id);
       if(!saved) throw new Error('Operacion guardada. Recarga el listado para imprimir el ticket.');
-      setSelected(saved); setMode('detail'); setNotice(isNew ? 'Salida registrada.' : 'Consumo liquidado.');
-      try { printConsumptionTicket(saved,!isNew,ticketWindow); } catch(e) { setModalError(`Operacion guardada. ${message(e)}`); }
+      setSelected(saved); setMode('detail'); setNotice(isNew ? 'Salida registrada.' : isEdit ? 'Salida actualizada.' : 'Consumo liquidado.');
+      if(!isEdit) try { printConsumptionTicket(saved,!isNew,ticketWindow); } catch(e) { setModalError(`Operacion guardada. ${message(e)}`); }
       window.dispatchEvent(new Event('vinos-consumption-changed'));
       void refresh();
     } catch(e) { ticketWindow?.close(); setModalError(`${committed ? 'Operacion guardada. ' : ''}${message(e)}`); }
@@ -147,21 +161,22 @@ export default function VinosConsumptionScreen({ selectedBranchId, branches, cur
         <td><strong>{consumptionFolio(r.folio)}</strong><span>{r.customer_name}</span></td><td>{new Date(r.created_at).toLocaleDateString('es-MX',{timeZone:'America/Mexico_City'})}</td><td>{r.due_date}</td>
         <td>{r.items.reduce((s,i)=>s+i.qty_out,0)}</td><td>{r.status==='OPEN'?'—':r.items.reduce((s,i)=>s+i.qty_returned,0)}</td><td>{r.status==='OPEN'?'—':r.items.reduce((s,i)=>s+i.qty_out-i.qty_returned,0)}</td>
         <td>{money(r.status==='OPEN'?r.items.reduce((s,i)=>s+i.qty_out*i.unit_price,0):0)}</td><td>{r.status==='SETTLED'?money(r.total):'—'}</td><td><span className={`consumption-status ${consumptionState(r,today)==='Vencido'?'late':r.status==='SETTLED'?'done':''}`}>{consumptionState(r,today)}</span></td>
-        <td><div className="consumption-actions"><button aria-label={`Ver ${consumptionFolio(r.folio)}`} title="Detalle" onClick={()=>openDetail(r,'detail')}><Eye size={18}/></button>{r.status==='OPEN'&&<><button title="Liquidar" aria-label={`Liquidar ${consumptionFolio(r.folio)}`} onClick={()=>openDetail(r,'settle')}><PackageCheck size={18}/></button><button className="cancel-action" style={{ color: '#dc2626', background: '#fef2f2' }} title="Eliminar salida" aria-label={`Eliminar ${consumptionFolio(r.folio)}`} onClick={()=>{setSelected(r);setCancelReason('');setModalError('');setMode('cancel');}}><Trash2 size={17}/></button></>}</div></td>
+        <td><div className="consumption-actions"><button aria-label={`Ver ${consumptionFolio(r.folio)}`} title="Detalle" onClick={()=>openDetail(r,'detail')}><Eye size={18}/></button>{r.status==='OPEN'&&<><button title="Editar salida" aria-label={`Editar ${consumptionFolio(r.folio)}`} onClick={()=>editConsumption(r)}><Pencil size={17}/></button><button title="Liquidar" aria-label={`Liquidar ${consumptionFolio(r.folio)}`} onClick={()=>openDetail(r,'settle')}><PackageCheck size={18}/></button><button className="cancel-action" style={{ color: '#dc2626', background: '#fef2f2' }} title="Eliminar salida" aria-label={`Eliminar ${consumptionFolio(r.folio)}`} onClick={()=>{setSelected(r);setCancelReason('');setModalError('');setMode('cancel');}}><Trash2 size={17}/></button></>}</div></td>
       </tr>)}</tbody></table></div>
     <dialog ref={dialog} className="consumption-dialog" style={{ position: 'fixed', inset: 'auto', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', margin: 0 }} onCancel={e=>{if(busy)e.preventDefault();else setMode(null);}}>
-      <header><div><h2>{mode==='new'?'Nueva salida a consumo':mode==='settle'?'Devolucion y cobro':mode==='cancel'?'Cancelar salida':selected?consumptionFolio(selected.folio):'Detalle'}</h2>{mode!=='new'&&<p>{selected?.customer_name} · Fecha limite: {selected?.due_date}</p>}</div><button disabled={busy} aria-label="Cerrar" title="Cerrar" onClick={()=>setMode(null)}><X size={20}/></button></header>
+      <header><div><h2>{mode==='new'?'Nueva salida a consumo':mode==='edit'&&selected?`Editar ${consumptionFolio(selected.folio)}`:mode==='settle'?'Devolucion y cobro':mode==='cancel'?'Cancelar salida':selected?consumptionFolio(selected.folio):'Detalle'}</h2>{mode!=='new'&&<p>{selected?.customer_name} · Fecha limite: {selected?.due_date}</p>}</div><button disabled={busy} aria-label="Cerrar" title="Cerrar" onClick={()=>setMode(null)}><X size={20}/></button></header>
       <div className="consumption-dialog-body">
-        {mode==='cancel' && selected ? <section className="consumption-cancel"><label>Observación<textarea rows={4} maxLength={500} value={cancelReason} disabled={busy} onChange={e=>setCancelReason(e.target.value)} placeholder="Escribe el motivo de eliminación"/></label></section> : mode==='new' ? <div className="consumption-new-layout">
+        {mode==='cancel' && selected ? <section className="consumption-cancel"><label>Observación<textarea rows={4} maxLength={500} value={cancelReason} disabled={busy} onChange={e=>setCancelReason(e.target.value)} placeholder="Escribe el motivo de eliminación"/></label></section> : mode==='new' || mode==='edit' ? <div className="consumption-new-layout">
           <section className="consumption-new-catalog">
           <div className="consumption-form"><label>Cliente<select value={customer} onChange={e=>setCustomer(e.target.value)} disabled={busy}><option value="">Seleccionar cliente</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Lista de precio<select value={tier} disabled={busy||draft.length>0} onChange={e=>setTier(e.target.value)}>{Object.entries(tierLabel).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label><label>Fecha limite<input type="date" min={today} value={due} disabled={busy} onChange={e=>setDue(e.target.value)}/></label></div>
           {blocked && <p className="consumption-error" role="alert">Cliente bloqueado por consumo o credito vencido. Revisa sus pendientes.</p>}
           {creditError && <p role="alert" className="consumption-error">{creditError}</p>}
           <label>Producto<input value={productSearch} disabled={busy} onChange={e=>setProductSearch(e.target.value)} placeholder="Nombre, SKU o codigo de barras"/></label>
-          <div className="consumption-picker">{products.filter(p=>`${p.name} ${p.sku} ${p.barcode??''}`.toLowerCase().includes(productSearch.toLowerCase())).slice(0,12).map(p=><button key={p.id} disabled={busy||p.total_stock<1||draft.some(i=>i.product_id===p.id)} onClick={()=>addProduct(p)}><Plus size={16}/><span>{p.name}</span><small>{p.total_stock} disponibles</small></button>)}</div>
+          <div className="consumption-picker">{products.filter(p=>`${p.name} ${p.sku} ${p.barcode??''}`.toLowerCase().includes(productSearch.toLowerCase())).slice(0,12).map(p=><button key={p.id} disabled={busy||getEditableStock(p)<1||draft.some(i=>i.product_id===p.id)} onClick={()=>addProduct(p)}><Plus size={16}/><span>{p.name}</span><small>{getEditableStock(p)} disponibles</small></button>)}</div>
           </section>
           <section className="consumption-new-selected" aria-label="Productos seleccionados">
           <div className="consumption-table"><table><thead><tr><th>Producto</th><th>Piezas</th><th>Precio pactado</th><th>Importe</th><th></th></tr></thead><tbody>{draft.map((i,index)=><tr key={i.product_id}><td>{i.name}</td><td><input aria-label={`Piezas ${i.name}`} type="number" min="1" max={i.available} step="1" value={i.qty} disabled={busy} onChange={e=>setDraft(draft.map((x,n)=>n===index?{...x,qty:Number(e.target.value)}:x))}/></td><td><input aria-label={`Precio ${i.name}`} type="number" min="0" step="0.01" value={i.unit_price} disabled={busy} onChange={e=>setDraft(draft.map((x,n)=>n===index?{...x,unit_price:Number(e.target.value)}:x))}/></td><td>{money(i.qty*i.unit_price)}</td><td><button disabled={busy} title="Quitar" aria-label={`Quitar ${i.name}`} onClick={()=>setDraft(draft.filter((_,n)=>n!==index))}><Trash2 size={16}/></button></td></tr>)}</tbody></table></div>
+          {mode==='edit'&&<label className="mt-3">Motivo de edición<textarea rows={2} maxLength={500} value={editReason} disabled={busy} onChange={e=>setEditReason(e.target.value)} placeholder="Indica por qué se modifica esta salida"/></label>}
           </section>
         </div> : selected && <>
           <div className="consumption-table"><table><thead><tr><th>Producto</th><th>Salieron</th><th>Regresan</th><th>Consumidas</th><th>Precio</th><th>Importe</th></tr></thead><tbody>{selected.items.map(i=><tr key={i.id}><td>{i.product_name}</td><td>{i.qty_out}</td><td>{mode==='settle'?<input aria-label={`Regresan ${i.product_name}`} type="number" min="0" max={i.qty_out} step="1" value={returned[i.id]??0} disabled={busy} onChange={e=>setReturned({...returned,[i.id]:Number(e.target.value)})}/>:selected.status==='OPEN'?'—':i.qty_returned}</td><td>{mode==='settle'?i.qty_out-(returned[i.id]??0):selected.status==='OPEN'?'—':i.qty_out-i.qty_returned}</td><td>{money(i.unit_price)}</td><td>{money((mode==='settle'?i.qty_out-(returned[i.id]??0):selected.status==='OPEN'?i.qty_out:i.qty_out-i.qty_returned)*i.unit_price)}</td></tr>)}</tbody></table></div>
@@ -172,7 +187,7 @@ export default function VinosConsumptionScreen({ selectedBranchId, branches, cur
         {modalError&&<p role="alert" className="consumption-error">{modalError}</p>}
       </div>
       {mode==='cancel'&&<footer><button disabled={busy} onClick={()=>setMode('detail')}>Volver</button><button className="danger" disabled={busy||!cancelReason.trim()} onClick={()=>void cancelSelected()}>{busy?'Eliminando...':'Eliminar salida'}</button></footer>}
-      {mode!=='detail'&&mode!=='cancel'&&<footer><div><span>{mode==='new'?'Valor de salida':payment==='CREDITO'?'Cargo a credito':'Total a cobrar'}</span><strong>{money(total)}</strong></div><button className="primary" disabled={busy||!!blocked||(mode==='new'&&(!credit||!draft.length))||(mode==='settle'&&invalidCredit)} onClick={()=>void submit()}>{busy?'Guardando...':mode==='new'?'Confirmar salida e imprimir':'Liquidar e imprimir'}</button></footer>}
+      {mode!=='detail'&&mode!=='cancel'&&<footer><div><span>{mode==='new'||mode==='edit'?'Valor de salida':payment==='CREDITO'?'Cargo a credito':'Total a cobrar'}</span><strong>{money(total)}</strong></div><button className="primary" disabled={busy||!!blocked||((mode==='new'||mode==='edit')&&(!credit||!draft.length||(mode==='edit'&&!editReason.trim())))||(mode==='settle'&&invalidCredit)} onClick={()=>void submit()}>{busy?'Guardando...':mode==='new'?'Confirmar salida e imprimir':mode==='edit'?'Guardar cambios':'Liquidar e imprimir'}</button></footer>}
     </dialog>
   </div>;
 }

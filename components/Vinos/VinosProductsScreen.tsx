@@ -1011,6 +1011,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                           const badgeClass =
                             row.status === 'INGRESO' ? 'bg-green-100 text-green-700'
                               : row.status === 'DEVOLUCION' ? 'bg-teal-100 text-teal-700'
+                              : row.status === 'AJUSTE' ? 'bg-amber-100 text-amber-700'
                               : row.status === 'SALIDA' ? 'bg-orange-100 text-orange-700'
                                 : 'bg-blue-100 text-blue-700';
                           return (
@@ -1023,7 +1024,7 @@ const VinosProductsScreen: React.FC<Props> = ({ selectedBranchId, branches, curr
                               </td>
                               <td className="px-4 py-3">
                                 <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black ${badgeClass}`}>
-                                  {row.id.startsWith('CON-') ? row.status === 'SALIDA' ? 'SALIDA A CONSUMO' : 'DEVOLUCION CONSUMO' : row.status === 'INGRESO' ? 'COMPRA' : row.status === 'SALIDA' ? 'VENTA' : row.status === 'DEVOLUCION' ? 'VENTA CANCELADA' : row.status}
+                                  {row.id.startsWith('CON-') ? row.status === 'SALIDA' ? 'SALIDA A CONSUMO' : row.status === 'AJUSTE' ? 'AJUSTE DE CONSUMO' : 'DEVOLUCION CONSUMO' : row.status === 'INGRESO' ? 'COMPRA' : row.status === 'SALIDA' ? 'VENTA' : row.status === 'DEVOLUCION' ? 'VENTA CANCELADA' : row.status}
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-sm font-bold text-slate-900">

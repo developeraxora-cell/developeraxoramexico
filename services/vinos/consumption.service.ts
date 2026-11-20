@@ -12,6 +12,7 @@ export interface Consumption {
   settled_at: string | null; status: 'OPEN' | 'SETTLED' | 'CANCELLED';
   price_type: string; payment_method: string | null; sale_id: string | null;
   total: number; items: ConsumptionItem[]; cancelled_at: string | null; cancelled_by: string | null; cancel_reason: string | null;
+  updated_at?: string | null; updated_by?: string | null;
 }
 export interface ConsumptionCredit {
   credit_limit: number; debt: number; available: number;
@@ -48,6 +49,12 @@ export const consumptionService = {
   async create(input: { id: string; branch_id: number; customer_id: string; due_date: string; actor_id: string; price_type: string;
     items: Array<{ product_id: string; qty: number; unit_price: number }> }): Promise<string> {
     const { data, error } = await supabaseVinos.rpc('create_vinos_consumption', { p_input: input });
+    if (error) throw new Error(error.message);
+    return data;
+  },
+  async edit(input: { id: string; customer_id: string; due_date: string; actor_id: string; price_type: string; reason: string;
+    items: Array<{ product_id: string; qty: number; unit_price: number }> }): Promise<string> {
+    const { data, error } = await supabaseVinos.rpc('edit_vinos_consumption', { p_input: input });
     if (error) throw new Error(error.message);
     return data;
   },
