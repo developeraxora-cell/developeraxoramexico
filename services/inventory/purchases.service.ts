@@ -457,7 +457,10 @@ export const purchasesService = {
     } = input;
 
     const normalizedBusinessUnit = business_unit ?? 'materiales';
-    const saleReference = reference?.trim() || await getNextSaleReference(branch_id, normalizedBusinessUnit);
+    // Jesus Maria Materiales assigns the next folio atomically in the database.
+    const saleReference = String(branch_id) === '2' && normalizedBusinessUnit === 'materiales'
+      ? null
+      : (reference?.trim() || await getNextSaleReference(branch_id, normalizedBusinessUnit));
 
     const { data: transaction, error: txError } = await supabase
       .from('inventory_transactions')

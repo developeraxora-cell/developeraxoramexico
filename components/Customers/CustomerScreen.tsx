@@ -886,7 +886,11 @@ const CustomerScreen: React.FC<CustomerScreenProps> = ({ selectedBranchId, branc
 
     const creditTransactionIds = new Set(notes.map((note) => String(note.inventory_transaction_id ?? '')).filter(Boolean));
     const cashSalesRaw = branchId ? await creditService.listCashSalesByCustomer(customer.id, branchId, customer.name, businessUnit) : [];
-    const cashSales = cashSalesRaw.filter((sale) => !creditTransactionIds.has(String(sale.id)) && !isZeroCostSaleNote(sale.notes));
+    const cashSales = cashSalesRaw.filter((sale) =>
+      !creditTransactionIds.has(String(sale.id))
+      && String(sale.payment_type ?? '').toUpperCase() !== 'CREDITO'
+      && !isZeroCostSaleNote(sale.notes)
+    );
     setCashSaleHistory(cashSales);
     if (cashSales.length > 0) {
       const { data: saleItems, error: saleItemsError } = await supabase
