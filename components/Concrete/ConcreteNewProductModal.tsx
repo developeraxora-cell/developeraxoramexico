@@ -639,6 +639,18 @@ const NewProductModal: React.FC<NewProductModalProps> = ({
               </button>
               <p className="text-[10px] text-slate-400">Unidad en la que se controla el stock (ej: KG).</p>
             </div>
+            <div className="space-y-1 flex items-center gap-3">
+              <input
+                id="concrete_is_divisible"
+                type="checkbox"
+                className="w-5 h-5 accent-orange-500"
+                checked={isDivisible}
+                onChange={(e) => setIsDivisible(e.target.checked)}
+              />
+              <label htmlFor="concrete_is_divisible" className="text-xs font-semibold text-gray-600">
+                Permite fraccionar (decimales)
+              </label>
+            </div>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4">

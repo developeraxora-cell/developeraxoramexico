@@ -1,6 +1,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Ban, History, PenLine } from 'lucide-react';
+import { History, PenLine, Trash2 } from 'lucide-react';
 import { Branch, User } from '../../types';
 import { logConcreteraAudit } from '../../services/audit/audit.service';
 import {
@@ -33,7 +33,6 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
   const [productsList, setProductsList] = useState<Product[]>([]);
   const [stockByProduct, setStockByProduct] = useState<Record<string, number>>({});
   const [productsSearch, setProductsSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [uoms, setUoms] = useState<Uom[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isNewProductOpen, setIsNewProductOpen] = useState(false);
@@ -41,10 +40,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [productToRemove, setProductToRemove] = useState<Product | null>(null);
-  const [statusObservation, setStatusObservation] = useState('');
-  const [statusObservationError, setStatusObservationError] = useState<string | null>(null);
   const [deleteObservation, setDeleteObservation] = useState('');
   const [deleteObservationError, setDeleteObservationError] = useState<string | null>(null);
   const [priceProduct, setPriceProduct] = useState<Product | null>(null);
@@ -195,18 +191,6 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     loadProducts();
   }, [loadProducts]);
 
-  const openStatusModal = (product: Product) => {
-    setProductToDelete(product);
-    setStatusObservation('');
-    setStatusObservationError(null);
-  };
-
-  const closeStatusModal = () => {
-    setProductToDelete(null);
-    setStatusObservation('');
-    setStatusObservationError(null);
-  };
-
   const openRemoveModal = (product: Product) => {
     setProductToRemove(product);
     setDeleteObservation('');
@@ -218,57 +202,6 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
     setDeleteObservation('');
     setDeleteObservationError(null);
   };
-
-  const handleConfirmDeleteProduct = useCallback(async () => {
-    if (!productToDelete) return;
-    const justification = statusObservation.trim();
-    if (!justification) {
-      setStatusObservationError(
-        productToDelete.is_active === false
-          ? 'La observación es obligatoria para activar el producto.'
-          : 'La observación es obligatoria para desactivar el producto.'
-      );
-      return;
-    }
-
-    setIsSaving(true);
-    setError(null);
-    setStatusObservationError(null);
-    try {
-      const previousProduct = productToDelete;
-      if (productToDelete.is_active === false) {
-        await catalogService.activateProduct(productToDelete.id);
-      } else {
-        await catalogService.deactivateProduct(productToDelete.id);
-      }
-      logConcreteraAudit({
-        branch_id: branchId ?? '',
-        branch_name: selectedBranch?.name ?? null,
-        user_id: currentUser.id,
-        user_name: currentUser.name,
-        action_type: 'ACTUALIZAR',
-        entity_type: 'producto',
-        entity_id: String(previousProduct.id),
-        description: previousProduct.is_active === false
-          ? `Producto activado: ${previousProduct.name}`
-          : `Producto desactivado: ${previousProduct.name}`,
-        justification,
-        previous_data: previousProduct as unknown as Record<string, unknown>,
-        new_data: {
-          ...previousProduct,
-          is_active: previousProduct.is_active === false,
-          notes: justification,
-        },
-      });
-      closeStatusModal();
-      await loadProducts();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'No se pudo actualizar el estado del producto.';
-      setError(message);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [branchId, currentUser.id, currentUser.name, loadProducts, productToDelete, selectedBranch?.name, statusObservation]);
 
   const handleConfirmRemoveProduct = useCallback(async () => {
     if (!productToRemove) return;
@@ -482,18 +415,14 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
   const filteredProducts = useMemo(() => {
     const term = productsSearch.trim().toLowerCase();
     return productsList.filter((product) => {
+      if (product.is_active === false) return false;
       const matchesTerm = !term
         || product.name.toLowerCase().includes(term)
         || (product.sku ?? '').toLowerCase().includes(term)
         || (product.barcode ?? '').toLowerCase().includes(term);
-      const isActive = product.is_active !== false;
-      const matchesStatus =
-        statusFilter === 'ALL'
-        || (statusFilter === 'ACTIVE' && isActive)
-        || (statusFilter === 'INACTIVE' && !isActive);
-      return matchesTerm && matchesStatus;
+      return matchesTerm;
     });
-  }, [productsList, productsSearch, statusFilter]);
+  }, [productsList, productsSearch]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE)),
@@ -507,7 +436,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [productsSearch, statusFilter, branchId]);
+  }, [productsSearch, branchId]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -525,7 +454,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
             📦 Productos por Sucursal
           </h2>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-            Listado de productos activos e inactivos por sucursal.
+            Listado de productos por sucursal.
           </p>
         </div>
 
@@ -547,7 +476,7 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
       </div>
 
       {/* BARRA DE BÚSQUEDA */}
-      <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-4">
+      <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
         <div className="relative flex-1">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
           <input 
@@ -557,19 +486,6 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
             value={productsSearch}
             onChange={(e) => setProductsSearch(e.target.value)}
           />
-        </div>
-        <div className="flex bg-slate-100 p-1 rounded-2xl whitespace-nowrap">
-          {(['ALL', 'ACTIVE', 'INACTIVE'] as const).map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all ${
-                statusFilter === status ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              {status === 'ALL' ? 'Todos' : status === 'ACTIVE' ? 'Activos' : 'Inactivos'}
-            </button>
-          ))}
         </div>
       </div>
 
@@ -598,23 +514,21 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest text-right">Precio Menor</th>
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest text-right">Stock</th>
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest text-right">Stock Mínimo</th>
-                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-center">Estado</th>
                 <th className="p-5 text-[10px] font-black uppercase tracking-widest text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading && (
                 <tr>
-                  <td colSpan={9} className="p-6 text-center text-slate-400 text-sm">Cargando productos...</td>
+                  <td colSpan={8} className="p-6 text-center text-slate-400 text-sm">Cargando productos...</td>
                 </tr>
               )}
               {!isLoading && branchId && filteredProducts.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="p-6 text-center text-slate-400 text-sm">No hay productos para mostrar.</td>
+                  <td colSpan={8} className="p-6 text-center text-slate-400 text-sm">No hay productos para mostrar.</td>
                 </tr>
               )}
               {!isLoading && paginatedProducts.map((product) => {
-                const isActive = product.is_active !== false;
                 const stock = Number(stockByProduct[product.id] ?? (product as any).stock ?? 0);
                 const minStock = Number((product as any).min_stock ?? 0);
                 const stockLabel = Number.isFinite(stock)
@@ -629,11 +543,11 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                 return (
                 <tr
                   key={product.id}
-                  className={`transition-colors ${isActive ? 'hover:bg-emerald-50/60' : 'bg-red-50/60 hover:bg-red-50'}`}
+                  className="transition-colors hover:bg-emerald-50/60"
                 >
                   <td className="p-5 text-xs font-black uppercase">
-                    <div className={`flex items-center gap-2 border-l-4 pl-3 ${isActive ? 'border-emerald-500' : 'border-red-500'}`}>
-                    <span className={isActive ? 'text-slate-800' : 'text-red-700'}>
+                    <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
+                    <span className="text-slate-800">
                       {product.name}
                     </span>
                     </div>
@@ -660,15 +574,6 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                   <td className="p-5 text-right text-xs font-black text-slate-600">
                     {formatNumber(Number(minStock), undefined, { maximumFractionDigits: 3 })}{' '}
                     <span className="text-[9px] font-black text-slate-400">{baseLabel}</span>
-                  </td>
-                  <td className="p-5 text-center text-xs font-bold">
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest ${
-                        isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {isActive ? 'Activo' : 'Inactivo'}
-                    </span>
                   </td>
                   <td className="p-5 text-center">
                     <div className="flex items-center justify-center gap-2">
@@ -707,14 +612,12 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
                         </button>
                       )}
                       <button
-                        onClick={() => openStatusModal(product)}
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg ${
-                          isActive ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'
-                        }`}
-                        title={isActive ? 'Desactivar' : 'Activar'}
+                        onClick={() => openRemoveModal(product)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-50"
+                        title="Eliminar producto"
                         disabled={isSaving}
                       >
-                        <Ban className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
@@ -764,35 +667,6 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ selectedBranchId, cur
           Usuario: {currentUser.name}
         </div>
       </div>
-
-      <ConfirmModal
-        isOpen={Boolean(productToDelete)}
-        title={productToDelete?.is_active === false ? 'Activar producto' : 'Desactivar producto'}
-        description={
-          productToDelete?.is_active === false
-            ? 'El producto volverá a estar disponible para compras.'
-            : 'El producto quedará inactivo y no se podrá usar en compras nuevas.'
-        }
-        icon="⛔"
-        confirmText={productToDelete?.is_active === false ? 'Activar' : 'Desactivar'}
-        cancelText="Cancelar"
-        noteLabel="Observación obligatoria"
-        notePlaceholder={
-          productToDelete?.is_active === false
-            ? 'Explique por qué se está activando el producto'
-            : 'Explique por qué se está desactivando el producto'
-        }
-        noteValue={statusObservation}
-        noteRequired
-        noteError={statusObservationError}
-        isProcessing={isSaving}
-        onNoteChange={(value) => {
-          setStatusObservation(value);
-          if (statusObservationError) setStatusObservationError(null);
-        }}
-        onConfirm={handleConfirmDeleteProduct}
-        onCancel={closeStatusModal}
-      />
 
       <ConfirmModal
         isOpen={Boolean(productToRemove)}
